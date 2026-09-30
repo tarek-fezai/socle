@@ -49,6 +49,10 @@ public final class AuditActions {
     public static final String WORKFLOW_UPDATED = "workflow.updated";
     public static final String WORKFLOW_DELETED = "workflow.deleted";
 
+    /** Attributions de rôles d'approbation scopées. */
+    public static final String APPROVAL_ROLE_ASSIGNED = "approval_role.assigned";
+    public static final String APPROVAL_ROLE_UNASSIGNED = "approval_role.unassigned";
+
     /** Configuration intégrations (intégrateur) — visible au journal pour supervision. */
     public static final String SIEM_CONNECTOR_CREATED = "siem.connector_created";
     public static final String SIEM_CONNECTOR_UPDATED = "siem.connector_updated";

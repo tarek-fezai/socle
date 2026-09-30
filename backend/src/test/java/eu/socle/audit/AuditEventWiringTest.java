@@ -148,7 +148,8 @@ class AuditEventWiringTest {
                 jdbcTemplate, auditService,
                 mock(eu.socle.document.ReliabilityScoreService.class),
                 documentStore,
-                new com.fasterxml.jackson.databind.ObjectMapper());
+                new com.fasterxml.jackson.databind.ObjectMapper(),
+                mock(eu.socle.document.ApprovalRoleResolver.class));
         UUID requestId = UUID.randomUUID();
 
         activities.recordSubmission(DOC, USER, requestId, UUID.randomUUID(), "wf-1", 1, 24);

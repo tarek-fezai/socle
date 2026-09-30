@@ -53,6 +53,7 @@ class DecideExpectedStepOrderTest {
     @Mock JdbcTemplate jdbcTemplate;
     @Mock ApprovalActivitiesImpl activities;
     @Mock ApprovalWorkflowDefinitionService workflowDefinitions;
+    @Mock ApprovalRoleResolver approvalRoleResolver;
     @Mock DocumentApprovalWorkflow workflowStub;
 
     DocumentApprovalService service;
@@ -69,13 +70,13 @@ class DecideExpectedStepOrderTest {
                 jdbcTemplate,
                 activities,
                 workflowDefinitions,
+                approvalRoleResolver,
                 passthroughTx(),
                 false
         );
         when(userSyncService.syncFromJwt(any())).thenReturn(user(APPROVER));
-        doNothing().when(authorizationService).requireDocumentRelation(APPROVER, DOC, "editor");
-        when(jdbcTemplate.queryForObject(contains("SELECT EXISTS"), eq(Boolean.class), any(), any(), any()))
-                .thenReturn(true);
+        when(authorizationService.hasRelation(APPROVER, "document", DOC, "editor")).thenReturn(true);
+        when(approvalRoleResolver.canDecideCurrentStep(eq(APPROVER), any())).thenReturn(true);
         when(workflowClient.newWorkflowStub(eq(DocumentApprovalWorkflow.class), eq("wf-1")))
                 .thenReturn(workflowStub);
         org.mockito.Mockito.doAnswer(inv -> {

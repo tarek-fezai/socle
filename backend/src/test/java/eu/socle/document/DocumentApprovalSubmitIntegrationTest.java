@@ -62,6 +62,7 @@ class DocumentApprovalSubmitIntegrationTest {
     @Mock JdbcTemplate jdbcTemplate;
     @Mock ApprovalActivitiesImpl springActivitiesIgnored;
     @Mock ApprovalWorkflowDefinitionService workflowDefinitions;
+    @Mock ApprovalRoleResolver approvalRoleResolver;
 
     TestWorkflowEnvironment testEnv;
     WorkflowClient workflowClient;
@@ -87,6 +88,7 @@ class DocumentApprovalSubmitIntegrationTest {
                 jdbcTemplate,
                 springActivitiesIgnored,
                 workflowDefinitions,
+                approvalRoleResolver,
                 DecideExpectedStepOrderTest.passthroughTx(),
                 false
         );
@@ -178,7 +180,8 @@ class DocumentApprovalSubmitIntegrationTest {
                         "document_id", documentId,
                         "current_step_order", 1
                 )));
-        when(jdbcTemplate.queryForObject(contains("SELECT EXISTS"), eq(Boolean.class), any(), any(), any()))
+        when(authorizationService.hasRelation(CONTRIBUTOR_ID, "document", documentId, "editor")).thenReturn(true);
+        when(approvalRoleResolver.canDecideCurrentStep(eq(CONTRIBUTOR_ID), eq(started.approvalRequestId())))
                 .thenReturn(true);
         when(jdbcTemplate.queryForObject(contains("SELECT status FROM approval_requests"), eq(String.class), eq(started.approvalRequestId())))
                 .thenAnswer(inv -> recordingActivities.requestStatus.get());

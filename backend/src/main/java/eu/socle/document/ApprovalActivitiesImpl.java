@@ -28,19 +28,22 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
     private final ReliabilityScoreService reliabilityScoreService;
     private final DocumentStore documentStore;
     private final ObjectMapper objectMapper;
+    private final ApprovalRoleResolver approvalRoleResolver;
 
     public ApprovalActivitiesImpl(
             JdbcTemplate jdbcTemplate,
             AuditService auditService,
             ReliabilityScoreService reliabilityScoreService,
             DocumentStore documentStore,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            ApprovalRoleResolver approvalRoleResolver
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.auditService = auditService;
         this.reliabilityScoreService = reliabilityScoreService;
         this.documentStore = documentStore;
         this.objectMapper = objectMapper;
+        this.approvalRoleResolver = approvalRoleResolver;
     }
 
     @Override
@@ -317,7 +320,7 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
 
     /**
      * Demandeur + utilisateurs du rôle approbateur de la dernière étape
-     * ({@code approval_workflow_steps.approver_role_id} → {@code user_global_roles}).
+     * couverts par la portée du document ({@code approval_role_assignments}).
      */
     private List<UUID> resolveChainExhaustedRecipients(
             UUID approvalRequestId,
@@ -327,26 +330,38 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         List<UUID> recipients = new java.util.ArrayList<>();
         recipients.add(requesterId);
 
-        List<UUID> lastApprovers = jdbcTemplate.query("""
-                SELECT ugr.user_id
+        List<Map<String, Object>> ctx = jdbcTemplate.queryForList("""
+                SELECT s.approver_role_id AS role_id, ar.document_id
                   FROM approval_requests ar
                   JOIN approval_workflow_steps s
                     ON s.workflow_id = ar.workflow_id AND s.step_order = ?
-                  JOIN user_global_roles ugr ON ugr.role_id = s.approver_role_id
                  WHERE ar.id = ?
                 """,
-                (rs, i) -> (UUID) rs.getObject("user_id"),
                 lastStepOrder,
                 approvalRequestId);
 
-        for (UUID approverId : lastApprovers) {
-            if (!recipients.contains(approverId)) {
-                recipients.add(approverId);
+        if (!ctx.isEmpty()) {
+            Map<String, Object> row = ctx.getFirst();
+            UUID roleId = row.get("role_id") instanceof UUID u
+                    ? u
+                    : (row.get("role_id") != null ? UUID.fromString(String.valueOf(row.get("role_id"))) : null);
+            UUID documentId = row.get("document_id") instanceof UUID u
+                    ? u
+                    : UUID.fromString(String.valueOf(row.get("document_id")));
+            if (roleId != null) {
+                for (UUID approverId : approvalRoleResolver.resolveInScopeAssignees(roleId, documentId)) {
+                    if (!recipients.contains(approverId)) {
+                        recipients.add(approverId);
+                    }
+                }
+            } else {
+                log.warn("Chaîne épuisée request={} : aucun rôle sur l'étape {} — notification demandeur seule",
+                        approvalRequestId, lastStepOrder);
             }
         }
 
-        if (lastApprovers.isEmpty()) {
-            log.warn("Chaîne épuisée request={} : aucun utilisateur pour le rôle de l'étape {} — notification demandeur seule",
+        if (recipients.size() == 1) {
+            log.warn("Chaîne épuisée request={} : aucun approbateur in-scope pour l'étape {} — notification demandeur seule",
                     approvalRequestId, lastStepOrder);
         }
         return recipients;

@@ -61,7 +61,10 @@ export function WorkflowsPage() {
           <h1 className="serif-title">Workflows d&apos;approbation</h1>
           <p className="mt-1.5 text-sm text-socle-muted">
             Chaînes à N étapes (SLA, rôle, escalade) — sélection automatique par espace / type
-            à la soumission.
+            à la soumission.{' '}
+            <Link to="/admin/approval-roles" className="font-semibold text-socle-accent">
+              Gérer les rôles d&apos;approbation scopés
+            </Link>
           </p>
         </div>
         <button
