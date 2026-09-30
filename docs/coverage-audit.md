@@ -1,7 +1,7 @@
 # Audit de couverture — maquettes `.dc.html` ↔ produit réel
 
-**Date :** 2026-09-28  
-**Référence maquette :** `systeme-documentation-direction-ui/` (83 écrans)  
+**Date :** 2026-09-30 (réalignement maquette / spec produit)  
+**Référence maquette :** `systeme-documentation-direction-ui/` (83 écrans : `Billing`→`Licence`, `StatusPage` retiré, `UserIdentities` ajouté)  
 **Frontend audité :** `frontend/src/` (routes dans `App.tsx`, pages listées ci-dessous)  
 **Méthode :** lecture seule — aucune modification de code dans cette tâche.  
 **Décisions produit déjà documentées :** `docs/design-alignment.md` (et docs techniques associées).
@@ -75,9 +75,10 @@
 | 20 | `Team.dc.html` | Membres & équipes | **COMPLET** | `/team` | **BE OK** `/api/v1/groups` + members | Groupes + membres ; invitations email (Invite*) toujours ABSENT. |
 | 21 | `InviteOrgMember.dc.html` | Inviter un membre (org) | **ABSENT** | — | BE schéma `team_invitations` | Intra-tenant (équipes du déploiement), pas multi-org. |
 | 22 | `TeamInvitations.dc.html` | Invitations en attente | **ABSENT** | — | BE schéma | |
-| 23 | `GlobalRoles.dc.html` | Rôles globaux | **ABSENT** | — | BE schéma + seed V4 | Rôles utilisés côté approbations ; pas d’admin UI. |
+| 23 | `GlobalRoles.dc.html` | Rôles plateforme + approbation | **ABSENT** | — | BE schéma + seed V4 | Maquette : rôles plateforme (source Jeton/Interne/Les deux) + rôles d’approbation avec portée. Pas d’admin UI produit. |
+| 23b | `UserIdentities.dc.html` | Identités IdP rattachées | **ABSENT** | — | BE `user_identities` | Nouvel écran maquette admin ; lien depuis Team / Admin. |
 | 24 | `Retention.dc.html` | Rétention & conformité | **ABSENT** | — | BE schéma `retention_policies` (lu par reliability) | Pas de CRUD UI/API admin. |
-| 25 | `Billing.dc.html` | Facturation | **ABSENT** | — | BE schéma `plan_tier` informatif | Entitlement réel = control plane externe (schéma) ; écran facturation SaaS multi-tenant **non** prévu. UI « plan déployé » possible plus tard sans être HORS SCOPE. |
+| 25 | `Licence.dc.html` | Licence (fichier / sièges / échéance) | **ABSENT** | — | BE schéma `plan_tier` informatif | Remplace l’ancien `Billing.dc.html` (facturation SaaS retirée de la maquette). Import de fichier de licence ; **pas** de carte bancaire ni factures. |
 | 26 | `DeleteDocument.dc.html` | Déplacer vers la corbeille | **ABSENT** | — | **BE OK** trash soft-delete | Confirm dialog maquette ; API `DELETE /documents/{id}` existe, **aucune UI**. |
 | 27 | `Trash.dc.html` | Corbeille | **COMPLET** | `/trash` | **BE OK** `/api/v1/trash` | Liste + filtre `resourceType` + Restaurer (409 parent affiché). Purge définitive UI non exposée (API DELETE existe). |
 | 28 | `FolderProcedures.dc.html` | Dossier Procédures | **PARTIEL** | Rail fiabilité sur `/docs` | BE schéma `folders` | Pas de page dossier / arborescence ; rail = substitut partiel. |
@@ -116,7 +117,7 @@
 | 61 | `Attestations.dc.html` | Attestations | **ABSENT** | — | BE schéma `attestation_*` (entrée reliability) | Pas d’API ack / campagne. |
 | 62 | `Workflows.dc.html` | Workflows d’approbation | **COMPLET** | `/admin/workflows` | **BE OK** CRUD `/api/v1/approval-workflows` + résolution scope à la soumission | Liste + édition N étapes (SLA, rôle, escalade) ; aperçu workflow applicable sur `/docs/:id`. |
 | 63 | `CustomFields.dc.html` | Champs personnalisés | **ABSENT** | — | BE schéma | |
-| 64 | `StatusPage.dc.html` | État du système | **ABSENT** | — | BE schéma `status_page_*` | |
+| 64 | ~~`StatusPage.dc.html`~~ | ~~État du système~~ | **SUPPRIMÉ (maquette)** | — | — | Retiré de la maquette (pas de status page SaaS). Schéma `status_page_*` éventuellement legacy. |
 | 65 | `Branding.dc.html` | Personnalisation de marque | **ABSENT** | Tokens hardcodés Tailwind | BE schéma `branding_settings` | |
 | 66 | `ExportPersonalData.dc.html` | Télécharger mes données | **ABSENT** | — | BE schéma RGPD | |
 | 67 | `HelpCenter.dc.html` | Centre d’aide | **ABSENT** | — | BE schéma | |
@@ -175,7 +176,8 @@
 **Non classés HORS SCOPE malgré ambiguïté mono-tenant :**
 
 - Bloc **Visibilité** d'`Access.dc.html` — **livré** (`organisation` / `space` / `restricted`) ; voir `docs/spaces-governance.md`.
-- `InviteOrgMember` / `Team*` / `Billing` (plan informatif) — restent **ABSENT** produit à construire ou non selon priorité, pas « obsolètes multi-tenant ».
+- `InviteOrgMember` / `Team*` / `Licence` / `UserIdentities` — restent **ABSENT** côté frontend ; maquette réalignée (plus de facturation SaaS).
+- `StatusPage` — **supprimé** de la maquette ; ne plus planifier comme écran produit.
 
 ---
 
@@ -218,7 +220,7 @@ Critères utilisés pour **ordonner la suggestion** (pas une décision produit) 
 ### Vague D — Plateforme & DX
 
 18. **Account**, **Login/LoginError** branding  
-19. **Admin** (SSO), **Branding**, **StatusPage**  
+19. **Admin** (OIDC / mapping rôles / stockage), **Branding**, **Licence**, **UserIdentities** (ABSENT frontend)  
 20. **GenerateApiKey / PersonalToken**, **ApiDocs**  
 21. **TagsAdmin**, **TemplatesAdmin**, **CustomFields**, **Glossary**  
 22. **Analytics**, **Changelog**, **Onboarding**, **Help***  

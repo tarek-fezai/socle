@@ -38,13 +38,20 @@
   <div style="position: relative; flex-grow: 1; overflow: hidden; background: #FAFAFB;">
 
     <svg width="1440" height="840" style="position: absolute; top: 0; left: 0;">
-      <line x1="720" y1="180" x2="420" y2="340" stroke="#E4E3F5" stroke-width="2"/>
-      <line x1="720" y1="180" x2="1020" y2="340" stroke="#E4E3F5" stroke-width="2"/>
-      <line x1="420" y1="340" x2="300" y2="530" stroke="#E4E3F5" stroke-width="2"/>
-      <line x1="420" y1="340" x2="560" y2="540" stroke="#E4E3F5" stroke-width="2"/>
-      <line x1="1020" y1="340" x2="1000" y2="540" stroke="#E4E3F5" stroke-width="2"/>
-      <line x1="1020" y1="340" x2="1170" y2="520" stroke="#E4E3F5" stroke-width="2"/>
-      <line x1="560" y1="540" x2="700" y2="680" stroke="#E4E3F5" stroke-width="2"/>
+      <!-- intra-espace -->
+      <line x1="720" y1="180" x2="420" y2="340" stroke="#C7C6F5" stroke-width="2"/>
+      <line x1="720" y1="180" x2="1020" y2="340" stroke="#C7C6F5" stroke-width="2"/>
+      <line x1="420" y1="340" x2="300" y2="530" stroke="#C7C6F5" stroke-width="2"/>
+      <line x1="420" y1="340" x2="560" y2="540" stroke="#C7C6F5" stroke-width="2"/>
+      <line x1="1020" y1="340" x2="1000" y2="540" stroke="#C7C6F5" stroke-width="2"/>
+      <line x1="1020" y1="340" x2="1170" y2="520" stroke="#C7C6F5" stroke-width="2"/>
+      <line x1="560" y1="540" x2="700" y2="680" stroke="#C7C6F5" stroke-width="2"/>
+      <!-- inter-espace sortant (vers Conformité) -->
+      <line x1="1020" y1="340" x2="1280" y2="200" stroke="#0D8A7C" stroke-width="2" stroke-dasharray="6 4"/>
+      <polygon points="1272,196 1286,200 1272,208" fill="#0D8A7C"/>
+      <!-- inter-espace entrant (depuis Infrastructure) -->
+      <line x1="160" y1="200" x2="720" y2="180" stroke="#B7791F" stroke-width="2" stroke-dasharray="2 5"/>
+      <polygon points="708,174 722,180 708,188" fill="#B7791F"/>
     </svg>
 
     <!-- root node — current page, filled accent -->
@@ -99,6 +106,22 @@
       <span style="font-size: 11px; color: #C2C2C6;">Instance</span>
     </a>
 
+    <!-- inter-espace entrant source -->
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 72px; top: 156px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 132px; height: 42px; border-radius: 10px; background: #FFFFFF; border: 1.5px dashed #D4B896; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 12.5px; font-weight: 500; color: #43434A;">Architecture réseau</span>
+      </div>
+      <span style="font-size: 11px; color: #B7791F;">Infrastructure · entrant</span>
+    </a>
+
+    <!-- inter-espace sortant cible -->
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 1220px; top: 156px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 132px; height: 42px; border-radius: 10px; background: #FFFFFF; border: 1.5px dashed #9BC9C2; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 12.5px; font-weight: 500; color: #43434A;">Registre traitements</span>
+      </div>
+      <span style="font-size: 11px; color: #0D8A7C;">Conformité · sortant</span>
+    </a>
+
     <!-- level 4 -->
     <a href="Main.dc.html" class="node" style="position: absolute; left: 640px; top: 656px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
       <div class="node-box" style="width: 112px; height: 42px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #E4E3EA; display: flex; align-items: center; justify-content: center;">
@@ -108,11 +131,23 @@
     </a>
 
     <!-- legend -->
-    <div style="position: absolute; left: 40px; bottom: 28px; display: flex; align-items: center; gap: 8px;">
-      <span class="legend-dot" style="background: #3730E0;"></span>
-      <span style="font-size: 12px; color: #6B6B72;">Page consultée</span>
-      <span style="width: 3px; height: 3px; border-radius: 50%; background: #DEDEE1; margin: 0 10px;"></span>
-      <span style="font-size: 12px; color: #6B6B72;">Trait fin = référence directe</span>
+    <div style="position: absolute; left: 40px; bottom: 28px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="legend-dot" style="background: #3730E0;"></span>
+        <span style="font-size: 12px; color: #6B6B72;">Page consultée</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 18px; height: 2px; background: #C7C6F5; flex-shrink: 0;"></span>
+        <span style="font-size: 12px; color: #6B6B72;">intra-espace</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 18px; height: 0; border-top: 2px dashed #0D8A7C; flex-shrink: 0;"></span>
+        <span style="font-size: 12px; color: #6B6B72;">inter-espace sortant</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 18px; height: 0; border-top: 2px dotted #B7791F; flex-shrink: 0;"></span>
+        <span style="font-size: 12px; color: #6B6B72;">inter-espace entrant</span>
+      </div>
     </div>
 
   </div>
