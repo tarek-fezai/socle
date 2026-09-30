@@ -20,9 +20,34 @@
 Comportement observable API **identique** à l'implémentation antérieure à
 l'abstraction `DocumentStore`.
 
+## Décision : un dépôt Git par instance
+
+La spec initiale faisait de **l'espace** le périmètre physique de stockage
+(un dépôt — ou un sous-arbre isolé — par espace). **Décision V1 : un seul
+dépôt Git par instance**, avec des chemins plats `documents/{id}.md`.
+
+Raisons retenues :
+
+- **ids globaux** — l'identifiant document est unique à l'instance ; le chemin
+  fichier n'a pas besoin d'encoder l'espace ;
+- **déplacement entre espaces** — changer `space_id` ne nécessite aucune
+  migration de dépôt ni de réécriture d'historique Git ;
+- **concurrence simple** — un seul HEAD à coordonner (voir verrou / `git_head_sha`) ;
+- **sauvegarde unique** — un artefact à sauvegarder / restaurer pour toute
+  l'instance.
+
+**Conséquence :** pas d'export Git natif « un dépôt = un espace ». Un export
+filtré par espace reste possible plus tard via `git filter-repo` (ou équivalent)
+ou via l'API d'export documentaire existante.
+
+**Réouverture :** si un client exige une séparation physique stricte par espace
+(compliance, multi-équipe hors confiance, etc.), la décision pourra être
+revue — ce n'est pas un verrou produit définitif, seulement le défaut V1.
+
 ## Provider `git` (JGit)
 
-Le dépôt Git **est** le moteur de persistance du contenu :
+Le dépôt Git **est** le moteur de persistance du contenu (un dépôt par
+instance — voir section précédente) :
 
 | Événement API | Git | Métadonnée API |
 |---------------|-----|----------------|
