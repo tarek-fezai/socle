@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Mobile — Notifications</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+</style>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden; position: relative;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 56px; padding: 0 10px 0 6px; display: flex; align-items: center; gap: 4px; border-bottom: 1px solid #ECECEE;">
+    <a href="MobileDashboard.dc.html" aria-label="Retour" style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E0E10" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <div style="flex-grow: 1; font-size: 15px; font-weight: 600;">Notifications</div>
+    <span style="font-size: 12px; color: #3730E0; font-weight: 600; padding: 6px 8px;">Tout marquer lu</span>
+  </div>
+
+  <div style="flex-grow: 1; overflow-y: auto;">
+
+    <a href="MobileApproval.dc.html" style="display: flex; gap: 11px; padding: 14px 16px; border-bottom: 1px solid #F5F5F7; align-items: flex-start;">
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: #3730E0; flex-shrink: 0; margin-top: 6px;"></span>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 13.5px; color: #0E0E10; line-height: 1.4;"><strong>Claire Dubois</strong> demande votre approbation sur <em>Politique de gestion des accès</em></div>
+        <div style="font-size: 11.5px; color: #B0B0B5; margin-top: 3px;">il y a 22 minutes</div>
+      </div>
+    </a>
+
+    <a href="MobileReview.dc.html" style="display: flex; gap: 11px; padding: 14px 16px; border-bottom: 1px solid #F5F5F7; align-items: flex-start;">
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: #3730E0; flex-shrink: 0; margin-top: 6px;"></span>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 13.5px; color: #0E0E10; line-height: 1.4;"><strong>Yanis M.</strong> a commenté <em>Politique de gestion des accès</em></div>
+        <div style="font-size: 11.5px; color: #B0B0B5; margin-top: 3px;">il y a 1 heure</div>
+      </div>
+    </a>
+
+    <a href="MobilePage.dc.html" style="display: flex; gap: 11px; padding: 14px 16px; border-bottom: 1px solid #F5F5F7; align-items: flex-start;">
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: transparent; flex-shrink: 0; margin-top: 6px;"></span>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 13.5px; color: #6B6B72; line-height: 1.4;"><strong style="color: #43434A;">Registre des traitements</strong> a été publié</div>
+        <div style="font-size: 11.5px; color: #B0B0B5; margin-top: 3px;">hier</div>
+      </div>
+    </a>
+
+    <a href="MobileAccount.dc.html" style="display: flex; gap: 11px; padding: 14px 16px; align-items: flex-start;">
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: transparent; flex-shrink: 0; margin-top: 6px;"></span>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 13.5px; color: #6B6B72; line-height: 1.4;">Votre échéance d'attestation « Politique de gestion des accès » arrive le 3 octobre</div>
+        <div style="font-size: 11.5px; color: #B0B0B5; margin-top: 3px;">il y a 2 jours</div>
+      </div>
+    </a>
+
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

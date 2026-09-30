@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Inviter — Politique de gestion des accès</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .cta:hover { background: #2C27C7; }
+  .ghost:hover { background: #F5F5F7; }
+  .field:focus-within { border-color: #C7C6F5; }
+  .chip-x:hover { background: #DEDEE1; }
+  .role:hover { border-color: #C7C6F5; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; background: #FFFFFF; overflow: hidden;">
+
+  <!-- DIMMED BACKGROUND -->
+  <div style="position: absolute; inset: 0; padding: 0 44px;">
+    <div style="height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE; opacity: 0.35;">
+      <div style="display: flex; align-items: center; gap: 7px; font-size: 13px; color: #B0B0B5;">
+        <span>Identité &amp; accès</span><span>→</span><span style="color: #0E0E10; font-weight: 500;">Politique de gestion des accès</span>
+      </div>
+      <div style="width: 100px; height: 30px; border-radius: 7px; background: #3730E0;"></div>
+    </div>
+    <div style="margin-top: 44px; opacity: 0.3; max-width: 760px;">
+      <div style="height: 30px; width: 60%; background: #F1EFEA; border-radius: 6px; margin-bottom: 20px;"></div>
+      <div style="height: 60px; border-radius: 10px; background: #F1EFEA; margin-bottom: 12px;"></div>
+      <div style="height: 60px; border-radius: 10px; background: #F1EFEA; margin-bottom: 12px;"></div>
+      <div style="height: 60px; border-radius: 10px; background: #F1EFEA;"></div>
+    </div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(14,14,16,0.45);"></div>
+
+  <!-- MODAL -->
+  <div style="position: absolute; top: 140px; left: 50%; transform: translateX(-50%); width: 520px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 24px 60px rgba(14,14,16,0.28); padding: 30px 30px 26px; box-sizing: border-box;">
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px;">
+      <h1 class="serif" style="font-weight: 400; font-size: 24px; margin: 0; color: #0E0E10;">Inviter des personnes</h1>
+      <a href="Access.dc.html" aria-label="Fermer" class="ghost" style="width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </a>
+    </div>
+    <p style="font-size: 13px; color: #9B9BA1; margin: 0 0 20px;">Sur « Politique de gestion des accès » · restreint à l'équipe Identité</p>
+
+    <div class="field" style="border: 1px solid #ECECEE; border-radius: 9px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; min-height: 20px;">
+      <span style="display: flex; align-items: center; gap: 6px; background: #F0EFFC; color: #3730E0; font-size: 12.5px; font-weight: 500; border-radius: 6px; padding: 4px 6px 4px 9px;">
+        claire.dubois@meridian-group.com
+        <span class="chip-x" style="width: 15px; height: 15px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </span>
+      </span>
+      <span style="font-size: 13.5px; color: #C2C2C6; padding: 5px 4px;">Nom, e-mail ou équipe…</span>
+    </div>
+
+    <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Rôle attribué</div>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px;">
+      <div class="role" style="display: flex; align-items: center; justify-content: space-between; border: 1.5px solid #3730E0; background: #FAFAFE; border-radius: 9px; padding: 10px 13px; cursor: pointer;">
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Lecteur</div>
+          <div style="font-size: 11.5px; color: #9B9BA1;">Peut consulter le document publié</div>
+        </div>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="role" style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #ECECEE; border-radius: 9px; padding: 10px 13px; cursor: pointer;">
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Contributeur</div>
+          <div style="font-size: 11.5px; color: #9B9BA1;">Peut proposer des modifications</div>
+        </div>
+      </div>
+      <div class="role" style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #ECECEE; border-radius: 9px; padding: 10px 13px; cursor: pointer;">
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Approbateur</div>
+          <div style="font-size: 11.5px; color: #9B9BA1;">Peut valider les révisions avant publication</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <span style="font-size: 12px; color: #9B9BA1;">1 invitation prête à envoyer</span>
+      <div style="display: flex; gap: 8px;">
+        <a href="Access.dc.html" class="ghost" style="padding: 9px 15px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Annuler</a>
+        <a href="Access.dc.html" class="cta" style="padding: 9px 18px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600;">Envoyer l'invitation</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

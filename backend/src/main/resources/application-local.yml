@@ -1,0 +1,15 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # jwk-set-uri alone avoids blocking on OIDC discovery if Keycloak is slow to start
+          jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8081/realms/socle/protocol/openid-connect/certs}
+
+logging:
+  level:
+    org.springframework.security: INFO
+    eu.socle: DEBUG

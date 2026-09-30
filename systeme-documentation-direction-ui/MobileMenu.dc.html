@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Menu mobile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+</style>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; background: #FFFFFF; overflow: hidden;">
+
+  <!-- BACKDROP -->
+  <div style="position: absolute; inset: 0;">
+    <div style="height: 56px; border-bottom: 1px solid #ECECEE; opacity: 0.3;"></div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(14,14,16,0.4);"></div>
+
+  <!-- DRAWER -->
+  <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 320px; background: #FFFFFF; box-shadow: 8px 0 30px rgba(14,14,16,0.18); display: flex; flex-direction: column; padding: 20px 18px; box-sizing: border-box; overflow: hidden;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 22px; height: 22px; border-radius: 6px; background: #3730E0;"></div>
+        <div style="font-size: 14.5px; font-weight: 700;">Socle</div>
+      </div>
+      <a href="MobilePage.dc.html" aria-label="Fermer le menu" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#43434A" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </a>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid #ECECEE; border-radius: 9px; margin-bottom: 16px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span style="font-size: 13px; color: #9B9BA1;">Rechercher</span>
+    </div>
+
+    <a href="MobileSpaces.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: 9px; background: #F5F5F7; margin-bottom: 18px;">
+      <div style="width: 22px; height: 22px; border-radius: 6px; background: #3730E0; flex-shrink: 0;"></div>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Identité &amp; accès</div>
+        <div style="font-size: 11px; color: #9B9BA1;">Changer d'espace</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <div style="display: flex; flex-direction: column; gap: 1px; overflow: auto; flex-grow: 1;">
+      <a href="MobilePage.dc.html" style="display: block; padding: 9px 10px; border-radius: 8px; background: #F0EFFC; color: #3730E0; font-size: 14px; font-weight: 600;">Politique de gestion des accès</a>
+
+      <a href="MobileFolder.dc.html" style="display: flex; align-items: center; gap: 6px; padding: 12px 10px 4px; font-size: 11.5px; font-weight: 600; color: #6B6B72;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        Procédures
+      </a>
+      <a href="MobilePage.dc.html" style="display: block; padding: 9px 10px 9px 22px; border-radius: 8px; color: #4B4B52; font-size: 14px;">Provisioning des comptes</a>
+      <a href="MobilePage.dc.html" style="display: block; padding: 9px 10px 9px 22px; border-radius: 8px; color: #4B4B52; font-size: 14px;">Dé-provisioning des comptes</a>
+      <a href="MobilePage.dc.html" style="display: block; padding: 9px 10px 9px 22px; border-radius: 8px; color: #4B4B52; font-size: 14px;">Revue périodique des droits</a>
+
+      <a href="MobileFolder.dc.html" style="display: flex; align-items: center; gap: 6px; padding: 12px 10px 4px; font-size: 11.5px; font-weight: 600; color: #6B6B72;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        Référence
+      </a>
+      <a href="MobilePage.dc.html" style="display: block; padding: 9px 10px 9px 22px; border-radius: 8px; color: #4B4B52; font-size: 14px;">Rôles &amp; habilitations</a>
+      <a href="MobilePage.dc.html" style="display: block; padding: 9px 10px 9px 22px; border-radius: 8px; color: #4B4B52; font-size: 14px;">Glossaire des permissions</a>
+
+      <a href="MobilePage.dc.html" style="display: flex; align-items: center; padding: 9px 10px; border-radius: 8px; color: #9B9BA1; font-size: 14px; margin-top: 6px;">
+        Registre des accès à privilèges
+        <span style="margin-left: auto; font-size: 10px; color: #B0B0B5;">brouillon</span>
+      </a>
+
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 16px 10px 6px;">Infrastructure</div>
+      <a href="MobilePage.dc.html" style="display: block; padding: 9px 10px; border-radius: 8px; color: #4B4B52; font-size: 14px;">Architecture réseau</a>
+      <a href="MobilePage.dc.html" style="display: block; padding: 9px 10px; border-radius: 8px; color: #4B4B52; font-size: 14px;">Plan de reprise d'activité</a>
+    </div>
+
+    <div style="display: flex; gap: 6px; padding-top: 10px;">
+      <a href="MobilePage.dc.html" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 6px; border-radius: 8px; border: 1px solid #ECECEE; color: #3730E0; font-size: 12.5px; font-weight: 600;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Document
+      </a>
+      <a href="MobilePage.dc.html" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 6px; border-radius: 8px; border: 1px solid #ECECEE; color: #3730E0; font-size: 12.5px; font-weight: 600;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Dossier
+      </a>
+    </div>
+
+    <a href="MobilePage.dc.html" style="display: flex; align-items: center; gap: 9px; padding: 9px 10px; margin-top: 4px; color: #9B9BA1; font-size: 13px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      Corbeille
+    </a>
+
+    <a href="MobileAccount.dc.html" style="display: flex; align-items: center; gap: 9px; padding: 8px 6px; border-top: 1px solid #ECECEE; margin-top: 6px;">
+      <div style="width: 26px; height: 26px; border-radius: 50%; background: #0E0E10; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; color: #FFFFFF;">TF</div>
+      <span style="font-size: 13px; color: #4B4B52; font-weight: 500;">Tarek Fezai</span>
+    </a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

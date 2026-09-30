@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Intégrations &amp; API — Meridian Group</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .nav-item:hover { background: #F5F5F7; }
+  .nav-item.on { background: #F0EFFC; color: #3730E0; font-weight: 600; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Account.dc.html" style="color: #9B9BA1;">Compte</a>
+      <span style="color: #DEDEE1;">→</span>
+      <a href="Admin.dc.html" style="color: #9B9BA1;">Administration</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Intégrations &amp; API</span>
+    </div>
+    <a href="Dashboard.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Retour à l'accueil</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+    <div style="width: 240px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Meridian Group</div>
+      <a href="Admin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Identité &amp; SSO</a>
+      <a href="Branding.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Personnalisation de marque</a>
+      <a href="Team.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Membres &amp; équipes</a>
+      <a href="GlobalRoles.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rôles globaux</a>
+      <a href="Integrations.dc.html" class="nav-item on" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Intégrations &amp; API</a>
+      <a href="ContentHealth.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Santé du contenu</a>
+      <a href="Analytics.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Analytique</a>
+      <a href="TagsAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Tags</a>
+      <a href="CustomFields.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Champs personnalisés</a>
+      <a href="TemplatesAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Modèles</a>
+      <a href="Workflows.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Workflows d'approbation</a>
+      <a href="Retention.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rétention &amp; conformité</a>
+      <a href="Attestations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Attestations</a>
+      <a href="AuditLog.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Journal d'audit</a>
+      <a href="Billing.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Facturation</a>
+    </div>
+
+    <div style="flex-grow: 1; overflow: hidden; padding: 40px 48px 0; min-width: 0;">
+      <div style="max-width: 780px;">
+
+        <h1 class="serif" style="font-weight: 400; font-size: 34px; margin: 0 0 6px; color: #0E0E10;">Intégrations &amp; API</h1>
+        <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 28px;">Synchronisation des identités et accès programmatique à la documentation.</p>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Provisioning SCIM</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px; margin-bottom: 28px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: #EEEDFD; display: flex; align-items: center; justify-content: center;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              </div>
+              <div>
+                <div style="font-size: 14px; font-weight: 600; color: #0E0E10;">Synchronisation Okta → Socle</div>
+                <div style="font-size: 12px; color: #9B9BA1;">Utilisateurs, groupes et rattachements d'espaces</div>
+              </div>
+            </div>
+            <span style="font-size: 12px; color: #1E8E5A; font-weight: 600; display: flex; align-items: center; gap: 5px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #1E8E5A;"></span>Dernière synchro il y a 6 min</span>
+          </div>
+          <div style="display: flex; gap: 24px; padding-top: 14px; border-top: 1px solid #F5F5F7;">
+            <div><div class="mono" style="font-size: 18px; color: #0E0E10; font-weight: 600;">214</div><div style="font-size: 11.5px; color: #9B9BA1;">utilisateurs synchronisés</div></div>
+            <div><div class="mono" style="font-size: 18px; color: #0E0E10; font-weight: 600;">18</div><div style="font-size: 11.5px; color: #9B9BA1;">groupes</div></div>
+            <div><div class="mono" style="font-size: 18px; color: #B7791F; font-weight: 600;">2</div><div style="font-size: 11.5px; color: #9B9BA1;">conflits à résoudre</div></div>
+          </div>
+        </div>
+
+        <a href="ApiDocs.dc.html" style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px; margin-bottom: 28px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 9px; background: #0E0E10; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: #0E0E10;">Portail développeur</div>
+              <div style="font-size: 12px; color: #9B9BA1;">Endpoints, schémas de réponse et limites de débit de l'API Socle</div>
+            </div>
+          </div>
+          <span style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Ouvrir →</span>
+        </a>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Clés API</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 28px;">
+          <div style="display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex-grow: 1;">
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Export nocturne — pipeline conformité</div>
+              <div class="mono" style="font-size: 11.5px; color: #9B9BA1; margin-top: 2px;">sk_live_••••••••••••4f2a · lecture seule</div>
+            </div>
+            <span style="font-size: 11px; color: #9B9BA1; margin-right: 16px;">utilisée il y a 3h</span>
+            <button style="font-size: 12px; color: #B54708; border: none; background: none; cursor: pointer; font-weight: 500;">Révoquer</button>
+          </div>
+          <div style="display: flex; align-items: center; padding: 13px 16px;">
+            <div style="flex-grow: 1;">
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Bot Slack #identite-acces</div>
+              <div class="mono" style="font-size: 11.5px; color: #9B9BA1; margin-top: 2px;">sk_live_••••••••••••9b31 · lecture + notifications</div>
+            </div>
+            <span style="font-size: 11px; color: #9B9BA1; margin-right: 16px;">utilisée il y a 12 min</span>
+            <button style="font-size: 12px; color: #B54708; border: none; background: none; cursor: pointer; font-weight: 500;">Révoquer</button>
+          </div>
+        </div>
+        <a href="GenerateApiKey.dc.html" class="cta" style="display: inline-block; padding: 9px 16px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600; margin-bottom: 30px;">+ Générer une clé API</a>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Webhooks</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 40px;">
+          <div style="padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #F5F5F7;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">document.published, document.approval_requested</div>
+              <div class="mono" style="font-size: 11.5px; color: #9B9BA1; margin-top: 2px;">https://hooks.meridian-group.com/socle</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <span style="font-size: 12px; color: #1E8E5A; font-weight: 600;">200 OK</span>
+              <a href="WebhookDeliveries.dc.html" style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Voir l'historique →</a>
+            </div>
+          </div>
+          <div style="padding: 13px 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">tag.added, folder.created, trash.restored</div>
+              <div class="mono" style="font-size: 11.5px; color: #9B9BA1; margin-top: 2px;">https://api.meridian-group.com/audit-relay</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <span style="font-size: 12px; color: #B54708; font-weight: 600; display: flex; align-items: center; gap: 5px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #B54708;"></span>3 échecs consécutifs</span>
+              <a href="WebhookDeliveries.dc.html" style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Voir l'historique →</a>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <span style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em;">Diffusion du journal d'audit vers un SIEM</span>
+          <a href="AuditLog.dc.html" style="font-size: 12px; font-weight: 600; color: #3730E0;">Voir le journal →</a>
+        </div>
+        <p style="font-size: 12.5px; color: #9B9BA1; margin: 0 0 14px; line-height: 1.5;">Diffuse en continu les événements du journal d'audit (connexions, publications, changements de permissions, exports) vers votre outil de supervision de sécurité.</p>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 20px;">
+
+          <div style="display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F5F5F7;">
+            <div style="width: 34px; height: 34px; border-radius: 8px; background: #FAFAFB; border: 1px solid #ECECEE; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
+              <span style="font-size: 14px; font-weight: 700; color: #43434A;">S</span>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Splunk — HTTP Event Collector</div>
+              <div class="mono" style="font-size: 11.5px; color: #9B9BA1; margin-top: 2px;">https://splunk.meridian-group.com:8088/services/collector · format CEF</div>
+            </div>
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #1E8E5A; margin-right: 16px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #1E8E5A;"></span>Connecté</span>
+            <a href="Integrations.dc.html" style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Configurer</a>
+          </div>
+
+          <div style="display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F5F5F7;">
+            <div style="width: 34px; height: 34px; border-radius: 8px; background: #F5F0FF; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Datadog — Log Intake API</div>
+              <div class="mono" style="font-size: 11.5px; color: #9B9BA1; margin-top: 2px;">https://http-intake.logs.datadoghq.eu · format JSON</div>
+            </div>
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #9B9BA1; margin-right: 16px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #C2C2C6;"></span>Non connecté</span>
+            <a href="Integrations.dc.html" style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Connecter</a>
+          </div>
+
+          <div style="display: flex; align-items: center; padding: 13px 16px;">
+            <div style="width: 34px; height: 34px; border-radius: 8px; background: #E9F1FD; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Microsoft Sentinel — Data Collector API</div>
+              <div class="mono" style="font-size: 11.5px; color: #9B9BA1; margin-top: 2px;">Table personnalisée : SocleAuditLog_CL · format JSON</div>
+            </div>
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #9B9BA1; margin-right: 16px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #C2C2C6;"></span>Non connecté</span>
+            <a href="Integrations.dc.html" style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Connecter</a>
+          </div>
+
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 8px; background: #FAFAFB; border-radius: 9px; padding: 11px 13px; margin-bottom: 40px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span style="font-size: 11.5px; color: #6B6B72; line-height: 1.5;">La diffusion est en quasi-temps réel (délai inférieur à 60 secondes) et n'affecte pas la rétention du journal d'audit dans Socle, conservé 24 mois. Un événement non livré est retenté avec le même mécanisme d'escalade que les webhooks.</span>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Sécurité des contenus intégrés</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; padding: 16px 18px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Bacs à sable (sandbox) pour les blocs enrichis</div>
+              <div style="font-size: 12px; color: #9B9BA1; max-width: 500px;">Vidéos, aperçus de lien, schémas et cartes Jira/GitHub/Figma s'affichent dans un <span class="mono" style="font-size: 11px;">&lt;iframe sandbox&gt;</span> isolé — sans exécution de script, sans accès au DOM parent ni aux cookies de session Socle.</div>
+            </div>
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #1E8E5A; background: #E7F5EA; border-radius: 7px; padding: 5px 12px; flex-shrink: 0;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1E8E5A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Actif
+            </span>
+          </div>
+        </div>
+
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid #F5F5F7;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Assainissement (sanitization) du HTML collé et importé</div>
+              <div style="font-size: 12px; color: #9B9BA1;">Retire automatiquement <span class="mono" style="font-size: 11px;">&lt;script&gt;</span>, les gestionnaires <span class="mono" style="font-size: 11px;">on*</span> et les URL <span class="mono" style="font-size: 11px;">javascript:</span> de tout contenu collé ou importé (Word, HTML, Markdown).</div>
+            </div>
+            <span style="font-size: 12px; color: #1E8E5A; font-weight: 600; flex-shrink: 0; margin-left: 16px;">Actif</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid #F5F5F7;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Content Security Policy (CSP) stricte</div>
+              <div style="font-size: 12px; color: #9B9BA1;">Bloque le chargement de scripts, styles ou trames tierces non explicitement autorisés dans la liste ci-dessous.</div>
+            </div>
+            <span style="font-size: 12px; color: #1E8E5A; font-weight: 600; flex-shrink: 0; margin-left: 16px;">Actif</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 13px 16px;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Blocage de l'exécution de code côté client dans les blocs de code</div>
+              <div style="font-size: 12px; color: #9B9BA1;">Les blocs de code sont affichés en texte pur avec coloration syntaxique — jamais interprétés ni exécutés dans le navigateur.</div>
+            </div>
+            <span style="font-size: 12px; color: #1E8E5A; font-weight: 600; flex-shrink: 0; margin-left: 16px;">Actif</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <span style="font-size: 11.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em;">Domaines autorisés pour les aperçus &amp; embeds externes</span>
+          <a href="Integrations.dc.html" style="font-size: 12px; font-weight: 600; color: #3730E0;">+ Ajouter un domaine</a>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 6px; padding: 4px 10px;"><span class="mono" style="font-size: 11.5px;">*.atlassian.net</span><span style="cursor: pointer; color: #9B9BA1;">×</span></span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 6px; padding: 4px 10px;"><span class="mono" style="font-size: 11.5px;">github.com</span><span style="cursor: pointer; color: #9B9BA1;">×</span></span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 6px; padding: 4px 10px;"><span class="mono" style="font-size: 11.5px;">figma.com</span><span style="cursor: pointer; color: #9B9BA1;">×</span></span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 6px; padding: 4px 10px;"><span class="mono" style="font-size: 11.5px;">*.youtube.com</span><span style="cursor: pointer; color: #9B9BA1;">×</span></span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 6px; padding: 4px 10px;"><span class="mono" style="font-size: 11.5px;">nist.gov</span><span style="cursor: pointer; color: #9B9BA1;">×</span></span>
+        </div>
+        <p style="font-size: 11.5px; color: #9B9BA1; margin: 0 0 40px; line-height: 1.5;">Un lien ou embed vers un domaine non listé s'affiche comme un simple lien texte non prévisualisé, avec un avertissement à l'insertion.</p>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

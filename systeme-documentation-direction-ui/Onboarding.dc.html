@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Bienvenue</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .cta:hover { background: #2C27C7; }
+  .ghost:hover { background: #F5F5F7; }
+  .step:hover { border-color: #DEDEE1; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; background: #FFFFFF; overflow: hidden;">
+
+  <!-- COLONNE VISUELLE -->
+  <div style="width: 480px; flex-shrink: 0; background: #0E0E10; display: flex; flex-direction: column; justify-content: space-between; padding: 44px 44px 52px; box-sizing: border-box; position: relative; overflow: hidden;">
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <div style="width: 26px; height: 26px; border-radius: 7px; background: #3730E0;"></div>
+      <div style="font-size: 17px; font-weight: 700; color: #FFFFFF;">Socle</div>
+    </div>
+
+    <svg width="100%" height="360" viewBox="0 0 380 360" style="opacity: 0.9; position: absolute; top: 130px; left: 50px;">
+      <circle cx="190" cy="60" r="30" fill="#7C76FF"/>
+      <text x="190" y="65" text-anchor="middle" font-size="13" font-family="IBM Plex Sans" font-weight="700" fill="#0E0E10">RL</text>
+      <line x1="190" y1="90" x2="190" y2="140" stroke="#3A3A42" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <rect x="105" y="140" width="170" height="52" rx="12" fill="none" stroke="#3A3A42" stroke-width="1.5"/>
+      <text x="190" y="162" text-anchor="middle" font-size="11.5" font-family="IBM Plex Sans" font-weight="600" fill="#F2F3F4">Espace Conformité</text>
+      <text x="190" y="179" text-anchor="middle" font-size="10" font-family="IBM Plex Mono" fill="#9B9BA1">rôle : Contributeur</text>
+      <line x1="190" y1="192" x2="60" y2="240" stroke="#2A2A30" stroke-width="1.5"/>
+      <line x1="190" y1="192" x2="190" y2="240" stroke="#2A2A30" stroke-width="1.5"/>
+      <line x1="190" y1="192" x2="320" y2="240" stroke="#2A2A30" stroke-width="1.5"/>
+      <rect x="10" y="240" width="100" height="38" rx="9" fill="none" stroke="#3A3A42" stroke-width="1.5"/>
+      <text x="60" y="263" text-anchor="middle" font-size="9.5" font-family="IBM Plex Sans" fill="#B0B0B5">Cartographie RGPD</text>
+      <rect x="140" y="240" width="100" height="38" rx="9" fill="none" stroke="#3A3A42" stroke-width="1.5"/>
+      <text x="190" y="263" text-anchor="middle" font-size="9.5" font-family="IBM Plex Sans" fill="#B0B0B5">Registre traitements</text>
+      <rect x="270" y="240" width="100" height="38" rx="9" fill="none" stroke="#3A3A42" stroke-width="1.5"/>
+      <text x="320" y="263" text-anchor="middle" font-size="9.5" font-family="IBM Plex Sans" fill="#B0B0B5">Procédure DPIA</text>
+    </svg>
+
+    <div>
+      <p class="serif" style="font-size: 22px; color: #F2F3F4; line-height: 1.4; margin: 0 0 10px;">« Chaque nouvel arrivant hérite du contexte de son équipe — pas d'une page blanche. »</p>
+      <p style="font-size: 12px; color: #6B6B72; margin: 0;">Meridian Group · Documentation interne</p>
+    </div>
+  </div>
+
+  <!-- COLONNE ONBOARDING -->
+  <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 76px; box-sizing: border-box;">
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 18px;">
+      <span style="width: 24px; height: 24px; border-radius: 50%; background: #DCF2ED; color: #0D8A7C; display: flex; align-items: center; justify-content: center;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0D8A7C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>
+      <span style="font-size: 12.5px; font-weight: 600; color: #0D8A7C; text-transform: uppercase; letter-spacing: 0.05em;">Invitation acceptée</span>
+    </div>
+
+    <h1 class="serif" style="font-weight: 400; font-size: 34px; margin: 0 0 8px; color: #0E0E10;">Bienvenue chez Meridian Group, Julie</h1>
+    <p style="font-size: 14.5px; color: #6B6B72; line-height: 1.6; margin: 0 0 28px; max-width: 440px;">Rania Lefèvre vous a ajouté(e) à l'espace <strong style="color: #0E0E10;">Conformité</strong> avec le rôle <strong style="color: #0E0E10;">Contributeur</strong>. Voici de quoi démarrer.</p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px;">
+
+      <div class="step" style="display: flex; align-items: flex-start; gap: 14px; border: 1px solid #ECECEE; border-radius: 12px; padding: 14px 16px;">
+        <div style="width: 32px; height: 32px; border-radius: 9px; background: #F0EFFC; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z" opacity="0"/><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        </div>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Parcourez les documents de l'espace</div>
+          <div style="font-size: 12.5px; color: #6B6B72; line-height: 1.5;">12 documents déjà classés — dont « Registre des traitements » et « Procédure DPIA ».</div>
+        </div>
+      </div>
+
+      <div class="step" style="display: flex; align-items: flex-start; gap: 14px; border: 1px solid #ECECEE; border-radius: 12px; padding: 14px 16px;">
+        <div style="width: 32px; height: 32px; border-radius: 9px; background: #EEEDFD; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Repérez les personnes clés</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+            <span style="width: 20px; height: 20px; border-radius: 50%; background: #EEEDFD; color: #3730E0; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1.5px solid #FFFFFF;">RL</span>
+            <span style="width: 20px; height: 20px; border-radius: 50%; background: #DFF3E6; color: #1E8E5A; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1.5px solid #FFFFFF; margin-left: -8px;">NB</span>
+            <span style="font-size: 12.5px; color: #6B6B72; margin-left: 4px;">Rania (Propriétaire) et Nora (Approbatrice) valident vos brouillons.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" style="display: flex; align-items: flex-start; gap: 14px; border: 1px solid #ECECEE; border-radius: 12px; padding: 14px 16px;">
+        <div style="width: 32px; height: 32px; border-radius: 9px; background: #FBF3E4; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B7791F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Réglez vos notifications</div>
+          <div style="font-size: 12.5px; color: #6B6B72; line-height: 1.5;">Par défaut, vous êtes alerté(e) sur les mentions et les documents à valider — modifiable à tout moment.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="Dashboard.dc.html" class="cta" style="padding: 12px 22px; border-radius: 9px; background: #3730E0; color: #FFFFFF; font-size: 14px; font-weight: 600;">Accéder à mon espace de travail →</a>
+      <a href="Account.dc.html" class="ghost" style="padding: 12px 18px; border-radius: 9px; border: 1px solid #ECECEE; color: #43434A; font-size: 14px; font-weight: 500;">Compléter mon profil</a>
+    </div>
+
+    <p style="font-size: 12px; color: #B0B0B5; margin-top: 22px;">Besoin d'aide pour démarrer ? Consultez le <a href="Glossary.dc.html" style="color: #6B6B72; text-decoration: underline;">glossaire</a> ou contactez Rania Lefèvre.</p>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

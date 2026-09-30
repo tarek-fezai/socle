@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Champs personnalisés — Meridian Group</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .nav-item:hover { background: #F5F5F7; }
+  .nav-item.on { background: #F0EFFC; color: #3730E0; font-weight: 600; }
+  .row:hover { background: #FAFAFB; }
+  .type-chip:hover { border-color: #C7C6F5; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Account.dc.html" style="color: #9B9BA1;">Compte</a>
+      <span style="color: #DEDEE1;">→</span>
+      <a href="Admin.dc.html" style="color: #9B9BA1;">Administration</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Champs personnalisés</span>
+    </div>
+    <a href="Dashboard.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Retour à l'accueil</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+    <!-- ADMIN SUB-NAV -->
+    <div style="width: 240px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Meridian Group</div>
+      <a href="Admin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Identité &amp; SSO</a>
+      <a href="Branding.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Personnalisation de marque</a>
+      <a href="Team.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Membres &amp; équipes</a>
+      <a href="GlobalRoles.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rôles globaux</a>
+      <a href="Integrations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Intégrations &amp; API</a>
+      <a href="ContentHealth.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Santé du contenu</a>
+      <a href="Analytics.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Analytique</a>
+      <a href="TagsAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Tags</a>
+      <a href="CustomFields.dc.html" class="nav-item on" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Champs personnalisés</a>
+      <a href="TemplatesAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Modèles</a>
+      <a href="Workflows.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Workflows d'approbation</a>
+      <a href="Retention.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rétention &amp; conformité</a>
+      <a href="Attestations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Attestations</a>
+      <a href="AuditLog.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Journal d'audit</a>
+      <a href="Billing.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Facturation</a>
+    </div>
+
+    <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+      <div style="flex-grow: 1; overflow: hidden; padding: 36px 40px 0; min-width: 0;">
+
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px;">
+          <h1 class="serif" style="font-weight: 400; font-size: 34px; margin: 0 0 6px; color: #0E0E10;">Champs personnalisés</h1>
+          <span style="flex-shrink: 0; padding: 9px 16px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; cursor: pointer;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nouveau champ
+          </span>
+        </div>
+        <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 26px;">Étendez les métadonnées des documents au-delà des champs fixes (propriétaire, fiabilité, tags) avec des champs propres à votre organisation.</p>
+
+        <!-- FIELDS LIST -->
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; overflow: hidden; margin-bottom: 30px;">
+
+          <div style="display: flex; align-items: center; padding: 11px 18px; font-size: 11.5px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #ECECEE; background: #FAFAFB;">
+            <div style="flex: 2;">Champ</div>
+            <div style="flex: 1.1;">Type</div>
+            <div style="flex: 1.6;">Portée</div>
+            <div style="flex: 0.9;">Obligatoire</div>
+            <div style="flex: 0.9;">Utilisation</div>
+            <div style="flex: 0.6; text-align: right;">Statut</div>
+          </div>
+
+          <!-- Field 1 -->
+          <div class="row" style="display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex: 2;">
+              <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Référence réglementaire</div>
+              <div class="mono" style="font-size: 11px; color: #9B9BA1;">reference_reglementaire</div>
+            </div>
+            <div style="flex: 1.1;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 5px; padding: 3px 8px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2.4"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+                Texte
+              </span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #6B6B72;">Espace : Conformité</div>
+            <div style="flex: 0.9;">
+              <span style="font-size: 11.5px; font-weight: 600; color: #1E8E5A;">Oui</span>
+            </div>
+            <div style="flex: 0.9; font-size: 13px; color: #6B6B72;">31 documents</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #1E8E5A;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A;"></span>Actif</span>
+            </div>
+          </div>
+
+          <!-- Field 2 -->
+          <div class="row" style="display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex: 2;">
+              <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Système concerné</div>
+              <div class="mono" style="font-size: 11px; color: #9B9BA1;">systeme_concerne</div>
+            </div>
+            <div style="flex: 1.1;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 5px; padding: 3px 8px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+                Multi-sélection
+              </span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #6B6B72;">Tous les espaces</div>
+            <div style="flex: 0.9;">
+              <span style="font-size: 11.5px; font-weight: 600; color: #9B9BA1;">Non</span>
+            </div>
+            <div style="flex: 0.9; font-size: 13px; color: #6B6B72;">208 documents</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #1E8E5A;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A;"></span>Actif</span>
+            </div>
+          </div>
+
+          <!-- Field 3 -->
+          <div class="row" style="display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex: 2;">
+              <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Date de dernier audit externe</div>
+              <div class="mono" style="font-size: 11px; color: #9B9BA1;">date_audit_externe</div>
+            </div>
+            <div style="flex: 1.1;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 5px; padding: 3px 8px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2.4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Date
+              </span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #6B6B72;">Espace : Conformité</div>
+            <div style="flex: 0.9;">
+              <span style="font-size: 11.5px; font-weight: 600; color: #9B9BA1;">Non</span>
+            </div>
+            <div style="flex: 0.9; font-size: 13px; color: #6B6B72;">6 documents</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #1E8E5A;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A;"></span>Actif</span>
+            </div>
+          </div>
+
+          <!-- Field 4 -->
+          <div class="row" style="display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex: 2;">
+              <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Criticité métier</div>
+              <div class="mono" style="font-size: 11px; color: #9B9BA1;">criticite_metier</div>
+            </div>
+            <div style="flex: 1.1;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 5px; padding: 3px 8px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><polyline points="9 12 11 14 15 10"/></svg>
+                Liste (unique)
+              </span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #6B6B72;">Tous les espaces</div>
+            <div style="flex: 0.9;">
+              <span style="font-size: 11.5px; font-weight: 600; color: #1E8E5A;">Oui</span>
+            </div>
+            <div style="flex: 0.9; font-size: 13px; color: #6B6B72;">856 documents</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #1E8E5A;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A;"></span>Actif</span>
+            </div>
+          </div>
+
+          <!-- Field 5 (draft) -->
+          <div class="row" style="display: flex; align-items: center; padding: 14px 18px;">
+            <div style="flex: 2;">
+              <div style="font-size: 14px; font-weight: 600; color: #6B6B72; margin-bottom: 2px;">Contrat fournisseur associé</div>
+              <div class="mono" style="font-size: 11px; color: #9B9BA1;">contrat_fournisseur</div>
+            </div>
+            <div style="flex: 1.1;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #9B9BA1; background: #F5F5F7; border-radius: 5px; padding: 3px 8px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2.4"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                Lien
+              </span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #9B9BA1;">Espace : Infrastructure</div>
+            <div style="flex: 0.9;">
+              <span style="font-size: 11.5px; font-weight: 600; color: #9B9BA1;">Non</span>
+            </div>
+            <div style="flex: 0.9; font-size: 13px; color: #9B9BA1;">—</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #9B9BA1;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #C2C2C6;"></span>Brouillon</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BUILDER PREVIEW -->
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Aperçu du constructeur — nouveau champ</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 22px; margin-bottom: 32px; display: flex; gap: 28px;">
+
+          <div style="flex: 1.2;">
+            <label style="display: block; font-size: 11.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">Nom du champ</label>
+            <input type="text" value="Fournisseur d'identité concerné" style="width: 100%; box-sizing: border-box; font-size: 14px; color: #0E0E10; border: 1px solid #ECECEE; border-radius: 8px; padding: 9px 12px; margin-bottom: 16px;">
+
+            <label style="display: block; font-size: 11.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">Description d'aide (optionnelle)</label>
+            <input type="text" value="Fournisseur IdP concerné par cette procédure" style="width: 100%; box-sizing: border-box; font-size: 13px; color: #43434A; border: 1px solid #ECECEE; border-radius: 8px; padding: 9px 12px; margin-bottom: 16px;">
+
+            <label style="display: block; font-size: 11.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">Portée</label>
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+              <span style="font-size: 12.5px; font-weight: 600; color: #3730E0; background: #F0EFFC; border-radius: 7px; padding: 7px 13px; cursor: pointer;">Espace spécifique</span>
+              <span style="font-size: 12.5px; font-weight: 500; color: #6B6B72; border: 1px solid #ECECEE; border-radius: 7px; padding: 7px 13px; cursor: pointer;">Tous les espaces</span>
+            </div>
+
+            <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #43434A; cursor: pointer;">
+              <span style="width: 34px; height: 19px; border-radius: 10px; background: #DEDEE1; position: relative; display: inline-block;">
+                <span style="position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #FFFFFF;"></span>
+              </span>
+              Champ obligatoire à la publication
+            </label>
+          </div>
+
+          <div style="flex: 1; border-left: 1px solid #ECECEE; padding-left: 28px;">
+            <label style="display: block; font-size: 11.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">Type de champ</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="type-chip" style="border: 1px solid #ECECEE; border-radius: 8px; padding: 10px 12px; cursor: pointer;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 2px;">Texte</div>
+                <div style="font-size: 11px; color: #9B9BA1;">Chaîne libre</div>
+              </div>
+              <div class="type-chip" style="border: 1.5px solid #3730E0; background: #FAFAFE; border-radius: 8px; padding: 10px 12px; cursor: pointer;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #3730E0; margin-bottom: 2px;">Liste (unique)</div>
+                <div style="font-size: 11px; color: #6B6B72;">Une valeur parmi une liste définie</div>
+              </div>
+              <div class="type-chip" style="border: 1px solid #ECECEE; border-radius: 8px; padding: 10px 12px; cursor: pointer;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 2px;">Multi-sélection</div>
+                <div style="font-size: 11px; color: #9B9BA1;">Plusieurs valeurs</div>
+              </div>
+              <div class="type-chip" style="border: 1px solid #ECECEE; border-radius: 8px; padding: 10px 12px; cursor: pointer;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 2px;">Date</div>
+                <div style="font-size: 11px; color: #9B9BA1;">Sélecteur de date</div>
+              </div>
+              <div class="type-chip" style="border: 1px solid #ECECEE; border-radius: 8px; padding: 10px 12px; cursor: pointer;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 2px;">Nombre</div>
+                <div style="font-size: 11px; color: #9B9BA1;">Valeur numérique</div>
+              </div>
+              <div class="type-chip" style="border: 1px solid #ECECEE; border-radius: 8px; padding: 10px 12px; cursor: pointer;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 2px;">Lien</div>
+                <div style="font-size: 11px; color: #9B9BA1;">URL externe</div>
+              </div>
+              <div class="type-chip" style="border: 1px solid #ECECEE; border-radius: 8px; padding: 10px 12px; cursor: pointer;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 2px;">Personne</div>
+                <div style="font-size: 11px; color: #9B9BA1;">Membre de l'organisation</div>
+              </div>
+              <div class="type-chip" style="border: 1px solid #ECECEE; border-radius: 8px; padding: 10px 12px; cursor: pointer;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 2px;">Case à cocher</div>
+                <div style="font-size: 11px; color: #9B9BA1;">Vrai / faux</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+              <label style="display: block; font-size: 11.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">Valeurs de la liste</label>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <span style="font-size: 11.5px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 6px; padding: 4px 9px;">Okta</span>
+                <span style="font-size: 11.5px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 6px; padding: 4px 9px;">SailPoint IdentityIQ</span>
+                <span style="font-size: 11.5px; font-weight: 600; color: #43434A; background: #F5F5F7; border-radius: 6px; padding: 4px 9px;">Entra ID</span>
+                <span style="font-size: 11.5px; font-weight: 600; color: #9B9BA1; border: 1px dashed #DEDEE1; border-radius: 6px; padding: 4px 9px;">+ Valeur</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-bottom: 32px;">
+          <a href="CustomFields.dc.html" class="ghost" style="padding: 9px 16px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Annuler</a>
+          <a href="CustomFields.dc.html" class="cta" style="padding: 9px 18px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600;">Créer le champ</a>
+        </div>
+
+      </div>
+
+      <!-- RIGHT INFO RAIL -->
+      <div style="width: 280px; flex-shrink: 0; border-left: 1px solid #ECECEE; padding: 32px 24px; display: flex; flex-direction: column; gap: 22px; overflow: hidden;">
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Où apparaissent les champs</div>
+          <p style="font-size: 12.5px; color: #6B6B72; line-height: 1.6; margin: 0;">Les champs actifs s'affichent dans le panneau « Métadonnées » de l'éditeur, dans la barre latérale de lecture, et peuvent être utilisés comme filtres de recherche et de workflow.</p>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Limites</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 12.5px; color: #43434A;">20 champs actifs maximum par organisation</span>
+            <span style="font-size: 12.5px; color: #43434A;">50 valeurs maximum par liste</span>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #ECECEE; padding-top: 18px;">
+          <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Voir aussi</div>
+          <a href="TagsAdmin.dc.html" style="display: block; font-size: 13px; color: #3730E0; font-weight: 500; padding: 4px 0;">Tags →</a>
+          <a href="TemplatesAdmin.dc.html" style="display: block; font-size: 13px; color: #3730E0; font-weight: 500; padding: 4px 0;">Modèles →</a>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

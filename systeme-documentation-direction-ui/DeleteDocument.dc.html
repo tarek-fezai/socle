@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Déplacer vers la corbeille — Politique de gestion des accès</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .ghost:hover { background: #F5F5F7; }
+  .danger-cta:hover { background: #9E3A05; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; background: #FFFFFF; overflow: hidden;">
+
+  <!-- DIMMED BACKGROUND -->
+  <div style="position: absolute; inset: 0; padding: 0 44px;">
+    <div style="height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE; opacity: 0.35;">
+      <div style="display: flex; align-items: center; gap: 7px; font-size: 13px; color: #B0B0B5;">
+        <span>Identité &amp; accès</span><span>→</span><span style="color: #0E0E10; font-weight: 500;">Politique de gestion des accès</span>
+      </div>
+      <div style="width: 100px; height: 30px; border-radius: 7px; background: #3730E0;"></div>
+    </div>
+    <div style="margin-top: 44px; opacity: 0.3;">
+      <div style="height: 34px; width: 46%; background: #F1EFEA; border-radius: 6px; margin-bottom: 22px;"></div>
+      <div style="height: 56px; border-radius: 10px; background: #F1EFEA; margin-bottom: 10px;"></div>
+      <div style="height: 56px; border-radius: 10px; background: #F1EFEA; margin-bottom: 10px;"></div>
+      <div style="height: 56px; border-radius: 10px; background: #F1EFEA;"></div>
+    </div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(14,14,16,0.45);"></div>
+
+  <!-- MODAL -->
+  <div style="position: absolute; top: 200px; left: 50%; transform: translateX(-50%); width: 480px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 24px 60px rgba(14,14,16,0.28); padding: 28px 28px 24px; box-sizing: border-box;">
+
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+      <div style="width: 36px; height: 36px; border-radius: 10px; background: #FCEEEA; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B54708" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
+      <h1 class="serif" style="font-weight: 400; font-size: 22px; margin: 0; color: #0E0E10;">Déplacer vers la corbeille ?</h1>
+    </div>
+
+    <p style="font-size: 13.5px; line-height: 1.6; color: #43434A; margin: 0 0 8px;">
+      « Politique de gestion des accès » sera retirée de l'arborescence de l'espace <strong>Identité &amp; accès</strong> et déplacée dans la corbeille.
+    </p>
+    <p style="font-size: 13.5px; line-height: 1.6; color: #43434A; margin: 0 0 20px;">
+      Le document reste restaurable pendant <strong>30 jours</strong>, après quoi il est supprimé définitivement avec son historique de versions.
+    </p>
+
+    <div style="border: 1px solid #ECECEE; border-radius: 10px; padding: 12px 14px; margin-bottom: 22px; display: flex; align-items: center; gap: 10px;">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A; flex-shrink: 0;"></span>
+      <div style="font-size: 12.5px; color: #6B6B72;">12 versions et 3 commentaires actifs seront conservés dans la corbeille.</div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <a href="Access.dc.html" class="ghost" style="padding: 9px 15px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Annuler</a>
+      <a href="Trash.dc.html" class="danger-cta" style="padding: 9px 18px; border-radius: 7px; background: #B54708; color: #FFFFFF; font-size: 13px; font-weight: 600;">Déplacer vers la corbeille</a>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

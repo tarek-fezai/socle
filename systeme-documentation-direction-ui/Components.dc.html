@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Composants d'interface</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FAFAFB; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .menu-item:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .ghost:hover { background: #F5F5F7; }
+  .tab:hover { color: #0E0E10; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FAFAFB; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 48px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE; background: #FFFFFF;">
+    <a href="Dashboard.dc.html" style="display: flex; align-items: center; gap: 9px;">
+      <div style="width: 22px; height: 22px; border-radius: 6px; background: #3730E0; flex-shrink: 0;"></div>
+      <div style="font-size: 14.5px; font-weight: 700; color: #0E0E10;">Socle</div>
+    </a>
+    <div style="display: flex; align-items: center; gap: 22px;">
+      <a href="Dashboard.dc.html" class="tab" style="font-size: 13px; font-weight: 500; color: #9B9BA1;">Accueil</a>
+      <a href="Spaces.dc.html" class="tab" style="font-size: 13px; font-weight: 500; color: #9B9BA1;">Espaces</a>
+      <a href="Components.dc.html" class="tab" style="font-size: 13px; font-weight: 600; color: #0E0E10;">Composants</a>
+    </div>
+    <a href="Notifications.dc.html" aria-label="Notifications" style="width: 34px; height: 34px; border-radius: 8px; border: 1px solid #ECECEE; display: flex; align-items: center; justify-content: center; position: relative;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#43434A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span style="position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #B54708; border: 1.5px solid #FFFFFF;"></span>
+    </a>
+  </div>
+
+  <div style="flex-shrink: 0; padding: 28px 48px 0;">
+    <h1 class="serif" style="font-weight: 400; font-size: 32px; margin: 0 0 4px; color: #0E0E10;">Composants d'interface</h1>
+    <p style="font-size: 13.5px; color: #9B9BA1; margin: 0;">Notifications, états vides, menus, confirmations et le thème sombre — pour que le système tienne debout partout, pas seulement sur les écrans principaux.</p>
+  </div>
+
+  <div style="display: flex; gap: 24px; flex-grow: 1; min-height: 0; padding: 20px 48px 40px;">
+
+    <!-- COLONNE 1 -->
+    <div style="flex: 1.1; display: flex; flex-direction: column; gap: 20px; min-width: 0;">
+
+      <div style="background: #FFFFFF; border: 1px solid #ECECEE; border-radius: 12px; padding: 20px;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px;">Notifications</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 9px; background: #F1F8F3; border: 1px solid #D3EBD9;">
+            <span style="width: 18px; height: 18px; border-radius: 50%; background: #1E8E5A; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 11px;">✓</span>
+            <span style="font-size: 13px; color: #14532D; flex-grow: 1;">Document publié avec succès</span>
+            <span style="font-size: 11px; color: #6B6B72;">à l'instant</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 9px; background: #FCEEEA; border: 1px solid #F2CFC2;">
+            <span style="width: 18px; height: 18px; border-radius: 50%; background: #B54708; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 11px;">!</span>
+            <span style="font-size: 13px; color: #7C2D12; flex-grow: 1;">Échec de l'enregistrement — connexion perdue</span>
+            <span style="font-size: 11px; color: #6B6B72; text-decoration: underline;">Réessayer</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 9px; background: #F0EFFC; border: 1px solid #DCDAFB;">
+            <span style="width: 18px; height: 18px; border-radius: 50%; background: #3730E0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 11px;">i</span>
+            <span style="font-size: 13px; color: #2A2494; flex-grow: 1;">Claire Dubois a commenté cette page</span>
+            <span style="font-size: 11px; color: #6B6B72;">il y a 2 min</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px; flex-shrink: 0;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">Tags, dossiers &amp; corbeille</div>
+
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #3730E0; background: #F0EFFC; border-radius: 6px; padding: 3px 8px 3px 9px;">IAM<span style="cursor: pointer; color: #9B95E6;">×</span></span>
+          <span style="display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; color: #B7791F; background: #FDF3E3; border-radius: 6px; padding: 3px 8px;">RGPD</span>
+          <span style="display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; color: #B54708; background: #FCEEEA; border-radius: 6px; padding: 3px 8px;">Critique</span>
+          <span style="font-size: 11px; color: #9B9BA1; border: 1px dashed #DEDEE1; border-radius: 6px; padding: 3px 8px;">+ Tag</span>
+        </div>
+
+        <div style="border: 1px solid #ECECEE; border-radius: 8px; padding: 4px; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 6px; padding: 6px 6px 4px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            <span style="font-size: 11.5px; font-weight: 600; color: #6B6B72; flex-grow: 1;">Procédures</span>
+            <span style="width: 18px; height: 18px; border-radius: 5px; border: 1px solid #ECECEE; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #3730E0;">+</span>
+          </div>
+          <div style="padding: 6px 6px 6px 22px; font-size: 12.5px; color: #4B4B52;">Provisioning des comptes</div>
+        </div>
+
+        <div style="border: 1px solid #F2CFC2; background: #FCF8F6; border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="min-width: 0;">
+            <div style="font-size: 12.5px; font-weight: 500; color: #0E0E10; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Registre des accès à privilèges</div>
+            <div style="font-size: 10.5px; color: #B7791F;">26 j restants</div>
+          </div>
+          <div style="display: flex; gap: 8px; flex-shrink: 0;">
+            <span style="font-size: 11.5px; font-weight: 600; color: #3730E0;">Restaurer</span>
+            <span style="font-size: 11.5px; font-weight: 600; color: #B54708;">Supprimer</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #ECECEE; border-radius: 12px; padding: 20px; flex-grow: 1;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px;">États d'interface</div>
+        <div style="display: flex; gap: 14px;">
+          <div style="flex: 1; border: 1px dashed #DEDEE1; border-radius: 10px; padding: 20px 14px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="1.6"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>
+            <div style="font-size: 12.5px; font-weight: 600; color: #43434A;">Aucun document</div>
+            <div style="font-size: 11px; color: #9B9BA1; line-height: 1.4;">Cet espace ne contient encore rien</div>
+            <span class="cta" style="margin-top: 2px; padding: 5px 12px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 11.5px; font-weight: 600;">+ Créer</span>
+          </div>
+          <div style="flex: 1; border: 1px dashed #DEDEE1; border-radius: 10px; padding: 20px 14px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div style="font-size: 12.5px; font-weight: 600; color: #43434A;">Aucun résultat</div>
+            <div style="font-size: 11px; color: #9B9BA1; line-height: 1.4;">Pour « provisioning saas externe »</div>
+            <span class="ghost" style="margin-top: 2px; padding: 5px 12px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 11.5px; font-weight: 500;">Effacer</span>
+          </div>
+          <div style="flex: 1; border: 1px solid #ECECEE; border-radius: 10px; padding: 20px 14px; display: flex; flex-direction: column; gap: 9px;">
+            <div style="font-size: 11px; color: #9B9BA1; margin-bottom: 2px;">Chargement</div>
+            <div style="height: 12px; width: 70%; border-radius: 4px; background: linear-gradient(90deg, #ECECEE 25%, #F5F5F7 50%, #ECECEE 75%);"></div>
+            <div style="height: 9px; width: 100%; border-radius: 4px; background: linear-gradient(90deg, #ECECEE 25%, #F5F5F7 50%, #ECECEE 75%);"></div>
+            <div style="height: 9px; width: 90%; border-radius: 4px; background: linear-gradient(90deg, #ECECEE 25%, #F5F5F7 50%, #ECECEE 75%);"></div>
+            <div style="height: 9px; width: 60%; border-radius: 4px; background: linear-gradient(90deg, #ECECEE 25%, #F5F5F7 50%, #ECECEE 75%);"></div>
+            <div style="font-size: 10.5px; color: #B0B0B5; margin-top: auto;">Squelette pendant la récupération des données</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- COLONNE 2 -->
+    <div style="flex: 0.85; display: flex; flex-direction: column; gap: 20px; min-width: 0;">
+
+      <div style="background: #FFFFFF; border: 1px solid #ECECEE; border-radius: 12px; padding: 20px;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px;">Menu contextuel</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; box-shadow: 0 4px 16px rgba(14,14,16,0.06); width: 220px; padding: 6px; display: flex; flex-direction: column;">
+          <a href="Main.dc.html" class="menu-item" style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; color: #33333C;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+            Renommer
+          </a>
+          <a href="Main.dc.html" class="menu-item" style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; color: #33333C;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2"><path d="M5 9l7-7 7 7M12 2v14"/><path d="M5 15v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+            Déplacer
+          </a>
+          <a href="Main.dc.html" class="menu-item" style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; color: #33333C;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Dupliquer
+          </a>
+          <a href="History.dc.html" class="menu-item" style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; color: #33333C;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            Voir l'historique
+          </a>
+          <div style="height: 1px; background: #ECECEE; margin: 5px 4px;"></div>
+          <a href="Main.dc.html" class="menu-item" style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; color: #B7791F;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B7791F" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg>
+            Archiver
+          </a>
+          <a href="Main.dc.html" class="menu-item" style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; color: #B54708;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B54708" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Supprimer
+          </a>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #ECECEE; border-radius: 12px; padding: 14px 16px;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;">Champ — validation</div>
+        <label style="display: block; font-size: 11px; font-weight: 600; color: #43434A; margin-bottom: 5px;">Domaine autorisé</label>
+        <div style="border: 1.5px solid #E2A388; background: #FCEEEA; border-radius: 8px; padding: 7px 11px; margin-bottom: 5px;">
+          <span style="font-size: 12.5px; color: #7C2D12;">meridiangroup,com</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#B54708" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#B54708"/></svg>
+          <span style="font-size: 11px; color: #B54708;">Format invalide — point manquant avant l'extension</span>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #ECECEE; border-radius: 12px; padding: 20px; flex-grow: 1; display: flex; flex-direction: column;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px;">Modale de confirmation</div>
+        <div style="flex-grow: 1; border-radius: 10px; background: #F5F5F7; display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="width: 320px; background: #FFFFFF; border: 1px solid #ECECEE; border-radius: 12px; box-shadow: 0 8px 24px rgba(14,14,16,0.10); padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: #0E0E10; margin-bottom: 8px;">Archiver ce document ?</div>
+            <p style="margin: 0 0 18px; font-size: 13px; line-height: 1.6; color: #6B6B72;">« Plan de reprise d'activité » sera retiré de la navigation mais restera consultable via l'historique. Cette action peut être annulée.</p>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <span class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Annuler</span>
+              <span style="padding: 7px 14px; border-radius: 7px; background: #B7791F; color: #FFFFFF; font-size: 13px; font-weight: 600;">Archiver</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- COLONNE 3 — DARK MODE -->
+    <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+      <div style="background: #0E0E10; border-radius: 12px; padding: 20px; flex-grow: 1; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 11px; font-weight: 600; color: #6B6B72; text-transform: uppercase; letter-spacing: 0.06em;">Thème sombre</div>
+
+        <div style="display: flex; align-items: center; gap: 9px;">
+          <div style="width: 22px; height: 22px; border-radius: 6px; background: #7C76FF; flex-shrink: 0;"></div>
+          <div style="font-size: 14px; font-weight: 700; color: #F2F3F4;">Socle</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <div style="padding: 7px 10px; border-radius: 7px; background: #1C1C22; color: #C9C7FF; font-size: 13px; font-weight: 600;">Politique de gestion des accès</div>
+          <div style="padding: 7px 10px; border-radius: 7px; color: #9B9BA1; font-size: 13px;">Procédure de provisioning</div>
+          <div style="padding: 7px 10px; border-radius: 7px; color: #9B9BA1; font-size: 13px;">Rôles &amp; habilitations</div>
+        </div>
+
+        <div style="border: 1px solid #2A2A30; border-radius: 10px; padding: 16px; margin-top: 4px;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+            <span style="font-size: 11.5px; font-weight: 600; color: #6EE7A8; display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #6EE7A8;"></span>Validé</span>
+          </div>
+          <div class="serif" style="font-size: 22px; color: #F2F3F4; margin-bottom: 8px;">Politique de gestion des accès</div>
+          <p style="margin: 0; font-size: 12.5px; line-height: 1.6; color: #9B9BA1;">Tout accès accordé doit être strictement nécessaire à l'exercice de la fonction.</p>
+        </div>
+
+        <div style="margin-top: auto; display: flex; align-items: center; gap: 8px;">
+          <span class="cta" style="padding: 7px 14px; border-radius: 7px; background: #7C76FF; color: #0E0E10; font-size: 12.5px; font-weight: 600;">Publier</span>
+          <span style="padding: 7px 14px; border-radius: 7px; border: 1px solid #2A2A30; color: #C7C6C6; font-size: 12.5px; font-weight: 500;">Aperçu</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

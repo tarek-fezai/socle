@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Accès — Politique de gestion des accès</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .tab:hover { color: #0E0E10; }
+  .cta:hover { background: #2C27C7; }
+  .option:hover { border-color: #C7C6F5; }
+  .row:hover { background: #FAFAFB; }
+  .nav-item:hover { background: #F5F5F7; }
+  .icon-item:hover { background: #F5F5F7; }
+  .collapse-btn:hover { background: #F5F5F7; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; background: #FFFFFF; overflow: hidden;">
+
+  <!-- SIDEBAR -->
+  <div style="width: {{sidebarWidth}}px; flex-shrink: 0; box-sizing: border-box; border-right: 1px solid #ECECEE; padding: {{sidebarPad}}; display: flex; flex-direction: column; gap: 24px; height: 900px; overflow: hidden; transition: width 180ms ease;">
+
+    <div style="display: flex; align-items: center; justify-content: {{logoJustify}}; gap: 9px;">
+      <sc-if value="{{expanded}}" hint-placeholder-val="{{true}}">
+        <a href="Dashboard.dc.html" style="display: flex; align-items: center; gap: 9px;">
+          <div style="width: 24px; height: 24px; border-radius: 7px; background: #3730E0; flex-shrink: 0;"></div>
+          <div style="font-size: 15px; font-weight: 700; color: #0E0E10; letter-spacing: -0.01em;">Socle</div>
+        </a>
+      </sc-if>
+      <sc-if value="{{collapsed}}" hint-placeholder-val="{{false}}">
+        <div style="width: 24px; height: 24px; border-radius: 7px; background: #3730E0; flex-shrink: 0;"></div>
+      </sc-if>
+      <button onClick="{{toggle}}" class="collapse-btn" aria-label="Réduire ou agrandir le menu" style="width: 26px; height: 26px; border-radius: 6px; border: 1px solid #ECECEE; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;">
+        <sc-if value="{{expanded}}" hint-placeholder-val="{{true}}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </sc-if>
+        <sc-if value="{{collapsed}}" hint-placeholder-val="{{false}}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </sc-if>
+      </button>
+    </div>
+
+    <sc-if value="{{expanded}}" hint-placeholder-val="{{true}}">
+      <a href="Search.dc.html" style="display: flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid #ECECEE; border-radius: 8px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span style="font-size: 12.5px; color: #9B9BA1; flex-grow: 1;">Rechercher</span>
+        <span style="font-size: 10.5px; color: #C2C2C6; border: 1px solid #ECECEE; border-radius: 4px; padding: 1px 5px;">⌘K</span>
+      </a>
+
+      <div style="display: flex; flex-direction: column; gap: 1px; overflow: hidden;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 6px;">Identité &amp; accès</div>
+
+        <a href="Main.dc.html" class="nav-item" style="display: block; padding: 7px 10px; border-radius: 7px; background: #F0EFFC; color: #3730E0; font-size: 13.5px; font-weight: 600;">
+          Politique de gestion des accès
+        </a>
+
+        <a href="FolderProcedures.dc.html" class="nav-item" style="display: flex; align-items: center; gap: 6px; padding: 10px 10px 4px; border-radius: 7px; font-size: 11.5px; font-weight: 600; color: #6B6B72;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          Procédures
+        </a>
+        <a href="Main.dc.html" class="nav-item" style="display: block; padding: 7px 10px 7px 22px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+          Provisioning des comptes
+        </a>
+        <a href="Main.dc.html" class="nav-item" style="display: block; padding: 7px 10px 7px 22px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+          Dé-provisioning des comptes
+        </a>
+        <a href="Main.dc.html" class="nav-item" style="display: block; padding: 7px 10px 7px 22px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+          Revue périodique des droits
+        </a>
+
+        <a href="FolderReference.dc.html" class="nav-item" style="display: flex; align-items: center; gap: 6px; padding: 10px 10px 4px; border-radius: 7px; font-size: 11.5px; font-weight: 600; color: #6B6B72;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          Référence
+        </a>
+        <a href="Main.dc.html" class="nav-item" style="display: block; padding: 7px 10px 7px 22px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+          Rôles &amp; habilitations
+        </a>
+        <a href="Glossary.dc.html" class="nav-item" style="display: block; padding: 7px 10px 7px 22px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+          Glossaire des permissions
+        </a>
+
+        <a href="Edit.dc.html" class="nav-item" style="display: flex; align-items: center; padding: 7px 10px; border-radius: 7px; color: #9B9BA1; font-size: 13.5px; margin-top: 2px;">
+          Registre des accès à privilèges
+          <span style="margin-left: auto; font-size: 10px; color: #B0B0B5;">brouillon</span>
+        </a>
+
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 18px 10px 6px;">Infrastructure</div>
+        <a href="Main.dc.html" class="nav-item" style="display: block; padding: 7px 10px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+          Architecture réseau
+        </a>
+        <a href="Main.dc.html" class="nav-item" style="display: block; padding: 7px 10px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+          Plan de reprise d'activité
+        </a>
+
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 18px 10px 6px;">Conformité</div>
+        <a href="Main.dc.html" class="nav-item" style="display: block; padding: 7px 10px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+          Registre des traitements
+        </a>
+      </div>
+
+      <div style="display: flex; gap: 6px;">
+        <a href="NewDocument.dc.html" class="nav-item" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 6px; border-radius: 7px; border: 1px solid #ECECEE; color: #3730E0; font-size: 12px; font-weight: 600;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Document
+        </a>
+        <a href="NewFolder.dc.html" class="nav-item" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 6px; border-radius: 7px; border: 1px solid #ECECEE; color: #3730E0; font-size: 12px; font-weight: 600;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Dossier
+        </a>
+      </div>
+
+      <div style="margin-top: auto; display: flex; align-items: center; gap: 9px; padding: 4px 2px;">
+        <div style="width: 26px; height: 26px; border-radius: 50%; background: #0E0E10; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; color: #FFFFFF;">TF</div>
+        <div style="font-size: 12.5px; color: #4B4B52; font-weight: 500;">Tarek Fezai</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{collapsed}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+        <a href="Main.dc.html" class="icon-item" title="Politique de gestion des accès" style="width: 36px; height: 36px; border-radius: 8px; background: #F0EFFC; display: flex; align-items: center; justify-content: center;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #3730E0;"></span>
+        </a>
+        <a href="Main.dc.html" class="icon-item" title="Provisioning des comptes" style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #C2C2C6;"></span>
+        </a>
+        <a href="Main.dc.html" class="icon-item" title="Dé-provisioning des comptes" style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #C2C2C6;"></span>
+        </a>
+        <a href="Main.dc.html" class="icon-item" title="Revue périodique des droits" style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #C2C2C6;"></span>
+        </a>
+        <a href="Main.dc.html" class="icon-item" title="Rôles &amp; habilitations" style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #C2C2C6;"></span>
+        </a>
+        <a href="Glossary.dc.html" class="icon-item" title="Glossaire des permissions" style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #C2C2C6;"></span>
+        </a>
+        <a href="Edit.dc.html" class="icon-item" title="Registre des accès à privilèges (brouillon)" style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid #DEDEE1;"></span>
+        </a>
+      </div>
+      <a href="NewDocument.dc.html" class="icon-item" title="Nouveau document ou dossier" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #ECECEE; display: flex; align-items: center; justify-content: center; align-self: center;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </a>
+            <div style="margin-top: auto; display: flex; justify-content: center; padding: 4px 0;">
+        <div style="width: 26px; height: 26px; border-radius: 50%; background: #0E0E10; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; color: #FFFFFF;">TF</div>
+      </div>
+    </sc-if>
+
+  </div>
+
+  <!-- MAIN COLUMN -->
+  <div style="flex-grow: 1; height: 900px; overflow: hidden; display: flex; flex-direction: column; min-width: 0;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <span>Identité &amp; accès</span>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Politique de gestion des accès</span>
+    </div>
+    <a href="InviteMember.dc.html" class="cta" style="padding: 7px 16px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600;">+ Inviter</a>
+  </div>
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 44px; padding: 0 44px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid #ECECEE;">
+    <a href="Main.dc.html" class="tab" style="font-size: 13px; font-weight: 500; color: #9B9BA1; padding: 6px 0;">Lire</a>
+    <a href="Edit.dc.html" class="tab" style="font-size: 13px; font-weight: 500; color: #9B9BA1; padding: 6px 0;">Modifier</a>
+    <a href="History.dc.html" class="tab" style="font-size: 13px; font-weight: 500; color: #9B9BA1; padding: 6px 0;">Historique</a>
+    <a href="Review.dc.html" class="tab" style="font-size: 13px; font-weight: 500; color: #9B9BA1; padding: 6px 0; display: flex; align-items: center; gap: 6px;">Commentaires <span style="background: #3730E0; color: #FFFFFF; font-size: 10px; font-weight: 600; border-radius: 8px; padding: 1px 6px;">3</span></a>
+    <a href="Access.dc.html" class="tab" style="font-size: 13px; font-weight: 600; color: #0E0E10; padding: 6px 0; border-bottom: 2px solid #3730E0;">Accès</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; justify-content: center; padding: 44px 40px 0;">
+    <div style="width: 760px; flex-shrink: 0;">
+
+      <h1 class="serif" style="font-weight: 400; font-size: 36px; margin: 0 0 28px; color: #0E0E10;">Accès et permissions</h1>
+
+      <div style="font-size: 13px; font-weight: 600; color: #0E0E10; margin-bottom: 12px;">Visibilité</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px;">
+        <div class="option" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1.5px solid #3730E0; border-radius: 10px; background: #FAFAFE;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; border: 5px solid #3730E0; margin-top: 2px; flex-shrink: 0;"></div>
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Organisation entière</div>
+            <div style="font-size: 12.5px; color: #6B6B72; margin-top: 2px;">Toute personne authentifiée peut consulter ce document.</div>
+          </div>
+        </div>
+        <div class="option" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #ECECEE; border-radius: 10px;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #C7C6C6; margin-top: 2px; flex-shrink: 0;"></div>
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Équipe Identité seule</div>
+            <div style="font-size: 12.5px; color: #6B6B72; margin-top: 2px;">Restreint aux membres de l'équipe propriétaire de l'espace.</div>
+          </div>
+        </div>
+        <div class="option" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #ECECEE; border-radius: 10px;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #C7C6C6; margin-top: 2px; flex-shrink: 0;"></div>
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Personnes spécifiques</div>
+            <div style="font-size: 12.5px; color: #6B6B72; margin-top: 2px;">Accès limité aux personnes et équipes listées ci-dessous.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 13px; font-weight: 600; color: #0E0E10; margin-bottom: 12px;">Personnes et équipes</div>
+      <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden;">
+
+        <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7;">
+          <div style="flex-grow: 1; display: flex; align-items: center; gap: 10px;">
+            <div style="width: 26px; height: 26px; border-radius: 50%; background: #0E0E10; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #FFFFFF;">TF</div>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Tarek Fezai</div>
+              <div style="font-size: 11.5px; color: #9B9BA1;">Actif il y a 20 min</div>
+            </div>
+          </div>
+          <span style="font-size: 12.5px; color: #43434A; font-weight: 500; padding: 5px 12px; border: 1px solid #ECECEE; border-radius: 7px;">Propriétaire</span>
+        </div>
+
+        <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7;">
+          <div style="flex-grow: 1; display: flex; align-items: center; gap: 10px;">
+            <div style="width: 26px; height: 26px; border-radius: 50%; background: #EEEDFD; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #3730E0;">CD</div>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Claire Dubois</div>
+              <div style="font-size: 11.5px; color: #9B9BA1;">Actif il y a 1h</div>
+            </div>
+          </div>
+          <span style="font-size: 12.5px; color: #43434A; font-weight: 500; padding: 5px 12px; border: 1px solid #ECECEE; border-radius: 7px;">Approbatrice</span>
+        </div>
+
+        <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7;">
+          <div style="flex-grow: 1; display: flex; align-items: center; gap: 10px;">
+            <div style="width: 26px; height: 26px; border-radius: 50%; background: #F2E4DC; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #8A4A2E;">YM</div>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Yanis M.</div>
+              <div style="font-size: 11.5px; color: #9B9BA1;">Actif il y a 3h</div>
+            </div>
+          </div>
+          <span style="font-size: 12.5px; color: #43434A; font-weight: 500; padding: 5px 12px; border: 1px solid #ECECEE; border-radius: 7px;">Contributeur</span>
+        </div>
+
+        <div class="row" style="display: flex; align-items: center; padding: 12px 16px;">
+          <div style="flex-grow: 1; display: flex; align-items: center; gap: 10px;">
+            <div style="width: 26px; height: 26px; border-radius: 8px; background: #F1EFEA; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #6B6862;">⬡</div>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Équipe Identité &amp; accès</div>
+              <div style="font-size: 11.5px; color: #9B9BA1;">12 membres · hérité de l'espace</div>
+            </div>
+          </div>
+          <span style="font-size: 12.5px; color: #43434A; font-weight: 500; padding: 5px 12px; border: 1px solid #ECECEE; border-radius: 7px;">Lecteurs</span>
+        </div>
+
+      </div>
+
+      <div style="margin-top: 32px; border: 1px solid #F2CFC2; background: #FCEEEA; border-radius: 10px; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600; color: #7C2D12; margin-bottom: 2px;">Déplacer ce document vers la corbeille</div>
+          <div style="font-size: 12px; color: #9A4A2E;">Réservé au propriétaire — restaurable pendant 30 jours avant suppression définitive.</div>
+        </div>
+        <a href="DeleteDocument.dc.html" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #E2A388; color: #B54708; font-size: 13px; font-weight: 600;">Supprimer</a>
+      </div>
+
+    </div>
+  </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { collapsed: false };
+  }
+  renderVals() {
+    const collapsed = !!this.state.collapsed;
+    return {
+      collapsed,
+      expanded: !collapsed,
+      sidebarWidth: collapsed ? 72 : 268,
+      sidebarPad: collapsed ? '20px 16px' : '28px 22px',
+      logoJustify: collapsed ? 'center' : 'space-between',
+      toggle: () => this.setState({ collapsed: !this.state.collapsed }),
+    };
+  }
+}
+</script>
+</body>
+</html>

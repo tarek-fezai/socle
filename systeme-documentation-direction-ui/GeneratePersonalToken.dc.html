@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Générer un jeton d'accès personnel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .scope:hover { border-color: #3730E0; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; background: #FFFFFF; overflow: hidden;">
+
+  <!-- DIMMED BACKGROUND -->
+  <div style="position: absolute; inset: 0; padding: 44px 40px 0; display: flex; justify-content: center; opacity: 0.32;">
+    <div style="width: 640px; flex-shrink: 0;">
+      <div style="height: 34px; width: 260px; background: #F1EFEA; border-radius: 8px; margin-bottom: 28px;"></div>
+      <div style="height: 90px; border: 1px solid #ECECEE; border-radius: 10px; margin-bottom: 16px;"></div>
+      <div style="height: 60px; border: 1px solid #ECECEE; border-radius: 10px;"></div>
+    </div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(14,14,16,0.45);"></div>
+
+  <!-- MODALE -->
+  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 480px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 24px 60px rgba(14,14,16,0.28); padding: 28px 28px 24px; box-sizing: border-box;">
+
+    <h2 class="serif" style="font-weight: 400; font-size: 24px; margin: 0 0 6px; color: #0E0E10;">Générer un jeton d'accès personnel</h2>
+    <p style="font-size: 13px; color: #9B9BA1; margin: 0 0 22px; line-height: 1.5;">Ce jeton agit avec vos permissions personnelles. Il n'est affiché qu'une seule fois — conservez-le dans un gestionnaire de secrets.</p>
+
+    <label style="display: block; font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 6px;">Nom du jeton</label>
+    <input type="text" value="Jeton — sans nom" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #ECECEE; border-radius: 8px; font-size: 13.5px; color: #0E0E10; margin-bottom: 18px; font-family: inherit;">
+
+    <label style="display: block; font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 8px;">Portée d'accès</label>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px;">
+      <label class="scope" style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1.5px solid #3730E0; border-radius: 9px; background: #F8F8FE; cursor: pointer;">
+        <input type="radio" name="scope" checked style="accent-color: #3730E0;">
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Lecture seule</div>
+          <div style="font-size: 11.5px; color: #9B9BA1;">Consultation des documents auxquels vous avez accès</div>
+        </div>
+      </label>
+      <label class="scope" style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1.5px solid #ECECEE; border-radius: 9px; cursor: pointer;">
+        <input type="radio" name="scope" style="accent-color: #3730E0;">
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10;">Lecture + écriture</div>
+          <div style="font-size: 11.5px; color: #9B9BA1;">Créer et modifier des documents en votre nom</div>
+        </div>
+      </label>
+    </div>
+
+    <label style="display: block; font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 8px;">Expiration</label>
+    <div style="display: flex; gap: 8px; margin-bottom: 22px;">
+      <span style="flex: 1; text-align: center; padding: 9px; border: 1.5px solid #3730E0; border-radius: 8px; background: #F8F8FE; font-size: 12.5px; font-weight: 600; color: #3730E0;">90 jours</span>
+      <span style="flex: 1; text-align: center; padding: 9px; border: 1px solid #ECECEE; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: #43434A;">1 an</span>
+      <span style="flex: 1; text-align: center; padding: 9px; border: 1px solid #ECECEE; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: #43434A;">Sans expiration</span>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <a href="Account.dc.html" class="ghost" style="flex: 1; text-align: center; padding: 11px; border-radius: 9px; border: 1px solid #ECECEE; color: #43434A; font-size: 13.5px; font-weight: 500;">Annuler</a>
+      <a href="Account.dc.html" class="cta" style="flex: 1.4; text-align: center; padding: 11px; border-radius: 9px; background: #3730E0; color: #FFFFFF; font-size: 13.5px; font-weight: 600;">Générer le jeton</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

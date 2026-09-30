@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Espace — Identité &amp; accès</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .tree-item:hover { background: #F5F5F7; }
+  .swatch:hover { transform: scale(1.08); }
+  .cta:hover { background: #2C27C7; }
+  .danger:hover { background: #FCEEEA; }
+  .ghost:hover { background: #F5F5F7; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Spaces.dc.html" style="color: #9B9BA1;">Espaces</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Identité &amp; accès</span>
+    </div>
+    <a href="NewDocument.dc.html" class="cta" style="padding: 7px 16px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600;">+ Nouveau document</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+    <!-- ARBORESCENCE -->
+    <div style="width: 420px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 28px 24px; overflow: hidden; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 22px;">
+        <div style="width: 30px; height: 30px; border-radius: 8px; background: #3730E0; flex-shrink: 0;"></div>
+        <div>
+          <div style="font-size: 16px; font-weight: 700; color: #0E0E10;">Identité &amp; accès</div>
+          <div style="font-size: 11.5px; color: #9B9BA1;">24 documents</div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em;">Arborescence</span>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; background: #F0EFFC; border-radius: 8px; padding: 7px 10px; margin-bottom: 6px;">
+        <span style="font-size: 12px; font-weight: 600; color: #3730E0;">2 sélectionnés</span>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <a href="TagsAdmin.dc.html" title="Taguer" aria-label="Taguer la sélection" style="width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2.59 12.58a2 2 0 0 1 0-2.83L9.76 2.58A2 2 0 0 1 11.17 2H18a2 2 0 0 1 2 2v6.83a2 2 0 0 1-.59 1.41z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </a>
+          <a href="NewFolder.dc.html" title="Déplacer vers un dossier" aria-label="Déplacer la sélection" style="width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7-7 7 7M12 2v14"/><path d="M5 15v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+          </a>
+          <a href="ExportFolder.dc.html" title="Exporter" aria-label="Exporter la sélection" style="width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </a>
+          <a href="DeleteDocument.dc.html" title="Supprimer" aria-label="Supprimer la sélection" style="width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B54708" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </a>
+          <button aria-label="Désélectionner" style="width: 22px; height: 22px; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 2px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <a href="Main.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 6px; font-size: 13.5px; color: #0E0E10; font-weight: 500;">
+          <span role="checkbox" aria-checked="false" style="width: 13px; height: 13px; border-radius: 4px; border: 1.5px solid #DEDEE1; flex-shrink: 0;"></span>
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A; flex-shrink: 0;"></span>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Politique de gestion des accès</span>
+          <span style="flex-shrink: 0; font-size: 10.5px; font-weight: 400; color: #B0B0B5;" title="Modifié par Tarek Fezai · 12 septembre 2026 à 14:22">TF · 15 j</span>
+        </a>
+
+        <div style="display: flex; align-items: center; gap: 6px; padding: 10px 8px 4px;">
+          <a href="FolderProcedures.dc.html" class="tree-item" style="flex-grow: 1; display: flex; align-items: center; gap: 6px; border-radius: 6px; padding: 2px 4px; font-size: 12px; font-weight: 600; color: #6B6B72;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            Procédures
+          </a>
+          <a href="NewDocument.dc.html" class="tree-item" aria-label="Ajouter dans Procédures" style="width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </a>
+        </div>
+        <a href="Main.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 6px 8px 6px 26px; border-radius: 6px; font-size: 13.5px; color: #4B4B52;">
+          <span role="checkbox" aria-checked="true" style="width: 13px; height: 13px; border-radius: 4px; background: #3730E0; flex-shrink: 0; display: flex; align-items: center; justify-content: center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A; flex-shrink: 0;"></span>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Provisioning des comptes</span>
+          <span style="flex-shrink: 0; font-size: 10.5px; font-weight: 400; color: #B0B0B5;" title="Modifié par Tarek Fezai · 12 septembre 2026 à 14:22">TF · 15 j</span>
+        </a>
+        <a href="Main.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 6px 8px 6px 26px; border-radius: 6px; font-size: 13.5px; color: #4B4B52;">
+          <span role="checkbox" aria-checked="true" style="width: 13px; height: 13px; border-radius: 4px; background: #3730E0; flex-shrink: 0; display: flex; align-items: center; justify-content: center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A; flex-shrink: 0;"></span>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Dé-provisioning des comptes</span>
+          <span style="flex-shrink: 0; font-size: 10.5px; font-weight: 400; color: #B0B0B5;" title="Modifié par Claire Dubois · 3 août 2026">CD · 2 mois</span>
+        </a>
+        <a href="Main.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 6px 8px 6px 26px; border-radius: 6px; font-size: 13.5px; color: #4B4B52;">
+          <span role="checkbox" aria-checked="false" style="width: 13px; height: 13px; border-radius: 4px; border: 1.5px solid #DEDEE1; flex-shrink: 0;"></span>
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #B7791F; flex-shrink: 0;"></span>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Revue périodique des droits</span>
+          <span style="flex-shrink: 0; font-size: 10.5px; font-weight: 400; color: #B0B0B5;" title="Modifié par Yanis M. · 20 septembre 2026">YM · 7 j</span>
+        </a>
+
+        <div style="display: flex; align-items: center; gap: 6px; padding: 10px 8px 4px;">
+          <a href="FolderReference.dc.html" class="tree-item" style="flex-grow: 1; display: flex; align-items: center; gap: 6px; border-radius: 6px; padding: 2px 4px; font-size: 12px; font-weight: 600; color: #6B6B72;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            Référence
+          </a>
+          <a href="NewDocument.dc.html" class="tree-item" aria-label="Ajouter dans Référence" style="width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </a>
+        </div>
+        <a href="Main.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 6px 8px 6px 26px; border-radius: 6px; font-size: 13.5px; color: #4B4B52;">
+          <span role="checkbox" aria-checked="false" style="width: 13px; height: 13px; border-radius: 4px; border: 1.5px solid #DEDEE1; flex-shrink: 0;"></span>
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #8B95A1; flex-shrink: 0;"></span>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Rôles &amp; habilitations</span>
+          <span style="flex-shrink: 0; font-size: 10.5px; font-weight: 400; color: #B0B0B5;" title="Modifié par Rania Lefèvre · 18 juillet 2026">RL · 2 mois</span>
+        </a>
+        <a href="Glossary.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 6px 8px 6px 26px; border-radius: 6px; font-size: 13.5px; color: #4B4B52;">
+          <span role="checkbox" aria-checked="false" style="width: 13px; height: 13px; border-radius: 4px; border: 1.5px solid #DEDEE1; flex-shrink: 0;"></span>
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #8B95A1; flex-shrink: 0;"></span>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Glossaire des permissions</span>
+          <span style="flex-shrink: 0; font-size: 10.5px; font-weight: 400; color: #B0B0B5;" title="Modifié par Sami Lahlou · 2 septembre 2026">SL · 3 sem.</span>
+        </a>
+
+        <a href="Edit.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 6px; font-size: 13.5px; color: #9B9BA1; margin-top: 6px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid #DEDEE1; flex-shrink: 0;"></span>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Registre des accès à privilèges</span>
+          <span style="flex-shrink: 0; font-size: 10.5px; color: #B0B0B5;">brouillon</span>
+        </a>
+      </div>
+
+      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 1px;">
+        <a href="NewDocument.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 8px; border-radius: 6px; font-size: 13px; color: #3730E0; font-weight: 600;">
+          + Nouveau document
+        </a>
+        <a href="NewFolder.dc.html" class="tree-item" style="display: flex; align-items: center; gap: 7px; padding: 8px; border-radius: 6px; font-size: 13px; color: #3730E0; font-weight: 600;">
+          + Nouveau dossier
+        </a>
+      </div>
+    </div>
+
+    <!-- PARAMÈTRES -->
+    <div style="flex-grow: 1; overflow: hidden; display: flex; justify-content: center; padding: 36px 40px 0; min-width: 0;">
+      <div style="width: 620px; flex-shrink: 0;">
+
+        <h1 class="serif" style="font-weight: 400; font-size: 32px; margin: 0 0 28px; color: #0E0E10;">Paramètres de l'espace</h1>
+
+        <div style="margin-bottom: 26px;">
+          <label style="display: block; font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 6px;">Nom de l'espace</label>
+          <div style="border: 1px solid #ECECEE; border-radius: 8px; padding: 9px 12px; font-size: 14px; color: #0E0E10;">Identité &amp; accès</div>
+        </div>
+
+        <div style="margin-bottom: 26px;">
+          <label style="display: block; font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 10px;">Couleur</label>
+          <div style="display: flex; gap: 10px;">
+            <div class="swatch" style="width: 28px; height: 28px; border-radius: 8px; background: #3730E0; box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #3730E0;"></div>
+            <div class="swatch" style="width: 28px; height: 28px; border-radius: 8px; background: #0D8A7C;"></div>
+            <div class="swatch" style="width: 28px; height: 28px; border-radius: 8px; background: #B7791F;"></div>
+            <div class="swatch" style="width: 28px; height: 28px; border-radius: 8px; background: #7C3AED;"></div>
+            <div class="swatch" style="width: 28px; height: 28px; border-radius: 8px; background: #1E8E5A;"></div>
+            <div class="swatch" style="width: 28px; height: 28px; border-radius: 8px; background: #B54708;"></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 26px;">
+          <label style="display: block; font-size: 12.5px; font-weight: 600; color: #43434A; margin-bottom: 6px;">Visibilité par défaut des nouveaux documents</label>
+          <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #ECECEE; border-radius: 8px; padding: 9px 12px;">
+            <span style="font-size: 14px; color: #0E0E10;">Organisation entière</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <label style="font-size: 12.5px; font-weight: 600; color: #43434A;">Membres de l'espace</label>
+            <a href="Access.dc.html" style="font-size: 12.5px; font-weight: 600; color: #3730E0;">Gérer →</a>
+          </div>
+          <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden;">
+            <div style="display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #F5F5F7;">
+              <div style="flex-grow: 1; display: flex; align-items: center; gap: 9px;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background: #0E0E10; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #FFFFFF;">TF</div>
+                <span style="font-size: 13px; color: #0E0E10;">Tarek Fezai</span>
+              </div>
+              <span style="font-size: 12px; color: #9B9BA1;">Propriétaire</span>
+            </div>
+            <div style="display: flex; align-items: center; padding: 10px 14px;">
+              <div style="flex-grow: 1; display: flex; align-items: center; gap: 9px;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background: #EEEDFD; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #3730E0;">CD</div>
+                <span style="font-size: 13px; color: #0E0E10;">Claire Dubois</span>
+              </div>
+              <span style="font-size: 12px; color: #9B9BA1;">Approbatrice</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <a href="AuditLog.dc.html" style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #ECECEE; border-radius: 10px; padding: 14px 16px;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Journal d'audit</div>
+              <div style="font-size: 12px; color: #9B9BA1;">Toutes les actions effectuées sur cet espace</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <a href="Trash.dc.html" style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #ECECEE; border-radius: 10px; padding: 14px 16px;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Corbeille</div>
+              <div style="font-size: 12px; color: #9B9BA1;">3 documents supprimés · conservés 30 jours</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        </div>
+
+        <div style="border: 1px solid #F2CFC2; background: #FCEEEA; border-radius: 10px; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600; color: #7C2D12; margin-bottom: 2px;">Archiver cet espace</div>
+            <div style="font-size: 12px; color: #9A4A2E;">Les documents restent consultables mais sortent de la navigation.</div>
+          </div>
+          <span class="danger" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #E2A388; color: #B54708; font-size: 13px; font-weight: 600;">Archiver</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

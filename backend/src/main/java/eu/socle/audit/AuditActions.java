@@ -1,0 +1,68 @@
+package eu.socle.audit;
+
+/** Actions d'audit connues (AuditLog.dc.html). */
+public final class AuditActions {
+
+    public static final String ACCESS_GRANT_REQUESTED = "access.grant_requested";
+    public static final String ACCESS_GRANTED = "access.granted";
+    public static final String ACCESS_REVOKE_REQUESTED = "access.revoke_requested";
+    public static final String ACCESS_REVOKED = "access.revoked";
+    public static final String DOCUMENT_CREATED = "document.created";
+    public static final String DOCUMENT_UPDATED = "document.updated";
+    public static final String DOCUMENT_VISIBILITY_CHANGED = "document.visibility_changed";
+    public static final String DOCUMENT_VERSION_CREATED = "document.version_created";
+    public static final String DOCUMENT_VERSION_RESTORED = "document.version_restored";
+    public static final String DOCUMENT_SUBMITTED = "document.submitted_for_approval";
+    public static final String DOCUMENT_APPROVED = "document.approved";
+    public static final String DOCUMENT_REJECTED = "document.rejected";
+    public static final String APPROVAL_ESCALATED = "approval.escalated";
+    public static final String APPROVAL_CHAIN_EXHAUSTED = "approval.chain_exhausted";
+    public static final String DOCUMENT_TRASHED = "document.trashed";
+    public static final String FOLDER_TRASHED = "folder.trashed";
+    public static final String SPACE_TRASHED = "space.trashed";
+    public static final String DOCUMENT_RESTORED_FROM_TRASH = "document.restored_from_trash";
+    public static final String FOLDER_RESTORED_FROM_TRASH = "folder.restored_from_trash";
+    public static final String SPACE_RESTORED_FROM_TRASH = "space.restored_from_trash";
+    public static final String DOCUMENT_PURGED = "document.purged";
+    public static final String FOLDER_PURGED = "folder.purged";
+    public static final String SPACE_PURGED = "space.purged";
+
+    public static final String SPACE_CREATED = "space.created";
+    public static final String SPACE_UPDATED = "space.updated";
+    public static final String SPACE_OWNER_ADDED = "space.owner_added";
+    public static final String SPACE_OWNER_REMOVED = "space.owner_removed";
+    public static final String SPACE_RESPONSIBLE_CHANGED = "space.responsible_changed";
+
+    public static final String GROUP_CREATED = "group.created";
+    public static final String GROUP_UPDATED = "group.updated";
+    public static final String GROUP_DELETED = "group.deleted";
+    public static final String GROUP_MEMBER_ADDED = "group.member_added";
+    public static final String GROUP_MEMBER_REMOVED = "group.member_removed";
+
+    /** Export documentaire (PDF) — traçabilité a posteriori (fuite potentielle). */
+    public static final String DOCUMENT_EXPORTED = "document.exported";
+    public static final String FOLDER_EXPORTED = "folder.exported";
+    public static final String TAG_EXPORTED = "tag.exported";
+
+    /** Définitions d'approbation (admin). */
+    public static final String WORKFLOW_CREATED = "workflow.created";
+    public static final String WORKFLOW_UPDATED = "workflow.updated";
+    public static final String WORKFLOW_DELETED = "workflow.deleted";
+
+    /** Configuration intégrations (intégrateur) — visible au journal pour supervision. */
+    public static final String SIEM_CONNECTOR_CREATED = "siem.connector_created";
+    public static final String SIEM_CONNECTOR_UPDATED = "siem.connector_updated";
+    public static final String SIEM_CONNECTOR_DELETED = "siem.connector_deleted";
+    public static final String WEBHOOK_ENDPOINT_CREATED = "webhook.endpoint_created";
+    public static final String WEBHOOK_ENDPOINT_UPDATED = "webhook.endpoint_updated";
+    public static final String WEBHOOK_ENDPOINT_DELETED = "webhook.endpoint_deleted";
+
+    /** Rôles plateforme internes (admin). */
+    public static final String PLATFORM_ROLE_GRANTED = "platform.role_granted";
+    public static final String PLATFORM_ROLE_REVOKED = "platform.role_revoked";
+    public static final String USER_IDENTITY_LINKED = "user.identity_linked";
+    public static final String USER_IDENTITY_UNLINKED = "user.identity_unlinked";
+    public static final String USER_IDENTITIES_IMPORTED = "user.identities_imported";
+
+    private AuditActions() {}
+}

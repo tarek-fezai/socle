@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Espaces</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .card:hover { border-color: #C7C6F5; }
+  .new-card:hover { border-color: #9B9BA1; background: #FAFAFB; }
+  .cta:hover { background: #2C27C7; }
+  .tab:hover { color: #0E0E10; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <a href="Dashboard.dc.html" style="display: flex; align-items: center; gap: 9px;">
+      <div style="width: 22px; height: 22px; border-radius: 6px; background: #3730E0; flex-shrink: 0;"></div>
+      <div style="font-size: 14.5px; font-weight: 700; color: #0E0E10;">Socle</div>
+    </a>
+    <div style="display: flex; align-items: center; gap: 22px;">
+      <a href="Dashboard.dc.html" class="tab" style="font-size: 13px; font-weight: 500; color: #9B9BA1;">Accueil</a>
+      <a href="Spaces.dc.html" class="tab" style="font-size: 13px; font-weight: 600; color: #0E0E10;">Espaces</a>
+      <a href="Components.dc.html" class="tab" style="font-size: 13px; font-weight: 500; color: #9B9BA1;">Composants</a>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <a href="Notifications.dc.html" aria-label="Notifications" style="width: 34px; height: 34px; border-radius: 8px; border: 1px solid #ECECEE; display: flex; align-items: center; justify-content: center; position: relative;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#43434A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span style="position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #B54708; border: 1.5px solid #FFFFFF;"></span>
+      </a>
+      <a href="CreateSpace.dc.html" class="cta" style="padding: 8px 16px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600;">+ Nouvel espace</a>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; padding: 44px 48px 0;">
+    <h1 class="serif" style="font-weight: 400; font-size: 40px; margin: 0 0 6px; color: #0E0E10;">Espaces</h1>
+    <p style="font-size: 14.5px; color: #9B9BA1; margin: 0 0 32px;">5 espaces · 214 documents au total</p>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;">
+
+      <a href="SpaceSettings.dc.html" class="card" style="display: block; border: 1px solid #ECECEE; border-radius: 14px; padding: 22px;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #3730E0; margin-bottom: 16px;"></div>
+        <div style="font-size: 16px; font-weight: 700; color: #0E0E10; margin-bottom: 4px;">Identité &amp; accès</div>
+        <div style="font-size: 12.5px; color: #9B9BA1; margin-bottom: 18px;">IAM, IGA, gouvernance des habilitations</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex;">
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #0E0E10; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #FFFFFF;">TF</div>
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #EEEDFD; border: 2px solid #FFFFFF; margin-left: -6px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #3730E0;">CD</div>
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #F1EFEA; border: 2px solid #FFFFFF; margin-left: -6px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #6B6862;">+9</div>
+          </div>
+          <span style="font-size: 12px; color: #9B9BA1;">24 documents</span>
+        </div>
+      </a>
+
+      <a href="SpaceSettings.dc.html" class="card" style="display: block; border: 1px solid #ECECEE; border-radius: 14px; padding: 22px;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #0D8A7C; margin-bottom: 16px;"></div>
+        <div style="font-size: 16px; font-weight: 700; color: #0E0E10; margin-bottom: 4px;">Infrastructure</div>
+        <div style="font-size: 12.5px; color: #9B9BA1; margin-bottom: 18px;">Réseau, continuité, exploitation</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex;">
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #DCF2ED; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #0D8A7C;">RL</div>
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #F1EFEA; border: 2px solid #FFFFFF; margin-left: -6px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #6B6862;">+5</div>
+          </div>
+          <span style="font-size: 12px; color: #9B9BA1;">41 documents</span>
+        </div>
+      </a>
+
+      <a href="SpaceSettings.dc.html" class="card" style="display: block; border: 1px solid #ECECEE; border-radius: 14px; padding: 22px;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #B7791F; margin-bottom: 16px;"></div>
+        <div style="font-size: 16px; font-weight: 700; color: #0E0E10; margin-bottom: 4px;">Conformité</div>
+        <div style="font-size: 12.5px; color: #9B9BA1; margin-bottom: 18px;">RGPD, audits, registres réglementaires</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex;">
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #F2E4DC; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #8A4A2E;">YM</div>
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #F1EFEA; border: 2px solid #FFFFFF; margin-left: -6px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #6B6862;">+3</div>
+          </div>
+          <span style="font-size: 12px; color: #9B9BA1;">37 documents</span>
+        </div>
+      </a>
+
+      <a href="SpaceSettings.dc.html" class="card" style="display: block; border: 1px solid #ECECEE; border-radius: 14px; padding: 22px;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #7C3AED; margin-bottom: 16px;"></div>
+        <div style="font-size: 16px; font-weight: 700; color: #0E0E10; margin-bottom: 4px;">Produit</div>
+        <div style="font-size: 12.5px; color: #9B9BA1; margin-bottom: 18px;">Spécifications fonctionnelles et techniques</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex;">
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #EDE4FC; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #7C3AED;">SL</div>
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #F1EFEA; border: 2px solid #FFFFFF; margin-left: -6px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #6B6862;">+7</div>
+          </div>
+          <span style="font-size: 12px; color: #9B9BA1;">68 documents</span>
+        </div>
+      </a>
+
+      <a href="SpaceSettings.dc.html" class="card" style="display: block; border: 1px solid #ECECEE; border-radius: 14px; padding: 22px;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: #1E8E5A; margin-bottom: 16px;"></div>
+        <div style="font-size: 16px; font-weight: 700; color: #0E0E10; margin-bottom: 4px;">Ressources humaines</div>
+        <div style="font-size: 12.5px; color: #9B9BA1; margin-bottom: 18px;">Onboarding, politiques internes</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex;">
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #DFF3E6; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #1E8E5A;">NB</div>
+            <div style="width: 22px; height: 22px; border-radius: 50%; background: #F1EFEA; border: 2px solid #FFFFFF; margin-left: -6px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #6B6862;">+4</div>
+          </div>
+          <span style="font-size: 12px; color: #9B9BA1;">44 documents</span>
+        </div>
+      </a>
+
+      <a href="CreateSpace.dc.html" class="new-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 1px dashed #DEDEE1; border-radius: 14px; padding: 22px; text-align: center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <div style="font-size: 13.5px; font-weight: 600; color: #6B6B72;">Nouvel espace</div>
+        <div style="font-size: 12px; color: #B0B0B5;">Regrouper des documents par domaine ou équipe</div>
+      </a>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

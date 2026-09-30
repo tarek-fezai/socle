@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Administration — Meridian Group</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .nav-item:hover { background: #F5F5F7; }
+  .nav-item.on { background: #F0EFFC; color: #3730E0; font-weight: 600; }
+  .danger:hover { background: #FCEEEA; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Account.dc.html" style="color: #9B9BA1;">Compte</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Administration</span>
+    </div>
+    <a href="Dashboard.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Retour à l'accueil</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+    <!-- ADMIN SUB-NAV -->
+    <div style="width: 240px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Meridian Group</div>
+      <a href="Admin.dc.html" class="nav-item on" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Identité &amp; SSO</a>
+      <a href="Branding.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Personnalisation de marque</a>
+      <a href="Team.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Membres &amp; équipes</a>
+      <a href="GlobalRoles.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rôles globaux</a>
+      <a href="Integrations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Intégrations &amp; API</a>
+      <a href="ContentHealth.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Santé du contenu</a>
+      <a href="Analytics.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Analytique</a>
+      <a href="TagsAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Tags</a>
+      <a href="CustomFields.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Champs personnalisés</a>
+      <a href="TemplatesAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Modèles</a>
+      <a href="Workflows.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Workflows d'approbation</a>
+      <a href="Retention.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rétention &amp; conformité</a>
+      <a href="Attestations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Attestations</a>
+      <a href="AuditLog.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Journal d'audit</a>
+      <a href="Billing.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Facturation</a>
+    </div>
+
+    <div style="flex-grow: 1; overflow: hidden; padding: 40px 48px 0; min-width: 0;">
+      <div style="max-width: 760px;">
+
+        <h1 class="serif" style="font-weight: 400; font-size: 34px; margin: 0 0 6px; color: #0E0E10;">Identité &amp; SSO</h1>
+        <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 28px;">Configuration de l'authentification pour l'ensemble de l'organisation.</p>
+
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 3px;">Fournisseur SSO</div>
+            <div style="font-size: 12.5px; color: #9B9BA1;">Okta · SAML 2.0</div>
+          </div>
+          <span style="font-size: 12px; color: #1E8E5A; font-weight: 600; display: flex; align-items: center; gap: 5px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #1E8E5A;"></span>Connecté</span>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Domaines autorisés</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 28px;">
+          <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7;">
+            <span class="mono" style="flex-grow: 1; font-size: 13px; color: #0E0E10;">meridian-group.com</span>
+            <span style="font-size: 11px; color: #1E8E5A; font-weight: 600;">Vérifié</span>
+          </div>
+          <div style="display: flex; align-items: center; padding: 12px 16px;">
+            <span class="mono" style="flex-grow: 1; font-size: 13px; color: #0E0E10;">meridian-contractors.eu</span>
+            <span style="font-size: 11px; color: #B7791F; font-weight: 600;">Vérification en attente</span>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Politique de session</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 28px;">
+          <div style="display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex-grow: 1;">
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Authentification à deux facteurs obligatoire</div>
+            </div>
+            <div style="width: 36px; height: 20px; border-radius: 10px; background: #3730E0; position: relative;"><div style="position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF;"></div></div>
+          </div>
+          <div style="display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex-grow: 1;">
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Expiration de session après inactivité</div>
+              <div style="font-size: 12px; color: #9B9BA1; margin-top: 2px;">30 minutes</div>
+            </div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div style="display: flex; align-items: center; padding: 13px 16px;">
+            <div style="flex-grow: 1;">
+              <div style="font-size: 13.5px; font-weight: 500; color: #0E0E10;">Bloquer les connexions hors domaine autorisé</div>
+            </div>
+            <div style="width: 36px; height: 20px; border-radius: 10px; background: #3730E0; position: relative;"><div style="position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF;"></div></div>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Langues de l'organisation</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px; margin-bottom: 28px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 2px;">Langue par défaut</div>
+              <div style="font-size: 12px; color: #9B9BA1;">Utilisée pour les nouveaux documents et les communications de l'organisation</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; border: 1px solid #ECECEE; border-radius: 7px; padding: 7px 11px;">
+              <span style="font-size: 13px; color: #43434A; font-weight: 500;">Français</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2.6" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <div style="padding-top: 14px; border-top: 1px solid #F5F5F7;">
+            <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 10px;">Langues activées pour la documentation</div>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #3730E0; background: #F0EFFC; border-radius: 6px; padding: 4px 9px;">Français <span style="color: #9B95E6; font-weight: 500;">· par défaut</span></span>
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #43434A; background: #FAFAFB; border: 1px solid #ECECEE; border-radius: 6px; padding: 4px 9px 4px 10px;">English<span style="cursor: pointer; color: #B0B0B5;">×</span></span>
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #43434A; background: #FAFAFB; border: 1px solid #ECECEE; border-radius: 6px; padding: 4px 9px 4px 10px;">Deutsch<span style="cursor: pointer; color: #B0B0B5;">×</span></span>
+              <span style="font-size: 11.5px; font-weight: 600; color: #9B9BA1; border: 1px dashed #DEDEE1; border-radius: 6px; padding: 4px 10px;">+ Langue</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 12.5px; color: #6B6B72;">Suggérer une traduction automatique quand un document manque dans une langue activée</span>
+              <div style="width: 36px; height: 20px; border-radius: 10px; background: #3730E0; position: relative; flex-shrink: 0; margin-left: 14px;"><div style="position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border: 1px solid #F3C9BB; border-radius: 10px; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px;">
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600; color: #B54708; margin-bottom: 2px;">Révoquer toutes les sessions actives</div>
+            <div style="font-size: 12px; color: #9B9BA1;">Déconnecte immédiatement les 214 utilisateurs actuellement connectés.</div>
+          </div>
+          <button class="danger" style="font-size: 12.5px; font-weight: 600; color: #B54708; border: 1px solid #F3C9BB; border-radius: 7px; padding: 8px 14px; background: none; cursor: pointer;">Révoquer</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT SUMMARY -->
+    <div style="width: 280px; flex-shrink: 0; border-left: 1px solid #ECECEE; padding: 24px 22px; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+      <a href="Team.dc.html" style="display: block; color: inherit;">
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Utilisateurs</div>
+        <div class="serif" style="font-size: 28px; color: #0E0E10;">214</div>
+      </a>
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Espaces</div>
+        <div class="serif" style="font-size: 28px; color: #0E0E10;">5</div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Plan</div>
+        <div style="font-size: 13.5px; color: #43434A; font-weight: 500;">Entreprise · renouvellement 1 janv. 2027</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

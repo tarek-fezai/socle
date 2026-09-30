@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Guide — Provisioning, vue d'ensemble</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .nav-item:hover { background: #F5F5F7; }
+  .switch-item:hover { color: #0E0E10; }
+  .section-card:hover { border-color: #DEDEE1; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; background: #FFFFFF; overflow: hidden;">
+
+  <!-- SIDEBAR -->
+  <div style="width: 260px; flex-shrink: 0; box-sizing: border-box; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; height: 900px; overflow: hidden;">
+
+    <a href="Dashboard.dc.html" style="display: flex; align-items: center; gap: 9px;">
+      <div style="width: 24px; height: 24px; border-radius: 7px; background: #3730E0; flex-shrink: 0;"></div>
+      <div style="font-size: 15px; font-weight: 700; color: #0E0E10; letter-spacing: -0.01em;">Socle</div>
+    </a>
+
+    <div style="display: flex; flex-direction: column; gap: 1px; overflow: hidden;">
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 6px;">Identité &amp; accès</div>
+
+      <a href="Composite.dc.html" class="nav-item" style="display: block; padding: 7px 10px; border-radius: 7px; background: #F0EFFC; color: #3730E0; font-size: 13.5px; font-weight: 600;">
+        Provisioning — Vue d'ensemble
+      </a>
+      <a href="Main.dc.html" class="nav-item" style="display: flex; align-items: center; gap: 7px; padding: 7px 10px 7px 22px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A; flex-shrink: 0;"></span>Provisioning automatisé
+      </a>
+      <a href="Main.dc.html" class="nav-item" style="display: flex; align-items: center; gap: 7px; padding: 7px 10px 7px 22px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #B7791F; flex-shrink: 0;"></span>Choix du connecteur SCIM
+      </a>
+      <a href="Main.dc.html" class="nav-item" style="display: flex; align-items: center; gap: 7px; padding: 7px 10px 7px 22px; border-radius: 7px; color: #4B4B52; font-size: 13.5px;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid #DEDEE1; flex-shrink: 0;"></span>Déclencher une resynchronisation
+      </a>
+
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 18px 10px 6px;">Autre espace</div>
+      <a href="Index.dc.html" class="nav-item" style="display: block; padding: 7px 10px; border-radius: 7px; color: #9B9BA1; font-size: 13.5px;">
+        Conformité
+      </a>
+    </div>
+
+    <div style="margin-top: auto; display: flex; align-items: center; gap: 9px; padding: 4px 2px;">
+      <div style="width: 26px; height: 26px; border-radius: 50%; background: #0E0E10; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; color: #FFFFFF;">TF</div>
+      <div style="font-size: 12.5px; color: #4B4B52; font-weight: 500;">Tarek Fezai</div>
+    </div>
+  </div>
+
+  <!-- MAIN COLUMN -->
+  <div style="flex-grow: 1; height: 900px; overflow: hidden; display: flex; flex-direction: column; min-width: 0;">
+
+    <!-- TOP BAR -->
+    <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+      <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+        <span>Identité &amp; accès</span>
+        <span style="color: #DEDEE1;">→</span>
+        <span style="color: #0E0E10; font-weight: 500;">Provisioning — Vue d'ensemble</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="Main.dc.html" class="switch-item" style="padding: 6px 4px; color: #9B9BA1; font-size: 13px; font-weight: 500;">Page</a>
+        <a href="Graph.dc.html" class="switch-item" style="padding: 6px 4px; color: #9B9BA1; font-size: 13px; font-weight: 500; margin-left: 14px;">Graphe</a>
+        <a href="Index.dc.html" class="switch-item" style="padding: 6px 4px; color: #9B9BA1; font-size: 13px; font-weight: 500; margin-left: 14px;">Index</a>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div style="flex-grow: 1; overflow: hidden; padding: 44px 48px 0; min-width: 0;">
+      <div style="max-width: 700px;">
+
+        <h1 class="serif" style="font-weight: 400; font-size: 36px; margin: 0 0 12px; color: #0E0E10;">Provisioning — Vue d'ensemble</h1>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 22px;">
+          <span style="font-size: 11.5px; font-weight: 600; color: #3730E0; background: #F0EFFC; border-radius: 999px; padding: 4px 11px;">Guide</span>
+          <span style="font-size: 11.5px; font-weight: 600; color: #5B4A8A; background: #EEEAFA; border-radius: 999px; padding: 4px 11px;">Composite</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #1E8E5A; background: #EAF6EE; border-radius: 999px; padding: 4px 11px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #1E8E5A;"></span>Approuvé</span>
+        </div>
+
+        <p style="font-size: 14.5px; line-height: 1.65; color: #43434A; margin: 0 0 30px;">Ce guide assemble les pages atomiques du domaine provisioning dans un ordre de lecture pensé pour un nouvel arrivant — chaque section renvoie vers la page source, sans dupliquer son contenu.</p>
+
+        <a href="Main.dc.html" class="section-card" style="display: block; border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px;">
+          <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Section 1</div>
+          <div style="font-size: 15.5px; font-weight: 600; color: #3730E0; margin-bottom: 6px;">Provisioning automatisé</div>
+          <p style="margin: 0; font-size: 13.5px; color: #6B6B72; line-height: 1.55;">Le concept central : ce que signifie « provisionner » un compte, et pourquoi l'automatiser.</p>
+        </a>
+
+        <a href="Main.dc.html" class="section-card" style="display: block; border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px;">
+          <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Section 2</div>
+          <div style="font-size: 15.5px; font-weight: 600; color: #3730E0; margin-bottom: 6px;">Choix du connecteur SCIM</div>
+          <p style="margin: 0; font-size: 13.5px; color: #6B6B72; line-height: 1.55;">La décision d'architecture qui encadre le choix technique du connecteur.</p>
+        </a>
+
+        <a href="Main.dc.html" class="section-card" style="display: block; border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px; margin-bottom: 30px;">
+          <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Section 3</div>
+          <div style="font-size: 15.5px; font-weight: 600; color: #3730E0; margin-bottom: 6px;">Déclencher une resynchronisation</div>
+          <p style="margin: 0 0 10px; font-size: 13.5px; color: #6B6B72; line-height: 1.55;">La procédure opérationnelle à suivre en cas d'écart détecté.</p>
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #B7791F; background: #FBF3E1; border-radius: 999px; padding: 3px 10px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #B7791F;"></span>Contient du contenu à revoir</span>
+        </a>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
