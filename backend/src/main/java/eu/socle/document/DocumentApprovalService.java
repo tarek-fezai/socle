@@ -40,6 +40,7 @@ public class DocumentApprovalService {
     private final JdbcTemplate jdbcTemplate;
     private final ApprovalActivitiesImpl activities;
     private final ApprovalWorkflowDefinitionService workflowDefinitions;
+    private final ApprovalRoleResolver approvalRoleResolver;
     private final TransactionTemplate transactionTemplate;
     private final boolean workerEnabled;
 
@@ -54,6 +55,7 @@ public class DocumentApprovalService {
             JdbcTemplate jdbcTemplate,
             ApprovalActivitiesImpl activities,
             ApprovalWorkflowDefinitionService workflowDefinitions,
+            ApprovalRoleResolver approvalRoleResolver,
             PlatformTransactionManager transactionManager,
             @Value("${socle.temporal.worker-enabled:true}") boolean workerEnabled
     ) {
@@ -64,6 +66,7 @@ public class DocumentApprovalService {
         this.jdbcTemplate = jdbcTemplate;
         this.activities = activities;
         this.workflowDefinitions = workflowDefinitions;
+        this.approvalRoleResolver = approvalRoleResolver;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.workerEnabled = workerEnabled;
     }
@@ -77,6 +80,7 @@ public class DocumentApprovalService {
             JdbcTemplate jdbcTemplate,
             ApprovalActivitiesImpl activities,
             ApprovalWorkflowDefinitionService workflowDefinitions,
+            ApprovalRoleResolver approvalRoleResolver,
             TransactionTemplate transactionTemplate,
             boolean workerEnabled
     ) {
@@ -87,6 +91,7 @@ public class DocumentApprovalService {
         this.jdbcTemplate = jdbcTemplate;
         this.activities = activities;
         this.workflowDefinitions = workflowDefinitions;
+        this.approvalRoleResolver = approvalRoleResolver;
         this.transactionTemplate = transactionTemplate;
         this.workerEnabled = workerEnabled;
     }
@@ -190,12 +195,13 @@ public class DocumentApprovalService {
 
     /**
      * Demandes en cours où l'utilisateur courant est l'approbateur de {@code current_step_order}
-     * (rôle via {@code approval_workflow_steps.approver_role_id} / {@code user_global_roles}).
+     * (rôle via {@code approval_workflow_steps.approver_role_id} / {@code approval_role_assignments}),
+     * avec portée couvrant le document <strong>et</strong> accès OpenFGA {@code editor}.
      * Si l'étape n'a pas de rôle, fallback sur le rôle global « Éditeur de documents ».
      */
     public List<ApprovalView> listMine(Jwt jwt) {
         var user = userSyncService.syncFromJwt(jwt);
-        return jdbcTemplate.query("""
+        List<Candidate> candidates = jdbcTemplate.query("""
                 SELECT ar.id, ar.document_id, d.title AS document_title,
                        ar.temporal_workflow_id, ar.status, ar.requested_by, ar.created_at,
                        ar.current_step_order, ar.sla_deadline_at, ar.submitted_version_no,
@@ -209,7 +215,8 @@ public class DocumentApprovalService {
                           )
                          THEN ar.submitted_version_no - 1
                          ELSE NULL
-                       END AS baseline_version_no
+                       END AS baseline_version_no,
+                       aws.approver_role_id
                   FROM approval_requests ar
                   JOIN documents d ON d.id = ar.document_id
                   JOIN approval_workflow_steps aws
@@ -217,23 +224,23 @@ public class DocumentApprovalService {
                    AND aws.step_order = ar.current_step_order
                  WHERE ar.status = 'en_cours'
                    AND d.deleted_at IS NULL
-                   AND (
-                     (aws.approver_role_id IS NOT NULL AND EXISTS (
-                        SELECT 1 FROM user_global_roles ugr
-                         WHERE ugr.user_id = ? AND ugr.role_id = aws.approver_role_id
-                     ))
-                     OR
-                     (aws.approver_role_id IS NULL AND EXISTS (
-                        SELECT 1 FROM user_global_roles ugr
-                        JOIN global_roles gr ON gr.id = ugr.role_id
-                         WHERE ugr.user_id = ? AND gr.name = 'Éditeur de documents'
-                     ))
-                   )
                  ORDER BY ar.sla_deadline_at ASC NULLS LAST, ar.created_at ASC
                 """,
-                (rs, i) -> mapApprovalView(rs),
-                user.getId(), user.getId());
+                (rs, i) -> {
+                    ApprovalView view = mapApprovalView(rs);
+                    UUID roleId = (UUID) rs.getObject("approver_role_id");
+                    return new Candidate(view, roleId);
+                });
+
+        return candidates.stream()
+                .filter(c -> approvalRoleResolver.canDecide(user.getId(), c.roleId(), c.view().documentId()))
+                .filter(c -> authorizationService.hasRelation(
+                        user.getId(), "document", c.view().documentId(), "editor"))
+                .map(Candidate::view)
+                .toList();
     }
+
+    private record Candidate(ApprovalView view, UUID roleId) {}
 
     /**
      * Signale une décision Temporal après verrouillage ligne ({@code FOR UPDATE}) et
@@ -242,7 +249,9 @@ public class DocumentApprovalService {
      */
     public Map<String, String> decide(Jwt jwt, UUID documentId, UUID requestId, DecisionRequest body) {
         var user = userSyncService.syncFromJwt(jwt);
-        authorizationService.requireDocumentRelation(user.getId(), documentId, "editor");
+        if (!authorizationService.hasRelation(user.getId(), "document", documentId, "editor")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "pas d'accès à la page");
+        }
 
         String decision = body.decision().trim().toLowerCase();
         if (!"approuve".equals(decision) && !"rejete".equals(decision)) {
@@ -277,10 +286,8 @@ public class DocumentApprovalService {
             if (actualStep != expectedStep) {
                 throw ApprovalConflictException.stepAdvanced(expectedStep, actualStep);
             }
-            if (!isCurrentStepApprover(user.getId(), requestId)) {
-                throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "Vous n'êtes pas approbateur de l'étape courante");
+            if (!approvalRoleResolver.canDecideCurrentStep(user.getId(), requestId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "rôle hors portée");
             }
 
             String wfId = (String) row.get("temporal_workflow_id");
@@ -304,34 +311,6 @@ public class DocumentApprovalService {
                 "temporalWorkflowId", temporalWorkflowId != null ? temporalWorkflowId : "",
                 "status", resolvedStatus != null ? resolvedStatus : decision
         );
-    }
-
-    private boolean isCurrentStepApprover(UUID userId, UUID requestId) {
-        Boolean allowed = jdbcTemplate.queryForObject("""
-                SELECT EXISTS (
-                  SELECT 1
-                    FROM approval_requests ar
-                    JOIN approval_workflow_steps aws
-                      ON aws.workflow_id = ar.workflow_id
-                     AND aws.step_order = ar.current_step_order
-                   WHERE ar.id = ?
-                     AND (
-                       (aws.approver_role_id IS NOT NULL AND EXISTS (
-                          SELECT 1 FROM user_global_roles ugr
-                           WHERE ugr.user_id = ? AND ugr.role_id = aws.approver_role_id
-                       ))
-                       OR
-                       (aws.approver_role_id IS NULL AND EXISTS (
-                          SELECT 1 FROM user_global_roles ugr
-                          JOIN global_roles gr ON gr.id = ugr.role_id
-                           WHERE ugr.user_id = ? AND gr.name = 'Éditeur de documents'
-                       ))
-                     )
-                )
-                """,
-                Boolean.class,
-                requestId, userId, userId);
-        return Boolean.TRUE.equals(allowed);
     }
 
     private ApprovalView mapApprovalView(java.sql.ResultSet rs) throws java.sql.SQLException {

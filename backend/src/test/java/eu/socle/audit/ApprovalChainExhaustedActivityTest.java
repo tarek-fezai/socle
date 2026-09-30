@@ -2,6 +2,7 @@ package eu.socle.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.document.ApprovalActivitiesImpl;
+import eu.socle.document.ApprovalRoleResolver;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -16,11 +17,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ApprovalChainExhaustedActivityTest {
 
@@ -28,6 +31,7 @@ class ApprovalChainExhaustedActivityTest {
     static final UUID REQUESTER = UUID.fromString("11111111-1111-1111-1111-111111111111");
     static final UUID LAST_APPROVER = UUID.fromString("33333333-3333-3333-3333-333333333333");
     static final UUID REQUEST_ID = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
+    static final UUID ROLE = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd");
 
     @Test
     void chainExhausted_notifiesRequesterAndLastApprover_andAudits() {
@@ -42,17 +46,21 @@ class ApprovalChainExhaustedActivityTest {
                 }
                 return 1;
             }
-            if ("query".equals(method)) {
-                return List.of(LAST_APPROVER);
+            if ("queryForList".equals(method)) {
+                return List.of(Map.of("role_id", ROLE, "document_id", DOC));
             }
             return Mockito.RETURNS_DEFAULTS.answer(invocation);
         });
+
+        ApprovalRoleResolver resolver = mock(ApprovalRoleResolver.class);
+        when(resolver.resolveInScopeAssignees(ROLE, DOC)).thenReturn(List.of(LAST_APPROVER));
 
         AuditService auditService = mock(AuditService.class);
         ApprovalActivitiesImpl activities = new ApprovalActivitiesImpl(
                 jdbcTemplate, auditService, mock(eu.socle.document.ReliabilityScoreService.class),
                 mock(eu.socle.storage.DocumentStore.class),
-                new com.fasterxml.jackson.databind.ObjectMapper());
+                new ObjectMapper(),
+                resolver);
         String result = activities.recordChainExhausted(
                 DOC, REQUEST_ID, 2, REQUESTER, ApprovalActivitiesImpl.SYSTEM_ACTOR_ID);
 
@@ -80,17 +88,21 @@ class ApprovalChainExhaustedActivityTest {
                 }
                 return 1;
             }
-            if ("query".equals(invocation.getMethod().getName())) {
-                return List.of();
+            if ("queryForList".equals(invocation.getMethod().getName())) {
+                return List.of(Map.of("role_id", ROLE, "document_id", DOC));
             }
             return Mockito.RETURNS_DEFAULTS.answer(invocation);
         });
+
+        ApprovalRoleResolver resolver = mock(ApprovalRoleResolver.class);
+        when(resolver.resolveInScopeAssignees(any(), any())).thenReturn(List.of());
 
         ApprovalActivitiesImpl activities = new ApprovalActivitiesImpl(
                 jdbcTemplate, mock(AuditService.class),
                 mock(eu.socle.document.ReliabilityScoreService.class),
                 mock(eu.socle.storage.DocumentStore.class),
-                new com.fasterxml.jackson.databind.ObjectMapper());
+                new ObjectMapper(),
+                resolver);
 
         assertThatThrownBy(() -> activities.recordChainExhausted(
                 DOC, REQUEST_ID, 1, REQUESTER, ApprovalActivitiesImpl.SYSTEM_ACTOR_ID))
