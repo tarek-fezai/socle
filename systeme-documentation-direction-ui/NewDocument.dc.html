@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Nouveau document</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .tpl:hover { border-color: #3730E0; background: #FAFAFE; }
+  .tpl.sel { border-color: #3730E0; background: #F0EFFC; }
+  .field:focus-within { border-color: #C7C6F5; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Dashboard.dc.html" style="color: #9B9BA1;">Accueil</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Nouveau document</span>
+    </div>
+    <a href="Dashboard.dc.html" aria-label="Fermer" class="ghost" style="width: 32px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; justify-content: center; padding: 52px 40px 0;">
+    <div style="width: 760px; flex-shrink: 0;">
+
+      <h1 class="serif" style="font-weight: 400; font-size: 36px; margin: 0 0 6px; color: #0E0E10;">Créer un document</h1>
+      <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 30px;">Choisissez un modèle pour démarrer avec une structure adaptée au type de contenu.</p>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <span style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em;">Modèle</span>
+        <a href="TemplatesAdmin.dc.html" style="font-size: 12px; font-weight: 600; color: #3730E0;">Gérer les modèles →</a>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px;">
+
+        <div class="tpl sel" style="border: 1.5px solid #3730E0; background: #F0EFFC; border-radius: 12px; padding: 16px 18px; cursor: pointer;">
+          <div style="width: 30px; height: 30px; border-radius: 8px; background: #3730E0; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 4px;">Politique</div>
+          <div style="font-size: 12.5px; color: #6B6B72; line-height: 1.5;">Règles et principes normatifs, avec cycle d'approbation et revue périodique.</div>
+        </div>
+
+        <div class="tpl" style="border: 1.5px solid #ECECEE; border-radius: 12px; padding: 16px 18px; cursor: pointer;">
+          <div style="width: 30px; height: 30px; border-radius: 8px; background: #F0EFEA; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B6862" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 4px;">Procédure</div>
+          <div style="font-size: 12.5px; color: #6B6B72; line-height: 1.5;">Étapes opérationnelles séquencées, avec rôles et points de contrôle.</div>
+        </div>
+
+        <div class="tpl" style="border: 1.5px solid #ECECEE; border-radius: 12px; padding: 16px 18px; cursor: pointer;">
+          <div style="width: 30px; height: 30px; border-radius: 8px; background: #F0EFEA; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B6862" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#6B6862"/></svg>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 4px;">Guide utilisateur</div>
+          <div style="font-size: 12.5px; color: #6B6B72; line-height: 1.5;">Explications pas à pas destinées aux utilisateurs finaux, illustrées.</div>
+        </div>
+
+        <div class="tpl" style="border: 1.5px dashed #DEDEE1; border-radius: 12px; padding: 16px 18px; cursor: pointer;">
+          <div style="width: 30px; height: 30px; border-radius: 8px; border: 1.5px dashed #DEDEE1; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 4px;">Document vierge</div>
+          <div style="font-size: 12.5px; color: #6B6B72; line-height: 1.5;">Partir d'une page blanche, sans structure imposée.</div>
+        </div>
+
+        <div class="tpl" style="border: 1.5px solid #ECECEE; border-radius: 12px; padding: 16px 18px; cursor: pointer;">
+          <div style="width: 30px; height: 30px; border-radius: 8px; background: #F0EFFC; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2.59 12.58a2 2 0 0 1 0-2.83L9.76 2.58A2 2 0 0 1 11.17 2H18a2 2 0 0 1 2 2v6.83a2 2 0 0 1-.59 1.41z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0E0E10;">Fiche fournisseur externe</span>
+            <span style="font-size: 9.5px; font-weight: 600; color: #3730E0; background: #F0EFFC; border-radius: 4px; padding: 1px 5px;">Meridian</span>
+          </div>
+          <div style="font-size: 12.5px; color: #6B6B72; line-height: 1.5;">Modèle personnalisé — coordonnées, périmètre d'accès, contact de sécurité.</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; margin-bottom: 18px;">
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Espace</div>
+          <div class="field" style="border: 1px solid #ECECEE; border-radius: 9px; padding: 10px 13px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 9px;">
+              <div style="width: 9px; height: 9px; border-radius: 3px; background: #3730E0;"></div>
+              <span style="font-size: 13.5px; color: #0E0E10; font-weight: 500;">Identité &amp; accès</span>
+            </div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Fiabilité cible</div>
+          <div class="field" style="border: 1px solid #ECECEE; border-radius: 9px; padding: 10px 13px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 13.5px; color: #0E0E10; font-weight: 500;">Revue annuelle obligatoire</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 22px;">
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Emplacement dans l'arborescence</div>
+        <div class="field" style="border: 1px solid #ECECEE; border-radius: 9px; padding: 10px 13px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 13.5px; color: #0E0E10; font-weight: 500;">Identité &amp; accès (racine)</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div style="font-size: 11.5px; color: #B0B0B5; margin-top: 6px;">À la racine de l'espace, ou dans un dossier existant (Procédures, Référence…) pour en faire un sous-élément.</div>
+      </div>
+
+      <div style="margin-bottom: 22px;">
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Titre du document</div>
+        <div class="field" style="border: 1px solid #ECECEE; border-radius: 9px; padding: 12px 14px;">
+          <span style="font-size: 15px; color: #C2C2C6;">Ex. Politique de classification des données</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 28px;">
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Tags <span style="text-transform: none; font-weight: 400; color: #C2C2C6;">(optionnel)</span></div>
+        <div class="field" style="border: 1px solid #ECECEE; border-radius: 9px; padding: 9px 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #3730E0; background: #F0EFFC; border-radius: 6px; padding: 3px 8px 3px 9px;">IAM<span style="cursor: pointer; color: #9B95E6;">×</span></span>
+          <span style="font-size: 13.5px; color: #C2C2C6;">Ajouter un tag existant ou en créer un…</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 48px;">
+        <span style="font-size: 12.5px; color: #9B9BA1;">Le document sera créé en brouillon, visible uniquement par vous jusqu'à publication.</span>
+        <div style="display: flex; gap: 10px; flex-shrink: 0;">
+          <a href="Dashboard.dc.html" class="ghost" style="padding: 9px 16px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13.5px; font-weight: 500;">Annuler</a>
+          <a href="Edit.dc.html" class="cta" style="padding: 9px 20px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13.5px; font-weight: 600;">Créer le document</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

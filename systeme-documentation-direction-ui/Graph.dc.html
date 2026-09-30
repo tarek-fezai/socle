@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Vue graphe</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .switch-item:hover { color: #0E0E10; }
+  .node:hover .node-box { border-color: #C7C6F5; }
+  .legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <!-- TOP BAR -->
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <span>Identité &amp; accès</span>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Vue graphe</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <a href="Main.dc.html" class="switch-item" style="padding: 6px 4px; color: #9B9BA1; font-size: 13px; font-weight: 500;">Page</a>
+      <a href="Graph.dc.html" class="switch-item" style="padding: 6px 4px; color: #0E0E10; font-size: 13px; font-weight: 600; margin-left: 14px; border-bottom: 2px solid #3730E0;">Graphe</a>
+      <a href="Index.dc.html" class="switch-item" style="padding: 6px 4px; color: #9B9BA1; font-size: 13px; font-weight: 500; margin-left: 14px;">Index</a>
+    </div>
+  </div>
+
+  <!-- GRAPH CANVAS -->
+  <div style="position: relative; flex-grow: 1; overflow: hidden; background: #FAFAFB;">
+
+    <svg width="1440" height="840" style="position: absolute; top: 0; left: 0;">
+      <line x1="720" y1="180" x2="420" y2="340" stroke="#E4E3F5" stroke-width="2"/>
+      <line x1="720" y1="180" x2="1020" y2="340" stroke="#E4E3F5" stroke-width="2"/>
+      <line x1="420" y1="340" x2="300" y2="530" stroke="#E4E3F5" stroke-width="2"/>
+      <line x1="420" y1="340" x2="560" y2="540" stroke="#E4E3F5" stroke-width="2"/>
+      <line x1="1020" y1="340" x2="1000" y2="540" stroke="#E4E3F5" stroke-width="2"/>
+      <line x1="1020" y1="340" x2="1170" y2="520" stroke="#E4E3F5" stroke-width="2"/>
+      <line x1="560" y1="540" x2="700" y2="680" stroke="#E4E3F5" stroke-width="2"/>
+    </svg>
+
+    <!-- root node — current page, filled accent -->
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 656px; top: 148px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 128px; height: 46px; border-radius: 10px; background: #3730E0; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 13px; font-weight: 600; color: #FFFFFF;">Accès</span>
+      </div>
+      <span style="font-size: 11.5px; color: #9B9BA1;">Politique</span>
+    </a>
+
+    <!-- level 2 -->
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 356px; top: 316px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 128px; height: 46px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #E4E3EA; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 13px; font-weight: 500; color: #0E0E10;">Provisioning</span>
+      </div>
+      <span style="font-size: 11.5px; color: #B0B0B5;">Procédure</span>
+    </a>
+
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 956px; top: 316px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 128px; height: 46px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #E4E3EA; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 13px; font-weight: 500; color: #0E0E10;">Revue droits</span>
+      </div>
+      <span style="font-size: 11.5px; color: #B0B0B5;">Procédure</span>
+    </a>
+
+    <!-- level 3 -->
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 234px; top: 508px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 126px; height: 42px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #E4E3EA; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 12.5px; font-weight: 500; color: #43434A;">Rôles &amp; hab.</span>
+      </div>
+      <span style="font-size: 11px; color: #C2C2C6;">Référence</span>
+    </a>
+
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 498px; top: 518px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 122px; height: 42px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #E4E3EA; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 12.5px; font-weight: 500; color: #43434A;">Comptes service</span>
+      </div>
+      <span style="font-size: 11px; color: #C2C2C6;">Procédure</span>
+    </a>
+
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 940px; top: 518px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 120px; height: 42px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #E4E3EA; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 12.5px; font-weight: 500; color: #43434A;">Journalisation</span>
+      </div>
+      <span style="font-size: 11px; color: #C2C2C6;">Standard</span>
+    </a>
+
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 1110px; top: 498px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 118px; height: 42px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #E4E3EA; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 12.5px; font-weight: 500; color: #43434A;">Comité d'audit</span>
+      </div>
+      <span style="font-size: 11px; color: #C2C2C6;">Instance</span>
+    </a>
+
+    <!-- level 4 -->
+    <a href="Main.dc.html" class="node" style="position: absolute; left: 640px; top: 656px; display: flex; flex-direction: column; align-items: center; gap: 9px;">
+      <div class="node-box" style="width: 112px; height: 42px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #E4E3EA; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 12.5px; font-weight: 500; color: #43434A;">SCIM / API</span>
+      </div>
+      <span style="font-size: 11px; color: #C2C2C6;">Intégration</span>
+    </a>
+
+    <!-- legend -->
+    <div style="position: absolute; left: 40px; bottom: 28px; display: flex; align-items: center; gap: 8px;">
+      <span class="legend-dot" style="background: #3730E0;"></span>
+      <span style="font-size: 12px; color: #6B6B72;">Page consultée</span>
+      <span style="width: 3px; height: 3px; border-radius: 50%; background: #DEDEE1; margin: 0 10px;"></span>
+      <span style="font-size: 12px; color: #6B6B72;">Trait fin = référence directe</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Tags — Meridian Group</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .nav-item:hover { background: #F5F5F7; }
+  .nav-item.on { background: #F0EFFC; color: #3730E0; font-weight: 600; }
+  .row:hover { background: #FAFAFB; }
+  .action:hover { text-decoration: underline; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Admin.dc.html" style="color: #9B9BA1;">Administration</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Tags</span>
+    </div>
+    <a href="Dashboard.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Retour à l'accueil</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+    <!-- ADMIN SUB-NAV -->
+    <div style="width: 240px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Meridian Group</div>
+      <a href="Admin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Identité &amp; SSO</a>
+      <a href="Branding.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Personnalisation de marque</a>
+      <a href="Team.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Membres &amp; équipes</a>
+      <a href="GlobalRoles.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rôles globaux</a>
+      <a href="Integrations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Intégrations &amp; API</a>
+      <a href="ContentHealth.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Santé du contenu</a>
+      <a href="Analytics.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Analytique</a>
+      <a href="TagsAdmin.dc.html" class="nav-item on" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Tags</a>
+      <a href="CustomFields.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Champs personnalisés</a>
+      <a href="TemplatesAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Modèles</a>
+      <a href="Workflows.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Workflows d'approbation</a>
+      <a href="Retention.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rétention &amp; conformité</a>
+      <a href="Attestations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Attestations</a>
+      <a href="AuditLog.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Journal d'audit</a>
+      <a href="Billing.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Facturation</a>
+    </div>
+
+    <div style="flex-grow: 1; overflow: hidden; padding: 40px 48px 0; min-width: 0;">
+      <div style="max-width: 820px;">
+
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px;">
+          <h1 class="serif" style="font-weight: 400; font-size: 34px; margin: 0; color: #0E0E10;">Tags</h1>
+          <a href="TagsAdmin.dc.html" class="cta" style="padding: 8px 16px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600; flex-shrink: 0;">+ Nouveau tag</a>
+        </div>
+        <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 24px;">Étiquettes utilisées pour classer et retrouver les documents dans toute l'organisation. 7 tags · 60 documents étiquetés.</p>
+
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 28px;">
+          <div style="display: flex; padding: 10px 16px; font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #ECECEE; background: #FAFAFB;">
+            <div style="flex: 2;">Tag</div>
+            <div style="flex: 1;">Documents</div>
+            <div style="flex: 1.6;">Créé par</div>
+            <div style="width: 240px;">Actions</div>
+          </div>
+
+          <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px;">
+            <div style="flex: 2;"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #3730E0; background: #F0EFFC; border-radius: 7px; padding: 4px 11px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #3730E0;"></span>IAM</span></div>
+            <div style="flex: 1; color: #43434A;">24</div>
+            <div style="flex: 1.6; color: #6B6B72;">Tarek Fezai</div>
+            <div style="width: 240px; display: flex; gap: 12px;">
+              <a href="ExportTag.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #6B6B72;">Exporter</a>
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #3730E0;">Renommer</a>
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #B54708;">Supprimer</a>
+            </div>
+          </div>
+
+          <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px;">
+            <div style="flex: 2;"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #B7791F; background: #FDF3E3; border-radius: 7px; padding: 4px 11px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #B7791F;"></span>RGPD</span></div>
+            <div style="flex: 1; color: #43434A;">12</div>
+            <div style="flex: 1.6; color: #6B6B72;">Yanis M.</div>
+            <div style="width: 240px; display: flex; gap: 12px;">
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #3730E0;">Renommer</a>
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #B54708;">Supprimer</a>
+            </div>
+          </div>
+
+          <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px;">
+            <div style="flex: 2;"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #7C3AED; background: #F3EEFD; border-radius: 7px; padding: 4px 11px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #7C3AED;"></span>SSO</span></div>
+            <div style="flex: 1; color: #43434A;">8</div>
+            <div style="flex: 1.6; color: #6B6B72;">Rania Lefèvre</div>
+            <div style="width: 240px; display: flex; gap: 12px;">
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #3730E0;">Renommer</a>
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #B54708;">Supprimer</a>
+            </div>
+          </div>
+
+          <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px;">
+            <div style="flex: 2;"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #B54708; background: #FCEEEA; border-radius: 7px; padding: 4px 11px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #B54708;"></span>Critique</span></div>
+            <div style="flex: 1; color: #43434A;">5</div>
+            <div style="flex: 1.6; color: #6B6B72;">Tarek Fezai</div>
+            <div style="width: 240px; display: flex; gap: 12px;">
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #3730E0;">Renommer</a>
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #B54708;">Supprimer</a>
+            </div>
+          </div>
+
+          <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px;">
+            <div style="flex: 2;"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #1E8E5A; background: #E7F5EC; border-radius: 7px; padding: 4px 11px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A;"></span>Revue Q3 2026</span></div>
+            <div style="flex: 1; color: #43434A;">6</div>
+            <div style="flex: 1.6; color: #6B6B72;">Claire Dubois</div>
+            <div style="width: 240px; display: flex; gap: 12px;">
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #3730E0;">Renommer</a>
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #B54708;">Supprimer</a>
+            </div>
+          </div>
+
+          <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px;">
+            <div style="flex: 2;"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #0D8A7C; background: #E4F4F2; border-radius: 7px; padding: 4px 11px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #0D8A7C;"></span>Fournisseur externe</span></div>
+            <div style="flex: 1; color: #43434A;">3</div>
+            <div style="flex: 1.6; color: #6B6B72;">Sami Lahlou</div>
+            <div style="width: 240px; display: flex; gap: 12px;">
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #3730E0;">Renommer</a>
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #B54708;">Supprimer</a>
+            </div>
+          </div>
+
+          <div class="row" style="display: flex; align-items: center; padding: 12px 16px; font-size: 13.5px;">
+            <div style="flex: 2;">
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #6B6862; background: #F1EFEA; border-radius: 7px; padding: 4px 11px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #9B9BA1;"></span>Obsolète</span>
+            </div>
+            <div style="flex: 1; color: #43434A;">2</div>
+            <div style="flex: 1.6; color: #6B6B72;">Nora Benali</div>
+            <div style="width: 200px; display: flex; gap: 12px;">
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #3730E0;">Fusionner</a>
+              <a href="TagsAdmin.dc.html" class="action" style="font-size: 12.5px; font-weight: 600; color: #B54708;">Supprimer</a>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="border-left: 3px solid #3730E0; background: #FAFAFE; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 40px;">
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #33333C;">« Fusionner » réattribue tous les documents d'un tag vers un autre et supprime le doublon — utile pour unifier des variantes comme « obsolète » et « à archiver ».</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT SUMMARY -->
+    <div style="width: 280px; flex-shrink: 0; border-left: 1px solid #ECECEE; padding: 24px 22px; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Tags actifs</div>
+        <div class="serif" style="font-size: 28px; color: #0E0E10;">7</div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Documents étiquetés</div>
+        <div class="serif" style="font-size: 28px; color: #0E0E10;">60 <span style="font-size: 14px; color: #9B9BA1; font-family: 'IBM Plex Sans', sans-serif;">/ 214</span></div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Qui peut créer un tag</div>
+        <div style="font-size: 13.5px; color: #43434A; font-weight: 500;">Tout membre lors de l'édition d'un document</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

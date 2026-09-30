@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Santé du contenu — Meridian Group</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .nav-item:hover { background: #F5F5F7; }
+  .nav-item.on { background: #F0EFFC; color: #3730E0; font-weight: 600; }
+  .row:hover { background: #FAFAFB; }
+  .tab-item.on { color: #0E0E10; font-weight: 600; border-bottom: 2px solid #3730E0; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Account.dc.html" style="color: #9B9BA1;">Compte</a>
+      <span style="color: #DEDEE1;">→</span>
+      <a href="Admin.dc.html" style="color: #9B9BA1;">Administration</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Santé du contenu</span>
+    </div>
+    <a href="Dashboard.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Retour à l'accueil</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+    <div style="width: 240px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Meridian Group</div>
+      <a href="Admin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Identité &amp; SSO</a>
+      <a href="Branding.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Personnalisation de marque</a>
+      <a href="Team.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Membres &amp; équipes</a>
+      <a href="GlobalRoles.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rôles globaux</a>
+      <a href="Integrations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Intégrations &amp; API</a>
+      <a href="ContentHealth.dc.html" class="nav-item on" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Santé du contenu</a>
+      <a href="Analytics.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Analytique</a>
+      <a href="TagsAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Tags</a>
+      <a href="CustomFields.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Champs personnalisés</a>
+      <a href="TemplatesAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Modèles</a>
+      <a href="Workflows.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Workflows d'approbation</a>
+      <a href="Retention.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rétention &amp; conformité</a>
+      <a href="Attestations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Attestations</a>
+      <a href="AuditLog.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Journal d'audit</a>
+      <a href="Billing.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Facturation</a>
+    </div>
+
+    <div style="flex-grow: 1; overflow: hidden; padding: 40px 48px 0; min-width: 0;">
+      <div style="max-width: 840px;">
+
+        <h1 class="serif" style="font-weight: 400; font-size: 34px; margin: 0 0 6px; color: #0E0E10;">Santé du contenu</h1>
+        <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 24px;">Vue d'ensemble des problèmes qui dégradent la fiabilité de la documentation publiée.</p>
+
+        <div style="display: flex; gap: 14px; margin-bottom: 28px;">
+          <div style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+            <div style="font-size: 12px; color: #9B9BA1; margin-bottom: 8px;">Liens cassés</div>
+            <div class="serif" style="font-size: 28px; color: #B54708;">7</div>
+          </div>
+          <div style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+            <div style="font-size: 12px; color: #9B9BA1; margin-bottom: 8px;">Documents orphelins</div>
+            <div class="serif" style="font-size: 28px; color: #B7791F;">4</div>
+          </div>
+          <div style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+            <div style="font-size: 12px; color: #9B9BA1; margin-bottom: 8px;">Revues en retard</div>
+            <div class="serif" style="font-size: 28px; color: #B54708;">11</div>
+          </div>
+          <div style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+            <div style="font-size: 12px; color: #9B9BA1; margin-bottom: 8px;">Fiabilité globale</div>
+            <div class="serif" style="font-size: 28px; color: #1E8E5A;">91%</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 14px; margin-bottom: 28px;">
+          <a href="TagsAdmin.dc.html" class="row" style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px; display: block;">
+            <div style="font-size: 12px; color: #9B9BA1; margin-bottom: 8px;">Documents sans tag</div>
+            <div class="serif" style="font-size: 28px; color: #B7791F;">154<span style="font-size: 14px; color: #B0B0B5; font-family: 'IBM Plex Sans', sans-serif;"> / 214</span></div>
+          </a>
+          <a href="FolderProcedures.dc.html" class="row" style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px; display: block;">
+            <div style="font-size: 12px; color: #9B9BA1; margin-bottom: 8px;">Dossiers sans description</div>
+            <div class="serif" style="font-size: 28px; color: #B7791F;">2<span style="font-size: 14px; color: #B0B0B5; font-family: 'IBM Plex Sans', sans-serif;"> / 3</span></div>
+          </a>
+          <a href="Trash.dc.html" class="row" style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px; display: block;">
+            <div style="font-size: 12px; color: #9B9BA1; margin-bottom: 8px;">Documents en corbeille</div>
+            <div class="serif" style="font-size: 28px; color: #6B6B72;">3</div>
+          </a>
+          <div style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+            <div style="font-size: 12px; color: #9B9BA1; margin-bottom: 8px;">Tags orphelins</div>
+            <div class="serif" style="font-size: 28px; color: #9B9BA1;">1</div>
+            <div style="font-size: 11px; color: #B0B0B5; margin-top: 2px;">« Obsolète » · 2 documents</div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 22px; border-bottom: 1px solid #ECECEE; margin-bottom: 18px;">
+          <span class="tab-item on" style="font-size: 13px; padding: 8px 0;">Liens cassés · 7</span>
+          <span class="tab-item" style="font-size: 13px; padding: 8px 0; color: #9B9BA1;">Orphelins · 4</span>
+          <span class="tab-item" style="font-size: 13px; padding: 8px 0; color: #9B9BA1;">Revues en retard · 11</span>
+          <span class="tab-item" style="font-size: 13px; padding: 8px 0; color: #9B9BA1;">Sans tag · 154</span>
+        </div>
+
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden;">
+          <div style="display: flex; padding: 10px 16px; font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #ECECEE; background: #FAFAFB;">
+            <div style="flex: 2;">Document</div>
+            <div style="flex: 2.4;">Référence cassée</div>
+            <div style="flex: 1;">Détecté</div>
+            <div style="width: 90px;"></div>
+          </div>
+
+          <a href="Edit.dc.html" class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px; color: #0E0E10;">
+            <div style="flex: 2; font-weight: 500;">Politique de gestion des accès</div>
+            <div class="mono" style="flex: 2.4; color: #B54708; font-size: 12.5px;">→ Procédure de provisioning v9</div>
+            <div style="flex: 1; color: #9B9BA1;">il y a 2j</div>
+            <div style="width: 90px; text-align: right;"><span style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Corriger</span></div>
+          </a>
+
+          <div class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px; color: #0E0E10;">
+            <div style="flex: 2; font-weight: 500;">Plan de reprise d'activité</div>
+            <a href="NotFound.dc.html" class="mono" style="flex: 2.4; color: #B54708; font-size: 12.5px;">→ Architecture réseau v6 (archivée)</a>
+            <div style="flex: 1; color: #9B9BA1;">il y a 5j</div>
+            <div style="width: 90px; text-align: right;"><a href="Edit.dc.html" style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Corriger</a></div>
+          </div>
+
+          <a href="Edit.dc.html" class="row" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13.5px; color: #0E0E10;">
+            <div style="flex: 2; font-weight: 500;">Registre des traitements</div>
+            <div class="mono" style="flex: 2.4; color: #B54708; font-size: 12.5px;">→ Modèle de clause DPA (supprimé)</div>
+            <div style="flex: 1; color: #9B9BA1;">il y a 6j</div>
+            <div style="width: 90px; text-align: right;"><span style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Corriger</span></div>
+          </a>
+
+          <a href="Edit.dc.html" class="row" style="display: flex; align-items: center; padding: 12px 16px; font-size: 13.5px; color: #0E0E10;">
+            <div style="flex: 2; font-weight: 500;">Rôles &amp; habilitations</div>
+            <div class="mono" style="flex: 2.4; color: #B54708; font-size: 12.5px;">→ wiki.legacy.meridian-group.com/roles</div>
+            <div style="flex: 1; color: #9B9BA1;">il y a 9j</div>
+            <div style="width: 90px; text-align: right;"><span style="font-size: 12.5px; color: #3730E0; font-weight: 600;">Corriger</span></div>
+          </a>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

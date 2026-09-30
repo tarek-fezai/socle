@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Comparer v12 → v13</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .sel:hover { border-color: #C7C6C6; }
+  .seg:hover { background: #ECECEE; }
+  .diffline { display: flex; align-items: stretch; min-height: 24px; }
+  .ln { width: 42px; flex-shrink: 0; text-align: right; padding: 3px 10px; font-size: 12px; color: #B0B0B5; user-select: none; box-sizing: border-box; }
+  .cell { flex-grow: 1; padding: 3px 14px; font-size: 12.5px; line-height: 1.6; color: #33333C; white-space: pre-wrap; box-sizing: border-box; }
+  .side { width: 50%; display: flex; box-sizing: border-box; }
+  .side.old { border-right: 1px solid #ECECEE; }
+  .row-unchanged .ln { background: #FAFAFB; }
+  .row-unchanged .cell { background: #FFFFFF; }
+  .row-del .side.old .ln { background: #F6C6BA; color: #7C2D12; }
+  .row-del .side.old .cell { background: #FCEEEA; }
+  .row-add .side.new .ln { background: #B7E4C7; color: #14532D; }
+  .row-add .side.new .cell { background: #DFF3E6; }
+  .row-empty .ln, .row-empty .cell { background: repeating-linear-gradient(135deg, #F5F5F7, #F5F5F7 4px, #EFEFF1 4px, #EFEFF1 8px); }
+  .hunk { display: flex; background: #F0EFFC; border-top: 1px solid #ECECEE; border-bottom: 1px solid #ECECEE; }
+  .hunk .cell { color: #3730E0; font-weight: 600; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Approval.dc.html" style="color: #9B9BA1;">Approbation</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Comparer v12 → v13</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <a href="Approval.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Retour à l'approbation</a>
+      <a href="Approval.dc.html" class="cta" style="padding: 7px 16px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600;">Approuver la révision v13</a>
+    </div>
+  </div>
+
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 14px 44px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #ECECEE; background: #FAFAFB;">
+    <div class="sel" style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid #ECECEE; border-radius: 8px; background: #FFFFFF;">
+      <span style="font-size: 11px; color: #9B9BA1;">Depuis</span>
+      <span style="font-size: 13px; font-weight: 600; color: #0E0E10;">v12</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B0B0B5" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    <div class="sel" style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid #ECECEE; border-radius: 8px; background: #FFFFFF;">
+      <span style="font-size: 11px; color: #9B9BA1;">Vers</span>
+      <span style="font-size: 13px; font-weight: 600; color: #0E0E10;">v13</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <span style="font-size: 12px; color: #1E8E5A; font-weight: 600; margin-left: 8px;">+18</span>
+    <span style="font-size: 12px; color: #B54708; font-weight: 600;">−4</span>
+
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: #B7791F; background: #FBF3E4; border-radius: 6px; padding: 4px 10px;">
+      <span style="width: 5px; height: 5px; border-radius: 50%; background: #B7791F;"></span>
+      RÉVISION EN ATTENTE D'APPROBATION
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; padding: 20px 44px 0; display: flex; flex-direction: column;">
+    <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden;">
+
+      <div class="hunk" style="padding: 0;">
+        <div class="cell" style="padding: 8px 14px; font-size: 12px;">@@ Circuit d'approbation — reformulation @@</div>
+      </div>
+
+      <div class="diffline row-del">
+        <div class="side old"><div class="ln mono">1</div><div class="cell mono">Toute révision est validée par le responsable</div></div>
+        <div class="side new row-add"><div class="ln mono">1</div><div class="cell mono">Toute révision est validée successivement par le</div></div>
+      </div>
+      <div class="diffline row-del">
+        <div class="side old"><div class="ln mono">2</div><div class="cell mono">hiérarchique du demandeur avant publication.</div></div>
+        <div class="side new row-add"><div class="ln mono">2</div><div class="cell mono">responsable N1 puis par le propriétaire N2 de la</div></div>
+      </div>
+      <div class="diffline row-add">
+        <div class="side old row-empty"><div class="ln mono"></div><div class="cell mono"></div></div>
+        <div class="side new"><div class="ln mono">3</div><div class="cell mono">ressource avant toute publication.</div></div>
+      </div>
+      <div class="diffline row-unchanged">
+        <div class="side old"><div class="ln mono">3</div><div class="cell mono">Un refus doit être motivé par écrit.</div></div>
+        <div class="side new"><div class="ln mono">4</div><div class="cell mono">Un refus doit être motivé par écrit.</div></div>
+      </div>
+
+      <div class="hunk">
+        <div class="cell" style="padding: 8px 14px; font-size: 12px;">@@ Nouveau flux de provisionnement — section ajoutée @@</div>
+      </div>
+
+      <div class="diffline row-add">
+        <div class="side old row-empty"><div class="ln mono"></div><div class="cell mono"></div></div>
+        <div class="side new"><div class="ln mono">5</div><div class="cell mono">Le moteur IGA synchronise désormais l'annuaire</div></div>
+      </div>
+      <div class="diffline row-add">
+        <div class="side old row-empty"><div class="ln mono"></div><div class="cell mono"></div></div>
+        <div class="side new"><div class="ln mono">6</div><div class="cell mono">central en continu et non plus à échéance</div></div>
+      </div>
+      <div class="diffline row-add">
+        <div class="side old row-empty"><div class="ln mono"></div><div class="cell mono"></div></div>
+        <div class="side new"><div class="ln mono">7</div><div class="cell mono">quotidienne, réduisant le délai de révocation</div></div>
+      </div>
+      <div class="diffline row-add">
+        <div class="side old row-empty"><div class="ln mono"></div><div class="cell mono"></div></div>
+        <div class="side new"><div class="ln mono">8</div><div class="cell mono">des accès en cas de départ.</div></div>
+      </div>
+
+      <div class="hunk">
+        <div class="cell" style="padding: 8px 14px; font-size: 12px;">@@ 2. Rôles et périmètres — 2 lignes inchangées @@</div>
+      </div>
+
+      <div class="diffline row-unchanged">
+        <div class="side old"><div class="ln mono">4</div><div class="cell mono">Les rôles suivants sont soumis à un cycle</div></div>
+        <div class="side new"><div class="ln mono">9</div><div class="cell mono">Les rôles suivants sont soumis à un cycle</div></div>
+      </div>
+      <div class="diffline row-unchanged">
+        <div class="side old"><div class="ln mono">5</div><div class="cell mono">de revue formalisé.</div></div>
+        <div class="side new"><div class="ln mono">10</div><div class="cell mono">de revue formalisé.</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

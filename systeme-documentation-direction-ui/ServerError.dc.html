@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Erreur serveur</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <a href="Dashboard.dc.html" style="display: flex; align-items: center; gap: 9px;">
+      <div style="width: 22px; height: 22px; border-radius: 6px; background: #3730E0;"></div>
+      <div style="font-size: 14px; font-weight: 700; color: #0E0E10; letter-spacing: -0.01em;">Socle</div>
+    </a>
+    <a href="Search.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Rechercher</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+    <div style="width: 480px; text-align: center;">
+
+      <div style="width: 56px; height: 56px; border-radius: 14px; background: #FCEEEA; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B54708" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+
+      <h1 class="serif" style="font-weight: 400; font-size: 28px; margin: 0 0 10px; color: #0E0E10;">Une erreur est survenue</h1>
+      <p style="font-size: 14.5px; line-height: 1.6; color: #6B6B72; margin: 0 0 4px;">Le serveur a rencontré un problème inattendu et n'a pas pu traiter votre demande.</p>
+      <p class="mono" style="font-size: 12px; color: #B0B0B5; margin: 0 0 28px;">Erreur 500 · incident #SOC-48213</p>
+
+      <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px; text-align: left; margin-bottom: 20px;">
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Ce que vous pouvez faire</div>
+        <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+          <span style="width: 5px; height: 5px; border-radius: 50%; background: #B0B0B5; margin-top: 6px; flex-shrink: 0;"></span>
+          <span style="font-size: 13px; color: #43434A;">Réessayez dans quelques instants — la plupart des incidents se résolvent d'eux-mêmes.</span>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+          <span style="width: 5px; height: 5px; border-radius: 50%; background: #B0B0B5; margin-top: 6px; flex-shrink: 0;"></span>
+          <span style="font-size: 13px; color: #43434A;">Si un document était en cours d'édition, votre brouillon local a été conservé.</span>
+        </div>
+      </div>
+
+      <a href="Dashboard.dc.html" class="cta" style="display: block; padding: 12px; border-radius: 9px; background: #3730E0; color: #FFFFFF; font-size: 14px; font-weight: 600; margin-bottom: 10px;">Réessayer</a>
+      <a href="Dashboard.dc.html" class="ghost" style="display: block; padding: 12px; border-radius: 9px; border: 1px solid #ECECEE; color: #43434A; font-size: 14px; font-weight: 500; margin-bottom: 20px;">Revenir à l'accueil</a>
+
+      <p style="font-size: 12px; color: #B0B0B5; margin: 0;">Le problème persiste ? Consultez la <a href="StatusPage.dc.html" style="color: #6B6B72; text-decoration: underline;">page de statut</a> ou contactez le support Meridian Group.</p>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

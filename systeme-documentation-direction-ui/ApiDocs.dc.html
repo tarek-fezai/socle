@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Portail développeur — API Socle</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .nav-item:hover { background: #F5F5F7; }
+  .nav-item.on { background: #F0EFFC; color: #3730E0; font-weight: 600; }
+  .copy:hover { opacity: 0.8; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="display: flex; align-items: center; gap: 22px;">
+      <a href="Dashboard.dc.html" style="display: flex; align-items: center; gap: 9px;">
+        <div style="width: 22px; height: 22px; border-radius: 6px; background: #3730E0;"></div>
+        <div style="font-size: 14px; font-weight: 700; color: #0E0E10;">Socle</div>
+      </a>
+      <span style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+        <a href="Integrations.dc.html" style="color: #9B9BA1;">Intégrations &amp; API</a>
+        <span style="color: #DEDEE1;">→</span>
+        <span style="color: #0E0E10; font-weight: 500;">Portail développeur</span>
+      </span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 12px; color: #6B6B72; font-weight: 500; border: 1px solid #ECECEE; border-radius: 6px; padding: 4px 9px;">v1</span>
+      <a href="Integrations.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Gérer mes clés API</a>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+    <!-- SIDEBAR -->
+    <div style="width: 240px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Démarrer</div>
+      <a href="ApiDocs.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Authentification</a>
+      <a href="ApiDocs.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Limites de débit</a>
+      <a href="ApiDocs.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Erreurs &amp; codes de statut</a>
+
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 18px 10px 8px;">Ressources</div>
+      <a href="ApiDocs.dc.html" class="nav-item on" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Documents</a>
+      <a href="ApiDocs.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Dossiers</a>
+      <a href="ApiDocs.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Tags</a>
+      <a href="ApiDocs.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Recherche</a>
+      <a href="ApiDocs.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Utilisateurs &amp; équipes</a>
+      <a href="WebhookDeliveries.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Webhooks</a>
+
+      <div style="margin-top: auto; border: 1px solid #ECECEE; border-radius: 10px; padding: 12px 13px;">
+        <div style="font-size: 12px; font-weight: 600; color: #0E0E10; margin-bottom: 4px;">Besoin d'aide ?</div>
+        <div style="font-size: 11.5px; color: #9B9BA1; line-height: 1.5;">Contactez l'équipe plateforme sur #socle-api ou consultez le changelog de l'API.</div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex-grow: 1; overflow: hidden; padding: 36px 44px 0; min-width: 0;">
+      <div style="max-width: 760px;">
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span style="font-size: 11px; font-weight: 700; color: #FFFFFF; background: #1E8E5A; border-radius: 5px; padding: 3px 8px;">GET</span>
+          <code class="mono" style="font-size: 15px; color: #0E0E10; font-weight: 600;">/v1/documents</code>
+        </div>
+        <h1 class="serif" style="font-weight: 400; font-size: 26px; margin: 0 0 8px; color: #0E0E10;">Lister les documents</h1>
+        <p style="font-size: 14px; color: #6B6B72; line-height: 1.6; margin: 0 0 24px;">Retourne les documents accessibles à la clé API utilisée, avec pagination par curseur. Les documents en brouillon ne sont retournés que si la clé a la portée <code class="mono" style="background: #FAFAFB; border-radius: 4px; padding: 1px 5px; font-size: 12.5px;">read+write</code>.</p>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Paramètres de requête</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 26px;">
+          <div style="display: flex; padding: 10px 16px; font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #ECECEE; background: #FAFAFB;">
+            <div style="flex: 1;">Paramètre</div>
+            <div style="flex: 0.7;">Type</div>
+            <div style="flex: 2.3;">Description</div>
+          </div>
+          <div style="display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+            <div class="mono" style="flex: 1; color: #3730E0;">space_id</div>
+            <div class="mono" style="flex: 0.7; color: #9B9BA1;">string</div>
+            <div style="flex: 2.3; color: #43434A;">Filtre sur un espace précis (optionnel).</div>
+          </div>
+          <div style="display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+            <div class="mono" style="flex: 1; color: #3730E0;">tag</div>
+            <div class="mono" style="flex: 0.7; color: #9B9BA1;">string</div>
+            <div style="flex: 2.3; color: #43434A;">Filtre sur un tag (ex. <span class="mono">IAM</span>).</div>
+          </div>
+          <div style="display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+            <div class="mono" style="flex: 1; color: #3730E0;">status</div>
+            <div class="mono" style="flex: 0.7; color: #9B9BA1;">enum</div>
+            <div style="flex: 2.3; color: #43434A;"><span class="mono">published</span> · <span class="mono">draft</span> · <span class="mono">archived</span></div>
+          </div>
+          <div style="display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+            <div class="mono" style="flex: 1; color: #3730E0;">cursor</div>
+            <div class="mono" style="flex: 0.7; color: #9B9BA1;">string</div>
+            <div style="flex: 2.3; color: #43434A;">Curseur de pagination retourné par la page précédente.</div>
+          </div>
+          <div style="display: flex; align-items: center; padding: 11px 16px; font-size: 13px;">
+            <div class="mono" style="flex: 1; color: #3730E0;">limit</div>
+            <div class="mono" style="flex: 0.7; color: #9B9BA1;">integer</div>
+            <div style="flex: 2.3; color: #43434A;">1 à 100 (défaut 25).</div>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Exemple de requête</div>
+        <div style="background: #0E0E10; border-radius: 10px; padding: 14px 16px; margin-bottom: 22px; overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span class="mono" style="font-size: 10.5px; color: #6B6862; text-transform: uppercase; letter-spacing: 0.05em;">curl</span>
+            <span class="copy" style="font-size: 10.5px; color: #6B6862; cursor: pointer;">Copier</span>
+          </div>
+          <pre class="mono" style="margin: 0; font-size: 12.5px; line-height: 1.6; color: #E7E5E0; white-space: pre-wrap;">curl https://api.meridian-group.com/v1/documents?tag=IAM&limit=25 \
+  -H "Authorization: Bearer sk_live_••••••••4f2a"</pre>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Réponse 200</div>
+        <div style="background: #0E0E10; border-radius: 10px; padding: 14px 16px; margin-bottom: 28px; overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span class="mono" style="font-size: 10.5px; color: #6B6862; text-transform: uppercase; letter-spacing: 0.05em;">application/json</span>
+            <span class="copy" style="font-size: 10.5px; color: #6B6862; cursor: pointer;">Copier</span>
+          </div>
+          <pre class="mono" style="margin: 0; font-size: 12.5px; line-height: 1.65; color: #E7E5E0; white-space: pre-wrap;">{
+  "data": [
+    {
+      "id": "doc_8f3e2a",
+      "title": "Procédure de provisioning",
+      "space_id": "space_identite-acces",
+      "status": "published",
+      "tags": ["IAM"],
+      "reliability": "high",
+      "updated_at": "2026-09-26T19:12:08Z",
+      "url": "https://app.socle.meridian-group.com/d/8f3e2a"
+    }
+  ],
+  "next_cursor": "eyJvZmZzZXQiOjI1fQ",
+  "has_more": true
+}</pre>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Codes de statut</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden; margin-bottom: 40px;">
+          <div style="display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+            <span class="mono" style="width: 60px; color: #1E8E5A; font-weight: 600;">200</span>
+            <span style="color: #43434A;">Requête traitée avec succès.</span>
+          </div>
+          <div style="display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+            <span class="mono" style="width: 60px; color: #B7791F; font-weight: 600;">401</span>
+            <span style="color: #43434A;">Clé API absente, invalide ou révoquée.</span>
+          </div>
+          <div style="display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+            <span class="mono" style="width: 60px; color: #B7791F; font-weight: 600;">403</span>
+            <span style="color: #43434A;">Portée insuffisante pour la ressource demandée.</span>
+          </div>
+          <div style="display: flex; align-items: center; padding: 11px 16px; font-size: 13px;">
+            <span class="mono" style="width: 60px; color: #B54708; font-weight: 600;">429</span>
+            <span style="color: #43434A;">Limite de débit dépassée — voir ci-contre.</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: RATE LIMITS -->
+    <div style="width: 280px; flex-shrink: 0; border-left: 1px solid #ECECEE; padding: 24px 22px; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Limites de débit</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 10px; padding: 14px 15px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 8px;"><span style="color: #9B9BA1;">Lecture</span><span class="mono" style="color: #43434A; font-weight: 600;">120 / min</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 8px;"><span style="color: #9B9BA1;">Écriture</span><span class="mono" style="color: #43434A; font-weight: 600;">30 / min</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px;"><span style="color: #9B9BA1;">Rafale (burst)</span><span class="mono" style="color: #43434A; font-weight: 600;">+20 sur 10s</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">En-têtes de réponse</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div class="mono" style="font-size: 11.5px; color: #43434A;">X-RateLimit-Limit</div>
+          <div class="mono" style="font-size: 11.5px; color: #43434A;">X-RateLimit-Remaining</div>
+          <div class="mono" style="font-size: 11.5px; color: #43434A;">X-RateLimit-Reset</div>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid #ECECEE; padding-top: 16px;">
+        <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Environnements</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; margin-bottom: 8px;">
+          <span style="color: #43434A;">Production</span>
+          <code class="mono" style="font-size: 11px; color: #9B9BA1;">api.meridian-group.com</code>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px;">
+          <span style="color: #43434A;">Bac à sable</span>
+          <code class="mono" style="font-size: 11px; color: #9B9BA1;">sandbox.api…</code>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

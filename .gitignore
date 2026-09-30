@@ -1,0 +1,51 @@
+# Env / secrets
+.env
+!.env.example
+*.local.yml
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Java / Maven
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+!**/src/main/**/lib/*.jar
+
+# Go
+webhook-worker/bin/
+webhook-worker/dist/
+*.exe
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+*.log
+.pnpm-store/
+
+# Contenu mode Git (socle.storage.git-repository-path)
+data/
+backend/data/
+
+# Sorties de tests locales
+mvn-*.txt
+frontend-*.txt
+
+# Infra local data
+infra/data/
+infra/postgres-data/
+infra/minio-data/
+
+# Misc
+*.tmp
+*.swp
+.turbo/

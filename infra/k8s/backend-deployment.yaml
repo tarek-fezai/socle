@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: socle-backend
+  labels:
+    app: socle-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: socle-backend
+  template:
+    metadata:
+      labels:
+        app: socle-backend
+    spec:
+      containers:
+        - name: backend
+          image: socle-backend:0.1.0
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: socle-backend-env
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: socle-backend
+spec:
+  selector:
+    app: socle-backend
+  ports:
+    - port: 8080
+      targetPort: 8080

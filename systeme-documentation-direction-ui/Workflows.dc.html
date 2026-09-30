@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Workflows d'approbation — Meridian Group</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .cta:hover { background: #2C27C7; }
+  .nav-item:hover { background: #F5F5F7; }
+  .nav-item.on { background: #F0EFFC; color: #3730E0; font-weight: 600; }
+  .row:hover { background: #FAFAFB; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; overflow: hidden;">
+
+  <div style="flex-shrink: 0; box-sizing: border-box; height: 60px; padding: 0 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECECEE;">
+    <div style="font-size: 13px; color: #B0B0B5; display: flex; align-items: center; gap: 7px;">
+      <a href="Account.dc.html" style="color: #9B9BA1;">Compte</a>
+      <span style="color: #DEDEE1;">→</span>
+      <a href="Admin.dc.html" style="color: #9B9BA1;">Administration</a>
+      <span style="color: #DEDEE1;">→</span>
+      <span style="color: #0E0E10; font-weight: 500;">Workflows d'approbation</span>
+    </div>
+    <a href="Dashboard.dc.html" class="ghost" style="padding: 7px 14px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Retour à l'accueil</a>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+    <!-- ADMIN SUB-NAV -->
+    <div style="width: 240px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Meridian Group</div>
+      <a href="Admin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Identité &amp; SSO</a>
+      <a href="Branding.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Personnalisation de marque</a>
+      <a href="Team.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Membres &amp; équipes</a>
+      <a href="GlobalRoles.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rôles globaux</a>
+      <a href="Integrations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Intégrations &amp; API</a>
+      <a href="ContentHealth.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Santé du contenu</a>
+      <a href="Analytics.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Analytique</a>
+      <a href="TagsAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Tags</a>
+      <a href="CustomFields.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Champs personnalisés</a>
+      <a href="TemplatesAdmin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Modèles</a>
+      <a href="Workflows.dc.html" class="nav-item on" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Workflows d'approbation</a>
+      <a href="Retention.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rétention &amp; conformité</a>
+      <a href="Attestations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Attestations</a>
+      <a href="AuditLog.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Journal d'audit</a>
+      <a href="Billing.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Facturation</a>
+    </div>
+
+    <div style="flex-grow: 1; overflow: hidden; display: flex; min-width: 0;">
+
+      <div style="flex-grow: 1; overflow: hidden; padding: 36px 40px 0; min-width: 0;">
+
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px;">
+          <h1 class="serif" style="font-weight: 400; font-size: 34px; margin: 0 0 6px; color: #0E0E10;">Workflows d'approbation</h1>
+          <a href="NewWorkflow.dc.html" class="cta" style="flex-shrink: 0; padding: 9px 16px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nouveau workflow
+          </a>
+        </div>
+        <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 26px;">Définissez des chaînes d'approbation à plusieurs étapes, appliquées automatiquement selon l'espace ou le type de document.</p>
+
+        <!-- WORKFLOW LIST -->
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; overflow: hidden; margin-bottom: 28px;">
+
+          <div style="display: flex; align-items: center; padding: 11px 18px; font-size: 11.5px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #ECECEE; background: #FAFAFB;">
+            <div style="flex: 2.2;">Workflow</div>
+            <div style="flex: 2.4;">Étapes</div>
+            <div style="flex: 1.6;">Déclencheur</div>
+            <div style="flex: 0.8;">SLA</div>
+            <div style="flex: 0.6; text-align: right;">Statut</div>
+          </div>
+
+          <!-- Workflow 1 -->
+          <div class="row" style="display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex: 2.2;">
+              <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 3px;">Documents de politique — Identité &amp; accès</div>
+              <div style="font-size: 12px; color: #9B9BA1;">3 documents actifs sous ce workflow</div>
+            </div>
+            <div style="flex: 2.4; display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 10.5px; font-weight: 600; color: #43434A; background: #F0EFFC; border-radius: 5px; padding: 3px 8px;">Responsable</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+              <span style="font-size: 10.5px; font-weight: 600; color: #43434A; background: #F0EFFC; border-radius: 5px; padding: 3px 8px;">Propriétaire</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+              <span style="font-size: 10.5px; font-weight: 600; color: #43434A; background: #F0EFFC; border-radius: 5px; padding: 3px 8px;">Conformité</span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #6B6B72;">Espace : Identité &amp; accès<br>Tag : <span class="mono" style="font-size: 11.5px;">politique</span></div>
+            <div style="flex: 0.8; font-size: 13px; color: #6B6B72;">48h / étape</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #1E8E5A;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A;"></span>Actif</span>
+            </div>
+          </div>
+
+          <!-- Workflow 2 -->
+          <div class="row" style="display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex: 2.2;">
+              <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 3px;">Procédures — tous espaces</div>
+              <div style="font-size: 12px; color: #9B9BA1;">14 documents actifs sous ce workflow</div>
+            </div>
+            <div style="flex: 2.4; display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 10.5px; font-weight: 600; color: #43434A; background: #F0EFFC; border-radius: 5px; padding: 3px 8px;">Propriétaire</span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #6B6B72;">Type : Procédure<br>Tous espaces</div>
+            <div style="flex: 0.8; font-size: 13px; color: #6B6B72;">72h / étape</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #1E8E5A;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A;"></span>Actif</span>
+            </div>
+          </div>
+
+          <!-- Workflow 3 -->
+          <div class="row" style="display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid #F5F5F7;">
+            <div style="flex: 2.2;">
+              <div style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 3px;">Documents réglementaires — Conformité</div>
+              <div style="font-size: 12px; color: #9B9BA1;">6 documents actifs sous ce workflow</div>
+            </div>
+            <div style="flex: 2.4; display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 10.5px; font-weight: 600; color: #43434A; background: #F0EFFC; border-radius: 5px; padding: 3px 8px;">Responsable</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+              <span style="font-size: 10.5px; font-weight: 600; color: #43434A; background: #F0EFFC; border-radius: 5px; padding: 3px 8px;">Conformité</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+              <span style="font-size: 10.5px; font-weight: 600; color: #43434A; background: #F0EFFC; border-radius: 5px; padding: 3px 8px;">Direction juridique</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+              <span style="font-size: 10.5px; font-weight: 600; color: #43434A; background: #F0EFFC; border-radius: 5px; padding: 3px 8px;">RSSI</span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #6B6B72;">Espace : Conformité<br>Tag : <span class="mono" style="font-size: 11.5px;">réglementaire</span></div>
+            <div style="flex: 0.8; font-size: 13px; color: #6B6B72;">24h / étape</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #1E8E5A;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #1E8E5A;"></span>Actif</span>
+            </div>
+          </div>
+
+          <!-- Workflow 4 (draft) -->
+          <div class="row" style="display: flex; align-items: center; padding: 16px 18px;">
+            <div style="flex: 2.2;">
+              <div style="font-size: 14px; font-weight: 600; color: #6B6B72; margin-bottom: 3px;">Guides techniques — Infrastructure</div>
+              <div style="font-size: 12px; color: #9B9BA1;">Brouillon — non appliqué</div>
+            </div>
+            <div style="flex: 2.4; display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 10.5px; font-weight: 600; color: #9B9BA1; background: #F5F5F7; border-radius: 5px; padding: 3px 8px;">Propriétaire</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+              <span style="font-size: 10.5px; font-weight: 600; color: #9B9BA1; background: #F5F5F7; border-radius: 5px; padding: 3px 8px;">Pair relecteur</span>
+            </div>
+            <div style="flex: 1.6; font-size: 13px; color: #9B9BA1;">Espace : Infrastructure</div>
+            <div style="flex: 0.8; font-size: 13px; color: #9B9BA1;">—</div>
+            <div style="flex: 0.6; text-align: right;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #9B9BA1;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #C2C2C6;"></span>Brouillon</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BUILDER PREVIEW -->
+        <div style="font-size: 12px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Aperçu du constructeur — « Documents réglementaires — Conformité »</div>
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 22px; margin-bottom: 32px;">
+
+          <div style="display: flex; align-items: stretch; gap: 0; margin-bottom: 18px; overflow-x: auto;">
+
+            <div style="width: 220px; flex-shrink: 0; border: 1px solid #ECECEE; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 10.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">Étape 1</div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 10px;">Revue Responsable</div>
+              <div style="font-size: 11.5px; color: #6B6B72; margin-bottom: 10px;">Approbateur : rôle « Responsable hiérarchique » du demandeur</div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9B9BA1;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                24h · escalade automatique
+              </div>
+            </div>
+
+            <div style="width: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="2.4"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+
+            <div style="width: 220px; flex-shrink: 0; border: 1px solid #ECECEE; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 10.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">Étape 2</div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 10px;">Revue Conformité</div>
+              <div style="font-size: 11.5px; color: #6B6B72; margin-bottom: 10px;">Approbateur : groupe « Équipe Conformité »</div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9B9BA1;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                24h · escalade automatique
+              </div>
+            </div>
+
+            <div style="width: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="2.4"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+
+            <div style="width: 220px; flex-shrink: 0; border: 1px solid #ECECEE; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 10.5px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">Étape 3</div>
+              <div style="font-size: 13.5px; font-weight: 600; color: #0E0E10; margin-bottom: 10px;">Revue Direction juridique</div>
+              <div style="font-size: 11.5px; color: #6B6B72; margin-bottom: 10px;">Approbateur : personne nommée — Sami Lahlou</div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9B9BA1;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                24h · pas d'escalade
+              </div>
+            </div>
+
+            <div style="width: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C2C2C6" stroke-width="2.4"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+
+            <div style="width: 220px; flex-shrink: 0; border: 1.5px dashed #DEDEE1; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+              <span style="width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #C2C2C6; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </span>
+              <span style="font-size: 12px; color: #9B9BA1; font-weight: 500;">Ajouter une étape</span>
+            </div>
+
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 16px; border-top: 1px solid #ECECEE;">
+            <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #43434A;">
+              <span style="width: 34px; height: 19px; border-radius: 10px; background: #3730E0; position: relative; display: inline-block;">
+                <span style="position: absolute; top: 2px; right: 2px; width: 15px; height: 15px; border-radius: 50%; background: #FFFFFF;"></span>
+              </span>
+              Rejet à une étape renvoie systématiquement à l'auteur
+            </label>
+            <div style="display: flex; gap: 10px;">
+              <a href="Workflows.dc.html" class="ghost" style="padding: 9px 16px; border-radius: 7px; border: 1px solid #ECECEE; color: #43434A; font-size: 13px; font-weight: 500;">Annuler</a>
+              <a href="Workflows.dc.html" class="cta" style="padding: 9px 18px; border-radius: 7px; background: #3730E0; color: #FFFFFF; font-size: 13px; font-weight: 600;">Enregistrer le workflow</a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- RIGHT INFO RAIL -->
+      <div style="width: 280px; flex-shrink: 0; border-left: 1px solid #ECECEE; padding: 32px 24px; display: flex; flex-direction: column; gap: 22px; overflow: hidden;">
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Priorité des règles</div>
+          <p style="font-size: 12.5px; color: #6B6B72; line-height: 1.6; margin: 0;">Lorsqu'un document correspond à plusieurs workflows, le plus spécifique (tag + espace) prévaut sur les règles génériques. En cas d'égalité, le workflow le plus récemment modifié s'applique.</p>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Rôles d'approbateur disponibles</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 12.5px; color: #43434A;">· Responsable hiérarchique</span>
+            <span style="font-size: 12.5px; color: #43434A;">· Propriétaire de l'espace</span>
+            <span style="font-size: 12.5px; color: #43434A;">· Groupe nommé</span>
+            <span style="font-size: 12.5px; color: #43434A;">· Personne nommée</span>
+            <span style="font-size: 12.5px; color: #43434A;">· Rôle global (ex. RSSI)</span>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #ECECEE; padding-top: 18px;">
+          <div style="font-size: 11px; font-weight: 600; color: #9B9BA1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Voir aussi</div>
+          <a href="Attestations.dc.html" style="display: block; font-size: 13px; color: #3730E0; font-weight: 500; padding: 4px 0;">Attestations de lecture →</a>
+          <a href="Retention.dc.html" style="display: block; font-size: 13px; color: #3730E0; font-weight: 500; padding: 4px 0;">Rétention &amp; conformité →</a>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Raccourcis clavier</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  a { text-decoration: none; }
+  .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .ghost:hover { background: #F5F5F7; }
+  .close-btn:hover { background: #F5F5F7; }
+  kbd { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #43434A; background: #FAFAFB; border: 1px solid #DEDEE1; border-bottom-width: 2px; border-radius: 5px; padding: 2px 7px; display: inline-block; min-width: 14px; text-align: center; }
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; background: #FFFFFF; overflow: hidden;">
+
+  <!-- DIMMED BACKGROUND (schematic dashboard) -->
+  <div style="position: absolute; inset: 0; display: flex;">
+    <div style="width: 268px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 28px 22px; opacity: 0.35;">
+      <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 28px;">
+        <div style="width: 24px; height: 24px; border-radius: 7px; background: #3730E0;"></div>
+        <div style="font-size: 15px; font-weight: 700; color: #0E0E10;">Socle</div>
+      </div>
+      <div style="height: 34px; border-radius: 8px; border: 1px solid #ECECEE; margin-bottom: 18px;"></div>
+      <div style="height: 14px; width: 60%; background: #F1EFEA; border-radius: 4px; margin-bottom: 16px;"></div>
+      <div style="height: 14px; width: 80%; background: #F1EFEA; border-radius: 4px; margin-bottom: 10px;"></div>
+      <div style="height: 14px; width: 70%; background: #F1EFEA; border-radius: 4px; margin-bottom: 10px;"></div>
+      <div style="height: 14px; width: 75%; background: #F1EFEA; border-radius: 4px;"></div>
+    </div>
+    <div style="flex-grow: 1; padding: 0 44px; opacity: 0.35;">
+      <div style="height: 60px; display: flex; align-items: center; justify-content: flex-end; border-bottom: 1px solid #ECECEE;">
+        <div style="width: 130px; height: 30px; border-radius: 7px; border: 1px solid #ECECEE;"></div>
+      </div>
+      <div style="margin-top: 44px;">
+        <div style="height: 40px; width: 40%; background: #F1EFEA; border-radius: 6px; margin-bottom: 22px;"></div>
+        <div style="display: flex; gap: 16px;">
+          <div style="height: 80px; flex: 1; border-radius: 12px; background: #F1EFEA;"></div>
+          <div style="height: 80px; flex: 1; border-radius: 12px; background: #F1EFEA;"></div>
+          <div style="height: 80px; flex: 1; border-radius: 12px; background: #F1EFEA;"></div>
+          <div style="height: 80px; flex: 1; border-radius: 12px; background: #F1EFEA;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(14,14,16,0.45);"></div>
+
+  <!-- MODAL -->
+  <div style="position: absolute; top: 82px; left: 50%; transform: translateX(-50%); width: 700px; max-height: 736px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 24px 60px rgba(14,14,16,0.28); box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column;">
+
+    <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 22px 26px 18px; border-bottom: 1px solid #ECECEE;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; border-radius: 9px; background: #F0EFFC; display: flex; align-items: center; justify-content: center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3730E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
+        </div>
+        <h1 class="serif" style="font-weight: 400; font-size: 22px; margin: 0; color: #0E0E10;">Raccourcis clavier</h1>
+      </div>
+      <a href="Dashboard.dc.html" class="close-btn" aria-label="Fermer" style="width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </a>
+    </div>
+
+    <div style="flex-grow: 1; overflow: auto; padding: 22px 26px 26px; display: flex; gap: 36px;">
+
+      <div style="flex: 1;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">Général</div>
+        <div style="display: flex; flex-direction: column; gap: 13px; margin-bottom: 26px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Rechercher</span><kbd>⌘</kbd><kbd>K</kbd></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Nouveau document</span><span><kbd>⌘</kbd><kbd>⇧</kbd><kbd>N</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Ouvrir les notifications</span><kbd>G</kbd> <kbd>N</kbd></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Aller à l'accueil</span><kbd>G</kbd> <kbd>H</kbd></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Aller aux favoris</span><kbd>G</kbd> <kbd>F</kbd></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Afficher ces raccourcis</span><kbd>?</kbd></div>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">Navigation du document</div>
+        <div style="display: flex; flex-direction: column; gap: 13px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Réduire / agrandir la barre latérale</span><span><kbd>⌘</kbd><kbd>\</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Document suivant / précédent</span><span><kbd>J</kbd> <kbd>K</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Basculer Lire / Modifier</span><kbd>E</kbd></div>
+        </div>
+      </div>
+
+      <div style="flex: 1;">
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">Édition</div>
+        <div style="display: flex; flex-direction: column; gap: 13px; margin-bottom: 26px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Enregistrer le brouillon</span><span><kbd>⌘</kbd><kbd>S</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Publier / envoyer en revue</span><span><kbd>⌘</kbd><kbd>↵</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Gras</span><span><kbd>⌘</kbd><kbd>B</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Italique</span><span><kbd>⌘</kbd><kbd>I</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Lien</span><span><kbd>⌘</kbd><kbd>K</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Insérer un tag</span><span><kbd>⌘</kbd><kbd>T</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Commenter la sélection</span><span><kbd>⌘</kbd><kbd>⇧</kbd><kbd>M</kbd></span></div>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">Sélection multiple</div>
+        <div style="display: flex; flex-direction: column; gap: 13px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Sélectionner / désélectionner une ligne</span><kbd>X</kbd></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Tout sélectionner</span><span><kbd>⌘</kbd><kbd>A</kbd></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #43434A;">Annuler la sélection</span><kbd>Échap</kbd></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="flex-shrink: 0; padding: 14px 26px; border-top: 1px solid #ECECEE; background: #FAFAFB;">
+      <p style="font-size: 12px; color: #9B9BA1; margin: 0;">Les raccourcis avec deux touches successives (comme <kbd>G</kbd> <kbd>H</kbd>) se pressent l'une après l'autre, pas simultanément. Sur Windows/Linux, remplacez <kbd>⌘</kbd> par <kbd>Ctrl</kbd>.</p>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
