@@ -20,6 +20,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # V27 seed TipTap JSON uses PostgreSQL $json$…$json$ dollar-quotes; Flyway would
+    # otherwise treat `${"type":…}` as a placeholder.
+    placeholder-replacement: false
   security:
     oauth2:
       resourceserver:
