@@ -28,14 +28,32 @@ export async function loginViaUi(
   username: string,
   password: string,
 ): Promise<void> {
-  await page.goto('/')
-  const loginBtn = page.getByRole('button', { name: /connexion|login/i })
-  if (await loginBtn.isVisible().catch(() => false)) {
-    await loginBtn.click()
+  const consoleErrors: string[] = []
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text())
+  })
+  page.on('pageerror', (err) => consoleErrors.push(String(err)))
+
+  await Promise.all([
+    page.waitForResponse(
+      (res) => res.url().includes('/api/v1/public/auth-config') && res.ok(),
+      { timeout: 30_000 },
+    ),
+    page.goto('/'),
+  ])
+
+  const loginBtn = page.getByRole('button', { name: /se connecter|connexion|login/i })
+  await loginBtn.click({ timeout: 30_000 })
+  try {
+    await page.waitForURL(/realms\/socle|\/protocol\/openid-connect/, { timeout: 60_000 })
+  } catch (err) {
+    throw new Error(
+      `OIDC redirect failed (url=${page.url()}). Console: ${consoleErrors.join(' | ') || '(none)'}`,
+      { cause: err },
+    )
   }
-  await page.waitForURL(/realms\/socle|\/protocol\/openid-connect/)
   await page.fill('#username', username)
   await page.fill('#password', password)
-  await page.click('input[type="submit"], button[type="submit"]')
-  await page.waitForURL(/127\.0\.0\.1|localhost/)
+  await page.click('#kc-login, input[type="submit"], button[type="submit"]')
+  await page.waitForURL(/127\.0\.0\.1(?::80)?\/?(?:callback|$)|localhost/, { timeout: 60_000 })
 }

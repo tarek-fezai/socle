@@ -15,7 +15,7 @@ Actuator: health is used for probes; restrict `/actuator` at the ingress in high
 
 - Terminate TLS at Caddy or ingress; enforce HTTPS redirects.
 - Set `CORS_ALLOWED_ORIGINS` to your public origin only (no wildcard in production).
-- Frontend is static nginx; security headers depend on ingress/Caddy configuration — add HSTS, `X-Content-Type-Options`, and CSP at the edge per your policy.
+- Frontend nginx (`frontend/nginx.conf`) sets CSP (`frame-ancestors 'none'`), `X-Content-Type-Options`, and `Referrer-Policy`. `connect-src` / `form-action` allow `http:` and `https:` so the SPA can reach the client's IdP (demo HTTP Keycloak or production HTTPS). Add HSTS at Caddy/ingress.
 
 ## Secrets
 
