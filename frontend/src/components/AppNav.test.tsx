@@ -61,23 +61,6 @@ describe('AppNav role-gated links (/me)', () => {
     expect(screen.queryByRole('link', { name: 'Intégrations' })).toBeNull()
   })
 
-  it('masque Modèles pour CONTRIBUTEUR et propose « Nouveau »', async () => {
-    render(wrap(<AppNav />))
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Documents' })).toBeTruthy())
-    expect(screen.queryByRole('link', { name: 'Modèles' })).toBeNull()
-    expect(screen.getByRole('link', { name: 'Nouveau' }).getAttribute('href')).toBe('/docs/new')
-  })
-
-  it('affiche le lien Modèles pour ADMINISTRATEUR_SYSTEME', async () => {
-    authState.me.roles = [SocleRole.ADMINISTRATEUR_SYSTEME]
-    render(wrap(<AppNav />))
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: 'Modèles' }).getAttribute('href')).toBe(
-        '/admin/templates',
-      ),
-    )
-  })
-
   it('affiche Audit pour AUDITEUR', async () => {
     authState.me.roles = [SocleRole.AUDITEUR]
     render(wrap(<AppNav />))

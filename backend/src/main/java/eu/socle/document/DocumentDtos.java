@@ -54,39 +54,8 @@ public final class DocumentDtos {
             int stalenessThresholdDays,
             /** organisation | space | restricted */
             String visibility,
-            int position,
-            /** Modèle d'origine (null si page vierge ou modèle supprimé depuis). */
-            UUID templateId,
-            /** Version du modèle à la création. */
-            Integer templateVersion
+            int position
     ) {
-        /** Compat appels sans provenance modèle. */
-        public DocumentResponse(
-                UUID id,
-                UUID spaceId,
-                UUID folderId,
-                String title,
-                String docType,
-                Map<String, Object> body,
-                String status,
-                int currentVersionNo,
-                Instant createdAt,
-                Instant updatedAt,
-                BigDecimal reliabilityScore,
-                Instant reliabilityComputedAt,
-                boolean stale,
-                Instant contentModifiedAt,
-                int stalenessThresholdDays,
-                String visibility,
-                int position
-        ) {
-            this(
-                    id, spaceId, folderId, title, docType, body, status, currentVersionNo,
-                    createdAt, updatedAt, reliabilityScore, reliabilityComputedAt,
-                    stale, contentModifiedAt, stalenessThresholdDays, visibility, position,
-                    null, null);
-        }
-
         /** Compat tests / appels sans folderId / position / visibility. */
         public DocumentResponse(
                 UUID id,
@@ -134,46 +103,29 @@ public final class DocumentDtos {
         }
     }
 
-    /**
-     * @param body obligatoire sauf si {@code templateId} est fourni (validé dans
-     *             {@link DocumentService#create}) ; avec modèle, le corps vient du modèle.
-     * @param templateId modèle de page d'origine (variables {@code {{date}}}… substituées côté serveur)
-     */
     public record CreateDocumentRequest(
             @NotBlank String title,
-            Map<String, Object> body,
+            @NotNull Map<String, Object> body,
             String docType,
             @NotNull UUID spaceId,
             /** Surcharge du default_visibility de l'espace — réservé aux owners. */
             String visibility,
-            UUID folderId,
-            UUID templateId
+            UUID folderId
     ) {
         public CreateDocumentRequest(String title, Map<String, Object> body) {
-            this(title, body, null, null, null, null, null);
+            this(title, body, null, null, null, null);
         }
 
         public CreateDocumentRequest(String title, Map<String, Object> body, String docType) {
-            this(title, body, docType, null, null, null, null);
+            this(title, body, docType, null, null, null);
         }
 
         public CreateDocumentRequest(String title, Map<String, Object> body, String docType, UUID spaceId) {
-            this(title, body, docType, spaceId, null, null, null);
+            this(title, body, docType, spaceId, null, null);
         }
 
         public CreateDocumentRequest(String title, Map<String, Object> body, String docType, UUID spaceId, String visibility) {
-            this(title, body, docType, spaceId, visibility, null, null);
-        }
-
-        public CreateDocumentRequest(
-                String title,
-                Map<String, Object> body,
-                String docType,
-                UUID spaceId,
-                String visibility,
-                UUID folderId
-        ) {
-            this(title, body, docType, spaceId, visibility, folderId, null);
+            this(title, body, docType, spaceId, visibility, null);
         }
     }
 

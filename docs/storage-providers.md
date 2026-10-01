@@ -101,20 +101,8 @@ réservé, toujours relisible.
 - blockquote contenant autre chose que des paragraphes (ex. transclusion) ;
 - `transclusion` avec attrs supplémentaires (`collapsed`, …) ou UUID invalide ;
 - marks inconnus (`underline`, …) ou marks avec attrs ;
-- nœuds / inlines inconnus (`callout`, `mention`, `placeholder`, …) ;
+- nœuds / inlines inconnus (`callout`, `mention`, …) ;
 - tout bloc dont l'aller-retour MD échoue pour une autre raison.
-
-Le nœud TipTap `placeholder` (`attrs.hint`) est volontairement hors Markdown
-lisible : la garde l'émet en `:::socle-json`, ce qui garantit un **aller-retour
-Git sans perte** (même sémantique que `callout` / nœuds inconnus).
-
-#### Modèles de pages (`templates`)
-
-Les modèles sont de la **configuration**, pas du contenu versionné. Leur corps
-TipTap (`templates.body`, JSONB) est **toujours stocké en PostgreSQL**, que
-`socle.storage.provider` soit `relational` ou `git`. Le dépôt Git ne contient
-que les documents ; créer un document depuis un modèle copie / substitue le
-body vers le document (puis éventuellement vers Git comme pour toute création).
 
 #### Diagnostic dérive projection ↔ Git (lecture seule)
 

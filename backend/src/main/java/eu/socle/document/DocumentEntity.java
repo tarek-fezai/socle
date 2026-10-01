@@ -84,14 +84,6 @@ public class DocumentEntity {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
-    /** Modèle d'origine (snapshot de provenance — pas de synchronisation ultérieure). */
-    @Column(name = "template_id")
-    private UUID templateId;
-
-    /** Version du modèle au moment de la création du document. */
-    @Column(name = "template_version")
-    private Integer templateVersion;
-
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
@@ -274,21 +266,5 @@ public class DocumentEntity {
 
     public void setUpdatedBy(UUID updatedBy) {
         this.updatedBy = updatedBy;
-    }
-
-    public UUID getTemplateId() {
-        return templateId;
-    }
-
-    public void setTemplateId(UUID templateId) {
-        this.templateId = templateId;
-    }
-
-    public Integer getTemplateVersion() {
-        return templateVersion;
-    }
-
-    public void setTemplateVersion(Integer templateVersion) {
-        this.templateVersion = templateVersion;
     }
 }

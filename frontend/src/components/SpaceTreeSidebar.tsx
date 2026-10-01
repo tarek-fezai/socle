@@ -221,14 +221,6 @@ export function SpaceTreeSidebar({ spaceId, currentDocumentId, currentFolderId }
           Dossier
         </button>
       </div>
-      <Link
-        to={`/docs/new?spaceId=${encodeURIComponent(spaceId)}${
-          activeFolderId ? `&folderId=${encodeURIComponent(activeFolderId)}` : ''
-        }`}
-        className="-mt-3 text-center text-xs font-semibold text-socle-slate hover:text-socle-accent"
-      >
-        Depuis un modèle…
-      </Link>
       {createDoc.isError && (
         <p className="-mt-3 text-xs text-socle-danger">Création refusée — accès editor requis.</p>
       )}
