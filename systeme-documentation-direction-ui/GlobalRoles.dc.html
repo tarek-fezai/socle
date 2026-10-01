@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<title>Rôles globaux — Meridian Group</title>
+<title>Rôles globaux — Organisation Démo</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -13,11 +13,10 @@
   body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
   a { text-decoration: none; }
   .serif { font-family: 'Instrument Serif', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
   .ghost:hover { background: #F5F5F7; }
   .nav-item:hover { background: #F5F5F7; }
   .nav-item.on { background: #F0EFFC; color: #3730E0; font-weight: 600; }
-  .check { color: #1E8E5A; }
-  .dash { color: #DEDEE1; }
 </style>
 </helmet>
 
@@ -36,10 +35,11 @@
 
     <!-- ADMIN SUB-NAV -->
     <div style="width: 240px; flex-shrink: 0; border-right: 1px solid #ECECEE; padding: 24px 16px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
-      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Meridian Group</div>
+      <div style="font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 10px 8px;">Organisation Démo</div>
       <a href="Admin.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Identité &amp; SSO</a>
       <a href="Branding.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Personnalisation de marque</a>
       <a href="Team.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Membres &amp; équipes</a>
+      <a href="UserIdentities.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Identités utilisateurs</a>
       <a href="GlobalRoles.dc.html" class="nav-item on" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rôles globaux</a>
       <a href="Integrations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Intégrations &amp; API</a>
       <a href="ContentHealth.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Santé du contenu</a>
@@ -51,74 +51,76 @@
       <a href="Retention.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Rétention &amp; conformité</a>
       <a href="Attestations.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Attestations</a>
       <a href="AuditLog.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Journal d'audit</a>
-      <a href="Billing.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Facturation</a>
+      <a href="Licence.dc.html" class="nav-item" style="padding: 8px 10px; border-radius: 7px; font-size: 13.5px; color: #4B4B52;">Licence</a>
     </div>
 
     <div style="flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; padding: 36px 48px 0; min-width: 0;">
 
       <h1 class="serif" style="font-weight: 400; font-size: 34px; margin: 0 0 6px; color: #0E0E10;">Rôles globaux</h1>
-      <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 24px;">Deux niveaux d'accès à l'administration, et quatre rôles d'accès au contenu d'une équipe.</p>
+      <p style="font-size: 14px; color: #9B9BA1; margin: 0 0 24px;">Rôles de plateforme issus du jeton ou de l'annuaire interne, et attributions d'approbation par portée.</p>
 
-      <div style="display: flex; gap: 16px; margin-bottom: 28px;">
-        <div style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-size: 12px; color: #3730E0; font-weight: 600; background: #F0EFFC; border-radius: 6px; padding: 3px 9px;">Administrateur</span>
+      <div style="font-size: 13px; font-weight: 700; color: #0E0E10; margin-bottom: 4px;">Rôles de plateforme</div>
+      <p style="font-size: 13px; color: #9B9BA1; margin: 0 0 14px;">Source configurable dans <a href="Admin.dc.html" style="color: #3730E0; font-weight: 600;">Identité &amp; SSO</a> (Jeton, Interne, ou Les deux).</p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px;">
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0E0E10;">Contributeur</span>
+            <span style="font-size: 11px; color: #3730E0; font-weight: 600; background: #F0EFFC; border-radius: 6px; padding: 3px 8px;">Les deux</span>
           </div>
-          <p style="font-size: 13px; color: #6B6B72; margin: 0 0 10px; line-height: 1.5;">Accès complet à l'administration de l'organisation : SSO, domaines, sessions, membres, intégrations, rétention et facturation.</p>
-          <div style="font-size: 12px; color: #9B9BA1;">6 administrateurs actuellement</div>
+          <p style="font-size: 12.5px; color: #6B6B72; margin: 0; line-height: 1.5;">Création et édition de documents. Rôle par défaut à la première connexion.</p>
         </div>
-        <div style="flex: 1; border: 1px solid #ECECEE; border-radius: 12px; padding: 18px 20px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-size: 12px; color: #43434A; font-weight: 500; border: 1px solid #ECECEE; border-radius: 6px; padding: 3px 9px;">Membre</span>
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0E0E10;">Auditeur</span>
+            <span style="font-size: 11px; color: #43434A; font-weight: 600; background: #FAFAFB; border: 1px solid #ECECEE; border-radius: 6px; padding: 3px 8px;">Jeton</span>
           </div>
-          <p style="font-size: 13px; color: #6B6B72; margin: 0 0 10px; line-height: 1.5;">Aucun accès à l'administration. Les droits sur le contenu dépendent uniquement du rôle attribué dans chaque équipe.</p>
-          <div style="font-size: 12px; color: #9B9BA1;">208 membres actuellement</div>
+          <p style="font-size: 12.5px; color: #6B6B72; margin: 0; line-height: 1.5;">Lecture étendue, journal d'audit et exports de conformité. Sans droit d'édition.</p>
+        </div>
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0E0E10;">Intégrateur</span>
+            <span style="font-size: 11px; color: #43434A; font-weight: 600; background: #FAFAFB; border: 1px solid #ECECEE; border-radius: 6px; padding: 3px 8px;">Interne</span>
+          </div>
+          <p style="font-size: 12.5px; color: #6B6B72; margin: 0; line-height: 1.5;">Clés API, webhooks et connecteurs. Accès technique sans administration complète.</p>
+        </div>
+        <div style="border: 1px solid #ECECEE; border-radius: 12px; padding: 16px 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0E0E10;">Administrateur système</span>
+            <span style="font-size: 11px; color: #3730E0; font-weight: 600; background: #F0EFFC; border-radius: 6px; padding: 3px 8px;">Les deux</span>
+          </div>
+          <p style="font-size: 12.5px; color: #6B6B72; margin: 0; line-height: 1.5;">Administration complète : SSO, membres, licence, rétention et intégrations.</p>
         </div>
       </div>
 
-      <div style="font-size: 13px; font-weight: 700; color: #0E0E10; margin-bottom: 4px;">Rôles dans une équipe</div>
-      <p style="font-size: 13px; color: #9B9BA1; margin: 0 0 14px;">Attribués par équipe (voir <a href="Team.dc.html" style="color: #3730E0; font-weight: 600;">Membres &amp; équipes</a>) et indépendants du rôle global.</p>
+      <div style="font-size: 13px; font-weight: 700; color: #0E0E10; margin-bottom: 4px;">Rôles d'approbation</div>
+      <p style="font-size: 13px; color: #9B9BA1; margin: 0 0 14px;">Attributions avec une portée explicite — indépendantes des rôles de plateforme.</p>
 
       <div style="border: 1px solid #ECECEE; border-radius: 10px; overflow: hidden;">
         <div style="display: flex; padding: 10px 16px; font-size: 11px; font-weight: 600; color: #B0B0B5; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #ECECEE; background: #FAFAFB;">
-          <div style="flex: 1.6;">Rôle</div>
-          <div style="flex: 1; text-align: center;">Lire</div>
-          <div style="flex: 1; text-align: center;">Commenter</div>
-          <div style="flex: 1; text-align: center;">Modifier</div>
-          <div style="flex: 1; text-align: center;">Approuver</div>
-          <div style="flex: 1.2; text-align: center;">Gérer les accès</div>
+          <div style="flex: 1.4;">Attribué à</div>
+          <div style="flex: 1.1;">Rôle</div>
+          <div style="flex: 2;">Portée</div>
         </div>
-        <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
-          <div style="flex: 1.6; font-weight: 600; color: #0E0E10;">Propriétaire</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1.2; text-align: center;" class="check">✓</div>
+        <div style="display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+          <div style="flex: 1.4; font-weight: 500; color: #0E0E10;">Claire Dubois</div>
+          <div style="flex: 1.1;"><span style="font-size: 12px; color: #43434A; font-weight: 500; border: 1px solid #ECECEE; border-radius: 6px; padding: 3px 9px;">Approbateur</span></div>
+          <div style="flex: 2; color: #6B6B72;">Tous les espaces</div>
         </div>
-        <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
-          <div style="flex: 1.6; font-weight: 600; color: #0E0E10;">Approbateur</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1.2; text-align: center;" class="dash">—</div>
+        <div style="display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+          <div style="flex: 1.4; font-weight: 500; color: #0E0E10;">Équipe Conformité</div>
+          <div style="flex: 1.1;"><span style="font-size: 12px; color: #43434A; font-weight: 500; border: 1px solid #ECECEE; border-radius: 6px; padding: 3px 9px;">Approbateur</span></div>
+          <div style="flex: 2; color: #6B6B72;">Un espace · <span style="color: #0E0E10; font-weight: 500;">Identité &amp; accès</span></div>
         </div>
-        <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
-          <div style="flex: 1.6; font-weight: 600; color: #0E0E10;">Contributeur</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="dash">—</div>
-          <div style="flex: 1.2; text-align: center;" class="dash">—</div>
+        <div style="display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F5F5F7; font-size: 13px;">
+          <div style="flex: 1.4; font-weight: 500; color: #0E0E10;">Rania Lefèvre</div>
+          <div style="flex: 1.1;"><span style="font-size: 12px; color: #43434A; font-weight: 500; border: 1px solid #ECECEE; border-radius: 6px; padding: 3px 9px;">Approbateur</span></div>
+          <div style="flex: 2; color: #6B6B72;">Un tag · <span class="mono" style="color: #0E0E10; font-weight: 500;">#politique</span></div>
         </div>
-        <div style="display: flex; align-items: center; padding: 12px 16px; font-size: 13px;">
-          <div style="flex: 1.6; font-weight: 600; color: #0E0E10;">Lecteur</div>
-          <div style="flex: 1; text-align: center;" class="check">✓</div>
-          <div style="flex: 1; text-align: center;" class="dash">—</div>
-          <div style="flex: 1; text-align: center;" class="dash">—</div>
-          <div style="flex: 1; text-align: center;" class="dash">—</div>
-          <div style="flex: 1.2; text-align: center;" class="dash">—</div>
+        <div style="display: flex; align-items: center; padding: 13px 16px; font-size: 13px;">
+          <div style="flex: 1.4; font-weight: 500; color: #0E0E10;">Yanis M.</div>
+          <div style="flex: 1.1;"><span style="font-size: 12px; color: #43434A; font-weight: 500; border: 1px solid #ECECEE; border-radius: 6px; padding: 3px 9px;">Approbateur</span></div>
+          <div style="flex: 2; color: #6B6B72;">Un type de document · <span style="color: #0E0E10; font-weight: 500;">Procédure</span></div>
         </div>
       </div>
 
