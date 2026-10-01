@@ -89,6 +89,8 @@ class FolderTreeCountersTest {
                 });
         when(authorizationService.filterByFolderViewer(eq(USER), any()))
                 .thenReturn(List.of(FOLDER));
+        when(authorizationService.hasRelation(eq(USER), eq("space"), eq(SPACE), eq("viewer")))
+                .thenReturn(true);
         // 3 docs in space, only 2 viewable (restricted filtered out)
         when(authorizationService.listViewableDocumentIds(eq(USER), any()))
                 .thenReturn(List.of(D1, D2));
@@ -99,6 +101,14 @@ class FolderTreeCountersTest {
                     return List.of(
                             mapDoc(mapper, D1, FOLDER, "A"),
                             mapDoc(mapper, D2, FOLDER, "B"));
+                });
+        when(jdbc.query(contains("WITH RECURSIVE ancestors"), any(RowMapper.class), any(Object[].class)))
+                .thenAnswer(inv -> {
+                    @SuppressWarnings("unchecked")
+                    RowMapper<Object> mapper = inv.getArgument(1);
+                    ResultSet rs = org.mockito.Mockito.mock(ResultSet.class);
+                    when(rs.getObject("id")).thenReturn(FOLDER);
+                    return List.of(mapper.mapRow(rs, 0));
                 });
 
         var tree = service.tree(jwt, SPACE, null);

@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -47,7 +46,8 @@ class FolderTreeVolumeTest {
     @BeforeEach
     void setUp() {
         fx = new FolderTestSupport();
-        doNothing().when(fx.authorizationService).requireSpaceRelation(any(), any(), any());
+        when(fx.authorizationService.hasRelation(eq(USER), eq("space"), eq(SPACE), eq("viewer")))
+                .thenReturn(true);
     }
 
     @Test
@@ -73,6 +73,7 @@ class FolderTreeVolumeTest {
         // une seule résolution, bornée à l'espace
         verify(fx.authorizationService, times(1)).listViewableDocumentIds(USER, DocumentScope.space(SPACE));
         verify(fx.authorizationService, never()).listViewableDocumentIds(any(), eq(DocumentScope.global()));
+        verify(fx.authorizationService, times(1)).filterByFolderViewer(eq(USER), anyCollection());
         // aucun check par document (N+1)
         verify(fx.authorizationService, never()).filterByDocumentViewer(any(), anyCollection());
         verify(fx.authorizationService, never()).hasRelation(any(), eq("document"), any(), any());

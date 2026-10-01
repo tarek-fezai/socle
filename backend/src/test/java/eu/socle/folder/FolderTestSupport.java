@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -195,7 +196,7 @@ final class FolderTestSupport {
                     return ids;
                 });
 
-        // tree() : tous les dossiers de l'espace
+        // tree() : tous les dossiers de l'espace (ORDER BY position… name)
         when(jdbc.query(contains("ORDER BY position ASC, lower(name) ASC"),
                 any(RowMapper.class), any(UUID.class)))
                 .thenAnswer(inv -> {
@@ -206,6 +207,37 @@ final class FolderTestSupport {
                         if (space.equals(f.spaceId())) {
                             rows.add(mapper.mapRow(folderRs(f), 0));
                         }
+                    }
+                    return rows;
+                });
+
+        // tree() : CTE ancêtres (WITH RECURSIVE ancestors)
+        when(jdbc.query(contains("WITH RECURSIVE ancestors"), any(RowMapper.class), any(Object[].class)))
+                .thenAnswer(inv -> {
+                    RowMapper<Object> mapper = inv.getArgument(1);
+                    Object[] seedArgs = java.util.Arrays.copyOfRange(
+                            inv.getArguments(), 2, inv.getArguments().length);
+                    Set<UUID> seeds = new java.util.HashSet<>();
+                    for (Object a : seedArgs) {
+                        seeds.add((UUID) a);
+                    }
+                    Set<UUID> ancestors = new java.util.HashSet<>();
+                    for (UUID seed : seeds) {
+                        UUID cur = seed;
+                        int guard = 0;
+                        while (cur != null && guard++ < 100) {
+                            if (!ancestors.add(cur)) {
+                                break;
+                            }
+                            Folder f = folders.get(cur);
+                            cur = f == null ? null : f.parentId();
+                        }
+                    }
+                    List<Object> rows = new ArrayList<>();
+                    for (UUID id : ancestors) {
+                        ResultSet rs = mock(ResultSet.class);
+                        when(rs.getObject("id")).thenReturn(id);
+                        rows.add(mapper.mapRow(rs, 0));
                     }
                     return rows;
                 });

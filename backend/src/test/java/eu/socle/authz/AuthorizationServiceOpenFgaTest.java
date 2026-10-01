@@ -36,7 +36,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import dev.openfga.sdk.api.client.model.ClientTupleKey;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Intégration {@link AuthorizationService} contre un vrai OpenFGA (Testcontainers, mémoire).
@@ -211,6 +216,61 @@ class AuthorizationServiceOpenFgaTest {
         assertThat(authz.hasRelation(SPACE_VIEWER, "folder", sub, "viewer")).isTrue();
         assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isTrue();
         assertThat(authz.hasRelation(OUTSIDER, "document", doc, "viewer")).isFalse();
+    }
+
+    @Test
+    void writeAtomic_invalidType_rollsBackEntireBatch() {
+        UUID doc = UUID.randomUUID();
+        String fgaUser = "user:" + CREATOR;
+        ClientTupleKey valid = new ClientTupleKey()
+                .user(fgaUser).relation("editor")._object("document:" + doc);
+        ClientTupleKey invalid = new ClientTupleKey()
+                .user(fgaUser).relation("viewer")._object("unknowntype:" + UUID.randomUUID());
+
+        assertThatThrownBy(() -> authz.writeAtomic(List.of(valid, invalid), List.of()))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_GATEWAY));
+
+        assertThat(authz.hasRelation(CREATOR, "document", doc, "editor")).isFalse();
+        assertThat(authz.readAllTuples("document", doc)).isEmpty();
+    }
+
+    @Test
+    void reparentFolder_invalidNewParent_keepsOldParentTuples() {
+        UUID space = UUID.randomUUID();
+        UUID folder = UUID.randomUUID();
+        authz.grantPermission("space", space, "viewer", "user", SPACE_VIEWER);
+        authz.provisionFolderAccess(folder, "space", space);
+        assertThat(authz.hasRelation(SPACE_VIEWER, "folder", folder, "viewer")).isTrue();
+
+        assertThatThrownBy(() ->
+                authz.reparentFolder(folder, "space", space, "notype", UUID.randomUUID()))
+                .isInstanceOf(ResponseStatusException.class);
+
+        // Transaction rollback : l'ancien parent/inherit_from reste
+        assertThat(authz.hasRelation(SPACE_VIEWER, "folder", folder, "viewer")).isTrue();
+        assertThat(authz.readAllTuples("folder", folder)).anySatisfy(t ->
+                assertThat(t.user()).isEqualTo("space:" + space));
+    }
+
+    @Test
+    void reparentDocument_invalidNewParent_keepsOldParentTuples() {
+        UUID space = UUID.randomUUID();
+        UUID folder = UUID.randomUUID();
+        UUID doc = UUID.randomUUID();
+        authz.grantPermission("space", space, "viewer", "user", SPACE_VIEWER);
+        authz.provisionFolderAccess(folder, "space", space);
+        authz.provisionDocumentAccess(doc, space, folder, CREATOR, "space");
+        assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isTrue();
+
+        assertThatThrownBy(() ->
+                authz.reparentDocument(doc, "folder:" + folder, "notype:" + UUID.randomUUID(), "space"))
+                .isInstanceOf(ResponseStatusException.class);
+
+        assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isTrue();
+        assertThat(authz.readAllTuples("document", doc)).anySatisfy(t ->
+                assertThat(t.user()).isEqualTo("folder:" + folder));
     }
 
     @Test

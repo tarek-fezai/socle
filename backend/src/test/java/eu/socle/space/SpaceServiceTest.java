@@ -2,6 +2,8 @@
 package eu.socle.space;
 
 import eu.socle.authz.AuthorizationService;
+import eu.socle.authz.AuthorizationService.ReadableScope;
+import eu.socle.authz.DocumentScope;
 import eu.socle.space.SpaceDtos.AddOwnerRequest;
 import eu.socle.space.SpaceDtos.CreateSpaceRequest;
 import eu.socle.space.SpaceDtos.GovernanceView;
@@ -101,6 +103,22 @@ class SpaceServiceTest {
                   PRIMARY KEY (space_id, user_id)
                 )
                 """);
+        jdbc.execute("""
+                CREATE TABLE documents (
+                  id UUID PRIMARY KEY,
+                  space_id UUID NOT NULL REFERENCES spaces(id),
+                  title TEXT NOT NULL,
+                  visibility TEXT NOT NULL DEFAULT 'organisation',
+                  deleted_at TIMESTAMPTZ
+                )
+                """);
+        jdbc.execute("""
+                CREATE TABLE folders (
+                  id UUID PRIMARY KEY,
+                  space_id UUID NOT NULL REFERENCES spaces(id),
+                  deleted_at TIMESTAMPTZ
+                )
+                """);
         jdbc.update("INSERT INTO users (id, email, display_name, status) VALUES (?,?,?,?), (?,?,?,?)",
                 USER_A, "a@example.com", "A", "active",
                 USER_B, "b@example.com", "B", "active");
@@ -110,6 +128,8 @@ class SpaceServiceTest {
 
     @BeforeEach
     void setUp() {
+        jdbc.update("DELETE FROM documents");
+        jdbc.update("DELETE FROM folders");
         jdbc.update("DELETE FROM space_owners");
         jdbc.update("DELETE FROM spaces WHERE id <> ?", SEED);
         service = new SpaceService(jdbc, userSyncService, authorizationService, mock(eu.socle.audit.AuditService.class));
@@ -121,6 +141,9 @@ class SpaceServiceTest {
         doNothing().when(authorizationService).revokePermission(any(), any(), any(), any(), any());
         when(authorizationService.listViewableSpaceIds(any())).thenReturn(List.of());
         when(authorizationService.hasRelation(any(), eq("space"), any(), any())).thenReturn(false);
+        when(authorizationService.readableScope(any()))
+                .thenReturn(new ReadableScope(List.of(), List.of(), List.of(), List.of()));
+        when(authorizationService.listViewableDocumentIds(any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -193,15 +216,76 @@ class SpaceServiceTest {
 
     @Test
     void seedSpace_stillResolvable_withoutHardcodedDefaultInService() {
+        jdbc.update("""
+                INSERT INTO space_owners (space_id, user_id, is_responsible, created_at)
+                VALUES (?, ?, true, now())
+                ON CONFLICT DO NOTHING
+                """, SEED, USER_A);
         when(authorizationService.hasRelation(USER_A, "space", SEED, "owner")).thenReturn(true);
         when(authorizationService.hasRelation(USER_A, "space", SEED, "viewer")).thenReturn(true);
 
         SpaceView view = service.get(jwt(USER_A), SEED);
         assertThat(view.id()).isEqualTo(SEED);
         assertThat(view.name()).isEqualTo("Espace par défaut");
+        assertThat(view.membership()).isEqualTo("member");
 
         GovernanceView gov = service.governance(jwt(USER_A), SEED);
         assertThat(gov.owners()).anyMatch(o -> o.userId().equals(USER_A) && o.responsible());
+    }
+
+    @Test
+    void list_includesPublicOnlySpace_withOrganisationDocument() {
+        UUID spaceId = UUID.randomUUID();
+        jdbc.update("INSERT INTO spaces (id, name, color) VALUES (?,?,?)",
+                spaceId, "Public docs", null);
+        jdbc.update("""
+                INSERT INTO documents (id, space_id, title, visibility)
+                VALUES (?, ?, 'Org page', 'organisation')
+                """, UUID.randomUUID(), spaceId);
+
+        when(authorizationService.listViewableSpaceIds(USER_B)).thenReturn(List.of());
+
+        List<SpaceView> listed = service.list(jwt(USER_B));
+        assertThat(listed).anySatisfy(s -> {
+            assertThat(s.id()).isEqualTo(spaceId);
+            assertThat(s.membership()).isEqualTo("public-only");
+            assertThat(s.canManage()).isFalse();
+        });
+    }
+
+    @Test
+    void get_nonMemberWithReadableDoc_returnsPublicOnly() {
+        UUID spaceId = UUID.randomUUID();
+        jdbc.update("INSERT INTO spaces (id, name, color) VALUES (?,?,?)",
+                spaceId, "Lu sans membership", null);
+        UUID docId = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO documents (id, space_id, title, visibility)
+                VALUES (?, ?, 'Org', 'organisation')
+                """, docId, spaceId);
+
+        when(authorizationService.hasRelation(USER_B, "space", spaceId, "viewer")).thenReturn(false);
+        when(authorizationService.listViewableDocumentIds(eq(USER_B), eq(DocumentScope.space(spaceId))))
+                .thenReturn(List.of(docId));
+
+        SpaceView view = service.get(jwt(USER_B), spaceId);
+        assertThat(view.membership()).isEqualTo("public-only");
+    }
+
+    @Test
+    void get_nonMemberWithoutReadableDoc_returns404() {
+        UUID spaceId = UUID.randomUUID();
+        jdbc.update("INSERT INTO spaces (id, name, color) VALUES (?,?,?)",
+                spaceId, "Secret", null);
+
+        when(authorizationService.hasRelation(USER_B, "space", spaceId, "viewer")).thenReturn(false);
+        when(authorizationService.listViewableDocumentIds(eq(USER_B), eq(DocumentScope.space(spaceId))))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.get(jwt(USER_B), spaceId))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     private static UserEntity user(UUID id) {

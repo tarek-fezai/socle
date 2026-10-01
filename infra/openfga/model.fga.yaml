@@ -144,6 +144,23 @@ tuples:
     relation: direct_access
     object: document:restricted-in-folder
 
+  # Page organisation dans un sous-dossier (non-membre lit via user:*)
+  - user: folder:sub-procedures
+    relation: parent
+    object: document:org-in-folder
+
+  - user: folder:sub-procedures
+    relation: inherit_from
+    object: document:org-in-folder
+
+  - user: user:*
+    relation: viewer
+    object: document:org-in-folder
+
+  - user: user:creator
+    relation: editor
+    object: document:org-in-folder
+
 tests:
   - name: organisation visibility — user:* is viewer not editor
     check:
@@ -282,6 +299,37 @@ tests:
         object: document:restricted-in-folder
         assertions:
           viewer: false
+
+  - name: non-member reads organisation doc in nested folder; not space siblings
+    check:
+      - user: user:stranger
+        object: document:org-in-folder
+        assertions:
+          viewer: true
+          editor: false
+      - user: user:stranger
+        object: document:nested-doc
+        assertions:
+          viewer: false
+      - user: user:stranger
+        object: document:folder-doc
+        assertions:
+          viewer: false
+      - user: user:stranger
+        object: folder:sub-procedures
+        assertions:
+          viewer: false
+      - user: user:stranger
+        object: space:engineering
+        assertions:
+          viewer: false
+    list_objects:
+      - user: user:stranger
+        type: document
+        assertions:
+          viewer:
+            - document:org-doc
+            - document:org-in-folder
 
   - name: creator is editor not owner
     check:

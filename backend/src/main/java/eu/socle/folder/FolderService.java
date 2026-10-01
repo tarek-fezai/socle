@@ -67,10 +67,16 @@ public class FolderService {
     @Transactional(readOnly = true)
     public FolderView get(Jwt jwt, UUID folderId) {
         var user = userSyncService.syncFromJwt(jwt);
-        authorizationService.requireFolderRelation(user.getId(), folderId, "viewer");
         FolderRow row = requireActiveFolder(folderId);
-        Counts counts = countsForFolder(user.getId(), row);
-        return toView(row, counts.documents(), counts.folders());
+        Visibility vis = resolveSpaceVisibility(user.getId(), row.spaceId());
+        if (!vis.visibleFolderIds().contains(folderId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier introuvable");
+        }
+        int docCount = (int) vis.docs().stream().filter(d -> folderId.equals(d.folderId())).count();
+        int folderCount = (int) vis.allFolders().stream()
+                .filter(f -> folderId.equals(f.parentFolderId()) && vis.visibleFolderIds().contains(f.id()))
+                .count();
+        return toView(row, docCount, folderCount);
     }
 
     @Transactional
@@ -160,8 +166,7 @@ public class FolderService {
         }
 
         FolderRow updated = requireActiveFolder(folderId);
-        Counts counts = countsForFolder(user.getId(), updated);
-        return toView(updated, counts.documents(), counts.folders());
+        return toViewWithVisibilityCounts(user.getId(), updated);
     }
 
     @Transactional
@@ -173,8 +178,7 @@ public class FolderService {
         UUID newParentId = request.parentFolderId();
         if (Objects.equals(row.parentFolderId(), newParentId)
                 && (request.position() == null || request.position() == row.position())) {
-            Counts counts = countsForFolder(user.getId(), row);
-            return toView(row, counts.documents(), counts.folders());
+            return toViewWithVisibilityCounts(user.getId(), row);
         }
 
         if (newParentId != null) {
@@ -239,8 +243,7 @@ public class FolderService {
                 null);
 
         FolderRow updated = requireActiveFolder(folderId);
-        Counts counts = countsForFolder(user.getId(), updated);
-        return toView(updated, counts.documents(), counts.folders());
+        return toViewWithVisibilityCounts(user.getId(), updated);
     }
 
     @Transactional
@@ -318,56 +321,24 @@ public class FolderService {
     }
 
     /**
-     * Arbre filtré : dossiers viewer + documents viewer, compteurs post-filtrage.
-     * Vérifications bornées à {@link DocumentScope#space(UUID)}.
+     * Arbre filtré selon les documents lisibles et/ou l'appartenance à l'espace.
+     * Non-membre sans document lisible → 404 (pas de 403 : on ne révèle pas l'espace).
+     * Dossier visible = viewer FGA OU ancêtre d'un document lisible.
+     * Compteurs post-filtrage, sans N+1 OpenFGA.
      */
     @Transactional(readOnly = true)
     public SpaceTreeResponse tree(Jwt jwt, UUID spaceId, Integer depth) {
         var user = userSyncService.syncFromJwt(jwt);
-        authorizationService.requireSpaceRelation(user.getId(), spaceId, "viewer");
         String spaceName = requireActiveSpace(spaceId);
+        Visibility vis = resolveSpaceVisibility(user.getId(), spaceId);
+        if (!vis.allowed()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Espace introuvable");
+        }
         int maxTreeDepth = depth == null || depth <= 0 ? maxDepth : Math.min(depth, maxDepth);
 
-        List<FolderRow> allFolders = jdbc.query("""
-                SELECT id, space_id, parent_folder_id, name, position, created_by, created_at, updated_at
-                  FROM folders
-                 WHERE space_id = ? AND deleted_at IS NULL
-                 ORDER BY position ASC, lower(name) ASC
-                """,
-                (rs, i) -> mapFolder(rs), spaceId);
-
-        List<UUID> viewableFolderIds = authorizationService.filterByFolderViewer(
-                user.getId(), allFolders.stream().map(FolderRow::id).toList());
-        Set<UUID> visibleFolders = new HashSet<>(viewableFolderIds);
-
-        List<UUID> viewableDocIds = authorizationService.listViewableDocumentIds(
-                user.getId(), DocumentScope.space(spaceId));
-        Set<UUID> visibleDocs = new HashSet<>(viewableDocIds);
-
-        List<DocRow> docs = List.of();
-        if (!viewableDocIds.isEmpty()) {
-            String placeholders = String.join(",", viewableDocIds.stream().map(u -> "?").toList());
-            List<Object> args = new ArrayList<>();
-            args.add(spaceId);
-            args.addAll(viewableDocIds);
-            docs = jdbc.query(
-                    """
-                    SELECT id, space_id, folder_id, title, status, visibility, position
-                      FROM documents
-                     WHERE space_id = ? AND deleted_at IS NULL
-                       AND id IN ("""
-                            + placeholders
-                            + """
-                       )
-                     ORDER BY position ASC, lower(title) ASC
-                    """,
-                    (rs, i) -> mapDoc(rs),
-                    args.toArray());
-        }
-
         Map<UUID, List<FolderRow>> childrenByParent = new HashMap<>();
-        for (FolderRow f : allFolders) {
-            if (!visibleFolders.contains(f.id())) {
+        for (FolderRow f : vis.allFolders()) {
+            if (!vis.visibleFolderIds().contains(f.id())) {
                 continue;
             }
             childrenByParent
@@ -377,18 +348,14 @@ public class FolderService {
 
         Map<UUID, List<DocRow>> docsByFolder = new HashMap<>();
         List<DocRow> rootDocs = new ArrayList<>();
-        for (DocRow d : docs) {
-            if (!visibleDocs.contains(d.id())) {
+        for (DocRow d : vis.docs()) {
+            if (d.folderId() == null) {
+                rootDocs.add(d);
                 continue;
             }
-            if (d.folderId() == null || !visibleFolders.contains(d.folderId())) {
-                if (d.folderId() == null) {
-                    rootDocs.add(d);
-                }
-                // Doc in invisible folder: omit (no leak)
-                continue;
+            if (vis.visibleFolderIds().contains(d.folderId())) {
+                docsByFolder.computeIfAbsent(d.folderId(), k -> new ArrayList<>()).add(d);
             }
-            docsByFolder.computeIfAbsent(d.folderId(), k -> new ArrayList<>()).add(d);
         }
 
         List<TreeFolderNode> rootFolders = buildTree(
@@ -408,10 +375,113 @@ public class FolderService {
                 spaceName,
                 rootFolders,
                 rootDocNodes,
-                visibleFolders.size(),
-                (int) docs.stream().filter(d -> visibleDocs.contains(d.id())
-                        && (d.folderId() == null || visibleFolders.contains(d.folderId()))).count()
+                vis.visibleFolderIds().size(),
+                vis.docs().size()
         );
+    }
+
+    /**
+     * Résout documents lisibles + dossiers visibles (viewer ∪ ancêtres des docs)
+     * pour un espace. Un seul {@code listViewableDocumentIds} + un
+     * {@code filterByFolderViewer} bornés à l'espace.
+     */
+    Visibility resolveSpaceVisibility(UUID userId, UUID spaceId) {
+        boolean spaceMember = authorizationService.hasRelation(userId, "space", spaceId, "viewer");
+        List<UUID> viewableDocIds = authorizationService.listViewableDocumentIds(
+                userId, DocumentScope.space(spaceId));
+        if (viewableDocIds.isEmpty() && !spaceMember) {
+            return Visibility.empty();
+        }
+
+        List<FolderRow> allFolders = jdbc.query("""
+                SELECT id, space_id, parent_folder_id, name, position, created_by, created_at, updated_at
+                  FROM folders
+                 WHERE space_id = ? AND deleted_at IS NULL
+                 ORDER BY position ASC, lower(name) ASC
+                """,
+                (rs, i) -> mapFolder(rs), spaceId);
+
+        List<UUID> allFolderIds = allFolders.stream().map(FolderRow::id).toList();
+        Set<UUID> viewerFolders = new HashSet<>(
+                authorizationService.filterByFolderViewer(userId, allFolderIds));
+
+        List<DocRow> docs = loadDocs(spaceId, viewableDocIds);
+        Set<UUID> seedFolderIds = new HashSet<>();
+        for (DocRow d : docs) {
+            if (d.folderId() != null) {
+                seedFolderIds.add(d.folderId());
+            }
+        }
+        Set<UUID> ancestorFolders = loadAncestorFolderIds(seedFolderIds);
+
+        Set<UUID> visibleFolders = new HashSet<>(viewerFolders);
+        visibleFolders.addAll(ancestorFolders);
+
+        return new Visibility(true, spaceMember, allFolders, visibleFolders, docs);
+    }
+
+    private List<DocRow> loadDocs(UUID spaceId, List<UUID> viewableDocIds) {
+        if (viewableDocIds == null || viewableDocIds.isEmpty()) {
+            return List.of();
+        }
+        String placeholders = String.join(",", viewableDocIds.stream().map(u -> "?").toList());
+        List<Object> args = new ArrayList<>();
+        args.add(spaceId);
+        args.addAll(viewableDocIds);
+        return jdbc.query(
+                """
+                SELECT id, space_id, folder_id, title, status, visibility, position
+                  FROM documents
+                 WHERE space_id = ? AND deleted_at IS NULL
+                   AND id IN ("""
+                        + placeholders
+                        + """
+                   )
+                 ORDER BY position ASC, lower(title) ASC
+                """,
+                (rs, i) -> mapDoc(rs),
+                args.toArray());
+    }
+
+    /** Remonte les ancêtres (CTE) des dossiers seeds — SQL pur, pas d'OpenFGA. */
+    private Set<UUID> loadAncestorFolderIds(Set<UUID> seedFolderIds) {
+        if (seedFolderIds == null || seedFolderIds.isEmpty()) {
+            return Set.of();
+        }
+        String placeholders = String.join(",", seedFolderIds.stream().map(u -> "?").toList());
+        List<UUID> ids = jdbc.query(
+                """
+                WITH RECURSIVE ancestors AS (
+                    SELECT id, parent_folder_id
+                      FROM folders
+                     WHERE deleted_at IS NULL
+                       AND id IN ("""
+                        + placeholders
+                        + """
+                       )
+                    UNION ALL
+                    SELECT f.id, f.parent_folder_id
+                      FROM folders f
+                      JOIN ancestors a ON f.id = a.parent_folder_id
+                     WHERE f.deleted_at IS NULL
+                )
+                SELECT DISTINCT id FROM ancestors
+                """,
+                (rs, i) -> (UUID) rs.getObject("id"),
+                seedFolderIds.toArray());
+        return new HashSet<>(ids);
+    }
+
+    record Visibility(
+            boolean allowed,
+            boolean spaceMember,
+            List<FolderRow> allFolders,
+            Set<UUID> visibleFolderIds,
+            List<DocRow> docs
+    ) {
+        static Visibility empty() {
+            return new Visibility(false, false, List.of(), Set.of(), List.of());
+        }
     }
 
     private List<TreeFolderNode> buildTree(
@@ -459,23 +529,6 @@ public class FolderService {
             return;
         }
         authorizationService.requireSpaceRelation(userId, spaceId, "editor");
-    }
-
-    private Counts countsForFolder(UUID userId, FolderRow folder) {
-        List<UUID> childFolderIds = jdbc.query("""
-                SELECT id FROM folders
-                 WHERE parent_folder_id = ? AND deleted_at IS NULL
-                """,
-                (rs, i) -> (UUID) rs.getObject("id"), folder.id());
-        int folderCount = authorizationService.filterByFolderViewer(userId, childFolderIds).size();
-
-        List<UUID> docIds = jdbc.query("""
-                SELECT id FROM documents
-                 WHERE folder_id = ? AND deleted_at IS NULL
-                """,
-                (rs, i) -> (UUID) rs.getObject("id"), folder.id());
-        int docCount = authorizationService.filterByDocumentViewer(userId, docIds).size();
-        return new Counts(docCount, folderCount);
     }
 
     private int folderDepth(UUID folderId) {
@@ -611,6 +664,15 @@ public class FolderService {
                 row.createdBy(), row.createdAt(), row.updatedAt(), docs, folders);
     }
 
+    private FolderView toViewWithVisibilityCounts(UUID userId, FolderRow row) {
+        Visibility vis = resolveSpaceVisibility(userId, row.spaceId());
+        int docCount = (int) vis.docs().stream().filter(d -> row.id().equals(d.folderId())).count();
+        int folderCount = (int) vis.allFolders().stream()
+                .filter(f -> row.id().equals(f.parentFolderId()) && vis.visibleFolderIds().contains(f.id()))
+                .count();
+        return toView(row, docCount, folderCount);
+    }
+
     private static FolderRow mapFolder(java.sql.ResultSet rs) throws java.sql.SQLException {
         Timestamp created = rs.getTimestamp("created_at");
         Timestamp updated = rs.getTimestamp("updated_at");
@@ -647,6 +709,4 @@ public class FolderService {
             UUID id, UUID spaceId, UUID folderId, String title, String status,
             String visibility, int position
     ) {}
-
-    private record Counts(int documents, int folders) {}
 }

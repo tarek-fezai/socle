@@ -94,7 +94,13 @@ export function SpacesPage() {
                 </div>
               </div>
               <span className="text-xs text-socle-slate">
-                {s.isResponsible ? 'Responsible' : s.isOwner ? 'Owner' : 'Membre'}
+                {s.isResponsible
+                  ? 'Responsible'
+                  : s.isOwner
+                    ? 'Owner'
+                    : s.membership === 'public-only'
+                      ? 'Lecture publique'
+                      : 'Membre'}
               </span>
             </Link>
             <Link

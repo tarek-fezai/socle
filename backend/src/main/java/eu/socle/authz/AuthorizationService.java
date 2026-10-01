@@ -13,6 +13,7 @@ import dev.openfga.sdk.api.client.model.ClientReadRequest;
 import dev.openfga.sdk.api.client.model.ClientTupleKey;
 import dev.openfga.sdk.api.client.model.ClientTupleKeyWithoutCondition;
 import dev.openfga.sdk.api.client.model.ClientWriteRequest;
+import dev.openfga.sdk.api.configuration.ClientWriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -963,7 +964,9 @@ public class AuthorizationService {
             if (!deletes.isEmpty()) {
                 req = req.deletes(deletes);
             }
-            openFgaClient.write(req).join();
+            // SDK 0.10 : mode transactionnel par défaut (une seule Write atomique).
+            // On force transactions(true) pour documenter l'intention — pas disableTransactions.
+            openFgaClient.write(req, new ClientWriteOptions().transactions(true)).join();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -1022,9 +1025,24 @@ public class AuthorizationService {
         return msg.contains("already exists") || msg.contains("cannot write a tuple which already exists");
     }
 
+    /**
+     * Conflit idempotent de <em>suppression</em> de tuple uniquement.
+     * Ne pas confondre avec « type/relation not found » (échec dur, rollback transactionnel).
+     */
     private static boolean isNotFound(Throwable e) {
         String msg = flattenMessage(e);
-        return msg.contains("not found") || msg.contains("does not exist");
+        if (msg.contains("type") && msg.contains("not found")) {
+            return false;
+        }
+        if (msg.contains("relation") && msg.contains("undefined")) {
+            return false;
+        }
+        if (msg.contains("relation") && msg.contains("not found") && !msg.contains("tuple")) {
+            return false;
+        }
+        return msg.contains("cannot delete a tuple which does not exist")
+                || msg.contains("tuple to be deleted was not found")
+                || (msg.contains("tuple") && msg.contains("does not exist"));
     }
 
     private static String flattenMessage(Throwable e) {

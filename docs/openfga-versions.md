@@ -24,8 +24,24 @@ utilisé par Socle, tout en bénéficiant des correctifs 1.8.x.
 - **0.10.0** : `disableTransactions` déprécié au profit de `transactions()`.
 - **0.10.1** : pont de sérialisation JSON ; wrappers Jackson 2 encore fonctionnels mais dépréciés.
 
-Socle n’utilise pas directement `getStatusCode()` ni `disableTransactions` ;
-aucune adaptation de code applicatif n’a été nécessaire pour 0.10.1.
+### Écritures atomiques (`writeAtomic`)
+
+Preuve SDK **0.10.1** (`ClientWriteOptions` + `OpenFgaClient.write`) :
+
+1. **Défaut** : `transactionsEnabled = true` dans le constructeur de
+   `ClientWriteOptions` (remplace `disableTransactions(false)`).
+2. **Une seule requête** : si `isTransactionsEnabled()`, `write()` appelle
+   `writeTransactions`, qui construit **un** `WriteRequest` (writes + deletes)
+   et invoque **une fois** `api.write(storeId, body, …)`.
+3. **Chunking** : `transactionChunkSize` ne s’applique qu’au mode
+   `transactions(false)` (`writeNonTransaction`) — hors chemin Socle.
+4. **Socle** : `AuthorizationService.doWrite` force
+   `new ClientWriteOptions().transactions(true)` (pas `disableTransactions`).
+
+IT : `AuthorizationServiceOpenFgaTest` — batch avec type inconnu ⇒ exception et
+aucun tuple écrit ; même garantie pour `reparentFolder` / `reparentDocument`.
+
+Socle n’utilise pas `getStatusCode()` ni `disableTransactions`.
 
 ## Tests du modèle (CLI)
 

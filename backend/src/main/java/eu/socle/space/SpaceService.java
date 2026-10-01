@@ -4,6 +4,7 @@ package eu.socle.space;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
+import eu.socle.authz.DocumentScope;
 import eu.socle.document.DocumentVisibility;
 import eu.socle.space.SpaceDtos.AddOwnerRequest;
 import eu.socle.space.SpaceDtos.CreateSpaceRequest;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -56,17 +58,23 @@ public class SpaceService {
     @Transactional(readOnly = true)
     public List<SpaceView> list(Jwt jwt) {
         var user = userSyncService.syncFromJwt(jwt);
-        Set<UUID> visible = new HashSet<>(authorizationService.listViewableSpaceIds(user.getId()));
+        Set<UUID> memberSpaces = new HashSet<>(authorizationService.listViewableSpaceIds(user.getId()));
         // Espaces dont on est owner en table (au cas où FGA listObjects est partiel)
         jdbc.query(
                 "SELECT space_id FROM space_owners WHERE user_id = ?",
                 rs -> {
                     while (rs.next()) {
-                        visible.add((UUID) rs.getObject("space_id"));
+                        memberSpaces.add((UUID) rs.getObject("space_id"));
                     }
                     return null;
                 },
                 user.getId());
+
+        Set<UUID> publicOnlySpaces = spacesReachableViaReadableDocuments(user.getId());
+        publicOnlySpaces.removeAll(memberSpaces);
+
+        Set<UUID> visible = new HashSet<>(memberSpaces);
+        visible.addAll(publicOnlySpaces);
 
         if (visible.isEmpty()) {
             return List.of();
@@ -81,13 +89,18 @@ public class SpaceService {
                    AND id IN (%s)
                  ORDER BY name ASC
                 """.formatted(placeholders),
-                (rs, i) -> toView(rs.getObject("id", UUID.class),
-                        rs.getString("name"),
-                        rs.getString("color"),
-                        rs.getTimestamp("created_at"),
-                        rs.getString("external_reference"),
-                        rs.getString("default_visibility"),
-                        user.getId()),
+                (rs, i) -> {
+                    UUID id = rs.getObject("id", UUID.class);
+                    String membership = memberSpaces.contains(id) ? "member" : "public-only";
+                    return toView(id,
+                            rs.getString("name"),
+                            rs.getString("color"),
+                            rs.getTimestamp("created_at"),
+                            rs.getString("external_reference"),
+                            rs.getString("default_visibility"),
+                            user.getId(),
+                            membership);
+                },
                 args);
     }
 
@@ -95,11 +108,19 @@ public class SpaceService {
     public SpaceView get(Jwt jwt, UUID spaceId) {
         var user = userSyncService.syncFromJwt(jwt);
         requireActive(spaceId);
-        if (!authorizationService.hasRelation(user.getId(), "space", spaceId, "viewer")
-                && !isTableOwner(spaceId, user.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès espace refusé (viewer)");
+        boolean member = authorizationService.hasRelation(user.getId(), "space", spaceId, "viewer")
+                || isTableOwner(spaceId, user.getId());
+        if (member) {
+            return loadView(spaceId, user.getId(), "member");
         }
-        return loadView(spaceId, user.getId());
+        // Non-membre : accessible s'il peut lire au moins un document (pages organisation, etc.)
+        List<UUID> readable = authorizationService.listViewableDocumentIds(
+                user.getId(), DocumentScope.space(spaceId));
+        if (readable.isEmpty()) {
+            // 404 : on ne révèle pas l'existence de l'espace
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Espace introuvable");
+        }
+        return loadView(spaceId, user.getId(), "public-only");
     }
 
     @Transactional
@@ -368,6 +389,10 @@ public class SpaceService {
     }
 
     private SpaceView loadView(UUID spaceId, UUID userId) {
+        return loadView(spaceId, userId, "member");
+    }
+
+    private SpaceView loadView(UUID spaceId, UUID userId, String membership) {
         return jdbc.query("""
                 SELECT id, name, color, created_at, external_reference, default_visibility FROM spaces
                  WHERE id = ? AND deleted_at IS NULL
@@ -383,9 +408,63 @@ public class SpaceService {
                             rs.getTimestamp("created_at"),
                             rs.getString("external_reference"),
                             rs.getString("default_visibility"),
-                            userId);
+                            userId,
+                            membership);
                 },
                 spaceId);
+    }
+
+    /**
+     * Espaces contenant au moins un document potentiellement lisible sans membership
+     * espace : pages {@code organisation}, docs en {@code direct_access}, ou dossiers
+     * {@code viewer} hors appartenance espace.
+     */
+    private Set<UUID> spacesReachableViaReadableDocuments(UUID userId) {
+        Set<UUID> out = new HashSet<>();
+        jdbc.query(
+                """
+                SELECT DISTINCT space_id FROM documents
+                 WHERE deleted_at IS NULL AND visibility = 'organisation'
+                """,
+                rs -> {
+                    while (rs.next()) {
+                        out.add((UUID) rs.getObject("space_id"));
+                    }
+                    return null;
+                });
+
+        var readable = authorizationService.readableScope(userId);
+        if (!readable.directDocumentIds().isEmpty()) {
+            String placeholders = String.join(",",
+                    readable.directDocumentIds().stream().map(id -> "?").toList());
+            List<Object> args = new ArrayList<>(readable.directDocumentIds());
+            jdbc.query(
+                    ("SELECT DISTINCT space_id FROM documents WHERE deleted_at IS NULL AND id IN (%s)"
+                            .formatted(placeholders)),
+                    rs -> {
+                        while (rs.next()) {
+                            out.add((UUID) rs.getObject("space_id"));
+                        }
+                        return null;
+                    },
+                    args.toArray());
+        }
+        if (!readable.folderViewerIds().isEmpty()) {
+            String placeholders = String.join(",",
+                    readable.folderViewerIds().stream().map(id -> "?").toList());
+            List<Object> args = new ArrayList<>(readable.folderViewerIds());
+            jdbc.query(
+                    ("SELECT DISTINCT space_id FROM folders WHERE deleted_at IS NULL AND id IN (%s)"
+                            .formatted(placeholders)),
+                    rs -> {
+                        while (rs.next()) {
+                            out.add((UUID) rs.getObject("space_id"));
+                        }
+                        return null;
+                    },
+                    args.toArray());
+        }
+        return out;
     }
 
     private SpaceView toView(
@@ -395,7 +474,8 @@ public class SpaceService {
             Timestamp createdAt,
             String externalReference,
             String defaultVisibility,
-            UUID userId
+            UUID userId,
+            String membership
     ) {
         boolean owner = isTableOwner(id, userId)
                 || authorizationService.hasRelation(userId, "space", id, "owner");
@@ -415,7 +495,8 @@ public class SpaceService {
                 dv,
                 owner,
                 owner,
-                responsible);
+                responsible,
+                membership == null ? "member" : membership);
     }
 
     private void requireUserExists(UUID userId) {

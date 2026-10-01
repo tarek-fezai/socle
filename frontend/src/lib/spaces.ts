@@ -13,6 +13,8 @@ export type Space = {
   canManage: boolean
   isOwner: boolean
   isResponsible: boolean
+  /** member = relations espace ; public-only = docs organisation lisibles */
+  membership?: 'member' | 'public-only' | string
 }
 
 export type SpaceOwner = {
