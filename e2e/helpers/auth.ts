@@ -59,12 +59,18 @@ export async function loginViaUi(
   await page.locator('#password, input[name="password"]').fill(password)
   await page.locator('#kc-login, button[type="submit"], input[type="submit"]').first().click()
 
-  // After code exchange, land on app origin (home or callback→home).
+  // After code exchange, land on app origin (past /callback) and wait for session UI.
   await page.waitForURL(
     (url) =>
       (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
       url.port !== '8081' &&
-      !url.pathname.includes('/protocol/openid-connect'),
+      !url.pathname.includes('/protocol/openid-connect') &&
+      url.pathname !== '/callback' &&
+      url.pathname !== '/silent-renew',
     { timeout: 60_000 },
   )
+  await page.getByRole('button', { name: /déconnexion|logout/i }).waitFor({
+    state: 'visible',
+    timeout: 60_000,
+  })
 }

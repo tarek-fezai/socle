@@ -157,14 +157,15 @@ test.describe.serial('Socle demo stack smoke', () => {
   test('8. search', async ({ page }) => {
     await loginViaUi(page, USER_A, PASS_A)
     await page.goto('/search')
-    await page.getByLabel('Requête de recherche').fill(documentTitle)
+    await expect(page.getByRole('heading', { name: 'Recherche' })).toBeVisible()
+    await page.getByRole('textbox', { name: /requête de recherche/i }).fill(documentTitle)
     await page.getByRole('button', { name: 'Rechercher' }).click()
     await expect(page.getByText(documentTitle).first()).toBeVisible({ timeout: 30_000 })
   })
 
   test('9. anchored comment (UI: comment-selection-btn, comments-panel)', async ({ page }) => {
     await loginViaUi(page, USER_A, PASS_A)
-    await page.goto(`/documents/${documentId}/edit`)
+    await page.goto(`/docs/${documentId}`)
     await page.getByTestId('toggle-comments').click()
     await expect(page.getByTestId('comments-panel')).toBeVisible()
     // Anchored thread: select text then use comment-selection-btn when present
