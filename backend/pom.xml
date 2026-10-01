@@ -22,7 +22,7 @@
     <mapstruct.version>1.6.3</mapstruct.version>
     <temporal.version>1.27.1</temporal.version>
     <springdoc.version>2.8.9</springdoc.version>
-    <openfga.version>0.9.1</openfga.version>
+    <openfga.version>0.10.1</openfga.version>
   </properties>
 
   <dependencies>

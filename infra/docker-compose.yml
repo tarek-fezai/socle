@@ -68,7 +68,7 @@ services:
       - temporal
 
   openfga-migrate:
-    image: openfga/openfga:v1.8.4
+    image: openfga/openfga:v1.8.16
     container_name: socle-openfga-migrate
     command: ["migrate"]
     environment:
@@ -80,7 +80,7 @@ services:
     restart: "no"
 
   openfga:
-    image: openfga/openfga:v1.8.4
+    image: openfga/openfga:v1.8.16
     container_name: socle-openfga
     command: ["run"]
     environment:
