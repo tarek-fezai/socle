@@ -52,6 +52,11 @@ export function AppNav() {
             <Link to="/admin/workflows" className="text-socle-muted hover:text-socle-ink">
               Workflows
             </Link>
+            {me?.roles?.includes(SocleRole.ADMINISTRATEUR_SYSTEME) && (
+              <Link to="/admin/templates" className="text-socle-muted hover:text-socle-ink">
+                Modèles
+              </Link>
+            )}
             {me?.roles?.includes(SocleRole.INTEGRATEUR) && (
               <Link to="/integrations" className="text-socle-muted hover:text-socle-ink">
                 Intégrations
@@ -65,6 +70,12 @@ export function AppNav() {
           </nav>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            to="/docs/new"
+            className="rounded-lg bg-socle-accent px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-socle-accent-hover"
+          >
+            Nouveau
+          </Link>
           <Link
             to="/notifications"
             className="relative flex h-[34px] w-[34px] items-center justify-center rounded-lg border border-socle-line text-[#43434A] hover:bg-[#F5F5F7]"

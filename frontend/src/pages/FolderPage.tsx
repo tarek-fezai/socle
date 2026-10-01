@@ -157,6 +157,12 @@ export function FolderPage() {
             <button type="button" className={ghostLink} onClick={() => setNewFolderOpen(true)}>
               + Sous-dossier
             </button>
+            <Link
+              to={`/docs/new?spaceId=${encodeURIComponent(f.spaceId)}&folderId=${encodeURIComponent(id)}`}
+              className={ghostLink}
+            >
+              Depuis un modèle
+            </Link>
             <button
               type="button"
               className="btn-primary"

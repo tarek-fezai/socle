@@ -51,6 +51,14 @@ export function formatNotificationMessage(n: NotificationItem): string {
     const source = String(n.payload?.source_space_name ?? 'un autre espace')
     return `Première référence externe depuis « ${source} » vers votre espace.`
   }
+  if (n.type === 'comment_mention') {
+    // L'utilisateur a été notifié uniquement s'il peut lire le document —
+    // le titre joint est donc autorisé ; jamais d'extrait de commentaire ici.
+    const title = n.documentTitle?.trim()
+    return title
+      ? `Vous avez été mentionné dans un commentaire sur « ${title} ».`
+      : 'Vous avez été mentionné dans un commentaire.'
+  }
   const msg = n.payload?.message
   if (typeof msg === 'string' && msg.trim()) return msg
   return `Notification (${n.type})`
@@ -59,6 +67,9 @@ export function formatNotificationMessage(n: NotificationItem): string {
 export function notificationResourceLink(n: NotificationItem): string | null {
   const docId = n.payload?.document_id
   if (typeof docId === 'string' && docId) {
+    if (n.type === 'comment_mention') {
+      return `/docs/${docId}/view?comments=open`
+    }
     return `/docs/${docId}`
   }
   if (n.type === 'external_reference_first') {

@@ -229,6 +229,182 @@ describe('DocumentEditPage — soumission', () => {
     expect(screen.queryByText('Soumettre pour approbation')).toBeNull()
   })
 
+  it('affiche le bandeau « N zones à compléter » et le message du 409 à la soumission', async () => {
+    getMock.mockImplementation((url: string) => {
+      if (url.includes('/approvals/current')) {
+        return Promise.resolve({ status: 204, data: undefined })
+      }
+      if (url.includes('/approvals/applicable-workflow')) {
+        return Promise.resolve({ data: { id: 'x', name: 'A', stepCount: 1, matchLevel: 'fallback', steps: [] } })
+      }
+      return Promise.resolve({
+        data: {
+          id: DOC_ID,
+          spaceId: '00000000-0000-0000-0000-000000000001',
+          title: 'Depuis modèle',
+          body: {
+            type: 'doc',
+            content: [
+              { type: 'placeholder', attrs: { hint: 'Objet' } },
+              { type: 'placeholder', attrs: { hint: 'Périmètre' } },
+            ],
+          },
+          status: 'brouillon',
+          currentVersionNo: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      })
+    })
+    postMock.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { error: 'placeholders_remaining', message: '2 zones à compléter subsistent.' },
+      },
+    })
+
+    render(wrap(<DocumentEditPage />))
+    expect((await screen.findByTestId('placeholder-banner')).textContent).toContain(
+      '2 zones à compléter',
+    )
+    fireEvent.click(await screen.findByText('Soumettre pour approbation'))
+    await waitFor(() => {
+      expect(screen.getByText('2 zones à compléter subsistent.')).toBeTruthy()
+    })
+  })
+
+  it('« Enregistrer comme modèle » avertit si le document n’est pas visible de l’organisation', async () => {
+    getMock.mockImplementation((url: string) => {
+      if (url.includes('/approvals/current')) {
+        return Promise.resolve({ status: 204, data: undefined })
+      }
+      if (url.includes('/approvals/applicable-workflow')) {
+        return Promise.resolve({ data: { id: 'x', name: 'A', stepCount: 1, matchLevel: 'fallback', steps: [] } })
+      }
+      return Promise.resolve({
+        data: {
+          id: DOC_ID,
+          spaceId: '00000000-0000-0000-0000-000000000001',
+          title: 'Doc restreint',
+          body: { type: 'doc' },
+          status: 'brouillon',
+          visibility: 'restricted',
+          currentVersionNo: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      })
+    })
+    postMock.mockResolvedValue({ data: { id: 'tpl-1' } })
+
+    render(wrap(<DocumentEditPage />))
+    fireEvent.click(await screen.findByText('Enregistrer comme modèle'))
+
+    expect(await screen.findByTestId('visibility-warning')).toBeTruthy()
+    const submit = screen.getByRole('button', { name: 'Enregistrer le modèle' }) as HTMLButtonElement
+    expect(submit.disabled).toBe(true)
+
+    fireEvent.click(screen.getByLabelText(/Je comprends/))
+    expect(submit.disabled).toBe(false)
+    fireEvent.click(submit)
+    await waitFor(() =>
+      expect(postMock).toHaveBeenCalledWith(`/api/v1/documents/${DOC_ID}/save-as-template`, {
+        scope: 'space',
+        spaceId: '00000000-0000-0000-0000-000000000001',
+        name: 'Doc restreint',
+      }),
+    )
+    expect(await screen.findByText('Modèle enregistré.')).toBeTruthy()
+  })
+
+  it('affiche le bandeau « N zones à compléter » et le message du 409 à la soumission', async () => {
+    getMock.mockImplementation((url: string) => {
+      if (url.includes('/approvals/current')) {
+        return Promise.resolve({ status: 204, data: undefined })
+      }
+      if (url.includes('/approvals/applicable-workflow')) {
+        return Promise.resolve({ data: { id: 'x', name: 'A', stepCount: 1, matchLevel: 'fallback', steps: [] } })
+      }
+      return Promise.resolve({
+        data: {
+          id: DOC_ID,
+          spaceId: '00000000-0000-0000-0000-000000000001',
+          title: 'Depuis modèle',
+          body: {
+            type: 'doc',
+            content: [
+              { type: 'placeholder', attrs: { hint: 'Objet' } },
+              { type: 'placeholder', attrs: { hint: 'Périmètre' } },
+            ],
+          },
+          status: 'brouillon',
+          currentVersionNo: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      })
+    })
+    postMock.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { error: 'placeholders_remaining', message: '2 zones à compléter subsistent.' },
+      },
+    })
+
+    render(wrap(<DocumentEditPage />))
+    expect((await screen.findByTestId('placeholder-banner')).textContent).toContain(
+      '2 zones à compléter',
+    )
+    fireEvent.click(await screen.findByText('Soumettre pour approbation'))
+    await waitFor(() => {
+      expect(screen.getByText('2 zones à compléter subsistent.')).toBeTruthy()
+    })
+  })
+
+  it('« Enregistrer comme modèle » avertit si le document n’est pas visible de l’organisation', async () => {
+    getMock.mockImplementation((url: string) => {
+      if (url.includes('/approvals/current')) {
+        return Promise.resolve({ status: 204, data: undefined })
+      }
+      if (url.includes('/approvals/applicable-workflow')) {
+        return Promise.resolve({ data: { id: 'x', name: 'A', stepCount: 1, matchLevel: 'fallback', steps: [] } })
+      }
+      return Promise.resolve({
+        data: {
+          id: DOC_ID,
+          spaceId: '00000000-0000-0000-0000-000000000001',
+          title: 'Doc restreint',
+          body: { type: 'doc' },
+          status: 'brouillon',
+          visibility: 'restricted',
+          currentVersionNo: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      })
+    })
+    postMock.mockResolvedValue({ data: { id: 'tpl-1' } })
+
+    render(wrap(<DocumentEditPage />))
+    fireEvent.click(await screen.findByText('Enregistrer comme modèle'))
+
+    expect(await screen.findByTestId('visibility-warning')).toBeTruthy()
+    const submit = screen.getByRole('button', { name: 'Enregistrer le modèle' }) as HTMLButtonElement
+    expect(submit.disabled).toBe(true)
+
+    fireEvent.click(screen.getByLabelText(/Je comprends/))
+    expect(submit.disabled).toBe(false)
+    fireEvent.click(submit)
+    await waitFor(() =>
+      expect(postMock).toHaveBeenCalledWith(`/api/v1/documents/${DOC_ID}/save-as-template`, {
+        scope: 'space',
+        spaceId: '00000000-0000-0000-0000-000000000001',
+        name: 'Doc restreint',
+      }),
+    )
+    expect(await screen.findByText('Modèle enregistré.')).toBeTruthy()
+  })
+
   it('affiche 403 proprement si soumission refusée', async () => {
     getMock.mockImplementation((url: string) => {
       if (url.includes('/approvals/current')) {

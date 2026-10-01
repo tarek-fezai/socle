@@ -2,6 +2,8 @@
 package eu.socle.document;
 
 import eu.socle.authz.AuthorizationService;
+import eu.socle.storage.DocumentStore;
+import eu.socle.template.TemplateBodySupport;
 import eu.socle.user.UserSyncService;
 import eu.socle.workflowdef.ApprovalWorkflowDefinitionService;
 import io.temporal.client.WorkflowClient;
@@ -44,6 +46,7 @@ public class DocumentApprovalService {
     private final ApprovalWorkflowDefinitionService workflowDefinitions;
     private final ApprovalRoleResolver approvalRoleResolver;
     private final TransactionTemplate transactionTemplate;
+    private final DocumentStore documentStore;
     private final boolean workerEnabled;
 
     private WorkerFactory workerFactory;
@@ -59,6 +62,7 @@ public class DocumentApprovalService {
             ApprovalWorkflowDefinitionService workflowDefinitions,
             ApprovalRoleResolver approvalRoleResolver,
             PlatformTransactionManager transactionManager,
+            DocumentStore documentStore,
             @Value("${socle.temporal.worker-enabled:true}") boolean workerEnabled
     ) {
         this.workflowClient = workflowClient;
@@ -70,6 +74,7 @@ public class DocumentApprovalService {
         this.workflowDefinitions = workflowDefinitions;
         this.approvalRoleResolver = approvalRoleResolver;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.documentStore = documentStore;
         this.workerEnabled = workerEnabled;
     }
 
@@ -95,6 +100,7 @@ public class DocumentApprovalService {
         this.workflowDefinitions = workflowDefinitions;
         this.approvalRoleResolver = approvalRoleResolver;
         this.transactionTemplate = transactionTemplate;
+        this.documentStore = null;
         this.workerEnabled = workerEnabled;
     }
 
@@ -136,6 +142,16 @@ public class DocumentApprovalService {
         // --- OpenFGA Check (DOIT rester avant WorkflowClient.start) ---
         authorizationService.requireDocumentRelation(user.getId(), documentId, "editor");
         authorizationService.requireSpaceRelation(user.getId(), document.getSpaceId(), "viewer");
+
+        Map<String, Object> body = document.getBody();
+        if (documentStore != null) {
+            body = documentStore.readCurrentContent(documentId, body);
+        }
+        List<String> remaining = TemplateBodySupport.listPlaceholderHints(body);
+        if (!remaining.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    TemplateBodySupport.placeholderConflictMessage(remaining));
+        }
 
         Integer open = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",

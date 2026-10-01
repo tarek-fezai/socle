@@ -13,6 +13,7 @@ import {
   listMyApprovals,
   type ApprovalItem,
 } from '../lib/approvals'
+import { listComments } from '../lib/comments'
 
 export function ApprovalsPage() {
   const queryClient = useQueryClient()
@@ -36,6 +37,12 @@ export function ApprovalsPage() {
   }, [])
 
   const selected = mine.data?.find((a) => a.approvalRequestId === selectedId) ?? null
+
+  const openComments = useQuery({
+    queryKey: ['document-comments', selected?.documentId, 'ouvert', ''],
+    queryFn: () => listComments(api, selected!.documentId, { status: 'ouvert' }),
+    enabled: Boolean(selected?.documentId),
+  })
 
   const diff = useQuery({
     queryKey: [
@@ -212,6 +219,15 @@ export function ApprovalsPage() {
             >
               Ouvrir le document →
             </Link>
+            {(openComments.data?.openThreadCount ?? 0) > 0 && (
+              <Link
+                to={`/docs/${selected.documentId}/view?comments=open`}
+                className="inline-block text-sm font-semibold text-socle-accent hover:underline"
+                data-testid="approval-open-comments-link"
+              >
+                Voir les commentaires ouverts ({openComments.data!.openThreadCount})
+              </Link>
+            )}
           </aside>
         )}
       </div>

@@ -7,6 +7,8 @@ import { SocleRole } from './lib/auth'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { DocumentEditPage } from './pages/DocumentEditPage'
 import { DocumentHistoryPage } from './pages/DocumentHistoryPage'
+import { NewDocumentPage } from './pages/NewDocumentPage'
+import { TemplatesAdminPage } from './pages/TemplatesAdminPage'
 import { AccessPage } from './pages/AccessPage'
 import { ApprovalsPage } from './pages/ApprovalsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
@@ -34,6 +36,7 @@ function HomePage() {
   const roles = me?.roles ?? []
   const isAuditeur = roles.includes(SocleRole.AUDITEUR)
   const isIntegrateur = roles.includes(SocleRole.INTEGRATEUR)
+  const isAdmin = roles.includes(SocleRole.ADMINISTRATEUR_SYSTEME)
 
   return (
     <main className="mx-auto flex min-h-[calc(100vh-60px)] max-w-3xl flex-col justify-center px-6 py-16">
@@ -59,6 +62,20 @@ function HomePage() {
             <Link className="font-semibold text-socle-accent underline-offset-4 hover:underline" to="/docs">
               Documents →
             </Link>
+            <Link
+              className="font-semibold text-socle-accent underline-offset-4 hover:underline"
+              to="/docs/new"
+            >
+              Nouveau document →
+            </Link>
+            {isAdmin && (
+              <Link
+                className="font-semibold text-socle-accent underline-offset-4 hover:underline"
+                to="/admin/templates"
+              >
+                Modèles →
+              </Link>
+            )}
             <Link className="font-semibold text-socle-accent underline-offset-4 hover:underline" to="/approvals">
               Approbations →
             </Link>
@@ -147,6 +164,22 @@ function AppShell() {
           element={
             <RequireAuth>
               <DocumentsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/docs/new"
+          element={
+            <RequireAuth>
+              <NewDocumentPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/templates"
+          element={
+            <RequireAuth>
+              <TemplatesAdminPage />
             </RequireAuth>
           }
         />
