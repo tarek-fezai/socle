@@ -83,6 +83,23 @@
       "realmRoles": ["contributeur"]
     },
     {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "username": "contributeur-b",
+      "enabled": true,
+      "email": "contributeur-b@example.com",
+      "emailVerified": true,
+      "firstName": "Baptiste",
+      "lastName": "Contributeur",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "contributeur-b",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["contributeur"]
+    },
+    {
       "id": "44444444-4444-4444-4444-444444444444",
       "username": "auditeur",
       "enabled": true,

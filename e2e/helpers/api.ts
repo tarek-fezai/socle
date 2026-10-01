@@ -27,3 +27,5 @@ export type TemplateSummary = { id: string; name: string }
 export type DocumentResponse = { id: string; title: string }
 
 export type GlobalRole = { id: string; name: string }
+
+export type MeResponse = { id: string; email: string; displayName: string }

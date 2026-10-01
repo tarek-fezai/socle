@@ -7,6 +7,7 @@ import {
   apiJson,
   type DocumentResponse,
   type GlobalRole,
+  type MeResponse,
   type SpaceSummary,
   type TemplateSummary,
 } from '../helpers/api'
@@ -14,8 +15,9 @@ import { backupSocleCoreAndGit, restoreSocleCoreAndGit } from '../helpers/compos
 
 const USER_A = process.env.E2E_USER_A ?? 'contributeur'
 const PASS_A = process.env.E2E_PASS_A ?? 'contributeur'
-const USER_B = process.env.E2E_USER_B ?? 'auditeur'
-const PASS_B = process.env.E2E_PASS_B ?? 'auditeur'
+/** Second contributeur (four-eyes). Auditeur cannot approve. */
+const USER_B = process.env.E2E_USER_B ?? 'contributeur-b'
+const PASS_B = process.env.E2E_PASS_B ?? 'contributeur-b'
 
 test.describe.serial('Socle demo stack smoke', () => {
   let tokenA: string
@@ -91,6 +93,15 @@ test.describe.serial('Socle demo stack smoke', () => {
   })
 
   test('6–7. submit approval by A; B approves (four-eyes)', async () => {
+    const meB = await apiJson<MeResponse>('/api/v1/me', tokenB)
+    expect(meB.id).toBeTruthy()
+
+    // B needs document editor (space owner → OpenFGA editor).
+    await apiJson(`/api/v1/spaces/${spaceId}/owners`, tokenA, {
+      method: 'POST',
+      body: JSON.stringify({ userId: meB.id, responsible: false }),
+    })
+
     const roles = await apiJson<GlobalRole[]>('/api/v1/global-roles', tokenA)
     const editorRole = roles.find((r) => r.name.includes('Éditeur de documents'))
     expect(editorRole).toBeTruthy()
@@ -101,9 +112,9 @@ test.describe.serial('Socle demo stack smoke', () => {
       body: JSON.stringify({
         roleId: analystRoleId,
         subjectType: 'user',
-        subjectId: '44444444-4444-4444-4444-444444444444',
-        scopeType: 'document',
-        scopeRef: documentId,
+        subjectId: meB.id,
+        scopeType: 'space',
+        scopeRef: spaceId,
       }),
     })
 
@@ -120,7 +131,11 @@ test.describe.serial('Socle demo stack smoke', () => {
         tokenA,
         {
           method: 'POST',
-          body: JSON.stringify({ decision: 'approuve', comment: 'self' }),
+          body: JSON.stringify({
+            decision: 'approuve',
+            comment: 'self',
+            expectedStepOrder: 1,
+          }),
         },
       )
     }).rejects.toThrow(/409|403|422|400/)
@@ -130,7 +145,11 @@ test.describe.serial('Socle demo stack smoke', () => {
       tokenB,
       {
         method: 'POST',
-        body: JSON.stringify({ decision: 'approuve', comment: 'LGTM E2E' }),
+        body: JSON.stringify({
+          decision: 'approuve',
+          comment: 'LGTM E2E',
+          expectedStepOrder: 1,
+        }),
       },
     )
   })
