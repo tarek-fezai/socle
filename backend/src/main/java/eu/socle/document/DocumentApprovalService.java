@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -217,16 +218,12 @@ public class DocumentApprovalService {
                          THEN ar.submitted_version_no - 1
                          ELSE NULL
                        END AS baseline_version_no,
-                       aws.approver_role_id,
-                       dv_sub.author_id AS submitted_author_id
+                       aws.approver_role_id
                   FROM approval_requests ar
                   JOIN documents d ON d.id = ar.document_id
                   JOIN approval_workflow_steps aws
                     ON aws.workflow_id = ar.workflow_id
                    AND aws.step_order = ar.current_step_order
-                  LEFT JOIN document_versions dv_sub
-                    ON dv_sub.document_id = ar.document_id
-                   AND dv_sub.version_no = ar.submitted_version_no
                  WHERE ar.status = 'en_cours'
                    AND d.deleted_at IS NULL
                  ORDER BY ar.sla_deadline_at ASC NULLS LAST, ar.created_at ASC
@@ -234,12 +231,16 @@ public class DocumentApprovalService {
                 (rs, i) -> {
                     ApprovalView view = mapApprovalView(rs);
                     UUID roleId = (UUID) rs.getObject("approver_role_id");
-                    UUID submittedAuthorId = (UUID) rs.getObject("submitted_author_id");
-                    return new Candidate(view, roleId, submittedAuthorId);
+                    return new Candidate(view, roleId);
                 });
 
         return candidates.stream()
-                .filter(c -> !isFourEyesConflict(user.getId(), c.view().requestedBy(), c.submittedAuthorId()))
+                .filter(c -> {
+                    Set<UUID> contributors = FourEyesPolicy.loadContentContributors(
+                            jdbcTemplate, c.view().documentId());
+                    return !FourEyesPolicy.isConflict(
+                            user.getId(), c.view().requestedBy(), contributors);
+                })
                 .filter(c -> approvalRoleResolver.canDecide(user.getId(), c.roleId(), c.view().documentId()))
                 .filter(c -> authorizationService.hasRelation(
                         user.getId(), "document", c.view().documentId(), "editor"))
@@ -247,7 +248,7 @@ public class DocumentApprovalService {
                 .toList();
     }
 
-    private record Candidate(ApprovalView view, UUID roleId, UUID submittedAuthorId) {}
+    private record Candidate(ApprovalView view, UUID roleId) {}
 
     /**
      * Signale une décision Temporal après verrouillage ligne ({@code FOR UPDATE}) et
@@ -272,11 +273,8 @@ public class DocumentApprovalService {
         String temporalWorkflowId = transactionTemplate.execute(status -> {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                     SELECT ar.temporal_workflow_id, ar.status, ar.document_id, ar.current_step_order,
-                           ar.requested_by, ar.submitted_version_no, dv.author_id AS submitted_author_id
+                           ar.requested_by, ar.submitted_version_no
                       FROM approval_requests ar
-                      LEFT JOIN document_versions dv
-                        ON dv.document_id = ar.document_id
-                       AND dv.version_no = ar.submitted_version_no
                      WHERE ar.id = ?
                      FOR UPDATE OF ar
                     """, requestId);
@@ -299,8 +297,8 @@ public class DocumentApprovalService {
             }
 
             UUID requestedBy = toUuid(row.get("requested_by"));
-            UUID submittedAuthorId = toUuid(row.get("submitted_author_id"));
-            if (isFourEyesConflict(user.getId(), requestedBy, submittedAuthorId)) {
+            Set<UUID> contributors = FourEyesPolicy.loadContentContributors(jdbcTemplate, documentId);
+            if (FourEyesPolicy.isConflict(user.getId(), requestedBy, contributors)) {
                 throw new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
                         "séparation des tâches : vous ne pouvez pas approuver votre propre demande");
@@ -334,13 +332,15 @@ public class DocumentApprovalService {
     }
 
     /**
-     * Quatre yeux : le demandeur et l'auteur de la version soumise ne peuvent pas décider.
+     * Quatre yeux : le demandeur et les contributeurs de contenu ne peuvent pas décider.
+     * @deprecated utiliser {@link FourEyesPolicy#isConflict}
      */
+    @Deprecated
     static boolean isFourEyesConflict(UUID actorId, UUID requestedBy, UUID submittedAuthorId) {
-        if (actorId == null) {
-            return false;
-        }
-        return actorId.equals(requestedBy) || actorId.equals(submittedAuthorId);
+        java.util.Set<UUID> contributors = submittedAuthorId == null
+                ? java.util.Set.of()
+                : java.util.Set.of(submittedAuthorId);
+        return FourEyesPolicy.isConflict(actorId, requestedBy, contributors);
     }
 
     private static UUID toUuid(Object raw) {

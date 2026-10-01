@@ -198,6 +198,11 @@ export function DocumentHistoryPage() {
                     <p className="mt-1 text-xs text-socle-muted">
                       {new Date(v.createdAt).toLocaleString('fr-FR')}
                       {v.authorId ? ` · auteur ${v.authorId.slice(0, 8)}…` : ' · auteur inconnu'}
+                      {v.archivedBy &&
+                      v.authorId &&
+                      v.archivedBy !== v.authorId
+                        ? ` · archivé par ${v.archivedBy.slice(0, 8)}…`
+                        : null}
                     </p>
                     <p className="mt-1 text-sm text-socle-slate">
                       {v.changeSummary?.trim() ? v.changeSummary : 'Aucun résumé'}

@@ -83,7 +83,7 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                 documentId, approvalRequestId, temporalWorkflowId, firstStepOrder);
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT current_version_no, body, git_head_sha
+                SELECT current_version_no, body, git_head_sha, updated_by, created_by
                   FROM documents
                  WHERE id = ? AND deleted_at IS NULL
                 """, documentId);
@@ -96,12 +96,27 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         String expectedHead = docRow.get("git_head_sha") == null
                 ? null
                 : String.valueOf(docRow.get("git_head_sha"));
+        UUID contentAuthorId = toUuid(docRow.get("updated_by"));
+        if (contentAuthorId == null) {
+            contentAuthorId = toUuid(docRow.get("created_by"));
+        }
 
-        // Archive + bump via DocumentStore (commit Git si provider=git) — pas d'INSERT JDBC direct.
+        // Archive + bump via DocumentStore — contenu identique : author = auteur du contenu,
+        // archived_by / committer = demandeur. updated_by inchangé (pas de mutation de contenu).
         documentStore.archiveVersion(
-                documentId, submittedVersionNo, body, requesterId, "Soumission pour approbation");
+                documentId,
+                submittedVersionNo,
+                body,
+                contentAuthorId,
+                requesterId,
+                "Soumission pour approbation");
         String newHead = documentStore.writeCurrentContent(
-                documentId, body, requesterId, "Soumission pour approbation", expectedHead);
+                documentId,
+                body,
+                contentAuthorId,
+                requesterId,
+                "Soumission pour approbation",
+                expectedHead);
 
         jdbcTemplate.update("""
                 UPDATE documents
@@ -331,14 +346,17 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
 
     /**
      * Destinataires d'alerte chaîne épuisée : demandeur (toujours) + approbateurs
-     * in-scope hors demandeur et auteur de la version soumise (quatre yeux).
+     * in-scope hors demandeur et contributeurs de contenu (quatre yeux).
      */
     private List<UUID> resolveChainExhaustedRecipients(
             UUID approvalRequestId,
             int lastStepOrder,
             UUID requesterId
     ) {
-        UUID submittedAuthorId = loadSubmittedAuthorId(approvalRequestId);
+        UUID documentIdForContributors = loadDocumentId(approvalRequestId);
+        java.util.Set<UUID> contributors = documentIdForContributors == null
+                ? java.util.Set.of()
+                : FourEyesPolicy.loadContentContributors(jdbcTemplate, documentIdForContributors);
         List<UUID> recipients = new java.util.ArrayList<>();
         if (requesterId != null) {
             recipients.add(requesterId);
@@ -364,7 +382,7 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                     : UUID.fromString(String.valueOf(row.get("document_id")));
             if (roleId != null) {
                 for (UUID approverId : approvalRoleResolver.resolveInScopeAssignees(roleId, documentId)) {
-                    if (DocumentApprovalService.isFourEyesConflict(approverId, requesterId, submittedAuthorId)) {
+                    if (FourEyesPolicy.isConflict(approverId, requesterId, contributors)) {
                         continue;
                     }
                     if (!recipients.contains(approverId)) {
@@ -411,21 +429,16 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                 ? u
                 : (row.get("requested_by") != null
                         ? UUID.fromString(String.valueOf(row.get("requested_by"))) : null);
-        UUID submittedAuthorId = loadSubmittedAuthorId(approvalRequestId);
+        java.util.Set<UUID> contributors = FourEyesPolicy.loadContentContributors(jdbcTemplate, documentId);
         return approvalRoleResolver.resolveInScopeAssignees(roleId, documentId).stream()
-                .anyMatch(id -> !DocumentApprovalService.isFourEyesConflict(id, requesterId, submittedAuthorId));
+                .anyMatch(id -> !FourEyesPolicy.isConflict(id, requesterId, contributors));
     }
 
-    private UUID loadSubmittedAuthorId(UUID approvalRequestId) {
+    private UUID loadDocumentId(UUID approvalRequestId) {
         List<UUID> rows = jdbcTemplate.query("""
-                SELECT dv.author_id
-                  FROM approval_requests ar
-                  JOIN document_versions dv
-                    ON dv.document_id = ar.document_id
-                   AND dv.version_no = ar.submitted_version_no
-                 WHERE ar.id = ?
+                SELECT document_id FROM approval_requests WHERE id = ?
                 """,
-                (rs, i) -> (UUID) rs.getObject("author_id"),
+                (rs, i) -> (UUID) rs.getObject("document_id"),
                 approvalRequestId);
         if (rows == null || rows.isEmpty()) {
             return null;
@@ -512,6 +525,16 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                     SYSTEM_ACTOR_ID);
         }
         return SYSTEM_ACTOR_ID;
+    }
+
+    private static UUID toUuid(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof UUID u) {
+            return u;
+        }
+        return UUID.fromString(String.valueOf(raw));
     }
 
     @SuppressWarnings("unchecked")

@@ -33,6 +33,10 @@ public class DocumentVersionEntity {
     @Column(name = "author_id")
     private UUID authorId;
 
+    /** Qui a déclenché l'archivage (édition / restore / soumission). */
+    @Column(name = "archived_by")
+    private UUID archivedBy;
+
     @Column(name = "change_summary")
     private String changeSummary;
 
@@ -91,6 +95,14 @@ public class DocumentVersionEntity {
 
     public void setAuthorId(UUID authorId) {
         this.authorId = authorId;
+    }
+
+    public UUID getArchivedBy() {
+        return archivedBy;
+    }
+
+    public void setArchivedBy(UUID archivedBy) {
+        this.archivedBy = archivedBy;
     }
 
     public String getChangeSummary() {

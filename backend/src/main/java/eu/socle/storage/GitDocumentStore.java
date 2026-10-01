@@ -83,7 +83,7 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
 
     @Override
     public String createContent(UUID documentId, Map<String, Object> body, UUID authorId) {
-        commitFile(documentId, body, authorId, "create " + documentId, null);
+        commitFile(documentId, body, authorId, authorId, "create " + documentId, null);
         return resolveHeadSha();
     }
 
@@ -109,7 +109,8 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
             UUID documentId,
             int archivedVersionNo,
             Map<String, Object> previousBody,
-            UUID authorId,
+            UUID contentAuthorId,
+            UUID archivedBy,
             String changeSummary
     ) {
         // Le commit précédent (HEAD avant writeCurrent) est l'archive.
@@ -119,7 +120,8 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
         version.setDocumentId(documentId);
         version.setVersionNo(archivedVersionNo);
         version.setBodySnapshot(previousBody == null ? Map.of() : new HashMap<>(previousBody));
-        version.setAuthorId(authorId);
+        version.setAuthorId(contentAuthorId);
+        version.setArchivedBy(archivedBy);
         version.setChangeSummary(changeSummary);
         version.setGitCommitSha(sha);
         versionRepository.save(version);
@@ -129,14 +131,15 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
     public String writeCurrentContent(
             UUID documentId,
             Map<String, Object> body,
-            UUID authorId,
+            UUID contentAuthorId,
+            UUID committerId,
             String changeSummary,
             String expectedGitHeadSha
     ) {
         String msg = changeSummary == null || changeSummary.isBlank()
                 ? "update " + documentId
                 : changeSummary;
-        commitFile(documentId, body, authorId, msg, expectedGitHeadSha);
+        commitFile(documentId, body, contentAuthorId, committerId, msg, expectedGitHeadSha);
         return resolveHeadSha();
     }
 
@@ -233,7 +236,8 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
     private void commitFile(
             UUID documentId,
             Map<String, Object> body,
-            UUID authorId,
+            UUID contentAuthorId,
+            UUID committerId,
             String message,
             String expectedGitHeadSha
     ) {
@@ -252,10 +256,11 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
                 String markdown = TipTapMarkdown.toMarkdown(body);
                 Files.writeString(file, markdown, StandardCharsets.UTF_8);
                 git.add().addFilepattern(relativePath(documentId)).call();
+                UUID committer = committerId != null ? committerId : contentAuthorId;
                 git.commit()
                         .setMessage(message)
-                        .setAuthor(ident(authorId))
-                        .setCommitter(ident(authorId))
+                        .setAuthor(ident(contentAuthorId))
+                        .setCommitter(ident(committer))
                         .call();
             } catch (IOException | GitAPIException e) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Commit Git impossible", e);
@@ -325,6 +330,7 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
                 v.getVersionNo(),
                 v.getBodySnapshot(),
                 v.getAuthorId(),
+                v.getArchivedBy(),
                 v.getChangeSummary(),
                 v.getCreatedAt() == null ? Instant.now() : v.getCreatedAt(),
                 v.getGitCommitSha()

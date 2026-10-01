@@ -2,6 +2,7 @@
 package eu.socle.authz;
 
 import eu.socle.document.DocumentLinkService;
+import eu.socle.document.VersionAuthorshipBackfillService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,15 +21,18 @@ public class VisibilityMigrationController {
     private final VisibilityTupleMigrationService migrationService;
     private final VisibilityDriftService driftService;
     private final DocumentLinkService documentLinkService;
+    private final VersionAuthorshipBackfillService versionAuthorshipBackfillService;
 
     public VisibilityMigrationController(
             VisibilityTupleMigrationService migrationService,
             VisibilityDriftService driftService,
-            DocumentLinkService documentLinkService
+            DocumentLinkService documentLinkService,
+            VersionAuthorshipBackfillService versionAuthorshipBackfillService
     ) {
         this.migrationService = migrationService;
         this.driftService = driftService;
         this.documentLinkService = documentLinkService;
+        this.versionAuthorshipBackfillService = versionAuthorshipBackfillService;
     }
 
     /**
@@ -72,5 +76,16 @@ public class VisibilityMigrationController {
     @GetMapping("/document-links-drift")
     public Map<String, Object> documentLinksDrift() {
         return documentLinkService.listDrift().toMap();
+    }
+
+    /**
+     * Backfill {@code document_versions.author_id}/{@code archived_by} + {@code documents.updated_by}
+     * (idempotent, journal {@code version-authorship-v1}).
+     */
+    @PostMapping("/backfill-version-authorship")
+    public Map<String, Object> backfillVersionAuthorship(
+            @RequestParam(defaultValue = "false") boolean force
+    ) {
+        return versionAuthorshipBackfillService.backfill(force).toMap();
     }
 }

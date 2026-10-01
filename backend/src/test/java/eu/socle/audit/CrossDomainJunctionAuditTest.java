@@ -268,14 +268,16 @@ class CrossDomainJunctionAuditTest {
     @Test
     void point4_recordSubmission_usesDocumentStore_notDirectVersionInsert() {
         DocumentStore store = mock(DocumentStore.class);
-        when(store.writeCurrentContent(any(), any(), any(), any(), any())).thenReturn("newsha");
+        when(store.writeCurrentContent(any(), any(), any(), any(), any(), any())).thenReturn("newsha");
 
         JdbcTemplate mockJdbc = mock(JdbcTemplate.class);
         when(mockJdbc.queryForList(org.mockito.ArgumentMatchers.contains("current_version_no"), eq(DOC_VISIBLE)))
                 .thenReturn(List.of(Map.of(
                         "current_version_no", 3,
                         "body", tipTap("submitted"),
-                        "git_head_sha", "oldsha")));
+                        "git_head_sha", "oldsha",
+                        "updated_by", USER,
+                        "created_by", USER)));
         when(mockJdbc.update(any(String.class), any(), any())).thenReturn(1);
         when(mockJdbc.update(any(String.class), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -288,9 +290,10 @@ class CrossDomainJunctionAuditTest {
         activities.recordSubmission(
                 DOC_VISIBLE, USER, UUID.randomUUID(), UUID.randomUUID(), "wf", 1, 24);
 
-        verify(store).archiveVersion(eq(DOC_VISIBLE), eq(3), any(), eq(USER), eq("Soumission pour approbation"));
+        verify(store).archiveVersion(
+                eq(DOC_VISIBLE), eq(3), any(), eq(USER), eq(USER), eq("Soumission pour approbation"));
         verify(store).writeCurrentContent(
-                eq(DOC_VISIBLE), any(), eq(USER), eq("Soumission pour approbation"), eq("oldsha"));
+                eq(DOC_VISIBLE), any(), eq(USER), eq(USER), eq("Soumission pour approbation"), eq("oldsha"));
     }
 
     /**

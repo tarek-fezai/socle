@@ -46,14 +46,16 @@ public class RelationalDocumentStore implements DocumentStore {
             UUID documentId,
             int archivedVersionNo,
             Map<String, Object> previousBody,
-            UUID authorId,
+            UUID contentAuthorId,
+            UUID archivedBy,
             String changeSummary
     ) {
         DocumentVersionEntity version = new DocumentVersionEntity();
         version.setDocumentId(documentId);
         version.setVersionNo(archivedVersionNo);
         version.setBodySnapshot(previousBody);
-        version.setAuthorId(authorId);
+        version.setAuthorId(contentAuthorId);
+        version.setArchivedBy(archivedBy);
         version.setChangeSummary(changeSummary);
         versionRepository.save(version);
     }
@@ -62,7 +64,8 @@ public class RelationalDocumentStore implements DocumentStore {
     public String writeCurrentContent(
             UUID documentId,
             Map<String, Object> body,
-            UUID authorId,
+            UUID contentAuthorId,
+            UUID committerId,
             String changeSummary,
             String expectedGitHeadSha
     ) {
@@ -128,6 +131,7 @@ public class RelationalDocumentStore implements DocumentStore {
                 v.getVersionNo(),
                 v.getBodySnapshot(),
                 v.getAuthorId(),
+                v.getArchivedBy(),
                 v.getChangeSummary(),
                 v.getCreatedAt(),
                 v.getGitCommitSha()

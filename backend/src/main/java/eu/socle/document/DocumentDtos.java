@@ -125,6 +125,7 @@ public final class DocumentDtos {
     public record VersionSummary(
             int versionNo,
             UUID authorId,
+            UUID archivedBy,
             String changeSummary,
             Instant createdAt
     ) {}
@@ -141,6 +142,7 @@ public final class DocumentDtos {
             int versionNo,
             Map<String, Object> bodySnapshot,
             UUID authorId,
+            UUID archivedBy,
             String changeSummary,
             Instant createdAt
     ) {}

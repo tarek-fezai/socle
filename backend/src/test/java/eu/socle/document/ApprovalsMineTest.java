@@ -77,6 +77,26 @@ class ApprovalsMineTest {
                 passthroughTx(),
                 false
         );
+        stubEmptyContributors();
+    }
+
+    /** FourEyesPolicy.loadContentContributors — aucune contribution par défaut. */
+    private void stubEmptyContributors() {
+        org.mockito.Mockito.lenient().when(jdbcTemplate.query(
+                        contains("submitted_version_no"),
+                        any(org.springframework.jdbc.core.ResultSetExtractor.class),
+                        any()))
+                .thenReturn(null);
+        org.mockito.Mockito.lenient().when(jdbcTemplate.query(
+                        contains("document_versions dv"),
+                        any(RowMapper.class),
+                        any(), any()))
+                .thenReturn(List.of());
+        org.mockito.Mockito.lenient().when(jdbcTemplate.query(
+                        contains("COALESCE(updated_by"),
+                        any(RowMapper.class),
+                        any()))
+                .thenReturn(List.of());
     }
 
     @Test
@@ -100,7 +120,6 @@ class ApprovalsMineTest {
                     when(rs.getTimestamp("created_at"))
                             .thenReturn(Timestamp.from(Instant.parse("2026-09-28T10:00:00Z")));
                     when(rs.getObject("approver_role_id")).thenReturn(ROLE);
-                    when(rs.getObject("submitted_author_id")).thenReturn(REQUESTER);
                     return List.of(mapper.mapRow(rs, 0));
                 });
         when(approvalRoleResolver.canDecide(APPROVER, ROLE, DOC)).thenReturn(true);
@@ -136,7 +155,6 @@ class ApprovalsMineTest {
                     when(rsOwn.getObject("requested_by")).thenReturn(APPROVER);
                     when(rsOwn.getTimestamp("created_at")).thenReturn(null);
                     when(rsOwn.getObject("approver_role_id")).thenReturn(ROLE);
-                    when(rsOwn.getObject("submitted_author_id")).thenReturn(APPROVER);
 
                     ResultSet rsOther = org.mockito.Mockito.mock(ResultSet.class);
                     when(rsOther.getObject("id")).thenReturn(OTHER_REQ);
@@ -151,7 +169,6 @@ class ApprovalsMineTest {
                     when(rsOther.getObject("requested_by")).thenReturn(REQUESTER);
                     when(rsOther.getTimestamp("created_at")).thenReturn(null);
                     when(rsOther.getObject("approver_role_id")).thenReturn(ROLE);
-                    when(rsOther.getObject("submitted_author_id")).thenReturn(REQUESTER);
 
                     return List.of(mapper.mapRow(rsOwn, 0), mapper.mapRow(rsOther, 1));
                 });
@@ -164,6 +181,72 @@ class ApprovalsMineTest {
 
         assertThat(mine).hasSize(1);
         assertThat(mine.getFirst().approvalRequestId()).isEqualTo(OTHER_REQ);
+    }
+
+    @Test
+    void listMine_excludesContentContributor_fourEyes() {
+        when(userSyncService.syncFromJwt(any())).thenReturn(user(APPROVER, "approver@example.com"));
+        when(jdbcTemplate.query(contains("approval_requests ar"), any(RowMapper.class)))
+                .thenAnswer(inv -> {
+                    RowMapper<?> mapper = inv.getArgument(1);
+                    ResultSet rs = org.mockito.Mockito.mock(ResultSet.class);
+                    when(rs.getObject("id")).thenReturn(REQ);
+                    when(rs.getObject("document_id")).thenReturn(DOC);
+                    when(rs.getString("document_title")).thenReturn("Alice a rédigé");
+                    when(rs.getString("temporal_workflow_id")).thenReturn("wf-1");
+                    when(rs.getString("status")).thenReturn("en_cours");
+                    when(rs.getInt("current_step_order")).thenReturn(1);
+                    when(rs.getTimestamp("sla_deadline_at")).thenReturn(null);
+                    when(rs.getObject("submitted_version_no")).thenReturn(2);
+                    when(rs.getObject("baseline_version_no")).thenReturn(1);
+                    when(rs.getObject("requested_by")).thenReturn(REQUESTER);
+                    when(rs.getTimestamp("created_at")).thenReturn(null);
+                    when(rs.getObject("approver_role_id")).thenReturn(ROLE);
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+        // APPROVER = contributeur de contenu (pas demandeur)
+        when(jdbcTemplate.query(
+                        contains("document_versions dv"),
+                        any(RowMapper.class),
+                        any(), any()))
+                .thenReturn(List.of(APPROVER));
+        when(approvalRoleResolver.canDecide(APPROVER, ROLE, DOC)).thenReturn(true);
+        when(authorizationService.hasRelation(APPROVER, "document", DOC, "editor")).thenReturn(true);
+
+        assertThat(service.listMine(jwt(APPROVER))).isEmpty();
+    }
+
+    @Test
+    void decide_forbiddenWhenActorIsContentContributor_fourEyes() {
+        when(userSyncService.syncFromJwt(any())).thenReturn(user(APPROVER, "approver@example.com"));
+        when(authorizationService.hasRelation(APPROVER, "document", DOC, "editor")).thenReturn(true);
+        when(jdbcTemplate.queryForList(contains("FOR UPDATE"), eq(REQ)))
+                .thenReturn(List.of(Map.of(
+                        "temporal_workflow_id", "wf-1",
+                        "status", "en_cours",
+                        "document_id", DOC,
+                        "current_step_order", 1,
+                        "requested_by", REQUESTER,
+                        "submitted_version_no", 2
+                )));
+        when(jdbcTemplate.query(
+                        contains("document_versions dv"),
+                        any(RowMapper.class),
+                        any(), any()))
+                .thenReturn(List.of(APPROVER));
+
+        assertThatThrownBy(() -> service.decide(
+                jwt(APPROVER),
+                DOC,
+                REQ,
+                new DocumentApprovalService.DecisionRequest("approuve", null, 1)
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(rse.getReason()).contains("séparation des tâches");
+                });
     }
 
     @Test
@@ -213,7 +296,6 @@ class ApprovalsMineTest {
                     when(rs.getObject("requested_by")).thenReturn(REQUESTER);
                     when(rs.getTimestamp("created_at")).thenReturn(null);
                     when(rs.getObject("approver_role_id")).thenReturn(ROLE);
-                    when(rs.getObject("submitted_author_id")).thenReturn(REQUESTER);
                     return List.of(mapper.mapRow(rs, 0));
                 });
         when(approvalRoleResolver.canDecide(OUTSIDER, ROLE, DOC)).thenReturn(false);

@@ -70,6 +70,47 @@ describe('DocumentHistoryPage', () => {
     restoreVersion.mockReset()
   })
 
+  it('affiche archivé par seulement s\'il diffère de l\'auteur', async () => {
+    getDocument.mockResolvedValue({
+      id: DOC,
+      spaceId: '00000000-0000-0000-0000-000000000001',
+      title: 'Politique',
+      body: {},
+      status: 'brouillon',
+      currentVersionNo: 2,
+      createdAt: '2026-09-01T00:00:00Z',
+      updatedAt: '2026-09-28T10:00:00Z',
+    })
+    listVersions.mockResolvedValue({
+      items: [
+        {
+          versionNo: 2,
+          authorId: '11111111-1111-1111-1111-111111111111',
+          archivedBy: '22222222-2222-2222-2222-222222222222',
+          changeSummary: 'Soumission pour approbation',
+          createdAt: '2026-09-28T10:00:00Z',
+        },
+        {
+          versionNo: 1,
+          authorId: '11111111-1111-1111-1111-111111111111',
+          archivedBy: '11111111-1111-1111-1111-111111111111',
+          changeSummary: 'edit',
+          createdAt: '2026-09-27T09:00:00Z',
+        },
+      ],
+      offset: 0,
+      limit: 50,
+      total: 2,
+    })
+
+    render(wrap(<DocumentHistoryPage />))
+
+    await waitFor(() => expect(screen.getByText('Soumission pour approbation')).toBeTruthy())
+    expect(screen.getByText(/archivé par 22222222/i)).toBeTruthy()
+    // Même auteur / archiveur → pas de second libellé
+    expect(screen.getAllByText(/archivé par/i)).toHaveLength(1)
+  })
+
   it('affiche la liste et identifie la version courante', async () => {
     getDocument.mockResolvedValue({
       id: DOC,

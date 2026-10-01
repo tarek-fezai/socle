@@ -44,6 +44,7 @@ export type TipTapNode = {
 export type VersionSummary = {
   versionNo: number
   authorId: string | null
+  archivedBy?: string | null
   changeSummary: string | null
   createdAt: string
 }

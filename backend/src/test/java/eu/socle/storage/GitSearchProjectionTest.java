@@ -191,8 +191,8 @@ class GitSearchProjectionTest {
                 "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"AncienTermeGit\"}]}]}");
 
         Map<String, Object> v2 = DocumentStoreContractTest.tipTap("NouveauTermeGit");
-        gitStore.archiveVersion(DOC, 1, v1, USER, "edit");
-        gitStore.writeCurrentContent(DOC, v2, USER, "edit", head);
+        gitStore.archiveVersion(DOC, 1, v1, USER, USER, "edit");
+        gitStore.writeCurrentContent(DOC, v2, USER, USER, "edit", head);
         jdbc.update("""
                 UPDATE documents SET body = ?::jsonb, updated_at = now() WHERE id = ?
                 """,
