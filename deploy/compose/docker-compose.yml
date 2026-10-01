@@ -137,6 +137,28 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  temporal-namespace:
+    image: temporalio/admin-tools:1.29.1-tctl-1.18.4-cli-1.5.0
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        set -eux
+        i=0
+        until temporal operator cluster health --address temporal:7233 >/dev/null 2>&1; do
+          i=$$((i + 1))
+          if [ "$$i" -ge 60 ]; then
+            echo "temporal not ready" >&2
+            exit 1
+          fi
+          sleep 2
+        done
+        temporal operator namespace describe --namespace default --address temporal:7233 >/dev/null 2>&1 \
+          || temporal operator namespace create --namespace default --address temporal:7233
+    depends_on:
+      temporal:
+        condition: service_healthy
+    restart: "no"
+
   backend:
     image: ghcr.io/tarek-fezai/socle-backend:${VERSION:-latest}
     build:
