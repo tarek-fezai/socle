@@ -32,14 +32,18 @@ spec:
           args:
             - |
               temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
-                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal setup-schema -v 0.0
+                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal \
+                --connect-attributes sslmode=disable setup-schema -v 0.0
               temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
                 -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal \
+                --connect-attributes sslmode=disable \
                 update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
               temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
-                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal_visibility setup-schema -v 0.0 --visibility
+                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal_visibility \
+                --connect-attributes sslmode=disable setup-schema -v 0.0 --visibility
               temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
                 -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal_visibility \
+                --connect-attributes sslmode=disable \
                 update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned --visibility
           env:
             - name: POSTGRES_PASSWORD
