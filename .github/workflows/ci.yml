@@ -27,7 +27,7 @@ jobs:
         run: mvn -B verify
       - name: Upload Surefire reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-surefire-reports
           path: backend/target/surefire-reports/
@@ -58,7 +58,7 @@ jobs:
         run: pnpm build
       - name: Upload Vitest / build logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-test-output
           path: |
