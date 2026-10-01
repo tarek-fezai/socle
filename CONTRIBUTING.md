@@ -40,6 +40,9 @@ Any change to a `*WorkflowImpl` class must either:
 
 Do not change workflow history shape without a version gate.
 
+Versions SDK / serveur / UI : `docs/temporal-versions.md`. Le test
+`DocumentApprovalWorkflowReplayTest` rejoue un historique capturé sous 1.27.x.
+
 ## Flyway
 
 **Never modify a migration that has already been merged** (`backend/src/main/resources/db/migration/V*.sql`). Add a new `V{n}__….sql` instead. Existing checksums must remain stable.
