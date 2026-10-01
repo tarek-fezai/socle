@@ -6,6 +6,8 @@ import { CommentsPanel, CommentSelectionButton } from '../components/CommentsPan
 import { DocumentReliabilityStatus } from '../components/ReliabilityDisplay'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { MoveDialog } from '../components/MoveDialog'
+import { PlaceholderBanner } from '../components/PlaceholderBanner'
+import { SaveAsTemplateDialog } from '../components/SaveAsTemplateDialog'
 import { SpaceTreeLayout } from '../components/SpaceTreeSidebar'
 import { StaleBadge } from '../components/StaleBadge'
 import { api } from '../lib/api'
@@ -24,6 +26,7 @@ import {
 } from '../lib/editLock'
 import { buildBreadcrumb, getSpaceTree, spaceTreeKey } from '../lib/folders'
 import { getSpace } from '../lib/spaces'
+import { placeholderConflictMessage } from '../lib/templates'
 import { fetchApplicableWorkflow, matchLevelLabel } from '../lib/workflows'
 import { DocumentEditor } from './DocumentEditor'
 
@@ -64,6 +67,7 @@ export function DocumentEditPage() {
     enabled: Boolean(spaceId),
   })
   const [moveOpen, setMoveOpen] = useState(false)
+  const [templateOpen, setTemplateOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [draftAnchor, setDraftAnchor] = useState<CommentAnchorInput | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -169,7 +173,10 @@ export function DocumentEditPage() {
     },
     onError: (err) => {
       setApprovalMsg(null)
-      setApprovalError(apiErrorMessage(err, 'Échec de la soumission pour approbation'))
+      setApprovalError(
+        placeholderConflictMessage(err) ??
+          apiErrorMessage(err, 'Échec de la soumission pour approbation'),
+      )
     },
   })
 
@@ -266,6 +273,13 @@ export function DocumentEditPage() {
             >
               Déplacer
             </button>
+            <button
+              type="button"
+              onClick={() => setTemplateOpen(true)}
+              className="text-sm text-socle-muted hover:text-socle-accent"
+            >
+              Enregistrer comme modèle
+            </button>
           </div>
           <p className="text-xs text-socle-muted">
             {save.isSuccess && savedAt
@@ -301,6 +315,8 @@ export function DocumentEditPage() {
         <div className="mb-4">
           <StaleBadge stale={doc.data.stale} contentModifiedAt={doc.data.contentModifiedAt} />
         </div>
+
+        <PlaceholderBanner body={body} />
 
         <form onSubmit={onSubmit} className="space-y-4">
           <input
@@ -390,6 +406,14 @@ export function DocumentEditPage() {
           )}
           {approvalError && <p className="text-right text-xs text-socle-danger">{approvalError}</p>}
         </form>
+        <SaveAsTemplateDialog
+          open={templateOpen}
+          onOpenChange={setTemplateOpen}
+          documentId={id}
+          spaceId={doc.data.spaceId}
+          documentTitle={title || doc.data.title}
+          visibility={doc.data.visibility}
+        />
         <MoveDialog
           open={moveOpen}
           onOpenChange={setMoveOpen}

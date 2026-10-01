@@ -119,14 +119,21 @@ export async function createDocument(
   api: { post: <T>(url: string, body: unknown) => Promise<{ data: T }> },
   title: string,
   spaceId: string,
-  body: Record<string, unknown> = emptyDocBody,
+  body: Record<string, unknown> | null = emptyDocBody,
   folderId?: string | null,
+  opts?: { templateId?: string | null; docType?: string | null; visibility?: DocumentVisibility },
 ) {
+  const templateId = opts?.templateId ?? null
+  // Avec un modèle, le corps vient du modèle : on n'envoie pas le corps vide par défaut.
+  const sendBody = body !== null && !(templateId && body === emptyDocBody)
   const { data } = await api.post<DocumentDetail>('/api/v1/documents', {
     title,
-    body,
+    ...(sendBody ? { body } : {}),
     spaceId,
     ...(folderId ? { folderId } : {}),
+    ...(templateId ? { templateId } : {}),
+    ...(opts?.docType ? { docType: opts.docType } : {}),
+    ...(opts?.visibility ? { visibility: opts.visibility } : {}),
   })
   return data
 }
