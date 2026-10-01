@@ -111,13 +111,14 @@ socle:
     email-claim: email
     name-claim: name
     roles-claim: realm_access.roles
-    role-source: CLAIMS
+    role-source: ${SOCLE_IDENTITY_ROLE_SOURCE:CLAIMS}
     default-role: CONTRIBUTEUR
     role-mapping:
       contributeur: CONTRIBUTEUR
       auditeur: AUDITEUR
       integrateur: INTEGRATEUR
       administrateur-systeme: ADMINISTRATEUR_SYSTEME
+    # Overridable via SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS (comma-separated subs).
     bootstrap-admin-subjects: []
     link-by-verified-email: false
     client-id: ${OIDC_FRONTEND_CLIENT_ID:socle-frontend}

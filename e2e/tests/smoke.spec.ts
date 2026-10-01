@@ -191,26 +191,28 @@ test.describe.serial('Socle demo stack smoke', () => {
     restoreSocleCoreAndGit(backupDir)
 
     tokenA = await fetchPasswordToken(USER_A, PASS_A)
+    // Sync + bootstrap admin (BOTH + bootstrap subject) before admin drift endpoints.
+    await apiJson('/api/v1/me', tokenA)
+
     const doc = await apiJson<DocumentResponse>(`/api/v1/documents/${documentId}`, tokenA)
     expect(doc.title).toBe(documentTitle)
 
-    const adminToken = tokenA
     const gitDrift = await apiJson<{ items?: unknown[] }>(
       '/api/v1/admin/storage/git-projection-drift',
-      adminToken,
+      tokenA,
     )
-    const visDrift = await apiJson<{ driftCount?: number }>(
+    const visDrift = await apiJson<{ driftCount?: number; items?: unknown[] }>(
       '/api/v1/admin/authz/visibility-drift',
-      adminToken,
+      tokenA,
     )
-    const linkDrift = await apiJson<{ driftCount?: number }>(
+    const linkDrift = await apiJson<{ driftCount?: number; items?: unknown[] }>(
       '/api/v1/admin/authz/document-links-drift',
-      adminToken,
+      tokenA,
     )
 
     expect(gitDrift.items?.length ?? 0).toBe(0)
-    expect(visDrift.driftCount ?? 0).toBe(0)
-    expect(linkDrift.driftCount ?? 0).toBe(0)
+    expect(visDrift.driftCount ?? visDrift.items?.length ?? 0).toBe(0)
+    expect(linkDrift.driftCount ?? linkDrift.items?.length ?? 0).toBe(0)
 
     fs.rmSync(backupDir, { recursive: true, force: true })
   })
