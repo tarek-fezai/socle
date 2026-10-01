@@ -29,12 +29,16 @@ public interface DocumentStore {
 
     /**
      * Archive le body courant sous {@code archivedVersionNo}, le nouveau contenu devient courant.
+     *
+     * @param contentAuthorId auteur du <strong>contenu</strong> archivé ({@code documents.updated_by} avant mutation)
+     * @param archivedBy      utilisateur qui déclenche l'archivage
      */
     void archiveVersion(
             UUID documentId,
             int archivedVersionNo,
             Map<String, Object> previousBody,
-            UUID authorId,
+            UUID contentAuthorId,
+            UUID archivedBy,
             String changeSummary
     );
 
@@ -42,6 +46,8 @@ public interface DocumentStore {
      * Après archive : persiste le nouveau contenu courant (Git commit HEAD / projection).
      * Relational : no-op (le body reste sur {@code documents} via DocumentService).
      *
+     * @param contentAuthorId auteur du contenu écrit (Git {@code author})
+     * @param committerId     qui a déclenché l'écriture (Git {@code committer})
      * @param expectedGitHeadSha en mode Git, SHA HEAD attendu ({@code documents.git_head_sha}) ;
      *                             mismatch → 409. Ignoré en relational.
      * @return nouveau SHA HEAD Git, ou {@code null} en relational
@@ -49,7 +55,8 @@ public interface DocumentStore {
     String writeCurrentContent(
             UUID documentId,
             Map<String, Object> body,
-            UUID authorId,
+            UUID contentAuthorId,
+            UUID committerId,
             String changeSummary,
             String expectedGitHeadSha
     );
@@ -76,6 +83,7 @@ public interface DocumentStore {
             int versionNo,
             Map<String, Object> bodySnapshot,
             UUID authorId,
+            UUID archivedBy,
             String changeSummary,
             java.time.Instant createdAt,
             String gitCommitSha

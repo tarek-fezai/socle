@@ -246,6 +246,7 @@ public class DocumentService {
         entity.setCurrentVersionNo(1);
         entity.setVisibility(visibility);
         entity.setCreatedBy(user.getId());
+        entity.setUpdatedBy(user.getId());
         DocumentEntity saved = repository.save(entity);
 
         // OpenFGA avant Git : si FGA échoue → rollback DB, aucun commit Git orphelin.
@@ -381,10 +382,12 @@ public class DocumentService {
 
         StatusTransition statusTransition = applyBodyMutationStatusRules(entity);
 
+        UUID contentAuthorId = contentAuthorOf(entity);
         documentStore.archiveVersion(
                 entity.getId(),
                 archivedVersionNo,
                 previousBody,
+                contentAuthorId,
                 user.getId(),
                 blankToNull(request.changeSummary())
         );
@@ -396,11 +399,13 @@ public class DocumentService {
         }
         entity.setBody(newBody);
         entity.setCurrentVersionNo(archivedVersionNo + 1);
+        entity.setUpdatedBy(user.getId());
         entity.touch();
         DocumentEntity saved = repository.save(entity);
         String newHeadSha = documentStore.writeCurrentContent(
                 saved.getId(),
                 newBody,
+                user.getId(),
                 user.getId(),
                 blankToNull(request.changeSummary()),
                 expectedGitHead);
@@ -470,6 +475,7 @@ public class DocumentService {
                 .map(v -> new VersionSummary(
                         v.versionNo(),
                         v.authorId(),
+                        v.archivedBy(),
                         v.changeSummary(),
                         v.createdAt()))
                 .toList();
@@ -490,6 +496,7 @@ public class DocumentService {
                 version.versionNo(),
                 versionBody,
                 version.authorId(),
+                version.archivedBy(),
                 version.changeSummary(),
                 version.createdAt()
         );
@@ -528,20 +535,28 @@ public class DocumentService {
         String expectedGitHead = entity.getGitHeadSha();
         String summary = "Restauration de la version " + versionNo;
 
+        UUID contentAuthorId = contentAuthorOf(entity);
         documentStore.archiveVersion(
                 entity.getId(),
                 archivedVersionNo,
                 previousBody,
+                contentAuthorId,
                 user.getId(),
                 summary
         );
 
         entity.setBody(copyBody(targetBody));
         entity.setCurrentVersionNo(archivedVersionNo + 1);
+        entity.setUpdatedBy(user.getId());
         entity.touch();
         DocumentEntity saved = repository.save(entity);
         String newHeadSha = documentStore.writeCurrentContent(
-                saved.getId(), copyBody(targetBody), user.getId(), summary, expectedGitHead);
+                saved.getId(),
+                copyBody(targetBody),
+                user.getId(),
+                user.getId(),
+                summary,
+                expectedGitHead);
         if (newHeadSha != null) {
             saved.setGitHeadSha(newHeadSha);
             saved = repository.save(saved);
@@ -657,6 +672,14 @@ public class DocumentService {
             return Map.of();
         }
         return new HashMap<>(body);
+    }
+
+    /** Auteur du contenu courant avant mutation ({@code updated_by}, sinon {@code created_by}). */
+    static UUID contentAuthorOf(DocumentEntity entity) {
+        if (entity.getUpdatedBy() != null) {
+            return entity.getUpdatedBy();
+        }
+        return entity.getCreatedBy();
     }
 
     private static String blankToNull(String value) {

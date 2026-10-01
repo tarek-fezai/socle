@@ -46,10 +46,10 @@ class GitReadCanonicalTest {
 
         String head = store.createContent(DOC, DocumentStoreContractTest.tipTap("A"), AUTHOR);
         store.writeCurrentContent(
-                DOC, DocumentStoreContractTest.tipTap("B"), AUTHOR, "b", head);
+                DOC, DocumentStoreContractTest.tipTap("B"), AUTHOR, AUTHOR, "b", head);
 
         assertThatThrownBy(() -> store.writeCurrentContent(
-                DOC, DocumentStoreContractTest.tipTap("C"), AUTHOR, "c", head))
+                DOC, DocumentStoreContractTest.tipTap("C"), AUTHOR, AUTHOR, "c", head))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode().value()).isEqualTo(409));
     }

@@ -77,6 +77,10 @@ public class DocumentEntity {
     @Column(name = "created_by")
     private UUID createdBy;
 
+    /** Auteur du contenu courant — mis à jour à create/update/restore, pas à la soumission. */
+    @Column(name = "updated_by")
+    private UUID updatedBy;
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
@@ -243,5 +247,13 @@ public class DocumentEntity {
 
     public void setCreatedBy(UUID createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

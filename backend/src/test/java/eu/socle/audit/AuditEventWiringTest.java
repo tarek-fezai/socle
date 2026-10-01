@@ -137,14 +137,16 @@ class AuditEventWiringTest {
                 .thenReturn(List.of(Map.of(
                         "current_version_no", 1,
                         "body", Map.of("type", "doc"),
-                        "git_head_sha", "abc")));
+                        "git_head_sha", "abc",
+                        "updated_by", USER,
+                        "created_by", USER)));
         lenient().when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(1);
         when(jdbcTemplate.queryForList(contains("FOR UPDATE"), any(UUID.class)))
                 .thenReturn(List.of(Map.of("status", "en_cours", "current_step_order", 1)));
         when(jdbcTemplate.queryForObject(anyString(), eq(UUID.class), any())).thenReturn(DOC);
 
         var documentStore = mock(eu.socle.storage.DocumentStore.class);
-        when(documentStore.writeCurrentContent(any(), any(), any(), any(), any())).thenReturn("def");
+        when(documentStore.writeCurrentContent(any(), any(), any(), any(), any(), any())).thenReturn("def");
         eu.socle.document.ApprovalRoleResolver resolver = mock(eu.socle.document.ApprovalRoleResolver.class);
         UUID eligibleApprover = UUID.fromString("33333333-3333-3333-3333-333333333333");
         when(resolver.resolveInScopeAssignees(any(), any())).thenReturn(List.of(eligibleApprover));
@@ -156,8 +158,21 @@ class AuditEventWiringTest {
                         "role_id", UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd"),
                         "document_id", DOC,
                         "requested_by", USER)));
-        when(jdbcTemplate.query(contains("author_id"), any(org.springframework.jdbc.core.RowMapper.class), any()))
+        org.mockito.Mockito.lenient().when(jdbcTemplate.query(
+                        contains("submitted_version_no"),
+                        any(org.springframework.jdbc.core.ResultSetExtractor.class),
+                        any()))
+                .thenReturn(null);
+        org.mockito.Mockito.lenient().when(jdbcTemplate.query(
+                        contains("document_versions dv"),
+                        any(org.springframework.jdbc.core.RowMapper.class),
+                        any(), any()))
                 .thenReturn(List.of());
+        org.mockito.Mockito.lenient().when(jdbcTemplate.query(
+                        contains("COALESCE(updated_by"),
+                        any(org.springframework.jdbc.core.RowMapper.class),
+                        any()))
+                .thenReturn(List.of(USER));
         ApprovalActivitiesImpl activities = new ApprovalActivitiesImpl(
                 jdbcTemplate, auditService,
                 mock(eu.socle.document.ReliabilityScoreService.class),
@@ -167,7 +182,7 @@ class AuditEventWiringTest {
         UUID requestId = UUID.randomUUID();
 
         activities.recordSubmission(DOC, USER, requestId, UUID.randomUUID(), "wf-1", 1, 24);
-        verify(documentStore).archiveVersion(eq(DOC), eq(1), any(), eq(USER), anyString());
+        verify(documentStore).archiveVersion(eq(DOC), eq(1), any(), eq(USER), eq(USER), anyString());
         verify(auditService).recordSync(
                 eq(USER), eq(false), eq(AuditActions.DOCUMENT_SUBMITTED),
                 eq("document"), eq(DOC), anyMap(), isNull());

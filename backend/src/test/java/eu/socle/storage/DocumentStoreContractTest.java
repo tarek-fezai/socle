@@ -42,6 +42,8 @@ abstract class DocumentStoreContractTest {
 
     static final UUID DOC = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     static final UUID AUTHOR = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    static final UUID ARCHIVER = UUID.fromString("22222222-2222-2222-2222-222222222222");
+    static final UUID CONTENT_AUTHOR = UUID.fromString("33333333-3333-3333-3333-333333333333");
 
     DocumentStore store;
     DocumentVersionRepository versions;
@@ -91,14 +93,30 @@ abstract class DocumentStoreContractTest {
         Map<String, Object> v1 = tipTap("Version une");
         String head = store.createContent(DOC, v1, AUTHOR);
 
-        store.archiveVersion(DOC, 1, v1, AUTHOR, "edit");
+        store.archiveVersion(DOC, 1, v1, AUTHOR, AUTHOR, "edit");
         Map<String, Object> v2 = tipTap("Version deux");
-        store.writeCurrentContent(DOC, v2, AUTHOR, "edit", head);
+        store.writeCurrentContent(DOC, v2, AUTHOR, AUTHOR, "edit", head);
 
         Optional<DocumentStore.StoredVersion> archived = store.findVersion(DOC, 1);
         assertThat(archived).isPresent();
         assertThat(archived.get().bodySnapshot()).isEqualTo(v1);
+        assertThat(archived.get().authorId()).isEqualTo(AUTHOR);
+        assertThat(archived.get().archivedBy()).isEqualTo(AUTHOR);
         assertThat(store.listVersions(DOC, 0, 10).getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void archiveVersion_storesContentAuthorDistinctFromArchiver() {
+        Map<String, Object> v1 = tipTap("Contenu Alice");
+        String head = store.createContent(DOC, v1, CONTENT_AUTHOR);
+
+        store.archiveVersion(DOC, 1, v1, CONTENT_AUTHOR, ARCHIVER, "Soumission pour approbation");
+        store.writeCurrentContent(DOC, v1, CONTENT_AUTHOR, ARCHIVER, "Soumission pour approbation", head);
+
+        Optional<DocumentStore.StoredVersion> archived = store.findVersion(DOC, 1);
+        assertThat(archived).isPresent();
+        assertThat(archived.get().authorId()).isEqualTo(CONTENT_AUTHOR);
+        assertThat(archived.get().archivedBy()).isEqualTo(ARCHIVER);
     }
 
     @Test
@@ -106,10 +124,10 @@ abstract class DocumentStoreContractTest {
         Map<String, Object> a = tipTap("Alpha");
         Map<String, Object> b = tipTap("Beta");
         String head1 = store.createContent(DOC, a, AUTHOR);
-        store.archiveVersion(DOC, 1, a, AUTHOR, "v1");
-        String head2 = store.writeCurrentContent(DOC, b, AUTHOR, "to-beta", head1);
-        store.archiveVersion(DOC, 2, b, AUTHOR, "v2");
-        store.writeCurrentContent(DOC, tipTap("Gamma"), AUTHOR, "to-gamma", head2);
+        store.archiveVersion(DOC, 1, a, AUTHOR, AUTHOR, "v1");
+        String head2 = store.writeCurrentContent(DOC, b, AUTHOR, AUTHOR, "to-beta", head1);
+        store.archiveVersion(DOC, 2, b, AUTHOR, AUTHOR, "v2");
+        store.writeCurrentContent(DOC, tipTap("Gamma"), AUTHOR, AUTHOR, "to-gamma", head2);
 
         DocumentStore.VersionDiffResult diff = store.diff(DOC, 1, 2);
         assertThat(diff.fromVersion()).isEqualTo(1);
@@ -122,14 +140,14 @@ abstract class DocumentStoreContractTest {
         Map<String, Object> a = tipTap("Original");
         Map<String, Object> b = tipTap("Modifié");
         String head1 = store.createContent(DOC, a, AUTHOR);
-        store.archiveVersion(DOC, 1, a, AUTHOR, "v1");
-        String head2 = store.writeCurrentContent(DOC, b, AUTHOR, "v2", head1);
+        store.archiveVersion(DOC, 1, a, AUTHOR, AUTHOR, "v1");
+        String head2 = store.writeCurrentContent(DOC, b, AUTHOR, AUTHOR, "v2", head1);
 
         Map<String, Object> restored = store.loadVersionBody(DOC, 1);
         assertThat(TipTapMarkdown.toMarkdown(restored)).containsIgnoringCase("Original");
 
-        store.archiveVersion(DOC, 2, b, AUTHOR, "Restauration de la version 1");
-        store.writeCurrentContent(DOC, restored, AUTHOR, "Restauration de la version 1", head2);
+        store.archiveVersion(DOC, 2, b, AUTHOR, AUTHOR, "Restauration de la version 1");
+        store.writeCurrentContent(DOC, restored, AUTHOR, AUTHOR, "Restauration de la version 1", head2);
 
         assertThat(store.findVersion(DOC, 1)).isPresent();
         assertThat(store.findVersion(DOC, 1).get().bodySnapshot()).isEqualTo(a);
@@ -165,7 +183,7 @@ abstract class DocumentStoreContractTest {
         // Relational : contenu courant = projection (param). Git : blob HEAD (projection ignorée).
         assertThat(normalizeDoc(store.readCurrentContent(DOC, v1))).isEqualTo(normalizeDoc(v1));
 
-        store.archiveVersion(DOC, 1, v1, AUTHOR, "edit");
+        store.archiveVersion(DOC, 1, v1, AUTHOR, AUTHOR, "edit");
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> orig = (List<Map<String, Object>>) v1.get("content");
         List<Map<String, Object>> blocks = new ArrayList<>(orig);
@@ -173,7 +191,7 @@ abstract class DocumentStoreContractTest {
         Map<String, Object> v2 = new LinkedHashMap<>();
         v2.put("type", "doc");
         v2.put("content", blocks);
-        store.writeCurrentContent(DOC, v2, AUTHOR, "edit", head);
+        store.writeCurrentContent(DOC, v2, AUTHOR, AUTHOR, "edit", head);
 
         assertThat(normalizeDoc(store.readCurrentContent(DOC, v2))).isEqualTo(normalizeDoc(v2));
 
