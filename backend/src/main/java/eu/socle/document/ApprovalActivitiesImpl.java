@@ -247,6 +247,16 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                 null
         );
 
+        // Plus aucun approbateur éligible (portée + quatre yeux) → bloqué, pas d'auto-approbation.
+        if (!hasEligibleApprovers(approvalRequestId, toStepOrder)) {
+            UUID requesterId = jdbcTemplate.queryForObject(
+                    "SELECT requested_by FROM approval_requests WHERE id = ?",
+                    UUID.class,
+                    approvalRequestId);
+            return recordChainExhausted(
+                    documentId, approvalRequestId, toStepOrder, requesterId, systemActorId);
+        }
+
         return "escalade_" + toStepOrder;
     }
 
@@ -319,16 +329,19 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
     }
 
     /**
-     * Demandeur + utilisateurs du rôle approbateur de la dernière étape
-     * couverts par la portée du document ({@code approval_role_assignments}).
+     * Destinataires d'alerte chaîne épuisée : demandeur (toujours) + approbateurs
+     * in-scope hors demandeur et auteur de la version soumise (quatre yeux).
      */
     private List<UUID> resolveChainExhaustedRecipients(
             UUID approvalRequestId,
             int lastStepOrder,
             UUID requesterId
     ) {
+        UUID submittedAuthorId = loadSubmittedAuthorId(approvalRequestId);
         List<UUID> recipients = new java.util.ArrayList<>();
-        recipients.add(requesterId);
+        if (requesterId != null) {
+            recipients.add(requesterId);
+        }
 
         List<Map<String, Object>> ctx = jdbcTemplate.queryForList("""
                 SELECT s.approver_role_id AS role_id, ar.document_id
@@ -350,21 +363,73 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                     : UUID.fromString(String.valueOf(row.get("document_id")));
             if (roleId != null) {
                 for (UUID approverId : approvalRoleResolver.resolveInScopeAssignees(roleId, documentId)) {
+                    if (DocumentApprovalService.isFourEyesConflict(approverId, requesterId, submittedAuthorId)) {
+                        continue;
+                    }
                     if (!recipients.contains(approverId)) {
                         recipients.add(approverId);
                     }
                 }
             } else {
-                log.warn("Chaîne épuisée request={} : aucun rôle sur l'étape {} — notification demandeur seule",
+                log.warn("Chaîne épuisée request={} : aucun rôle sur l'étape {}",
                         approvalRequestId, lastStepOrder);
             }
         }
 
-        if (recipients.size() == 1) {
-            log.warn("Chaîne épuisée request={} : aucun approbateur in-scope pour l'étape {} — notification demandeur seule",
+        if (recipients.size() <= 1) {
+            log.warn("Chaîne épuisée request={} : aucun approbateur éligible pour l'étape {} (quatre yeux / portée)",
                     approvalRequestId, lastStepOrder);
         }
         return recipients;
+    }
+
+    private boolean hasEligibleApprovers(UUID approvalRequestId, int stepOrder) {
+        List<Map<String, Object>> ctx = jdbcTemplate.queryForList("""
+                SELECT s.approver_role_id AS role_id, ar.document_id, ar.requested_by
+                  FROM approval_requests ar
+                  JOIN approval_workflow_steps s
+                    ON s.workflow_id = ar.workflow_id AND s.step_order = ?
+                 WHERE ar.id = ?
+                """,
+                stepOrder,
+                approvalRequestId);
+        if (ctx.isEmpty()) {
+            return false;
+        }
+        Map<String, Object> row = ctx.getFirst();
+        UUID roleId = row.get("role_id") instanceof UUID u
+                ? u
+                : (row.get("role_id") != null ? UUID.fromString(String.valueOf(row.get("role_id"))) : null);
+        if (roleId == null) {
+            return false;
+        }
+        UUID documentId = row.get("document_id") instanceof UUID u
+                ? u
+                : UUID.fromString(String.valueOf(row.get("document_id")));
+        UUID requesterId = row.get("requested_by") instanceof UUID u
+                ? u
+                : (row.get("requested_by") != null
+                        ? UUID.fromString(String.valueOf(row.get("requested_by"))) : null);
+        UUID submittedAuthorId = loadSubmittedAuthorId(approvalRequestId);
+        return approvalRoleResolver.resolveInScopeAssignees(roleId, documentId).stream()
+                .anyMatch(id -> !DocumentApprovalService.isFourEyesConflict(id, requesterId, submittedAuthorId));
+    }
+
+    private UUID loadSubmittedAuthorId(UUID approvalRequestId) {
+        List<UUID> rows = jdbcTemplate.query("""
+                SELECT dv.author_id
+                  FROM approval_requests ar
+                  JOIN document_versions dv
+                    ON dv.document_id = ar.document_id
+                   AND dv.version_no = ar.submitted_version_no
+                 WHERE ar.id = ?
+                """,
+                (rs, i) -> (UUID) rs.getObject("author_id"),
+                approvalRequestId);
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        return rows.getFirst();
     }
 
     @Override

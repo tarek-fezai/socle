@@ -144,12 +144,25 @@ class AuditEventWiringTest {
 
         var documentStore = mock(eu.socle.storage.DocumentStore.class);
         when(documentStore.writeCurrentContent(any(), any(), any(), any(), any())).thenReturn("def");
+        eu.socle.document.ApprovalRoleResolver resolver = mock(eu.socle.document.ApprovalRoleResolver.class);
+        UUID eligibleApprover = UUID.fromString("33333333-3333-3333-3333-333333333333");
+        when(resolver.resolveInScopeAssignees(any(), any())).thenReturn(List.of(eligibleApprover));
+        org.mockito.Mockito.lenient().when(jdbcTemplate.queryForList(
+                        contains("approver_role_id"),
+                        any(Integer.class),
+                        any(UUID.class)))
+                .thenReturn(List.of(Map.of(
+                        "role_id", UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+                        "document_id", DOC,
+                        "requested_by", USER)));
+        when(jdbcTemplate.query(contains("author_id"), any(org.springframework.jdbc.core.RowMapper.class), any()))
+                .thenReturn(List.of());
         ApprovalActivitiesImpl activities = new ApprovalActivitiesImpl(
                 jdbcTemplate, auditService,
                 mock(eu.socle.document.ReliabilityScoreService.class),
                 documentStore,
                 new com.fasterxml.jackson.databind.ObjectMapper(),
-                mock(eu.socle.document.ApprovalRoleResolver.class));
+                resolver);
         UUID requestId = UUID.randomUUID();
 
         activities.recordSubmission(DOC, USER, requestId, UUID.randomUUID(), "wf-1", 1, 24);

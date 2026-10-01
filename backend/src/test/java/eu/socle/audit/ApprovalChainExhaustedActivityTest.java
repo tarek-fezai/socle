@@ -49,6 +49,9 @@ class ApprovalChainExhaustedActivityTest {
             if ("queryForList".equals(method)) {
                 return List.of(Map.of("role_id", ROLE, "document_id", DOC));
             }
+            if ("query".equals(method)) {
+                return List.of();
+            }
             return Mockito.RETURNS_DEFAULTS.answer(invocation);
         });
 
@@ -90,6 +93,9 @@ class ApprovalChainExhaustedActivityTest {
             }
             if ("queryForList".equals(invocation.getMethod().getName())) {
                 return List.of(Map.of("role_id", ROLE, "document_id", DOC));
+            }
+            if ("query".equals(invocation.getMethod().getName())) {
+                return List.of();
             }
             return Mockito.RETURNS_DEFAULTS.answer(invocation);
         });

@@ -128,13 +128,17 @@ public class DocumentApprovalWorkflowImpl implements DocumentApprovalWorkflow {
             }
 
             ApprovalStepDef target = steps.get(targetIndex);
-            activities.recordSlaEscalation(
+            String escalationResult = activities.recordSlaEscalation(
                     approvalRequestId,
                     step.stepOrder(),
                     target.stepOrder(),
                     target.effectiveSlaHours(),
                     systemActor
             );
+            // Aucun approbateur éligible sur l'étape cible (portée / quatre yeux)
+            if ("en_cours_alerte".equals(escalationResult)) {
+                return escalationResult;
+            }
             index = targetIndex;
         }
 
