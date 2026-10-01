@@ -1,9 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { CommentsPanel, CommentSelectionButton } from '../components/CommentsPanel'
 import { StaleBadge } from '../components/StaleBadge'
 import { api } from '../lib/api'
+import {
+  canCommentOnSpace,
+  highlightAnchorsHtml,
+  listComments,
+  type CommentAnchorInput,
+} from '../lib/comments'
 import { getResolvedDocument, type TipTapNode } from '../lib/documents'
+import { getSpace } from '../lib/spaces'
 
 function textOf(node: TipTapNode | undefined): string {
   if (!node) return ''
@@ -12,7 +21,13 @@ function textOf(node: TipTapNode | undefined): string {
   return kids.map((c) => textOf(c as TipTapNode)).join('')
 }
 
-function TransclusionBlock({ node }: { node: TipTapNode }) {
+function TransclusionBlock({
+  node,
+  anchors,
+}: {
+  node: TipTapNode
+  anchors: Array<{ exact: string; attached?: boolean }>
+}) {
   const attrs = (node.attrs ?? {}) as Record<string, unknown>
   const accessible = attrs.accessible === true
 
@@ -47,17 +62,23 @@ function TransclusionBlock({ node }: { node: TipTapNode }) {
           </Link>
         ) : null}
       </div>
-      {nested ? <TipTapView node={nested} /> : null}
+      {nested ? <TipTapView node={nested} anchors={anchors} /> : null}
     </section>
   )
 }
 
-function TipTapView({ node }: { node: TipTapNode }) {
+function TipTapView({
+  node,
+  anchors = [],
+}: {
+  node: TipTapNode
+  anchors?: Array<{ exact: string; attached?: boolean }>
+}) {
   if (!node || typeof node !== 'object') return null
   const type = String(node.type ?? '')
 
   if (type === 'transclusion') {
-    return <TransclusionBlock node={node} />
+    return <TransclusionBlock node={node} anchors={anchors} />
   }
 
   if (type === 'doc' || type === 'blockquote') {
@@ -65,20 +86,38 @@ function TipTapView({ node }: { node: TipTapNode }) {
     return (
       <div className={type === 'blockquote' ? 'border-l border-socle-line pl-3 text-socle-slate' : ''}>
         {kids.map((child, i) => (
-          <TipTapView key={i} node={child as TipTapNode} />
+          <TipTapView key={i} node={child as TipTapNode} anchors={anchors} />
         ))}
       </div>
     )
   }
 
   if (type === 'paragraph') {
-    return <p className="mb-3 leading-relaxed text-socle-ink">{textOf(node)}</p>
+    const plain = textOf(node)
+    if (anchors.length > 0) {
+      return (
+        <p
+          className="mb-3 leading-relaxed text-socle-ink"
+          dangerouslySetInnerHTML={{ __html: highlightAnchorsHtml(plain, anchors) }}
+        />
+      )
+    }
+    return <p className="mb-3 leading-relaxed text-socle-ink">{plain}</p>
   }
 
   if (type === 'heading') {
     const level = Number((node.attrs as { level?: number } | undefined)?.level ?? 2)
     const Tag = (`h${Math.min(6, Math.max(1, level))}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6')
-    return <Tag className="mb-3 font-display text-socle-ink">{textOf(node)}</Tag>
+    const plain = textOf(node)
+    if (anchors.length > 0) {
+      return (
+        <Tag
+          className="mb-3 font-display text-socle-ink"
+          dangerouslySetInnerHTML={{ __html: highlightAnchorsHtml(plain, anchors) }}
+        />
+      )
+    }
+    return <Tag className="mb-3 font-display text-socle-ink">{plain}</Tag>
   }
 
   if (type === 'bulletList' || type === 'orderedList') {
@@ -98,7 +137,7 @@ function TipTapView({ node }: { node: TipTapNode }) {
     return (
       <>
         {kids.map((child, i) => (
-          <TipTapView key={i} node={child as TipTapNode} />
+          <TipTapView key={i} node={child as TipTapNode} anchors={anchors} />
         ))}
       </>
     )
@@ -108,6 +147,12 @@ function TipTapView({ node }: { node: TipTapNode }) {
 
 export function CompositePage() {
   const { id = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  const [commentsOpen, setCommentsOpen] = useState(
+    () => searchParams.get('comments') === '1' || searchParams.get('comments') === 'open',
+  )
+  const [draftAnchor, setDraftAnchor] = useState<CommentAnchorInput | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const doc = useQuery({
     queryKey: ['document-resolved', id],
@@ -117,6 +162,32 @@ export function CompositePage() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
+
+  const spaceId = doc.data?.spaceId ?? ''
+  const space = useQuery({
+    queryKey: ['space', spaceId],
+    queryFn: () => getSpace(api, spaceId),
+    enabled: Boolean(spaceId),
+  })
+
+  const comments = useQuery({
+    queryKey: ['document-comments', id, 'ouvert', ''],
+    queryFn: () => listComments(api, id, { status: 'ouvert' }),
+    enabled: Boolean(id),
+  })
+
+  useEffect(() => {
+    if (searchParams.get('comments') === '1' || searchParams.get('comments') === 'open') {
+      setCommentsOpen(true)
+    }
+  }, [searchParams])
+
+  const highlightAnchors = useMemo(() => {
+    const threads = comments.data?.threads ?? []
+    return threads
+      .filter((t) => t.anchor?.exact && t.anchor.attached !== false)
+      .map((t) => ({ exact: t.anchor!.exact, attached: t.anchor!.attached }))
+  }, [comments.data])
 
   if (doc.isLoading) {
     return <main className="page-shell text-socle-muted">Chargement…</main>
@@ -134,37 +205,76 @@ export function CompositePage() {
   }
 
   const body = (doc.data.body ?? { type: 'doc', content: [] }) as TipTapNode
+  const canComment = space.data ? canCommentOnSpace(space.data) : false
+  const openCount = comments.data?.openThreadCount ?? 0
 
   return (
-    <main className="page-shell max-w-3xl">
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <Link to="/docs" className="text-sm font-semibold text-socle-accent">
-          ← Documents
-        </Link>
-        <Link
-          to={`/docs/${id}`}
-          className="text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
-        >
-          Éditer
-        </Link>
-        <Link
-          to={`/docs/${id}/export`}
-          className="text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
-        >
-          Exporter
-        </Link>
-      </div>
+    <div className="flex min-h-[calc(100vh-0px)]">
+      <main className={`page-shell min-w-0 flex-1 ${commentsOpen ? 'max-w-none' : 'max-w-3xl'}`}>
+        <div className="mb-6 flex flex-wrap items-center gap-4">
+          <Link to="/docs" className="text-sm font-semibold text-socle-accent">
+            ← Documents
+          </Link>
+          <Link
+            to={`/docs/${id}`}
+            className="text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
+          >
+            Éditer
+          </Link>
+          <Link
+            to={`/docs/${id}/export`}
+            className="text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
+          >
+            Exporter
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCommentsOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
+            data-testid="toggle-comments"
+          >
+            Commentaires
+            {openCount > 0 && (
+              <span className="rounded-lg bg-socle-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                {openCount}
+              </span>
+            )}
+          </button>
+        </div>
 
-      <p className="mb-2 text-xs font-medium uppercase tracking-[0.15em] text-socle-muted">
-        Page composite
-      </p>
-      <h1 className="font-display text-4xl text-socle-ink">{doc.data.title}</h1>
-      <div className="mt-3">
-        <StaleBadge stale={doc.data.stale} contentModifiedAt={doc.data.contentModifiedAt} />
-      </div>
-      <div className="mt-8">
-        <TipTapView node={body} />
-      </div>
-    </main>
+        <p className="mb-2 text-xs font-medium uppercase tracking-[0.15em] text-socle-muted">
+          Page composite
+        </p>
+        <h1 className="font-display text-4xl text-socle-ink">{doc.data.title}</h1>
+        <div className="mt-3">
+          <StaleBadge stale={doc.data.stale} contentModifiedAt={doc.data.contentModifiedAt} />
+        </div>
+        <div className="relative mt-8" ref={contentRef} data-comment-root>
+          <TipTapView node={body} anchors={highlightAnchors} />
+          <CommentSelectionButton
+            rootRef={contentRef}
+            enabled={canComment}
+            onComment={(anchor) => {
+              setDraftAnchor(anchor)
+              setCommentsOpen(true)
+            }}
+          />
+        </div>
+      </main>
+      {commentsOpen && (
+        <CommentsPanel
+          documentId={id}
+          versionNo={doc.data.currentVersionNo}
+          canComment={canComment}
+          spaceId={doc.data.spaceId}
+          draftAnchor={draftAnchor}
+          onDraftAnchorClear={() => setDraftAnchor(null)}
+          onClose={() => {
+            setCommentsOpen(false)
+            setDraftAnchor(null)
+          }}
+        />
+      )}
+    </div>
   )
 }

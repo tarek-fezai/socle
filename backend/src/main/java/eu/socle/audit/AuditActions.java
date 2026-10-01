@@ -77,5 +77,11 @@ public final class AuditActions {
     public static final String USER_IDENTITY_UNLINKED = "user.identity_unlinked";
     public static final String USER_IDENTITIES_IMPORTED = "user.identities_imported";
 
+    public static final String COMMENT_CREATED = "comment.created";
+    public static final String COMMENT_EDITED = "comment.edited";
+    public static final String COMMENT_DELETED = "comment.deleted";
+    public static final String COMMENT_RESOLVED = "comment.resolved";
+    public static final String COMMENT_REOPENED = "comment.reopened";
+
     private AuditActions() {}
 }
