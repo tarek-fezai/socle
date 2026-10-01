@@ -5,7 +5,7 @@ Socle est une plateforme de documentation d'entreprise auto-hébergée. Les briq
 - **OIDC** — authentification via un IdP (Keycloak fourni en **exemple de développement** local ; tout IdP OIDC se configure via `socle.identity`)
 - **Autorisation fine** — OpenFGA (relations organisation → espace → dossier → document)
 - **Workflows métier** — Temporal
-- **Stockage objet** — S3-compatible (MinIO / s3mock en local)
+- **Stockage contenu** — Postgres (JSONB) et/ou dépôt Git local selon le provider configuré
 - **Diffusion audit** — worker Go (outbox Postgres → SIEM)
 
 Keycloak et OpenFGA sont des **composants techniques** d'authn/authz de la plateforme, pas un produit IAM/IGA client.

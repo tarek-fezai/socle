@@ -11,12 +11,6 @@ socle:
     api-url: http://localhost:8082
     list-objects-max-results: 1000
     visibility-migration-on-startup: false
-  s3:
-    endpoint: http://localhost:9000
-    region: us-east-1
-    access-key: test
-    secret-key: test
-    bucket: test
   cors:
     allowed-origins: http://localhost:5173
   reliability:

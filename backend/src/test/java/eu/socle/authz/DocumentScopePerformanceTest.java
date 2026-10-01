@@ -54,7 +54,6 @@ class DocumentScopePerformanceTest {
                 null,
                 new SocleProperties.OpenFga("http://localhost", "s", "m", 1000, false, 50, 4, 500),
                 null,
-                null,
                 null);
         authz = new AuthorizationService(openFgaClient, jdbc, props);
         checksCounted = new AtomicInteger();

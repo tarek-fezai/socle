@@ -52,7 +52,6 @@ class VisibilityListObjectsCeilingTest {
                 null,
                 new SocleProperties.OpenFga("http://localhost", "s", "m", CEILING, false, null, null, null),
                 null,
-                null,
                 null);
         service = new AuthorizationService(openFgaClient, jdbc, props);
     }

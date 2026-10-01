@@ -58,7 +58,6 @@ class VisibilityAuthzCorrectifsTest {
                 null,
                 new SocleProperties.OpenFga("http://localhost", "s", "m", 1000, false, null, null, null),
                 null,
-                null,
                 null);
         authz = new AuthorizationService(openFgaClient, jdbc, props);
         migration = new VisibilityTupleMigrationService(authz, jdbc, new ObjectMapper());
