@@ -22,7 +22,10 @@ export async function fetchPasswordToken(username: string, password: string): Pr
   return json.access_token
 }
 
-/** Browser login via Keycloak form (authorization code + PKCE handled by Socle SPA). */
+/**
+ * Browser login via Keycloak form.
+ * The SPA uses AuthProvider requireLogin, so / already redirects to the IdP.
+ */
 export async function loginViaUi(
   page: import('@playwright/test').Page,
   username: string,
@@ -34,26 +37,34 @@ export async function loginViaUi(
   })
   page.on('pageerror', (err) => consoleErrors.push(String(err)))
 
-  await Promise.all([
-    page.waitForResponse(
-      (res) => res.url().includes('/api/v1/public/auth-config') && res.ok(),
-      { timeout: 30_000 },
-    ),
-    page.goto('/'),
-  ])
+  await page.goto('/')
 
-  const loginBtn = page.getByRole('button', { name: /se connecter|connexion|login/i })
-  await loginBtn.click({ timeout: 30_000 })
   try {
     await page.waitForURL(/realms\/socle|\/protocol\/openid-connect/, { timeout: 60_000 })
   } catch (err) {
-    throw new Error(
-      `OIDC redirect failed (url=${page.url()}). Console: ${consoleErrors.join(' | ') || '(none)'}`,
-      { cause: err },
-    )
+    // Fallback: click login if auto-redirect did not run (e.g. requireLogin=false).
+    const loginBtn = page.getByRole('button', { name: /se connecter|connexion|login/i })
+    if (await loginBtn.isVisible().catch(() => false)) {
+      await loginBtn.click()
+      await page.waitForURL(/realms\/socle|\/protocol\/openid-connect/, { timeout: 60_000 })
+    } else {
+      throw new Error(
+        `OIDC redirect failed (url=${page.url()}). Console: ${consoleErrors.join(' | ') || '(none)'}`,
+        { cause: err },
+      )
+    }
   }
-  await page.fill('#username', username)
-  await page.fill('#password', password)
-  await page.click('#kc-login, input[type="submit"], button[type="submit"]')
-  await page.waitForURL(/127\.0\.0\.1(?::80)?\/?(?:callback|$)|localhost/, { timeout: 60_000 })
+
+  await page.locator('#username, input[name="username"]').fill(username)
+  await page.locator('#password, input[name="password"]').fill(password)
+  await page.locator('#kc-login, button[type="submit"], input[type="submit"]').first().click()
+
+  // After code exchange, land on app origin (home or callback→home).
+  await page.waitForURL(
+    (url) =>
+      (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
+      url.port !== '8081' &&
+      !url.pathname.includes('/protocol/openid-connect'),
+    { timeout: 60_000 },
+  )
 }
