@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.audit;
 
-import eu.socle.config.SecurityConfig;
+import eu.socle.config.SecurityWebMvcTest;
 import eu.socle.document.ContentHealthService;
 import eu.socle.document.TransclusionGraphService;
 import eu.socle.export.ExportController;
@@ -17,9 +18,7 @@ import eu.socle.workflowdef.ApprovalWorkflowDefinitionController;
 import eu.socle.workflowdef.ApprovalWorkflowDefinitionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
@@ -36,9 +35,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * SoD généralisée : {@code auditeur} seul → 403 sur configuration Spaces / Groupes /
- * Workflows / Export / Intégrations (filtre {@link SecurityConfig}).
+ * Workflows / Export / Intégrations (filtre {@link eu.socle.config.SecurityConfig}).
  */
-@WebMvcTest(controllers = {
+@SecurityWebMvcTest(controllers = {
         SpaceController.class,
         GroupController.class,
         ApprovalWorkflowDefinitionController.class,
@@ -46,7 +45,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         SiemConnectorController.class,
         WebhookEndpointController.class
 })
-@Import(SecurityConfig.class)
 class AuditorSoDSecurityTest {
 
     static final UUID ID = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");

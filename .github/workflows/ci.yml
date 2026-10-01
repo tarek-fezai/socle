@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Verify
+        run: mvn -B verify
+      - name: Upload Surefire reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: backend/target/surefire-reports/
+          if-no-files-found: ignore
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Test
+        shell: bash
+        run: set -o pipefail && pnpm test 2>&1 | tee vitest-output.txt
+      - name: Build
+        run: pnpm build
+      - name: Upload Vitest / build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-output
+          path: |
+            frontend/vitest-output.txt
+            frontend/coverage/
+            frontend/test-results/
+          if-no-files-found: ignore
+
+  worker:
+    name: worker
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webhook-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: webhook-worker/go.sum
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: go test ./...

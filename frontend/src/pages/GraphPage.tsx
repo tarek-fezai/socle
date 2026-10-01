@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -73,7 +74,7 @@ export function GraphPage() {
             height: 42,
             shape: 'roundrectangle',
             'text-wrap': 'ellipsis',
-            'text-max-width': 110,
+            'text-max-width': '110',
           },
         },
         {

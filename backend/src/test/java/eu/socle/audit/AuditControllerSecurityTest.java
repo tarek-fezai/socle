@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.audit;
 
-import eu.socle.config.SecurityConfig;
+import eu.socle.config.SecurityWebMvcTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -22,8 +21,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = AuditController.class)
-@Import(SecurityConfig.class)
+@SecurityWebMvcTest(controllers = AuditController.class)
 class AuditControllerSecurityTest {
 
     static final UUID ACTOR = UUID.fromString("11111111-1111-1111-1111-111111111111");

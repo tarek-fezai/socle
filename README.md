@@ -188,3 +188,13 @@ curl -s http://localhost:8082/healthz
 # Temporal (via tctl dans le conteneur, ou temporal CLI)
 docker exec socle-temporal temporal operator cluster health
 ```
+
+## Licence
+
+Socle est distribué sous **GNU Affero General Public License v3.0 or later**
+([AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0.html)).
+Voir le fichier [`LICENSE`](LICENSE) à la racine du dépôt.
+
+Les sources portent l'en-tête `SPDX-License-Identifier: AGPL-3.0-or-later`.
+Contributions : voir [`CONTRIBUTING.md`](CONTRIBUTING.md). Signalement de
+vulnérabilités : [`SECURITY.md`](SECURITY.md).

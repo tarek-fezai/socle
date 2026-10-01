@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Navigate, Route, Routes, Link } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { RequireAuth } from './auth/RequireAuth'

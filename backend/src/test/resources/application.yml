@@ -1,0 +1,34 @@
+# Always applied in tests. WebMvc security tests use @SecurityWebMvcTest
+# (mock JwtDecoder, no OIDC discovery). Keycloak is not required in CI.
+socle:
+  storage:
+    provider: relational
+    git-repository-path: ./target/git-content-test
+  temporal:
+    target: localhost:7233
+    namespace: default
+  openfga:
+    api-url: http://localhost:8082
+    list-objects-max-results: 1000
+    visibility-migration-on-startup: false
+  s3:
+    endpoint: http://localhost:9000
+    region: us-east-1
+    access-key: test
+    secret-key: test
+    bucket: test
+  cors:
+    allowed-origins: http://localhost:5173
+  reliability:
+    default-review-cycle-days: 365
+  staleness:
+    threshold-days: 90
+  identity:
+    issuer-uri: http://localhost:8081/realms/socle
+    subject-claim: sub
+    email-claim: email
+    name-claim: name
+    roles-claim: realm_access.roles
+    role-source: CLAIMS
+    default-role: CONTRIBUTEUR
+    client-id: socle-frontend

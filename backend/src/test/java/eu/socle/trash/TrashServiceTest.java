@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.trash;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
