@@ -101,7 +101,8 @@ public class ApprovalRoleAssignmentService {
                         "subjectType", subjectType,
                         "subjectId", subjectId.toString(),
                         "scopeType", scopeType,
-                        "scopeRef", scopeRef != null ? scopeRef : ""
+                        "scopeRef", scopeRef != null ? scopeRef : "",
+                        "selfAssigned", "user".equals(subjectType) && actorId.equals(subjectId)
                 ),
                 null
         );
@@ -209,7 +210,7 @@ public class ApprovalRoleAssignmentService {
         return v;
     }
 
-    private static String normalizeScopeRef(String scopeType, String scopeRef) {
+    private String normalizeScopeRef(String scopeType, String scopeRef) {
         if ("all".equals(scopeType)) {
             if (scopeRef != null && !scopeRef.isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "scopeRef doit être vide pour all");
@@ -220,17 +221,43 @@ public class ApprovalRoleAssignmentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "scopeRef requis pour " + scopeType);
         }
         String trimmed = scopeRef.trim();
-        if ("space".equals(scopeType) || "tag".equals(scopeType)) {
+        if ("space".equals(scopeType)) {
             try {
                 return UUID.fromString(trimmed).toString();
             } catch (IllegalArgumentException e) {
-                if ("tag".equals(scopeType)) {
-                    return trimmed; // nom de tag accepté
-                }
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "scopeRef UUID invalide");
             }
         }
+        if ("tag".equals(scopeType)) {
+            return resolveTagScopeRef(trimmed);
+        }
         return trimmed;
+    }
+
+    /** Résout un UUID ou un nom de tag unique en UUID stocké. */
+    private String resolveTagScopeRef(String raw) {
+        try {
+            UUID id = UUID.fromString(raw);
+            Integer n = jdbc.queryForObject(
+                    "SELECT count(*) FROM tags WHERE id = ?", Integer.class, id);
+            if (n == null || n == 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tag introuvable");
+            }
+            return id.toString();
+        } catch (IllegalArgumentException ignored) {
+            // nom de tag → UUID
+        }
+        List<UUID> matches = jdbc.query(
+                "SELECT id FROM tags WHERE lower(name) = lower(?)",
+                (rs, i) -> (UUID) rs.getObject("id"),
+                raw);
+        if (matches.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tag introuvable");
+        }
+        if (matches.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tag ambigu");
+        }
+        return matches.getFirst().toString();
     }
 
     private static boolean isAdministrateurSysteme() {

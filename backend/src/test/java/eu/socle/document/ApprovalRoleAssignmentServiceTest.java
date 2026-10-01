@@ -123,6 +123,90 @@ class ApprovalRoleAssignmentServiceTest {
         assertThat(view.scopeType()).isEqualTo("all");
     }
 
+    @Test
+    void selfAssign_auditIncludesSelfAssignedTrue() {
+        asUser(OWNER);
+        when(jdbc.query(contains("space_owners"), any(RowMapper.class), eq(OWNER)))
+                .thenReturn(List.of(SPACE_A));
+        when(jdbc.queryForObject(contains("FROM global_roles"), eq(Integer.class), eq(ROLE))).thenReturn(1);
+        when(jdbc.queryForObject(contains("FROM users"), eq(Integer.class), eq(OWNER))).thenReturn(1);
+        when(jdbc.update(contains("INSERT INTO approval_role_assignments"), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
+        when(jdbc.query(contains("WHERE ara.id = ?"), any(RowMapper.class), any()))
+                .thenAnswer(inv -> {
+                    RowMapper<?> mapper = inv.getArgument(1);
+                    ResultSet rs = org.mockito.Mockito.mock(ResultSet.class);
+                    when(rs.getObject("id")).thenReturn(UUID.randomUUID());
+                    when(rs.getObject("role_id")).thenReturn(ROLE);
+                    when(rs.getString("role_name")).thenReturn("Reviewer");
+                    when(rs.getString("subject_type")).thenReturn("user");
+                    when(rs.getObject("subject_id")).thenReturn(OWNER);
+                    when(rs.getString("scope_type")).thenReturn("space");
+                    when(rs.getString("scope_ref")).thenReturn(SPACE_A.toString());
+                    when(rs.getObject("granted_by")).thenReturn(OWNER);
+                    when(rs.getTimestamp("granted_at")).thenReturn(Timestamp.from(Instant.now()));
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+
+        service.assign(OWNER, new ApprovalRoleAssignmentService.AssignRequest(
+                ROLE, "user", OWNER, "space", SPACE_A.toString()));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> meta = ArgumentCaptor.forClass(Map.class);
+        verify(auditService).recordSync(
+                eq(OWNER), eq(true), eq(AuditActions.APPROVAL_ROLE_ASSIGNED),
+                eq("approval_role_assignment"), any(), meta.capture(), isNull());
+        assertThat(meta.getValue()).containsEntry("selfAssigned", true);
+    }
+
+    @Test
+    void assign_tagByName_resolvesToUuid() {
+        UUID tagId = UUID.fromString("99999999-9999-9999-9999-999999999999");
+        asAdmin(ACTOR);
+        when(jdbc.queryForObject(contains("FROM global_roles"), eq(Integer.class), eq(ROLE))).thenReturn(1);
+        when(jdbc.queryForObject(contains("FROM users"), eq(Integer.class), eq(SUBJECT))).thenReturn(1);
+        when(jdbc.query(contains("FROM tags WHERE lower(name)"), any(RowMapper.class), eq("Confidential")))
+                .thenReturn(List.of(tagId));
+        when(jdbc.update(contains("INSERT INTO approval_role_assignments"), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
+        when(jdbc.query(contains("WHERE ara.id = ?"), any(RowMapper.class), any()))
+                .thenAnswer(inv -> {
+                    RowMapper<?> mapper = inv.getArgument(1);
+                    ResultSet rs = org.mockito.Mockito.mock(ResultSet.class);
+                    when(rs.getObject("id")).thenReturn(UUID.randomUUID());
+                    when(rs.getObject("role_id")).thenReturn(ROLE);
+                    when(rs.getString("role_name")).thenReturn("Reviewer");
+                    when(rs.getString("subject_type")).thenReturn("user");
+                    when(rs.getObject("subject_id")).thenReturn(SUBJECT);
+                    when(rs.getString("scope_type")).thenReturn("tag");
+                    when(rs.getString("scope_ref")).thenReturn(tagId.toString());
+                    when(rs.getObject("granted_by")).thenReturn(ACTOR);
+                    when(rs.getTimestamp("granted_at")).thenReturn(Timestamp.from(Instant.now()));
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+
+        var view = service.assign(ACTOR, new ApprovalRoleAssignmentService.AssignRequest(
+                ROLE, "user", SUBJECT, "tag", "Confidential"));
+
+        assertThat(view.scopeRef()).isEqualTo(tagId.toString());
+        verify(jdbc).update(
+                contains("INSERT INTO approval_role_assignments"),
+                any(), eq(ROLE), eq("user"), eq(SUBJECT), eq("tag"), eq(tagId.toString()), eq(ACTOR));
+    }
+
+    @Test
+    void assign_tagUnknownName_badRequest() {
+        asAdmin(ACTOR);
+        when(jdbc.query(contains("FROM tags WHERE lower(name)"), any(RowMapper.class), eq("Inconnu")))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.assign(ACTOR, new ApprovalRoleAssignmentService.AssignRequest(
+                ROLE, "user", SUBJECT, "tag", "Inconnu")))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
     private void stubGetAfterInsert() {
         when(jdbc.query(contains("WHERE ara.id = ?"), any(RowMapper.class), any()))
                 .thenAnswer(inv -> {

@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Jeu de données de démo / test — Socle (dev local)
 -- Idempotent : ON CONFLICT / WHERE NOT EXISTS.
--- Aligné sur les comptes Keycloak realm `socle` (infra/keycloak/realm-socle.json).
+-- Aligné sur les comptes Keycloak realm `socle` (infra/keycloak/realm-socle.dev.json, DEV UNIQUEMENT).
 --
 -- Usage :
 --   Get-Content infra/sql/demo-seed.sql -Raw |

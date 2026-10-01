@@ -62,10 +62,8 @@ public class ApprovalRoleResolver {
                              OR (ara.scope_type = 'tag' AND EXISTS (
                                    SELECT 1
                                      FROM document_tags dt
-                                     JOIN tags t ON t.id = dt.tag_id
                                     WHERE dt.document_id = d.id
-                                      AND (ara.scope_ref = t.id::text
-                                           OR ara.scope_ref = t.name)
+                                      AND ara.scope_ref = dt.tag_id::text
                                  ))
                               )
                      )
@@ -123,9 +121,8 @@ public class ApprovalRoleResolver {
                             AND ara.scope_ref IS NOT DISTINCT FROM d.doc_type)
                         OR (ara.scope_type = 'tag' AND EXISTS (
                               SELECT 1 FROM document_tags dt
-                              JOIN tags t ON t.id = dt.tag_id
                              WHERE dt.document_id = d.id
-                               AND (ara.scope_ref = t.id::text OR ara.scope_ref = t.name)
+                               AND ara.scope_ref = dt.tag_id::text
                             ))
                      )
                   UNION
@@ -143,9 +140,8 @@ public class ApprovalRoleResolver {
                             AND ara.scope_ref IS NOT DISTINCT FROM d.doc_type)
                         OR (ara.scope_type = 'tag' AND EXISTS (
                               SELECT 1 FROM document_tags dt
-                              JOIN tags t ON t.id = dt.tag_id
                              WHERE dt.document_id = d.id
-                               AND (ara.scope_ref = t.id::text OR ara.scope_ref = t.name)
+                               AND ara.scope_ref = dt.tag_id::text
                             ))
                      )
                 ) covered

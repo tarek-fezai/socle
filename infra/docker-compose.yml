@@ -34,7 +34,7 @@ services:
     ports:
       - "${KEYCLOAK_PORT:-8081}:8080"
     volumes:
-      - ./keycloak/realm-socle.json:/opt/keycloak/data/import/realm-socle.json:ro
+      - ./keycloak/realm-socle.dev.json:/opt/keycloak/data/import/realm-socle.dev.json:ro
     depends_on:
       postgres:
         condition: service_healthy
