@@ -33,6 +33,7 @@ TEMPORAL_TARGET=temporal:7233
 TEMPORAL_NAMESPACE=default
 
 OIDC_ISSUER_URI=http://127.0.0.1:8081/realms/socle
+OIDC_CLIENT_ISSUER_URI=http://keycloak:8080/realms/socle
 OIDC_JWK_SET_URI=http://keycloak:8080/realms/socle/protocol/openid-connect/certs
 OIDC_CLIENT_ID=socle-backend
 OIDC_CLIENT_SECRET=${OIDC_SECRET}

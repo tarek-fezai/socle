@@ -39,7 +39,8 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           keycloak:
-            issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8081/realms/socle}
+            # Reachable from the backend container (may differ from public JWT iss).
+            issuer-uri: ${OIDC_CLIENT_ISSUER_URI:${OIDC_ISSUER_URI:http://localhost:8081/realms/socle}}
 
 management:
   endpoints:
