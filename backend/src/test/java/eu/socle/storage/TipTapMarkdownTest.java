@@ -63,6 +63,20 @@ class TipTapMarkdownTest {
     }
 
     @Test
+    void roundTrip_placeholderNode() {
+        Map<String, Object> placeholder = new LinkedHashMap<>();
+        placeholder.put("type", "placeholder");
+        placeholder.put("attrs", Map.of("hint", "Décrire l'objectif"));
+        Map<String, Object> body = doc(heading(2, "Objectif"), placeholder, para("Suite"));
+        assertRoundTripEquals(body);
+        // Nœud inconnu du Markdown lisible → bloc socle-json, hint conservé
+        assertThat(TipTapMarkdown.toMarkdown(body))
+                .contains(":::socle-json")
+                .contains("\"type\":\"placeholder\"")
+                .contains("Décrire l'objectif");
+    }
+
+    @Test
     void roundTrip_inlineMarks_boldItalicCodeStrikeAndCombined() {
         assertRoundTripEquals(doc(paraWithMarks(
                 text("plain "),

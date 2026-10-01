@@ -83,5 +83,11 @@ public final class AuditActions {
     public static final String COMMENT_RESOLVED = "comment.resolved";
     public static final String COMMENT_REOPENED = "comment.reopened";
 
+    public static final String TEMPLATE_CREATED = "template.created";
+    public static final String TEMPLATE_UPDATED = "template.updated";
+    public static final String TEMPLATE_DELETED = "template.deleted";
+    public static final String TEMPLATE_USED = "template.used";
+    public static final String TEMPLATE_CREATED_FROM_DOCUMENT = "template.created_from_document";
+
     private AuditActions() {}
 }

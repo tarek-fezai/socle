@@ -75,6 +75,22 @@ body {
   }
 }
 
+/* Zones « à compléter » des modèles (extension TipTap Placeholder) */
+.socle-placeholder {
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  border: 1px dashed #dedee1;
+  background: #fafafb;
+  padding: 0.5rem 0.75rem;
+  color: #9b9ba1;
+  font-style: italic;
+  user-select: none;
+}
+.socle-placeholder.ProseMirror-selectednode {
+  border-color: #c7c6f5;
+  outline: none;
+}
+
 /* Ancres de commentaires (vue lecture) */
 mark.comment-mark {
   border-radius: 2px;

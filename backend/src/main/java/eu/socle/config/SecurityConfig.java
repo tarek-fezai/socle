@@ -121,7 +121,9 @@ public class SecurityConfig {
                                 "/api/v1/folders",
                                 "/api/v1/folders/**",
                                 "/api/v1/tags",
-                                "/api/v1/tags/**"
+                                "/api/v1/tags/**",
+                                "/api/v1/templates",
+                                "/api/v1/templates/**"
                         ).authenticated()
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2
