@@ -82,12 +82,6 @@ socle:
     # Migration visibility-v1 au boot — désactivée par défaut (une seule fois via authz_migrations).
     # Activer explicitement ou POST /api/v1/admin/authz/migrate-visibility.
     visibility-migration-on-startup: ${SOCLE_FGA_VISIBILITY_MIGRATION_ON_STARTUP:false}
-  s3:
-    endpoint: ${S3_ENDPOINT:http://localhost:9000}
-    region: ${S3_REGION:us-east-1}
-    access-key: ${S3_ACCESS_KEY:socleminio}
-    secret-key: ${S3_SECRET_KEY:socleminio}
-    bucket: ${S3_BUCKET:socle-docs}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
   reliability:

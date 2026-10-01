@@ -7,7 +7,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record SocleProperties(
         Temporal temporal,
         OpenFga openfga,
-        S3 s3,
         Cors cors,
         Instance instance
 ) {
@@ -69,6 +68,5 @@ public record SocleProperties(
         }
     }
 
-    public record S3(String endpoint, String region, String accessKey, String secretKey, String bucket) {}
     public record Cors(String allowedOrigins) {}
 }

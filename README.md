@@ -6,7 +6,7 @@ Plateforme de documentation d'entreprise auto-hébergée.
 
 ```
 socle/
-├── backend/            Java 21 + Spring Boot 3.5 (API, OIDC, JPA, Flyway, Temporal, OpenFGA, S3)
+├── backend/            Java 21 + Spring Boot 3.5 (API, OIDC, JPA, Flyway, Temporal, OpenFGA)
 ├── webhook-worker/     Go 1.22+ (outbox audit → Splunk / Datadog / Sentinel)
 ├── frontend/           React 18 + TypeScript + Vite
 ├── infra/              docker-compose, Keycloak realm, OpenFGA model, manifests K8s
@@ -98,10 +98,6 @@ Services exposés :
 | Temporal UI | http://localhost:8088 |
 | OpenFGA HTTP | http://localhost:8082 |
 | OpenFGA Playground | http://localhost:3001 |
-| S3 mock (adobe/s3mock) | http://localhost:9000 — bucket `socle-docs` |
-| Redis | `localhost:6379` |
-
-> **Note :** l'image Docker Hub `minio/minio` peut être inaccessible selon le réseau ; le compose utilise `adobe/s3mock` (S3-compatible) pour le stockage objet local.
 
 ## Auth → autorisation → workflows
 
