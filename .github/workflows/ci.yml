@@ -151,6 +151,16 @@ jobs:
           npm test
         timeout-minutes: 45
 
+      - name: Dump Compose logs on failure
+        if: failure()
+        working-directory: deploy/compose
+        run: |
+          docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
+            --env-file .env.ci --profile demo-idp ps -a || true
+          docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
+            --env-file .env.ci --profile demo-idp logs --no-color --tail=200 \
+            backend openfga openfga-init temporal keycloak caddy || true
+
       - name: Tear down Compose
         if: always() && (github.event_name == 'schedule' || steps.changes.outputs.e2e_relevant == 'true')
         run: |

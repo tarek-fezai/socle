@@ -20,6 +20,7 @@ if [ -n "${OPENFGA_STORE_ID:-}" ]; then
 fi
 
 echo "openfga-init: waiting for OpenFGA HTTP..."
+command -v wget >/dev/null 2>&1 || apk add --no-cache wget >/dev/null
 i=0
 while ! wget -q -O /dev/null "${OPENFGA_API_URL}/healthz" 2>/dev/null; do
   i=$((i + 1))
@@ -29,6 +30,10 @@ while ! wget -q -O /dev/null "${OPENFGA_API_URL}/healthz" 2>/dev/null; do
   fi
   sleep 2
 done
+
+# Writable by backend UID 10001 (OpenFGA auto-init state files).
+mkdir -p "$CONFIG_DIR"
+chmod 777 "$CONFIG_DIR"
 
 echo "openfga-init: creating store (if missing)..."
 STORE_RESP="$(wget -q -O - --header='Content-Type: application/json' \
@@ -61,5 +66,6 @@ fi
   [ -n "$MODEL_ID" ] && echo "OPENFGA_MODEL_ID=${MODEL_ID}"
 } > "${STORE_ENV}.tmp"
 mv "${STORE_ENV}.tmp" "$STORE_ENV"
-chmod 644 "$STORE_ENV"
+chmod 777 "$CONFIG_DIR"
+chmod 666 "$STORE_ENV" 2>/dev/null || true
 echo "openfga-init: wrote ${STORE_ENV}"

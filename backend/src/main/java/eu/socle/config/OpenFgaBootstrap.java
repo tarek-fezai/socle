@@ -60,6 +60,23 @@ public class OpenFgaBootstrap implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        int attempts = 0;
+        Exception last = null;
+        while (attempts < 30) {
+            attempts++;
+            try {
+                bootstrapOnce();
+                return;
+            } catch (Exception e) {
+                last = e;
+                log.warn("OpenFGA bootstrap tentative {}/30: {}", attempts, e.toString());
+                Thread.sleep(2000L);
+            }
+        }
+        throw new IllegalStateException("OpenFGA bootstrap échoué après 30 tentatives", last);
+    }
+
+    private void bootstrapOnce() throws Exception {
         String storeId = properties.openfga().storeId();
         if (storeId == null || storeId.isBlank()) {
             storeId = findOrCreateStore();
