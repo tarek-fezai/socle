@@ -105,7 +105,7 @@ export function FolderReliabilityRail({
   return (
     <div data-testid="folder-reliability-rail">
       <div className="section-label mb-2.5">Fiabilité</div>
-      {avg == null ? (
+      {avg == null || tone === 'none' ? (
         <p className="text-[13px] text-socle-muted" data-testid="reliability-unevaluated">
           Non évalué
         </p>

@@ -84,7 +84,7 @@ describe('GraphPage', () => {
       expect(cytoscape).toHaveBeenCalled()
     })
 
-    const opts = vi.mocked(cytoscape).mock.calls[0][0] as {
+    const opts = vi.mocked(cytoscape).mock.calls[0][0] as unknown as {
       elements: Array<{ data: Record<string, unknown> }>
       style: Array<{ selector: string }>
     }

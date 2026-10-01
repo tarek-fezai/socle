@@ -99,7 +99,6 @@ export function FolderExportPage() {
 }
 
 export function TagExportPage() {
-  const { id = '' } = useParams()
   return (
     <ExportShell
       scope="tag"

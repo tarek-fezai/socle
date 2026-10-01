@@ -74,7 +74,7 @@ export function GraphPage() {
             height: 42,
             shape: 'roundrectangle',
             'text-wrap': 'ellipsis',
-            'text-max-width': 110,
+            'text-max-width': '110',
           },
         },
         {

@@ -161,7 +161,7 @@ export function DocumentEditPage() {
   const pending = currentApproval.data
   const status = doc.data.status
   const canSubmit =
-    !pending && (status === 'brouillon' || status === 'en_revue') && status !== 'archive'
+    !pending && (status === 'brouillon' || status === 'en_revue')
   const lockBanner = editLock.data ? editLockBannerText(editLock.data) : null
 
   return (

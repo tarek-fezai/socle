@@ -3,14 +3,12 @@ package eu.socle.integrations;
 
 import eu.socle.audit.AuditController;
 import eu.socle.audit.AuditQueryService;
-import eu.socle.config.SecurityConfig;
+import eu.socle.config.SecurityWebMvcTest;
 import eu.socle.webhook.WebhookDeliveryController;
 import eu.socle.webhook.WebhookDeliveryQueryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
@@ -39,19 +37,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Preuve SoD au niveau du <strong>filtre Spring Security</strong> ({@link SecurityConfig}),
  * pas un mock de rôle côté client.
  *
- * <p>{@code @WebMvcTest} + {@code @Import(SecurityConfig)} charge le vrai
- * {@code SecurityFilterChain}. {@code jwt().authorities(ROLE_*)} simule un JWT déjà
+ * <p>{@code @SecurityWebMvcTest} charge le vrai {@code SecurityFilterChain}
+ * sans découverte OIDC. {@code jwt().authorities(ROLE_*)} simule un JWT déjà
  * authentifié avec des authorities realm — le même mécanisme que
  * {@code JwtAuthenticationConverter} en prod. Les services métier sont mockés uniquement
  * pour isoler la couche HTTP/sécurité ; un 403 doit survenir <em>avant</em> tout appel service.
  */
-@WebMvcTest(controllers = {
+@SecurityWebMvcTest(controllers = {
         SiemConnectorController.class,
         WebhookEndpointController.class,
         AuditController.class,
         WebhookDeliveryController.class
 })
-@Import(SecurityConfig.class)
 class IntegrationsSecurityTest {
 
     static final UUID ID = UUID.fromString("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
