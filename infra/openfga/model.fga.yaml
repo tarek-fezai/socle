@@ -180,6 +180,7 @@ tests:
         assertions:
           viewer:
             - document:org-doc
+            - document:org-in-folder
 
   - name: space inherit_from — space viewer is document viewer; outsider is not
     check:
@@ -233,9 +234,10 @@ tests:
         assertions:
           direct_access:
             - document:da-only
-          # org-doc visible via user:* (visibilité organisation) — attendu
+          # org-doc + org-in-folder visibles via user:* (visibilité organisation)
           viewer:
             - document:org-doc
+            - document:org-in-folder
 
   - name: group#member grants editor via space; user without membership has no access
     check:

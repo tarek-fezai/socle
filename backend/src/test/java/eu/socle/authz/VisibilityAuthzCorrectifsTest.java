@@ -7,6 +7,7 @@ import eu.socle.document.DocumentVisibility;
 import dev.openfga.sdk.api.client.OpenFgaClient;
 import dev.openfga.sdk.api.client.model.ClientTupleKey;
 import dev.openfga.sdk.api.client.model.ClientWriteRequest;
+import dev.openfga.sdk.api.configuration.ClientWriteOptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,7 +64,7 @@ class VisibilityAuthzCorrectifsTest {
         authz = new AuthorizationService(openFgaClient, jdbc, props);
         migration = new VisibilityTupleMigrationService(authz, jdbc, new ObjectMapper());
         drift = new VisibilityDriftService(authz, jdbc);
-        when(openFgaClient.write(any(ClientWriteRequest.class)))
+        when(openFgaClient.write(any(ClientWriteRequest.class), any(ClientWriteOptions.class)))
                 .thenReturn(CompletableFuture.completedFuture(
                         mock(dev.openfga.sdk.api.client.model.ClientWriteResponse.class)));
         stubRead(List.of());
@@ -103,7 +104,7 @@ class VisibilityAuthzCorrectifsTest {
         when(jdbc.queryForObject(contains("authz_migrations"), eq(Integer.class), any()))
                 .thenReturn(1);
         assertThat(migration.migrate().skipped()).isTrue();
-        verify(openFgaClient, never()).write(any(ClientWriteRequest.class));
+        verify(openFgaClient, never()).write(any(ClientWriteRequest.class), any(ClientWriteOptions.class));
     }
 
     @Test
@@ -136,7 +137,7 @@ class VisibilityAuthzCorrectifsTest {
 
     @Test
     void applyVisibilityTuples_atomicWrite_failureLeavesNeitherTuple() throws Exception {
-        when(openFgaClient.write(any(ClientWriteRequest.class)))
+        when(openFgaClient.write(any(ClientWriteRequest.class), any(ClientWriteOptions.class)))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("OpenFGA down")));
 
         assertThatThrownBy(() ->
@@ -145,7 +146,7 @@ class VisibilityAuthzCorrectifsTest {
                 .isInstanceOf(ResponseStatusException.class);
 
         ArgumentCaptor<ClientWriteRequest> cap = ArgumentCaptor.forClass(ClientWriteRequest.class);
-        verify(openFgaClient, atLeastOnce()).write(cap.capture());
+        verify(openFgaClient, atLeastOnce()).write(cap.capture(), any(ClientWriteOptions.class));
         assertThat(cap.getValue().getWrites()).extracting(ClientTupleKey::getRelation)
                 .containsExactlyInAnyOrder("inherit_from", "viewer");
         verify(openFgaClient, never()).writeTuples(any());
@@ -161,7 +162,7 @@ class VisibilityAuthzCorrectifsTest {
                 DocumentVisibility.ORGANISATION);
 
         ArgumentCaptor<ClientWriteRequest> cap = ArgumentCaptor.forClass(ClientWriteRequest.class);
-        verify(openFgaClient).write(cap.capture());
+        verify(openFgaClient).write(cap.capture(), any(ClientWriteOptions.class));
         assertThat(cap.getValue().getWrites()).extracting(ClientTupleKey::getRelation)
                 .contains("parent", "inherit_from", "viewer", "editor", "direct_access");
     }
