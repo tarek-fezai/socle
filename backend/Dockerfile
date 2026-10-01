@@ -25,12 +25,18 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=build /build/target/socle-backend-*.jar /app/app.jar
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
-RUN chown -R appuser:appuser /app \
-    && chmod 755 /app/docker-entrypoint.sh
+# Entrypoint written in-image (avoids Windows CRLF → exec format error).
+RUN printf '%s\n' \
+  '#!/bin/bash' \
+  'set -euo pipefail' \
+  'mkdir -p /data/git-content /openfga-config' \
+  'chown -R appuser:appuser /data/git-content /openfga-config 2>/dev/null || true' \
+  'exec runuser -u appuser -- java -jar /app/app.jar "$@"' \
+  > /app/docker-entrypoint.sh \
+  && chmod 755 /app/docker-entrypoint.sh \
+  && chown -R appuser:appuser /app
 
-# Entrypoint starts as root to chown mounted volumes, then drops to UID 10001.
 USER root
 
 ENV SOCLE_REJECT_WEAK_SECRETS=true
