@@ -8,7 +8,7 @@ OIDC_SECRET="$(openssl rand -hex 24)"
 KC_PASS="$(openssl rand -hex 12)"
 
 cat > "$OUT" <<EOF
-DOMAIN=127.0.0.1
+DOMAIN=http://127.0.0.1
 VERSION=local
 COMPOSE_PROJECT_NAME=socle-production
 
