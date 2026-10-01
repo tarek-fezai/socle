@@ -20,6 +20,7 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | Name | Default | Required | Secret | Description |
 |------|---------|----------|--------|-------------|
 | `OIDC_ISSUER_URI` | `http://localhost:8081/realms/socle` | yes (prod) | no | JWT issuer; also `socle.identity.issuer-uri` |
+| `OIDC_CLIENT_ISSUER_URI` | same as `OIDC_ISSUER_URI` | no | no | Issuer reachable by backend for OAuth2 client discovery (demo Compose: `http://keycloak:8080/realms/socle`) |
 | `OIDC_JWK_SET_URI` | derived from issuer | no | no | JWKS URL if issuer metadata is unreachable from backend |
 | `OIDC_CLIENT_ID` | `socle-backend` | no | no | OAuth client for backend (if used) |
 | `OIDC_CLIENT_SECRET` | `change-me` | yes (prod) | **yes** | Backend OAuth client secret |
