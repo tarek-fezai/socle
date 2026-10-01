@@ -83,12 +83,6 @@ export function DocumentsPage() {
               </option>
             ))}
           </select>
-          <Link
-            to={spaceId ? `/docs/new?spaceId=${encodeURIComponent(spaceId)}` : '/docs/new'}
-            className="btn-ghost"
-          >
-            Depuis un modèle
-          </Link>
           <button
             type="button"
             onClick={() => create.mutate()}

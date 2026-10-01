@@ -63,12 +63,6 @@ export function SpaceBrowsePage() {
             <button type="button" className="btn-ghost" onClick={() => setNewFolderOpen(true)}>
               + Nouveau dossier
             </button>
-            <Link
-              to={`/docs/new?spaceId=${encodeURIComponent(spaceId)}`}
-              className="btn-ghost"
-            >
-              Depuis un modèle
-            </Link>
             <button
               type="button"
               className="btn-primary"

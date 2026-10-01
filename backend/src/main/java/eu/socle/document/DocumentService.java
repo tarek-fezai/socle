@@ -17,8 +17,6 @@ import eu.socle.document.DocumentDtos.VersionPage;
 import eu.socle.document.DocumentDtos.VersionSummary;
 import eu.socle.storage.DocumentStore;
 import eu.socle.storage.RelationalDocumentStore;
-import eu.socle.template.TemplateService;
-import eu.socle.template.TemplateService.TemplateInstantiation;
 import eu.socle.space.ExternalReferencePolicy;
 import eu.socle.trash.TrashService;
 import eu.socle.user.UserSyncService;
@@ -56,7 +54,6 @@ public class DocumentService {
     private final StalenessService stalenessService;
     private final JdbcTemplate jdbc;
     private final DocumentLinkService documentLinkService;
-    private final TemplateService templateService;
 
     /**
      * Constructeur tests unitaires — provider relational implicite ;
@@ -86,7 +83,7 @@ public class DocumentService {
         );
     }
 
-    /** Constructeur sans modèles de pages (tests existants) — {@code templateId} → 503. */
+    @Autowired
     public DocumentService(
             DocumentRepository repository,
             UserSyncService userSyncService,
@@ -100,37 +97,6 @@ public class DocumentService {
             JdbcTemplate jdbc,
             DocumentLinkService documentLinkService
     ) {
-        this(
-                repository,
-                userSyncService,
-                authorizationService,
-                auditService,
-                reliabilityScoreService,
-                trashService,
-                documentStore,
-                transclusionResolver,
-                stalenessService,
-                jdbc,
-                documentLinkService,
-                null);
-    }
-
-    @Autowired
-    public DocumentService(
-            DocumentRepository repository,
-            UserSyncService userSyncService,
-            AuthorizationService authorizationService,
-            AuditService auditService,
-            ReliabilityScoreService reliabilityScoreService,
-            TrashService trashService,
-            DocumentStore documentStore,
-            TransclusionResolver transclusionResolver,
-            StalenessService stalenessService,
-            JdbcTemplate jdbc,
-            DocumentLinkService documentLinkService,
-            TemplateService templateService
-    ) {
-        this.templateService = templateService;
         this.repository = repository;
         this.documentStore = documentStore;
         this.userSyncService = userSyncService;
@@ -286,35 +252,13 @@ public class DocumentService {
 
         String visibility = resolveCreateVisibility(user.getId(), spaceId, request.visibility());
 
-        // Modèle : corps dérivé du template (variables substituées) ; sinon body requis.
-        TemplateInstantiation template = null;
-        if (request.templateId() != null) {
-            if (templateService == null) {
-                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                        "Modèles de pages indisponibles");
-            }
-            template = templateService.prepareInstantiation(
-                    user, request.templateId(), spaceId, request.title());
-        } else if (request.body() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "body requis (ou templateId)");
-        }
-
         DocumentEntity entity = new DocumentEntity();
         entity.setSpaceId(spaceId);
         entity.setFolderId(folderId);
         entity.setTitle(request.title().trim());
-        String requestedDocType = blankToNull(request.docType());
-        entity.setDocType(requestedDocType != null
-                ? requestedDocType
-                : template != null ? blankToNull(template.docType()) : null);
-        Map<String, Object> body = transclusionResolver.normalizeForStorage(
-                copyBody(template != null ? template.body() : request.body()));
+        entity.setDocType(blankToNull(request.docType()));
+        Map<String, Object> body = transclusionResolver.normalizeForStorage(copyBody(request.body()));
         entity.setBody(body);
-        if (template != null) {
-            entity.setTemplateId(template.templateId());
-            entity.setTemplateVersion(template.version());
-        }
         entity.setStatus("brouillon");
         entity.setCurrentVersionNo(1);
         entity.setVisibility(visibility);
@@ -351,29 +295,20 @@ public class DocumentService {
 
         syncDocumentLinks(saved, body);
 
-        Map<String, Object> createMeta = new LinkedHashMap<>();
-        createMeta.put("title", saved.getTitle());
-        createMeta.put("spaceId", saved.getSpaceId().toString());
-        createMeta.put("status", saved.getStatus());
-        createMeta.put("visibility", visibility);
-        if (template != null) {
-            createMeta.put("templateId", template.templateId().toString());
-            createMeta.put("templateVersion", template.version());
-        }
         auditService.record(
                 user.getId(),
                 false,
                 AuditActions.DOCUMENT_CREATED,
                 "document",
                 saved.getId(),
-                createMeta,
+                Map.of(
+                        "title", saved.getTitle(),
+                        "spaceId", saved.getSpaceId().toString(),
+                        "status", saved.getStatus(),
+                        "visibility", visibility
+                ),
                 null
         );
-        if (template != null) {
-            // Les INSERT JDBC (document_tags) référencent documents(id) : flush JPA d'abord.
-            repository.flush();
-            templateService.afterDocumentCreated(user.getId(), template, saved.getId(), spaceId);
-        }
         return toResponse(saved);
     }
 
@@ -747,9 +682,7 @@ public class DocumentService {
                 f.contentModifiedAt(),
                 f.thresholdDays(),
                 vis,
-                d.getPosition(),
-                d.getTemplateId(),
-                d.getTemplateVersion()
+                d.getPosition()
         );
     }
 
