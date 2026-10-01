@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CommentsPanel, CommentSelectionButton } from '../components/CommentsPanel'
 import { DocumentReliabilityStatus } from '../components/ReliabilityDisplay'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { MoveDialog } from '../components/MoveDialog'
@@ -9,6 +10,11 @@ import { SpaceTreeLayout } from '../components/SpaceTreeSidebar'
 import { StaleBadge } from '../components/StaleBadge'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
+import {
+  canCommentOnSpace,
+  type CommentAnchorInput,
+  listComments,
+} from '../lib/comments'
 import { emptyDocBody, getDocument, updateDocument } from '../lib/documents'
 import {
   acquireEditLock,
@@ -17,6 +23,7 @@ import {
   releaseEditLock,
 } from '../lib/editLock'
 import { buildBreadcrumb, getSpaceTree, spaceTreeKey } from '../lib/folders'
+import { getSpace } from '../lib/spaces'
 import { fetchApplicableWorkflow, matchLevelLabel } from '../lib/workflows'
 import { DocumentEditor } from './DocumentEditor'
 
@@ -57,6 +64,22 @@ export function DocumentEditPage() {
     enabled: Boolean(spaceId),
   })
   const [moveOpen, setMoveOpen] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const [draftAnchor, setDraftAnchor] = useState<CommentAnchorInput | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  const space = useQuery({
+    queryKey: ['space', spaceId],
+    queryFn: () => getSpace(api, spaceId),
+    enabled: Boolean(spaceId),
+  })
+
+  const openComments = useQuery({
+    queryKey: ['document-comments', id, 'ouvert', ''],
+    queryFn: () => listComments(api, id, { status: 'ouvert' }),
+    enabled: Boolean(id),
+    refetchInterval: commentsOpen ? false : 30_000,
+  })
 
   const currentApproval = useQuery({
     queryKey: ['approval', id],
@@ -174,6 +197,7 @@ export function DocumentEditPage() {
   const status = doc.data.status
   const canSubmit = !pending && (status === 'brouillon' || status === 'en_revue')
   const lockBanner = editLock.data ? editLockBannerText(editLock.data) : null
+  const canComment = space.data ? canCommentOnSpace(space.data) : true
 
   const treeFolders = tree.data?.folders ?? []
   const folderId =
@@ -181,7 +205,8 @@ export function DocumentEditPage() {
 
   return (
     <SpaceTreeLayout spaceId={doc.data.spaceId} currentDocumentId={id}>
-      <main className="page-shell">
+      <div className="flex min-h-0 flex-1">
+      <main className={`page-shell min-w-0 flex-1 ${commentsOpen ? 'max-w-none pr-6' : ''}`}>
         <Breadcrumb
           className="mb-4"
           items={buildBreadcrumb({
@@ -215,6 +240,19 @@ export function DocumentEditPage() {
             >
               Exporter
             </Link>
+            <button
+              type="button"
+              onClick={() => setCommentsOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
+              data-testid="toggle-comments"
+            >
+              Commentaires
+              {(openComments.data?.openThreadCount ?? 0) > 0 && (
+                <span className="rounded-lg bg-socle-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  {openComments.data!.openThreadCount}
+                </span>
+              )}
+            </button>
             <Link
               to={`/documents/${id}/access`}
               className="text-sm text-socle-muted hover:text-socle-accent"
@@ -283,7 +321,17 @@ export function DocumentEditPage() {
             />
           </label>
 
-          <DocumentEditor content={body} onChange={setBody} />
+          <div className="relative" ref={contentRef} data-comment-root>
+            <DocumentEditor content={body} onChange={setBody} />
+            <CommentSelectionButton
+              rootRef={contentRef}
+              enabled={canComment}
+              onComment={(anchor) => {
+                setDraftAnchor(anchor)
+                setCommentsOpen(true)
+              }}
+            />
+          </div>
 
           {canSubmit && applicable.data && (
             <div className="rounded-xl border border-socle-line bg-[#FAFAFB] px-4 py-3 text-sm text-socle-ink">
@@ -357,6 +405,21 @@ export function DocumentEditPage() {
           onMoved={() => void queryClient.invalidateQueries({ queryKey: ['document', id] })}
         />
       </main>
+      {commentsOpen && (
+        <CommentsPanel
+          documentId={id}
+          versionNo={doc.data.currentVersionNo}
+          canComment={canComment}
+          spaceId={doc.data.spaceId}
+          draftAnchor={draftAnchor}
+          onDraftAnchorClear={() => setDraftAnchor(null)}
+          onClose={() => {
+            setCommentsOpen(false)
+            setDraftAnchor(null)
+          }}
+        />
+      )}
+      </div>
     </SpaceTreeLayout>
   )
 }

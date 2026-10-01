@@ -19,14 +19,20 @@ public final class SpaceDtos {
             /** {@code open} | {@code restricted} — owners seulement ; null = inchangé. */
             String externalReference,
             /** {@code organisation} | {@code space} | {@code restricted} — null = inchangé. */
-            String defaultVisibility
+            String defaultVisibility,
+            /** {@code members} | {@code all_readers} — null = inchangé. */
+            String commentPolicy
     ) {
         public UpdateSpaceRequest(String name, String color) {
-            this(name, color, null, null);
+            this(name, color, null, null, null);
         }
 
         public UpdateSpaceRequest(String name, String color, String externalReference) {
-            this(name, color, externalReference, null);
+            this(name, color, externalReference, null, null);
+        }
+
+        public UpdateSpaceRequest(String name, String color, String externalReference, String defaultVisibility) {
+            this(name, color, externalReference, defaultVisibility, null);
         }
     }
 
@@ -39,6 +45,8 @@ public final class SpaceDtos {
             String externalReference,
             /** Visibilité par défaut des nouveaux documents. */
             String defaultVisibility,
+            /** {@code members} (défaut) ou {@code all_readers}. */
+            String commentPolicy,
             boolean canManage,
             boolean isOwner,
             boolean isResponsible,
@@ -48,6 +56,23 @@ public final class SpaceDtos {
              */
             String membership
     ) {
+        /** Compat sans commentPolicy / membership. */
+        public SpaceView(
+                UUID id,
+                String name,
+                String color,
+                String createdAt,
+                String externalReference,
+                String defaultVisibility,
+                boolean canManage,
+                boolean isOwner,
+                boolean isResponsible,
+                String membership
+        ) {
+            this(id, name, color, createdAt, externalReference, defaultVisibility, "members",
+                    canManage, isOwner, isResponsible, membership);
+        }
+
         /** Compat sans membership (défaut member). */
         public SpaceView(
                 UUID id,
@@ -60,7 +85,7 @@ public final class SpaceDtos {
                 boolean isOwner,
                 boolean isResponsible
         ) {
-            this(id, name, color, createdAt, externalReference, defaultVisibility,
+            this(id, name, color, createdAt, externalReference, defaultVisibility, "members",
                     canManage, isOwner, isResponsible, "member");
         }
 
@@ -75,7 +100,7 @@ public final class SpaceDtos {
                 boolean isOwner,
                 boolean isResponsible
         ) {
-            this(id, name, color, createdAt, externalReference, "organisation",
+            this(id, name, color, createdAt, externalReference, "organisation", "members",
                     canManage, isOwner, isResponsible, "member");
         }
     }

@@ -359,6 +359,8 @@ public class ReliabilityScoreService {
                        COUNT(*) FILTER (WHERE resolved = true)::int AS resolved
                   FROM document_comments
                  WHERE document_id = ?
+                   AND deleted_at IS NULL
+                   AND parent_comment_id IS NULL
                 """,
                 rs -> {
                     rs.next();

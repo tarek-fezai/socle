@@ -74,3 +74,25 @@ body {
     @apply text-[12px] font-semibold uppercase tracking-[0.05em] text-socle-muted;
   }
 }
+
+/* Ancres de commentaires (vue lecture) */
+mark.comment-mark {
+  border-radius: 2px;
+  padding: 0 1px;
+}
+mark.comment-mark-1 {
+  background: #fdefd3;
+  border-bottom: 2px solid #d9a441;
+}
+mark.comment-mark-2 {
+  background: #fbe2db;
+  border-bottom: 2px solid #b54708;
+}
+mark.comment-mark-3 {
+  background: #f0effc;
+  border-bottom: 2px solid #3730e0;
+}
+span.comment-mention {
+  font-weight: 600;
+  color: #3730e0;
+}

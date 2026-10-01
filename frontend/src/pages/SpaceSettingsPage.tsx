@@ -21,6 +21,7 @@ export function SpaceSettingsPage() {
   const [defaultVisibility, setDefaultVisibility] = useState<
     'organisation' | 'space' | 'restricted'
   >('organisation')
+  const [commentPolicy, setCommentPolicy] = useState<'members' | 'all_readers'>('members')
   const [ownerId, setOwnerId] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -34,6 +35,7 @@ export function SpaceSettingsPage() {
       setDefaultVisibility(
         dv === 'space' || dv === 'restricted' ? dv : 'organisation',
       )
+      setCommentPolicy(s.commentPolicy === 'all_readers' ? 'all_readers' : 'members')
       return s
     },
     enabled: Boolean(spaceId),
@@ -51,6 +53,7 @@ export function SpaceSettingsPage() {
         name: name.trim(),
         externalReference: space.data?.canManage ? externalReference : undefined,
         defaultVisibility: space.data?.canManage ? defaultVisibility : undefined,
+        commentPolicy: space.data?.canManage ? commentPolicy : undefined,
       }),
     onSuccess: () => {
       setError(null)
@@ -169,6 +172,20 @@ export function SpaceSettingsPage() {
               <option value="organisation">Tous les utilisateurs</option>
               <option value="space">Membres de l&apos;espace</option>
               <option value="restricted">Personnes et équipes listées</option>
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="text-socle-muted">Qui peut commenter</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-socle-line bg-white px-3 py-2"
+              value={commentPolicy}
+              onChange={(e) =>
+                setCommentPolicy(e.target.value as 'members' | 'all_readers')
+              }
+              data-testid="comment-policy-select"
+            >
+              <option value="members">Membres de l&apos;espace uniquement</option>
+              <option value="all_readers">Tous les lecteurs du document</option>
             </select>
           </label>
           {externalReference === 'restricted' ? (

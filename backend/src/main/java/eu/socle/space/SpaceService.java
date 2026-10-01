@@ -83,7 +83,7 @@ public class SpaceService {
         String placeholders = String.join(",", visible.stream().map(id -> "?").toList());
         Object[] args = visible.toArray();
         return jdbc.query("""
-                SELECT id, name, color, created_at, external_reference, default_visibility
+                SELECT id, name, color, created_at, external_reference, default_visibility, comment_policy
                   FROM spaces
                  WHERE deleted_at IS NULL
                    AND id IN (%s)
@@ -98,6 +98,7 @@ public class SpaceService {
                             rs.getTimestamp("created_at"),
                             rs.getString("external_reference"),
                             rs.getString("default_visibility"),
+                            rs.getString("comment_policy"),
                             user.getId(),
                             membership);
                 },
@@ -129,8 +130,8 @@ public class SpaceService {
         UUID id = UUID.randomUUID();
         String color = blankToNull(request.color());
         jdbc.update(
-                "INSERT INTO spaces (id, name, color, external_reference, default_visibility, created_at) "
-                        + "VALUES (?, ?, ?, 'open', 'organisation', now())",
+                "INSERT INTO spaces (id, name, color, external_reference, default_visibility, comment_policy, created_at) "
+                        + "VALUES (?, ?, ?, 'open', 'organisation', 'members', now())",
                 id, request.name().trim(), color);
         jdbc.update("""
                 INSERT INTO space_owners (space_id, user_id, is_responsible, created_at)
@@ -158,37 +159,30 @@ public class SpaceService {
         if (defaultVis != null) {
             defaultVis = DocumentVisibility.requireValid(defaultVis);
         }
-
-        if (extRef != null && defaultVis != null) {
-            jdbc.update(
-                    "UPDATE spaces SET name = ?, color = ?, external_reference = ?, default_visibility = ? "
-                            + "WHERE id = ? AND deleted_at IS NULL",
-                    request.name().trim(),
-                    blankToNull(request.color()),
-                    extRef,
-                    defaultVis,
-                    spaceId);
-        } else if (extRef != null) {
-            jdbc.update(
-                    "UPDATE spaces SET name = ?, color = ?, external_reference = ? WHERE id = ? AND deleted_at IS NULL",
-                    request.name().trim(),
-                    blankToNull(request.color()),
-                    extRef,
-                    spaceId);
-        } else if (defaultVis != null) {
-            jdbc.update(
-                    "UPDATE spaces SET name = ?, color = ?, default_visibility = ? WHERE id = ? AND deleted_at IS NULL",
-                    request.name().trim(),
-                    blankToNull(request.color()),
-                    defaultVis,
-                    spaceId);
-        } else {
-            jdbc.update(
-                    "UPDATE spaces SET name = ?, color = ? WHERE id = ? AND deleted_at IS NULL",
-                    request.name().trim(),
-                    blankToNull(request.color()),
-                    spaceId);
+        String commentPolicy = blankToNull(request.commentPolicy());
+        if (commentPolicy != null) {
+            commentPolicy = commentPolicy.trim().toLowerCase();
+            if (!"members".equals(commentPolicy) && !"all_readers".equals(commentPolicy)) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "commentPolicy doit être members ou all_readers");
+            }
         }
+
+        jdbc.update("""
+                UPDATE spaces SET
+                  name = ?,
+                  color = ?,
+                  external_reference = COALESCE(?, external_reference),
+                  default_visibility = COALESCE(?, default_visibility),
+                  comment_policy = COALESCE(?, comment_policy)
+                 WHERE id = ? AND deleted_at IS NULL
+                """,
+                request.name().trim(),
+                blankToNull(request.color()),
+                extRef,
+                defaultVis,
+                commentPolicy,
+                spaceId);
         Map<String, Object> meta = new java.util.LinkedHashMap<>();
         meta.put("name", request.name().trim());
         if (extRef != null) {
@@ -196,6 +190,9 @@ public class SpaceService {
         }
         if (defaultVis != null) {
             meta.put("defaultVisibility", defaultVis);
+        }
+        if (commentPolicy != null) {
+            meta.put("commentPolicy", commentPolicy);
         }
         auditService.record(
                 user.getId(), false, AuditActions.SPACE_UPDATED, "space", spaceId, meta, null);
@@ -394,7 +391,8 @@ public class SpaceService {
 
     private SpaceView loadView(UUID spaceId, UUID userId, String membership) {
         return jdbc.query("""
-                SELECT id, name, color, created_at, external_reference, default_visibility FROM spaces
+                SELECT id, name, color, created_at, external_reference, default_visibility, comment_policy
+                  FROM spaces
                  WHERE id = ? AND deleted_at IS NULL
                 """,
                 rs -> {
@@ -408,6 +406,7 @@ public class SpaceService {
                             rs.getTimestamp("created_at"),
                             rs.getString("external_reference"),
                             rs.getString("default_visibility"),
+                            rs.getString("comment_policy"),
                             userId,
                             membership);
                 },
@@ -474,6 +473,7 @@ public class SpaceService {
             Timestamp createdAt,
             String externalReference,
             String defaultVisibility,
+            String commentPolicy,
             UUID userId,
             String membership
     ) {
@@ -486,6 +486,7 @@ public class SpaceService {
         String dv = defaultVisibility == null || defaultVisibility.isBlank()
                 ? DocumentVisibility.ORGANISATION
                 : defaultVisibility;
+        String cp = commentPolicy == null || commentPolicy.isBlank() ? "members" : commentPolicy;
         return new SpaceView(
                 id,
                 name,
@@ -493,6 +494,7 @@ public class SpaceService {
                 createdAt != null ? createdAt.toInstant().toString() : null,
                 mode,
                 dv,
+                cp,
                 owner,
                 owner,
                 responsible,

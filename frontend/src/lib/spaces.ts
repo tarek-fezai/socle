@@ -10,6 +10,8 @@ export type Space = {
   externalReference?: 'open' | 'restricted' | string
   /** organisation | space | restricted — défaut des nouveaux documents */
   defaultVisibility?: 'organisation' | 'space' | 'restricted' | string
+  /** members (défaut) | all_readers — qui peut commenter */
+  commentPolicy?: 'members' | 'all_readers' | string
   canManage: boolean
   isOwner: boolean
   isResponsible: boolean
@@ -47,6 +49,7 @@ export async function updateSpace(
     color?: string | null
     externalReference?: 'open' | 'restricted' | null
     defaultVisibility?: 'organisation' | 'space' | 'restricted' | null
+    commentPolicy?: 'members' | 'all_readers' | null
   },
 ) {
   const { data } = await api.put<Space>(`/api/v1/spaces/${id}`, body)
