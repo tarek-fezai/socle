@@ -1,0 +1,349 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Tests du modèle OpenFGA Socle — exécutés via `fga model test`.
+name: Socle authorization model
+
+model_file: ./model.fga
+
+tuples:
+  # Organisation & espace
+  - user: organisation:acme
+    relation: parent
+    object: space:engineering
+
+  - user: user:space-owner
+    relation: owner
+    object: space:engineering
+
+  - user: user:space-editor
+    relation: editor
+    object: space:engineering
+
+  - user: user:space-viewer
+    relation: viewer
+    object: space:engineering
+
+  # Groupe
+  - user: user:group-member
+    relation: member
+    object: group:eng-team
+
+  - user: group:eng-team#member
+    relation: editor
+    object: space:engineering
+
+  # Dossier sous l'espace (parent + inherit)
+  - user: space:engineering
+    relation: parent
+    object: folder:procedures
+
+  - user: space:engineering
+    relation: inherit_from
+    object: folder:procedures
+
+  # Document visibilité space (héritage)
+  - user: space:engineering
+    relation: parent
+    object: document:space-doc
+
+  - user: space:engineering
+    relation: inherit_from
+    object: document:space-doc
+
+  - user: user:creator
+    relation: editor
+    object: document:space-doc
+
+  - user: user:creator
+    relation: direct_access
+    object: document:space-doc
+
+  # Document organisation (user:* viewer, héritage space)
+  - user: space:engineering
+    relation: parent
+    object: document:org-doc
+
+  - user: space:engineering
+    relation: inherit_from
+    object: document:org-doc
+
+  - user: user:*
+    relation: viewer
+    object: document:org-doc
+
+  - user: user:creator
+    relation: editor
+    object: document:org-doc
+
+  - user: user:creator
+    relation: direct_access
+    object: document:org-doc
+
+  # Document restricted (parent only — pas d'inherit_from)
+  - user: space:engineering
+    relation: parent
+    object: document:restricted-doc
+
+  - user: user:creator
+    relation: editor
+    object: document:restricted-doc
+
+  - user: user:creator
+    relation: direct_access
+    object: document:restricted-doc
+
+  # Document avec seulement direct_access (index ListObjects — aucun droit)
+  - user: space:engineering
+    relation: parent
+    object: document:da-only
+
+  - user: user:stranger
+    relation: direct_access
+    object: document:da-only
+
+  # Document dans le dossier (héritage via folder)
+  - user: folder:procedures
+    relation: parent
+    object: document:folder-doc
+
+  - user: folder:procedures
+    relation: inherit_from
+    object: document:folder-doc
+
+  # Grant direct sur le dossier seul (viewer)
+  - user: user:folder-grantee
+    relation: viewer
+    object: folder:procedures
+
+  # Sous-dossier + document (héritage espace → dossier → sous-dossier → document)
+  - user: folder:procedures
+    relation: parent
+    object: folder:sub-procedures
+
+  - user: folder:procedures
+    relation: inherit_from
+    object: folder:sub-procedures
+
+  - user: folder:sub-procedures
+    relation: parent
+    object: document:nested-doc
+
+  - user: folder:sub-procedures
+    relation: inherit_from
+    object: document:nested-doc
+
+  # Restricted dans un dossier visible (pas d'inherit_from)
+  - user: folder:procedures
+    relation: parent
+    object: document:restricted-in-folder
+
+  - user: user:creator
+    relation: editor
+    object: document:restricted-in-folder
+
+  - user: user:creator
+    relation: direct_access
+    object: document:restricted-in-folder
+
+  # Page organisation dans un sous-dossier (non-membre lit via user:*)
+  - user: folder:sub-procedures
+    relation: parent
+    object: document:org-in-folder
+
+  - user: folder:sub-procedures
+    relation: inherit_from
+    object: document:org-in-folder
+
+  - user: user:*
+    relation: viewer
+    object: document:org-in-folder
+
+  - user: user:creator
+    relation: editor
+    object: document:org-in-folder
+
+tests:
+  - name: organisation visibility — user:* is viewer not editor
+    check:
+      - user: user:anybody
+        object: document:org-doc
+        assertions:
+          viewer: true
+          editor: false
+          owner: false
+      - user: user:space-viewer
+        object: document:org-doc
+        assertions:
+          viewer: true
+    list_objects:
+      - user: user:anybody
+        type: document
+        assertions:
+          viewer:
+            - document:org-doc
+            - document:org-in-folder
+
+  - name: space inherit_from — space viewer is document viewer; outsider is not
+    check:
+      - user: user:space-viewer
+        object: document:space-doc
+        assertions:
+          viewer: true
+          editor: false
+      - user: user:outsider
+        object: document:space-doc
+        assertions:
+          viewer: false
+          editor: false
+          owner: false
+      - user: user:space-editor
+        object: document:space-doc
+        assertions:
+          viewer: true
+          editor: true
+
+  - name: restricted — space editor not viewer; space owner is owner/editor/viewer via parent
+    check:
+      - user: user:space-editor
+        object: document:restricted-doc
+        assertions:
+          viewer: false
+          editor: false
+          owner: false
+      - user: user:space-owner
+        object: document:restricted-doc
+        assertions:
+          owner: true
+          editor: true
+          viewer: true
+      - user: user:space-viewer
+        object: document:restricted-doc
+        assertions:
+          viewer: false
+
+  - name: direct_access alone grants no viewer on that document
+    check:
+      - user: user:stranger
+        object: document:da-only
+        assertions:
+          viewer: false
+          editor: false
+          owner: false
+    list_objects:
+      - user: user:stranger
+        type: document
+        assertions:
+          direct_access:
+            - document:da-only
+          # org-doc + org-in-folder visibles via user:* (visibilité organisation)
+          viewer:
+            - document:org-doc
+            - document:org-in-folder
+
+  - name: group#member grants editor via space; user without membership has no access
+    check:
+      - user: user:group-member
+        object: document:space-doc
+        assertions:
+          viewer: true
+          editor: true
+      - user: user:ex-member
+        object: document:space-doc
+        assertions:
+          viewer: false
+          editor: false
+
+  - name: folder cascade space → folder → document; folder-only grant
+    check:
+      - user: user:space-viewer
+        object: document:folder-doc
+        assertions:
+          viewer: true
+      - user: user:folder-grantee
+        object: document:folder-doc
+        assertions:
+          viewer: true
+          editor: false
+      - user: user:folder-grantee
+        object: folder:procedures
+        assertions:
+          viewer: true
+      - user: user:outsider
+        object: document:folder-doc
+        assertions:
+          viewer: false
+
+  - name: nested folder inheritance space → folder → subfolder → document
+    check:
+      - user: user:space-viewer
+        object: document:nested-doc
+        assertions:
+          viewer: true
+      - user: user:space-viewer
+        object: folder:sub-procedures
+        assertions:
+          viewer: true
+      - user: user:outsider
+        object: document:nested-doc
+        assertions:
+          viewer: false
+
+  - name: restricted in visible folder — space member not viewer
+    check:
+      - user: user:space-viewer
+        object: folder:procedures
+        assertions:
+          viewer: true
+      - user: user:space-viewer
+        object: document:restricted-in-folder
+        assertions:
+          viewer: false
+      - user: user:space-editor
+        object: document:restricted-in-folder
+        assertions:
+          viewer: false
+
+  - name: non-member reads organisation doc in nested folder; not space siblings
+    check:
+      - user: user:stranger
+        object: document:org-in-folder
+        assertions:
+          viewer: true
+          editor: false
+      - user: user:stranger
+        object: document:nested-doc
+        assertions:
+          viewer: false
+      - user: user:stranger
+        object: document:folder-doc
+        assertions:
+          viewer: false
+      - user: user:stranger
+        object: folder:sub-procedures
+        assertions:
+          viewer: false
+      - user: user:stranger
+        object: space:engineering
+        assertions:
+          viewer: false
+    list_objects:
+      - user: user:stranger
+        type: document
+        assertions:
+          viewer:
+            - document:org-doc
+            - document:org-in-folder
+
+  - name: creator is editor not owner
+    check:
+      - user: user:creator
+        object: document:space-doc
+        assertions:
+          editor: true
+          owner: false
+          viewer: true
+      - user: user:creator
+        object: document:restricted-doc
+        assertions:
+          editor: true
+          owner: false
+          viewer: true

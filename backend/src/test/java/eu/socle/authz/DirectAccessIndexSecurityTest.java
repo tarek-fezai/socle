@@ -61,6 +61,7 @@ class DirectAccessIndexSecurityTest {
                 null,
                 new SocleProperties.OpenFga("http://localhost", "s", "m", 1000, false, null, null, null),
                 null,
+                null,
                 null);
         authz = new AuthorizationService(openFgaClient, jdbc, props);
         drift = new VisibilityDriftService(authz, jdbc);

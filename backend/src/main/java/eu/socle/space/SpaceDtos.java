@@ -41,8 +41,29 @@ public final class SpaceDtos {
             String defaultVisibility,
             boolean canManage,
             boolean isOwner,
-            boolean isResponsible
+            boolean isResponsible,
+            /**
+             * {@code member} — accès via relations espace ;
+             * {@code public-only} — uniquement via documents organisation lisibles.
+             */
+            String membership
     ) {
+        /** Compat sans membership (défaut member). */
+        public SpaceView(
+                UUID id,
+                String name,
+                String color,
+                String createdAt,
+                String externalReference,
+                String defaultVisibility,
+                boolean canManage,
+                boolean isOwner,
+                boolean isResponsible
+        ) {
+            this(id, name, color, createdAt, externalReference, defaultVisibility,
+                    canManage, isOwner, isResponsible, "member");
+        }
+
         /** Compat sans defaultVisibility. */
         public SpaceView(
                 UUID id,
@@ -55,7 +76,7 @@ public final class SpaceDtos {
                 boolean isResponsible
         ) {
             this(id, name, color, createdAt, externalReference, "organisation",
-                    canManage, isOwner, isResponsible);
+                    canManage, isOwner, isResponsible, "member");
         }
     }
 

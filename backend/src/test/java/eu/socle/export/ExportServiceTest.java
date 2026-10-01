@@ -158,7 +158,7 @@ class ExportServiceTest {
             if (sql.contains("FROM folders WHERE id")) {
                 var rs = mock(java.sql.ResultSet.class);
                 when(rs.getObject("id")).thenReturn(FOLDER);
-                when(rs.getString("title")).thenReturn("Procedures");
+                when(rs.getString("name")).thenReturn("Procedures");
                 return List.of(mapper.mapRow(rs, 0));
             }
             if (sql.contains("WITH RECURSIVE")) {

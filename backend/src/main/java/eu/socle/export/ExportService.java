@@ -95,19 +95,19 @@ public class ExportService {
                 .toList();
 
         List<NamedBody> pages = resolveAll(user.getId(), included);
-        String title = "Dossier — " + folder.title();
+        String title = "Dossier — " + folder.name();
         byte[] pdf = TipTapPdfRenderer.renderCollection(title, pages);
 
         Map<String, Object> meta = new HashMap<>();
         meta.put("format", "pdf");
-        meta.put("title", folder.title());
+        meta.put("title", folder.name());
         meta.put("documentCount", pages.size());
         meta.put("candidateCount", viewableIds.size());
         auditService.record(
                 user.getId(), false, AuditActions.FOLDER_EXPORTED,
                 "folder", folderId, meta, null);
 
-        return new ExportFile(safeFilename(folder.title()) + ".pdf", "application/pdf", pdf);
+        return new ExportFile(safeFilename(folder.name()) + ".pdf", "application/pdf", pdf);
     }
 
     @Transactional(readOnly = true)
@@ -149,10 +149,10 @@ public class ExportService {
 
     private FolderRow requireActiveFolder(UUID folderId) {
         List<FolderRow> rows = jdbc.query("""
-                SELECT id, title FROM folders WHERE id = ? AND deleted_at IS NULL
+                SELECT id, name FROM folders WHERE id = ? AND deleted_at IS NULL
                 """, (rs, i) -> new FolderRow(
                 (UUID) rs.getObject("id"),
-                rs.getString("title")), folderId);
+                rs.getString("name")), folderId);
         if (rows.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier introuvable");
         }
@@ -181,7 +181,7 @@ public class ExportService {
 
     public record ExportFile(String filename, String contentType, byte[] bytes) {}
 
-    private record FolderRow(UUID id, String title) {}
+    private record FolderRow(UUID id, String name) {}
 
     private record TagRow(UUID id, String name) {}
 }

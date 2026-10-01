@@ -83,3 +83,21 @@ jobs:
         run: go build ./...
       - name: Test
         run: go test ./...
+
+  authz-model:
+    name: authz-model
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenFGA CLI
+        env:
+          FGA_CLI_VERSION: "0.8.1"
+        run: |
+          set -euo pipefail
+          curl -sSL -o /tmp/fga.tar.gz \
+            "https://github.com/openfga/cli/releases/download/v${FGA_CLI_VERSION}/fga_${FGA_CLI_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/fga.tar.gz -C /tmp
+          sudo mv /tmp/fga /usr/local/bin/fga
+          fga version
+      - name: Test authorization model
+        run: fga model test --tests infra/openfga/model.fga.yaml

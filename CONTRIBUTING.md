@@ -27,7 +27,9 @@ By signing off, you certify the [Developer Certificate of Origin](https://develo
 | Frontend | `pnpm test` (from `frontend/`) |
 | Webhook worker | `go test ./...` (from `webhook-worker/`) |
 
-Backend integration tests use **Testcontainers** (Postgres 16) when Docker is available. OpenFGA is mocked in unit/integration tests — no OpenFGA service is required in CI.
+Backend integration tests use **Testcontainers** (Postgres 16, and OpenFGA in-memory for
+`AuthorizationServiceOpenFgaTest`) when Docker is available. The authorization **model**
+is also tested without Java via `fga model test` (CI job `authz-model`).
 
 ## Temporal workflows
 

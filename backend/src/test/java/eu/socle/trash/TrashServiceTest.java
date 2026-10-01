@@ -192,7 +192,7 @@ class TrashServiceTest {
     }
 
     @Test
-    void restore_documentBlockedWhenParentFolderStillTrashed() throws Exception {
+    void restore_documentReparentsToRootWhenParentFolderStillTrashed() throws Exception {
         UUID trashId = UUID.randomUUID();
         when(jdbc.query(contains("FROM trash_items WHERE id"), any(RowMapper.class), eq(trashId)))
                 .thenAnswer(inv -> {
@@ -201,19 +201,25 @@ class TrashServiceTest {
                     return List.of(mapTrash(mapper, trashId, "document", DOC));
                 });
         when(authorizationService.hasRelation(USER, "document", DOC, "editor")).thenReturn(true);
-        when(jdbc.query(contains("SELECT folder_id FROM documents"), any(RowMapper.class), eq(DOC)))
-                .thenReturn(List.of(FOLDER));
-        when(jdbc.queryForObject(contains("FROM folders WHERE id"), eq(Boolean.class), eq(FOLDER)))
-                .thenReturn(true);
-
-        assertThatThrownBy(() -> service.restore(jwt, trashId))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(ex -> {
-                    ResponseStatusException rse = (ResponseStatusException) ex;
-                    assertThat(rse.getStatusCode().value()).isEqualTo(409);
-                    assertThat(rse.getReason()).containsIgnoringCase("dossier parent");
+        when(jdbc.query(contains("LEFT JOIN folders f ON f.id = d.folder_id"), any(RowMapper.class), eq(DOC)))
+                .thenAnswer(inv -> {
+                    @SuppressWarnings("unchecked")
+                    RowMapper<Object> mapper = inv.getArgument(1);
+                    ResultSet rs = mock(ResultSet.class);
+                    when(rs.getObject("folder_id")).thenReturn(FOLDER);
+                    when(rs.getObject("space_id")).thenReturn(SPACE);
+                    when(rs.getTimestamp("folder_deleted")).thenReturn(Timestamp.from(NOW));
+                    return List.of(mapper.mapRow(rs, 0));
                 });
-        verify(jdbc, never()).update(contains("SET deleted_at = NULL"), any(UUID.class));
+        when(jdbc.update(contains("UPDATE documents SET folder_id = NULL"), eq(DOC))).thenReturn(1);
+        when(jdbc.update(contains("UPDATE documents SET deleted_at = NULL"), eq(DOC))).thenReturn(1);
+        when(jdbc.update(contains("DELETE FROM trash_items"), any(), any(UUID.class))).thenReturn(1);
+
+        var result = service.restore(jwt, trashId);
+
+        assertThat(result.documents()).isEqualTo(1);
+        assertThat(result.message()).containsIgnoringCase("racine");
+        verify(jdbc).update(contains("UPDATE documents SET folder_id = NULL"), eq(DOC));
     }
 
     @Test
@@ -228,8 +234,16 @@ class TrashServiceTest {
         when(authorizationService.hasRelation(USER, "folder", FOLDER, "editor")).thenReturn(true);
         when(authorizationService.hasRelation(USER, "document", DOC, "editor")).thenReturn(true);
         when(authorizationService.hasRelation(USER, "document", DOC2, "editor")).thenReturn(true);
-        when(jdbc.query(contains("SELECT parent_folder_id FROM folders"), any(RowMapper.class), eq(FOLDER)))
-                .thenReturn(List.of());
+        when(jdbc.query(contains("LEFT JOIN folders p ON p.id = f.parent_folder_id"), any(RowMapper.class), eq(FOLDER)))
+                .thenAnswer(inv -> {
+                    @SuppressWarnings("unchecked")
+                    RowMapper<Object> mapper = inv.getArgument(1);
+                    ResultSet rs = mock(ResultSet.class);
+                    when(rs.getObject("parent_folder_id")).thenReturn(null);
+                    when(rs.getObject("space_id")).thenReturn(SPACE);
+                    when(rs.getTimestamp("parent_deleted")).thenReturn(null);
+                    return List.of(mapper.mapRow(rs, 0));
+                });
         when(jdbc.query(contains("WITH RECURSIVE tree"), any(RowMapper.class), eq(FOLDER)))
                 .thenReturn(List.of());
         when(jdbc.query(contains("folder_id = ? AND deleted_at IS NOT NULL"), any(RowMapper.class), eq(FOLDER)))
@@ -243,7 +257,7 @@ class TrashServiceTest {
         assertThat(result.documents()).isEqualTo(2);
         assertThat(result.folders()).isEqualTo(1);
         verify(jdbc, times(2)).update(contains("UPDATE documents SET deleted_at = NULL"), any(UUID.class));
-        verify(auditService).record(eq(USER), eq(false), eq(AuditActions.FOLDER_RESTORED_FROM_TRASH),
+        verify(auditService).record(eq(USER), eq(false), eq(AuditActions.FOLDER_RESTORED),
                 eq("folder"), eq(FOLDER), anyMap(), isNull());
     }
 
@@ -344,8 +358,16 @@ class TrashServiceTest {
                     return List.of(mapTrash(mapper, trashId, "folder", FOLDER));
                 });
         when(authorizationService.hasRelation(USER, "folder", FOLDER, "editor")).thenReturn(true);
-        when(jdbc.query(contains("SELECT parent_folder_id FROM folders"), any(RowMapper.class), eq(FOLDER)))
-                .thenReturn(List.of());
+        when(jdbc.query(contains("LEFT JOIN folders p ON p.id = f.parent_folder_id"), any(RowMapper.class), eq(FOLDER)))
+                .thenAnswer(inv -> {
+                    @SuppressWarnings("unchecked")
+                    RowMapper<Object> mapper = inv.getArgument(1);
+                    ResultSet rs = mock(ResultSet.class);
+                    when(rs.getObject("parent_folder_id")).thenReturn(null);
+                    when(rs.getObject("space_id")).thenReturn(SPACE);
+                    when(rs.getTimestamp("parent_deleted")).thenReturn(null);
+                    return List.of(mapper.mapRow(rs, 0));
+                });
         when(jdbc.query(contains("WITH RECURSIVE tree"), any(RowMapper.class), eq(FOLDER)))
                 .thenReturn(List.of());
         when(jdbc.query(contains("folder_id = ? AND deleted_at IS NOT NULL"), any(RowMapper.class), eq(FOLDER)))
@@ -463,7 +485,7 @@ class TrashServiceTest {
         when(rs.getObject("id")).thenReturn(id);
         when(rs.getObject("space_id")).thenReturn(spaceId);
         when(rs.getObject("parent_folder_id")).thenReturn(parent);
-        when(rs.getString("title")).thenReturn("Folder");
+        when(rs.getString("name")).thenReturn("Folder");
         when(rs.getTimestamp("deleted_at")).thenReturn(deleted ? Timestamp.from(NOW) : null);
         return mapper.mapRow(rs, 0);
     }

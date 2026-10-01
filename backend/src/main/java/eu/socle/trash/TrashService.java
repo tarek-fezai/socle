@@ -177,10 +177,11 @@ public class TrashService {
         for (FolderRow f : folders) {
             softDeleteFolderRow(f, user.getId(), now);
         }
-        auditService.record(user.getId(), false, AuditActions.FOLDER_TRASHED,
+        auditService.record(user.getId(), false, AuditActions.FOLDER_DELETED,
                 "folder", folderId,
                 Map.of(
-                        "title", folder.title(),
+                        "title", folder.name(),
+                        "name", folder.name(),
                         "cascadedDocuments", docsToTrash.size(),
                         "cascadedFolders", folders.size()),
                 null);
@@ -229,21 +230,21 @@ public class TrashService {
         List<UUID> restoredDocs = new ArrayList<>();
         List<UUID> restoredFolders = new ArrayList<>();
         List<UUID> restoredSpaces = new ArrayList<>();
+        String message = null;
 
         switch (item.resourceType()) {
             case "document" -> {
-                assertParentFolderRestorable(item.resourceId());
+                message = reparentDocumentToRootIfParentTrashed(item.resourceId());
                 restoreDocument(item.resourceId());
                 restoredDocs.add(item.resourceId());
             }
             case "folder" -> {
-                assertParentFolderOfFolderRestorable(item.resourceId());
+                message = reparentFolderToRootIfParentTrashed(item.resourceId());
                 List<UUID> folderIds = descendantFolderIdsIncludingSelf(item.resourceId());
                 List<UUID> docIds = new ArrayList<>();
                 for (UUID fid : folderIds) {
                     docIds.addAll(softDeletedDocumentsInFolder(fid));
                 }
-                // Checks OpenFGA sur TOUTE la cascade AVANT toute écriture
                 for (UUID fid : folderIds) {
                     requireEdit(user.getId(), "folder", fid);
                 }
@@ -292,21 +293,22 @@ public class TrashService {
 
         String restoreAction = switch (item.resourceType()) {
             case "document" -> AuditActions.DOCUMENT_RESTORED_FROM_TRASH;
-            case "folder" -> AuditActions.FOLDER_RESTORED_FROM_TRASH;
+            case "folder" -> AuditActions.FOLDER_RESTORED;
             case "space" -> AuditActions.SPACE_RESTORED_FROM_TRASH;
             default -> AuditActions.DOCUMENT_RESTORED_FROM_TRASH;
         };
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("trashItemId", trashItemId.toString());
+        meta.put("restoredDocuments", restoredDocs.size());
+        meta.put("restoredFolders", restoredFolders.size());
+        meta.put("restoredSpaces", restoredSpaces.size());
+        if (message != null) {
+            meta.put("message", message);
+        }
         auditService.record(user.getId(), false, restoreAction,
-                item.resourceType(), item.resourceId(),
-                Map.of(
-                        "trashItemId", trashItemId.toString(),
-                        "restoredDocuments", restoredDocs.size(),
-                        "restoredFolders", restoredFolders.size(),
-                        "restoredSpaces", restoredSpaces.size()
-                ),
-                null);
+                item.resourceType(), item.resourceId(), meta, null);
 
-        return new RestoreResult(restoredDocs.size(), restoredFolders.size(), restoredSpaces.size());
+        return new RestoreResult(restoredDocs.size(), restoredFolders.size(), restoredSpaces.size(), message);
     }
 
     /**
@@ -374,52 +376,70 @@ public class TrashService {
     }
 
     /**
-     * Politique simple : on refuse de restaurer un document si son dossier parent
-     * est encore soft-delete — messager l'utilisateur de restaurer le parent d'abord.
+     * Si le dossier parent est encore en corbeille, rattache le document à la racine de l'espace.
+     * @return message utilisateur ou null
      */
-    private void assertParentFolderRestorable(UUID documentId) {
-        List<UUID> folderIds = jdbcTemplate.query("""
-                SELECT folder_id FROM documents
-                 WHERE id = ? AND folder_id IS NOT NULL
+    private String reparentDocumentToRootIfParentTrashed(UUID documentId) {
+        List<Map<String, Object>> rows = jdbcTemplate.query("""
+                SELECT d.folder_id, d.space_id, f.deleted_at AS folder_deleted
+                  FROM documents d
+                  LEFT JOIN folders f ON f.id = d.folder_id
+                 WHERE d.id = ?
                 """,
-                (rs, i) -> (UUID) rs.getObject("folder_id"),
+                (rs, i) -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("folderId", rs.getObject("folder_id"));
+                    m.put("spaceId", rs.getObject("space_id"));
+                    m.put("folderDeleted", rs.getTimestamp("folder_deleted") != null);
+                    return m;
+                },
                 documentId);
-        if (folderIds.isEmpty() || folderIds.getFirst() == null) {
-            return;
+        if (rows.isEmpty()) {
+            return null;
         }
-        UUID folderId = folderIds.getFirst();
-        Boolean parentDeleted = jdbcTemplate.queryForObject(
-                "SELECT deleted_at IS NOT NULL FROM folders WHERE id = ?",
-                Boolean.class,
-                folderId);
-        if (Boolean.TRUE.equals(parentDeleted)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Restaurez d'abord le dossier parent (encore en corbeille)");
+        Map<String, Object> row = rows.getFirst();
+        if (row.get("folderId") == null || !Boolean.TRUE.equals(row.get("folderDeleted"))) {
+            return null;
         }
+        jdbcTemplate.update("""
+                UPDATE documents SET folder_id = NULL WHERE id = ?
+                """, documentId);
+        return "Le dossier parent est encore en corbeille — document restauré à la racine de l'espace";
     }
 
-    /** Même règle pour un dossier dont le parent_folder est encore en corbeille. */
-    private void assertParentFolderOfFolderRestorable(UUID folderId) {
-        List<UUID> parents = jdbcTemplate.query("""
-                SELECT parent_folder_id FROM folders
-                 WHERE id = ? AND parent_folder_id IS NOT NULL
+    /** Même politique pour un dossier dont le parent_folder est encore soft-delete. */
+    private String reparentFolderToRootIfParentTrashed(UUID folderId) {
+        List<Map<String, Object>> rows = jdbcTemplate.query("""
+                SELECT f.parent_folder_id, f.space_id, p.deleted_at AS parent_deleted
+                  FROM folders f
+                  LEFT JOIN folders p ON p.id = f.parent_folder_id
+                 WHERE f.id = ?
                 """,
-                (rs, i) -> (UUID) rs.getObject("parent_folder_id"),
+                (rs, i) -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("parentId", rs.getObject("parent_folder_id"));
+                    m.put("spaceId", rs.getObject("space_id"));
+                    m.put("parentDeleted", rs.getTimestamp("parent_deleted") != null);
+                    return m;
+                },
                 folderId);
-        if (parents.isEmpty() || parents.getFirst() == null) {
-            return;
+        if (rows.isEmpty()) {
+            return null;
         }
-        UUID parentId = parents.getFirst();
-        Boolean parentDeleted = jdbcTemplate.queryForObject(
-                "SELECT deleted_at IS NOT NULL FROM folders WHERE id = ?",
-                Boolean.class,
-                parentId);
-        if (Boolean.TRUE.equals(parentDeleted)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Restaurez d'abord le dossier parent (encore en corbeille)");
+        Map<String, Object> row = rows.getFirst();
+        if (row.get("parentId") == null || !Boolean.TRUE.equals(row.get("parentDeleted"))) {
+            return null;
         }
+        jdbcTemplate.update("""
+                UPDATE folders SET parent_folder_id = NULL WHERE id = ?
+                """, folderId);
+        // OpenFGA : remonter parent/inherit_from vers l'espace
+        UUID spaceId = (UUID) row.get("spaceId");
+        UUID oldParent = (UUID) row.get("parentId");
+        if (spaceId != null && oldParent != null) {
+            authorizationService.reparentFolder(folderId, "folder", oldParent, "space", spaceId);
+        }
+        return "Le dossier parent est encore en corbeille — dossier restauré à la racine de l'espace";
     }
 
     // ── soft-delete helpers ──────────────────────────────────────────
@@ -453,7 +473,8 @@ public class TrashService {
             return;
         }
         Map<String, Object> snap = new LinkedHashMap<>();
-        snap.put("title", folder.title());
+        snap.put("title", folder.name());
+        snap.put("name", folder.name());
         snap.put("spaceId", folder.spaceId().toString());
         snap.put("parentFolderId", folder.parentFolderId() != null ? folder.parentFolderId().toString() : null);
         insertTrashItem("folder", folder.id(), snap, deletedBy, now);
@@ -649,7 +670,7 @@ public class TrashService {
 
     private List<FolderRow> activeFoldersInSpace(UUID spaceId) {
         return jdbcTemplate.query("""
-                SELECT id, space_id, parent_folder_id, title, deleted_at
+                SELECT id, space_id, parent_folder_id, name, deleted_at
                   FROM folders
                  WHERE space_id = ? AND deleted_at IS NULL
                  ORDER BY parent_folder_id NULLS FIRST
@@ -709,7 +730,7 @@ public class TrashService {
 
     private FolderRow requireActiveFolderAllowAlready(UUID id) {
         List<FolderRow> rows = jdbcTemplate.query("""
-                SELECT id, space_id, parent_folder_id, title, deleted_at
+                SELECT id, space_id, parent_folder_id, name, deleted_at
                   FROM folders WHERE id = ?
                 """,
                 (rs, i) -> mapFolder(rs), id);
@@ -772,13 +793,14 @@ public class TrashService {
 
     private TrashPreview previewFolder(TrashRow item) {
         List<Map<String, Object>> rows = jdbcTemplate.query("""
-                SELECT id, title, space_id, deleted_at
+                SELECT id, name, space_id, deleted_at
                   FROM folders WHERE id = ? AND deleted_at IS NOT NULL
                 """,
                 (rs, i) -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id", rs.getObject("id"));
-                    m.put("title", rs.getString("title"));
+                    m.put("title", rs.getString("name"));
+                    m.put("name", rs.getString("name"));
                     m.put("spaceId", rs.getObject("space_id"));
                     m.put("deletedAt", rs.getTimestamp("deleted_at").toInstant().toString());
                     return m;
@@ -848,7 +870,7 @@ public class TrashService {
             return "";
         }
         Object t = snapshot.get("title");
-        if (t == null && "space".equals(resourceType)) {
+        if (t == null) {
             t = snapshot.get("name");
         }
         return t != null ? t.toString() : "";
@@ -870,7 +892,7 @@ public class TrashService {
                 (UUID) rs.getObject("id"),
                 (UUID) rs.getObject("space_id"),
                 (UUID) rs.getObject("parent_folder_id"),
-                rs.getString("title"),
+                rs.getString("name"),
                 del != null ? del.toInstant() : null
         );
     }
@@ -908,7 +930,12 @@ public class TrashService {
     }
 
     public record SoftDeleteResult(int documents, int folders, int spaces) {}
-    public record RestoreResult(int documents, int folders, int spaces) {}
+
+    public record RestoreResult(int documents, int folders, int spaces, String message) {
+        public RestoreResult(int documents, int folders, int spaces) {
+            this(documents, folders, spaces, null);
+        }
+    }
 
     public record TrashPage(List<TrashItemView> items, int offset, int limit, long total) {}
 
@@ -932,7 +959,7 @@ public class TrashService {
     ) {}
 
     private record DocRow(UUID id, UUID spaceId, UUID folderId, String title, String status) {}
-    private record FolderRow(UUID id, UUID spaceId, UUID parentFolderId, String title, Instant deletedAt) {}
+    private record FolderRow(UUID id, UUID spaceId, UUID parentFolderId, String name, Instant deletedAt) {}
     private record SpaceRow(UUID id, String name, String color, Instant deletedAt) {}
     private record TrashRow(
             UUID id, String resourceType, UUID resourceId, String snapshot,

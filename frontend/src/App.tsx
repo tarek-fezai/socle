@@ -18,6 +18,8 @@ import { WorkflowsPage } from './pages/WorkflowsPage'
 import { ApprovalRolesPage } from './pages/ApprovalRolesPage'
 import { SpacesPage } from './pages/SpacesPage'
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage'
+import { SpaceBrowsePage } from './pages/SpaceBrowsePage'
+import { FolderPage } from './pages/FolderPage'
 import { TeamPage } from './pages/TeamPage'
 import { SearchPage } from './pages/SearchPage'
 import { CompositePage } from './pages/CompositePage'
@@ -281,6 +283,22 @@ function AppShell() {
           element={
             <RequireAuth>
               <SpaceSettingsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/spaces/:spaceId/tree"
+          element={
+            <RequireAuth>
+              <SpaceBrowsePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/folders/:id"
+          element={
+            <RequireAuth>
+              <FolderPage />
             </RequireAuth>
           }
         />
