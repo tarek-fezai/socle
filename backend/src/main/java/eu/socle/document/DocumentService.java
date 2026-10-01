@@ -232,12 +232,29 @@ public class DocumentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spaceId requis");
         }
         UUID spaceId = request.spaceId();
-        authorizationService.requireSpaceRelation(user.getId(), spaceId, "editor");
+        UUID folderId = request.folderId();
+        if (folderId != null) {
+            List<UUID> folderSpace = jdbc.query("""
+                    SELECT space_id FROM folders WHERE id = ? AND deleted_at IS NULL
+                    """,
+                    (rs, i) -> (UUID) rs.getObject("space_id"), folderId);
+            if (folderSpace.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier introuvable");
+            }
+            if (!folderSpace.getFirst().equals(spaceId)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Le dossier n'appartient pas à cet espace");
+            }
+            authorizationService.requireFolderRelation(user.getId(), folderId, "editor");
+        } else {
+            authorizationService.requireSpaceRelation(user.getId(), spaceId, "editor");
+        }
 
         String visibility = resolveCreateVisibility(user.getId(), spaceId, request.visibility());
 
         DocumentEntity entity = new DocumentEntity();
         entity.setSpaceId(spaceId);
+        entity.setFolderId(folderId);
         entity.setTitle(request.title().trim());
         entity.setDocType(blankToNull(request.docType()));
         Map<String, Object> body = transclusionResolver.normalizeForStorage(copyBody(request.body()));
@@ -255,7 +272,7 @@ public class DocumentService {
         // la TX DB est annulée ; réparer via visibility-drift / migrate-visibility.
         List<AuthorizationService.AccessTuple> provisioned =
                 authorizationService.provisionDocumentAccess(
-                        saved.getId(), spaceId, user.getId(), visibility);
+                        saved.getId(), spaceId, folderId, user.getId(), visibility);
         try {
             String headSha = documentStore.createContent(saved.getId(), body, user.getId());
             if (headSha != null) {
@@ -651,6 +668,7 @@ public class DocumentService {
         return new DocumentResponse(
                 d.getId(),
                 d.getSpaceId(),
+                d.getFolderId(),
                 d.getTitle(),
                 d.getDocType(),
                 body,
@@ -663,7 +681,8 @@ public class DocumentService {
                 f.stale(),
                 f.contentModifiedAt(),
                 f.thresholdDays(),
-                vis
+                vis,
+                d.getPosition()
         );
     }
 

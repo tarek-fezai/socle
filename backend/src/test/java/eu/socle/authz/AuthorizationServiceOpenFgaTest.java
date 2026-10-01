@@ -107,6 +107,7 @@ class AuthorizationServiceOpenFgaTest {
                 null,
                 new SocleProperties.OpenFga(null, null, null, 3, false, 2, 2, 500),
                 null,
+                null,
                 null);
         authz = new AuthorizationService(client, jdbc, props);
     }
@@ -193,6 +194,66 @@ class AuthorizationServiceOpenFgaTest {
         assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isTrue();
         assertThat(authz.hasRelation(folderGrantee, "document", doc, "viewer")).isTrue();
         assertThat(authz.hasRelation(OUTSIDER, "document", doc, "viewer")).isFalse();
+    }
+
+    @Test
+    void folder_nestedInheritance_spaceFolderSubfolderDocument() {
+        UUID space = UUID.randomUUID();
+        UUID folder = UUID.randomUUID();
+        UUID sub = UUID.randomUUID();
+        authz.grantPermission("space", space, "viewer", "user", SPACE_VIEWER);
+        authz.provisionFolderAccess(folder, "space", space);
+        authz.provisionFolderAccess(sub, "folder", folder);
+
+        UUID doc = UUID.randomUUID();
+        authz.provisionDocumentAccess(doc, space, sub, CREATOR, "space");
+
+        assertThat(authz.hasRelation(SPACE_VIEWER, "folder", sub, "viewer")).isTrue();
+        assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isTrue();
+        assertThat(authz.hasRelation(OUTSIDER, "document", doc, "viewer")).isFalse();
+    }
+
+    @Test
+    void reparentFolder_atomic_oldParentNoLongerGrantsAccess() {
+        UUID space = UUID.randomUUID();
+        UUID folderA = UUID.randomUUID();
+        UUID folderB = UUID.randomUUID();
+        UUID doc = UUID.randomUUID();
+
+        authz.grantPermission("space", space, "viewer", "user", SPACE_VIEWER);
+        authz.provisionFolderAccess(folderA, "space", space);
+        authz.provisionFolderAccess(folderB, "space", space);
+        authz.provisionDocumentAccess(doc, space, folderA, CREATOR, "space");
+
+        assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isTrue();
+
+        // Retirer viewer espace, n'accorder viewer que sur folderA
+        authz.revokePermission("space", space, "viewer", "user", SPACE_VIEWER);
+        authz.grantPermission("folder", folderA, "viewer", "user", SPACE_VIEWER);
+        assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isTrue();
+
+        authz.reparentDocument(doc, "folder:" + folderA, "folder:" + folderB, "space");
+        assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isFalse();
+
+        authz.grantPermission("folder", folderB, "viewer", "user", SPACE_VIEWER);
+        assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isTrue();
+    }
+
+    @Test
+    void restrictedInVisibleFolder_spaceMemberNotViewer() {
+        UUID space = UUID.randomUUID();
+        UUID folder = UUID.randomUUID();
+        authz.grantPermission("space", space, "viewer", "user", SPACE_VIEWER);
+        authz.grantPermission("space", space, "editor", "user", SPACE_EDITOR);
+        authz.provisionFolderAccess(folder, "space", space);
+
+        UUID doc = UUID.randomUUID();
+        authz.provisionDocumentAccess(doc, space, folder, CREATOR, "restricted");
+
+        assertThat(authz.hasRelation(SPACE_VIEWER, "folder", folder, "viewer")).isTrue();
+        assertThat(authz.hasRelation(SPACE_VIEWER, "document", doc, "viewer")).isFalse();
+        assertThat(authz.hasRelation(SPACE_EDITOR, "document", doc, "viewer")).isFalse();
+        assertThat(authz.hasRelation(CREATOR, "document", doc, "viewer")).isTrue();
     }
 
     @Test

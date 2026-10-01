@@ -111,6 +111,9 @@ export function SpaceSettingsPage() {
       <p className="mt-1.5 font-mono text-xs text-socle-muted">{spaceId}</p>
 
       <div className="mt-4 flex flex-wrap gap-3 text-sm">
+        <Link to={`/spaces/${spaceId}/tree`} className="font-semibold text-socle-accent hover:underline">
+          Parcourir l&apos;arborescence →
+        </Link>
         <Link to={`/spaces/${spaceId}/graph`} className="font-semibold text-socle-accent hover:underline">
           Vue graphe →
         </Link>

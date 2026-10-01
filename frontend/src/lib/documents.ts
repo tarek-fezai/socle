@@ -13,6 +13,9 @@ export type DocumentSummary = {
 export type DocumentDetail = {
   id: string
   spaceId: string
+  /** null / absent = racine de l'espace */
+  folderId?: string | null
+  position?: number
   title: string
   docType?: string | null
   body: Record<string, unknown>
@@ -117,11 +120,26 @@ export async function createDocument(
   title: string,
   spaceId: string,
   body: Record<string, unknown> = emptyDocBody,
+  folderId?: string | null,
 ) {
   const { data } = await api.post<DocumentDetail>('/api/v1/documents', {
     title,
     body,
     spaceId,
+    ...(folderId ? { folderId } : {}),
+  })
+  return data
+}
+
+/** Déplace un document vers un dossier (`folderId: null` = racine de l'espace). */
+export async function moveDocument(
+  api: { post: <T>(url: string, body: unknown) => Promise<{ data: T }> },
+  id: string,
+  body: { folderId: string | null; position?: number },
+) {
+  const { data } = await api.post<DocumentDetail>(`/api/v1/documents/${id}/move`, {
+    folderId: body.folderId,
+    ...(body.position != null ? { position: body.position } : {}),
   })
   return data
 }

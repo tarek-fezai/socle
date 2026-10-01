@@ -114,6 +114,36 @@ tuples:
     relation: viewer
     object: folder:procedures
 
+  # Sous-dossier + document (héritage espace → dossier → sous-dossier → document)
+  - user: folder:procedures
+    relation: parent
+    object: folder:sub-procedures
+
+  - user: folder:procedures
+    relation: inherit_from
+    object: folder:sub-procedures
+
+  - user: folder:sub-procedures
+    relation: parent
+    object: document:nested-doc
+
+  - user: folder:sub-procedures
+    relation: inherit_from
+    object: document:nested-doc
+
+  # Restricted dans un dossier visible (pas d'inherit_from)
+  - user: folder:procedures
+    relation: parent
+    object: document:restricted-in-folder
+
+  - user: user:creator
+    relation: editor
+    object: document:restricted-in-folder
+
+  - user: user:creator
+    relation: direct_access
+    object: document:restricted-in-folder
+
 tests:
   - name: organisation visibility — user:* is viewer not editor
     check:
@@ -220,6 +250,36 @@ tests:
           viewer: true
       - user: user:outsider
         object: document:folder-doc
+        assertions:
+          viewer: false
+
+  - name: nested folder inheritance space → folder → subfolder → document
+    check:
+      - user: user:space-viewer
+        object: document:nested-doc
+        assertions:
+          viewer: true
+      - user: user:space-viewer
+        object: folder:sub-procedures
+        assertions:
+          viewer: true
+      - user: user:outsider
+        object: document:nested-doc
+        assertions:
+          viewer: false
+
+  - name: restricted in visible folder — space member not viewer
+    check:
+      - user: user:space-viewer
+        object: folder:procedures
+        assertions:
+          viewer: true
+      - user: user:space-viewer
+        object: document:restricted-in-folder
+        assertions:
+          viewer: false
+      - user: user:space-editor
+        object: document:restricted-in-folder
         assertions:
           viewer: false
 

@@ -147,14 +147,24 @@ public class AuthorizationService {
     public List<AccessTuple> provisionDocumentAccess(
             UUID documentId, UUID spaceId, UUID creatorId, String visibility
     ) {
+        return provisionDocumentAccess(documentId, spaceId, null, creatorId, visibility);
+    }
+
+    /**
+     * Création document : parent = dossier si fourni, sinon espace.
+     * {@code restricted} → pas d'{@code inherit_from}.
+     */
+    public List<AccessTuple> provisionDocumentAccess(
+            UUID documentId, UUID spaceId, UUID folderId, UUID creatorId, String visibility
+    ) {
         String vis = DocumentVisibility.requireValid(
                 visibility == null ? DocumentVisibility.SPACE : visibility);
         String doc = document(documentId);
-        String spaceObj = space(spaceId);
+        String parentObj = folderId != null ? folder(folderId) : space(spaceId);
         List<ClientTupleKey> writes = new ArrayList<>();
-        writes.add(tuple(spaceObj, "parent", doc));
+        writes.add(tuple(parentObj, "parent", doc));
         if (DocumentVisibility.inheritsFromParent(vis)) {
-            writes.add(tuple(spaceObj, "inherit_from", doc));
+            writes.add(tuple(parentObj, "inherit_from", doc));
         }
         if (DocumentVisibility.isOrganisationWide(vis)) {
             writes.add(tuple(WILDCARD_USER, "viewer", doc));
@@ -165,6 +175,63 @@ public class AuthorizationService {
         return writes.stream()
                 .map(t -> new AccessTuple(t.getUser(), t.getRelation(), t.getObject()))
                 .toList();
+    }
+
+    /** Création dossier : {@code parent} + {@code inherit_from} vers espace ou dossier parent. */
+    public void provisionFolderAccess(UUID folderId, String parentType, UUID parentId) {
+        reparentFolder(folderId, null, null, parentType, parentId);
+    }
+
+    /**
+     * Déplacement dossier : retire l'ancien parent/inherit_from, écrit le nouveau — un Write atomique.
+     */
+    public void reparentFolder(
+            UUID folderId,
+            String oldParentType,
+            UUID oldParentId,
+            String newParentType,
+            UUID newParentId
+    ) {
+        String folderObj = folder(folderId);
+        String newParent = newParentType + ":" + newParentId;
+        List<ClientTupleKey> writes = List.of(
+                tuple(newParent, "parent", folderObj),
+                tuple(newParent, "inherit_from", folderObj)
+        );
+        List<ClientTupleKeyWithoutCondition> deletes = new ArrayList<>();
+        if (oldParentType != null && oldParentId != null) {
+            String oldParent = oldParentType + ":" + oldParentId;
+            if (!oldParent.equals(newParent)) {
+                deletes.add(deleteKey(oldParent, "parent", folderObj));
+                deletes.add(deleteKey(oldParent, "inherit_from", folderObj));
+            }
+        }
+        writeAtomic(writes, deletes);
+    }
+
+    /**
+     * Déplacement document dans le même espace : remplace parent (+ inherit_from si non restricted).
+     */
+    public void reparentDocument(
+            UUID documentId,
+            String oldParentObject,
+            String newParentObject,
+            String visibility
+    ) {
+        String vis = DocumentVisibility.requireValid(
+                visibility == null ? DocumentVisibility.SPACE : visibility);
+        String doc = document(documentId);
+        List<ClientTupleKey> writes = new ArrayList<>();
+        List<ClientTupleKeyWithoutCondition> deletes = new ArrayList<>();
+        writes.add(tuple(newParentObject, "parent", doc));
+        if (DocumentVisibility.inheritsFromParent(vis)) {
+            writes.add(tuple(newParentObject, "inherit_from", doc));
+        }
+        if (oldParentObject != null && !oldParentObject.equals(newParentObject)) {
+            deletes.add(deleteKey(oldParentObject, "parent", doc));
+            deletes.add(deleteKey(oldParentObject, "inherit_from", doc));
+        }
+        writeAtomic(writes, deletes);
     }
 
     /** Compensation : suppression groupée des tuples de création. */
@@ -217,13 +284,7 @@ public class AuthorizationService {
     }
 
     public void linkFolderToParent(UUID folderId, String parentType, UUID parentId) {
-        String parentObj = parentType + ":" + parentId;
-        writeAtomic(
-                List.of(
-                        tuple(parentObj, "parent", folder(folderId)),
-                        tuple(parentObj, "inherit_from", folder(folderId))
-                ),
-                List.of());
+        provisionFolderAccess(folderId, parentType, parentId);
     }
 
     public void grantOrganisationViewer(UUID documentId) {
@@ -699,6 +760,31 @@ public class AuthorizationService {
 
     public List<UUID> listOwnedSpaceIds(UUID userId) {
         return listObjectsOfType(userId, "owner", "space");
+    }
+
+    /** ListObjects folder#viewer — plafonné ; croiser ensuite avec les dossiers de l'espace. */
+    public List<UUID> listViewableFolderIds(UUID userId) {
+        List<UUID> ids = listObjectsOfType(userId, "viewer", "folder");
+        warnIfAtCeiling("F_view", ids.size());
+        return ids;
+    }
+
+    public List<UUID> filterByFolderViewer(UUID userId, Collection<UUID> folderIds) {
+        if (folderIds == null || folderIds.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> distinct = folderIds.stream().distinct().toList();
+        String fgaUser = user(userId);
+        List<ClientBatchCheckItem> checks = new ArrayList<>(distinct.size());
+        for (UUID id : distinct) {
+            checks.add(new ClientBatchCheckItem()
+                    .user(fgaUser)
+                    .relation("viewer")
+                    ._object(folder(id))
+                    .correlationId(id.toString()));
+        }
+        Set<UUID> allowed = runBatchedChecks(fgaUser, checks);
+        return distinct.stream().filter(allowed::contains).toList();
     }
 
     public List<UUID> listDirectAccessDocumentIds(UUID userId) {

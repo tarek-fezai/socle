@@ -29,6 +29,9 @@ public class DocumentEntity {
     private UUID folderId;
 
     @Column(nullable = false)
+    private int position = 0;
+
+    @Column(nullable = false)
     private String title;
 
     /** Type libre — apparié à {@code approval_workflows.scope_doc_type}. */
@@ -131,6 +134,14 @@ public class DocumentEntity {
 
     public void setFolderId(UUID folderId) {
         this.folderId = folderId;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
     }
 
     public String getTitle() {

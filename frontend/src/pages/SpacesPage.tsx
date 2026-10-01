@@ -77,10 +77,10 @@ export function SpacesPage() {
 
       <ul className="mt-8 space-y-2">
         {spaces.data?.map((s) => (
-          <li key={s.id}>
+          <li key={s.id} className="flex items-center gap-2">
             <Link
-              to={`/spaces/${s.id}`}
-              className="flex items-center justify-between rounded-xl border border-socle-line bg-white px-4 py-3 hover:border-[#C7C6F5] hover:bg-socle-mist/40"
+              to={`/spaces/${s.id}/tree`}
+              className="flex min-w-0 flex-1 items-center justify-between rounded-xl border border-socle-line bg-white px-4 py-3 hover:border-[#C7C6F5] hover:bg-socle-mist/40"
             >
               <div className="flex items-center gap-3">
                 <span
@@ -96,6 +96,13 @@ export function SpacesPage() {
               <span className="text-xs text-socle-slate">
                 {s.isResponsible ? 'Responsible' : s.isOwner ? 'Owner' : 'Membre'}
               </span>
+            </Link>
+            <Link
+              to={`/spaces/${s.id}`}
+              className="shrink-0 text-xs font-semibold text-socle-accent hover:underline"
+              aria-label={`Paramètres de ${s.name}`}
+            >
+              Paramètres
             </Link>
           </li>
         ))}

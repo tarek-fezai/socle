@@ -39,6 +39,7 @@ public final class DocumentDtos {
     public record DocumentResponse(
             UUID id,
             UUID spaceId,
+            UUID folderId,
             String title,
             String docType,
             Map<String, Object> body,
@@ -52,9 +53,10 @@ public final class DocumentDtos {
             Instant contentModifiedAt,
             int stalenessThresholdDays,
             /** organisation | space | restricted */
-            String visibility
+            String visibility,
+            int position
     ) {
-        /** Compat tests / appels sans visibility. */
+        /** Compat tests / appels sans folderId / position / visibility. */
         public DocumentResponse(
                 UUID id,
                 UUID spaceId,
@@ -72,9 +74,32 @@ public final class DocumentDtos {
                 int stalenessThresholdDays
         ) {
             this(
-                    id, spaceId, title, docType, body, status, currentVersionNo,
+                    id, spaceId, null, title, docType, body, status, currentVersionNo,
                     createdAt, updatedAt, reliabilityScore, reliabilityComputedAt,
-                    stale, contentModifiedAt, stalenessThresholdDays, DocumentVisibility.SPACE);
+                    stale, contentModifiedAt, stalenessThresholdDays, DocumentVisibility.SPACE, 0);
+        }
+
+        public DocumentResponse(
+                UUID id,
+                UUID spaceId,
+                String title,
+                String docType,
+                Map<String, Object> body,
+                String status,
+                int currentVersionNo,
+                Instant createdAt,
+                Instant updatedAt,
+                BigDecimal reliabilityScore,
+                Instant reliabilityComputedAt,
+                boolean stale,
+                Instant contentModifiedAt,
+                int stalenessThresholdDays,
+                String visibility
+        ) {
+            this(
+                    id, spaceId, null, title, docType, body, status, currentVersionNo,
+                    createdAt, updatedAt, reliabilityScore, reliabilityComputedAt,
+                    stale, contentModifiedAt, stalenessThresholdDays, visibility, 0);
         }
     }
 
@@ -84,18 +109,23 @@ public final class DocumentDtos {
             String docType,
             @NotNull UUID spaceId,
             /** Surcharge du default_visibility de l'espace — réservé aux owners. */
-            String visibility
+            String visibility,
+            UUID folderId
     ) {
         public CreateDocumentRequest(String title, Map<String, Object> body) {
-            this(title, body, null, null, null);
+            this(title, body, null, null, null, null);
         }
 
         public CreateDocumentRequest(String title, Map<String, Object> body, String docType) {
-            this(title, body, docType, null, null);
+            this(title, body, docType, null, null, null);
         }
 
         public CreateDocumentRequest(String title, Map<String, Object> body, String docType, UUID spaceId) {
-            this(title, body, docType, spaceId, null);
+            this(title, body, docType, spaceId, null, null);
+        }
+
+        public CreateDocumentRequest(String title, Map<String, Object> body, String docType, UUID spaceId, String visibility) {
+            this(title, body, docType, spaceId, visibility, null);
         }
     }
 

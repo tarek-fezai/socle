@@ -28,6 +28,14 @@ public final class AuditActions {
     public static final String FOLDER_PURGED = "folder.purged";
     public static final String SPACE_PURGED = "space.purged";
 
+    public static final String FOLDER_CREATED = "folder.created";
+    public static final String FOLDER_RENAMED = "folder.renamed";
+    public static final String FOLDER_MOVED = "folder.moved";
+    /** Soft-delete dossier (corbeille) — alias produit de {@link #FOLDER_TRASHED}. */
+    public static final String FOLDER_DELETED = "folder.deleted";
+    public static final String FOLDER_RESTORED = "folder.restored";
+    public static final String DOCUMENT_MOVED = "document.moved";
+
     public static final String SPACE_CREATED = "space.created";
     public static final String SPACE_UPDATED = "space.updated";
     public static final String SPACE_OWNER_ADDED = "space.owner_added";

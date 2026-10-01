@@ -8,7 +8,8 @@ public record SocleProperties(
         Temporal temporal,
         OpenFga openfga,
         Cors cors,
-        Instance instance
+        Instance instance,
+        Folders folders
 ) {
     public record Temporal(String target, String namespace) {}
 
@@ -19,6 +20,13 @@ public record SocleProperties(
     public record Instance(String displayName) {
         public String effectiveDisplayName() {
             return displayName == null || displayName.isBlank() ? "Socle" : displayName;
+        }
+    }
+
+    /** Arborescence dossiers — profondeur max configurable. */
+    public record Folders(Integer maxDepth) {
+        public int effectiveMaxDepth() {
+            return maxDepth == null || maxDepth <= 0 ? 5 : maxDepth;
         }
     }
 
