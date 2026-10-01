@@ -44,7 +44,15 @@ public class CommentService {
 
     public static final String ANONYMIZED_LABEL = "Utilisateur supprimé";
     public static final String NOTIF_TYPE_MENTION = "comment_mention";
-    private static final Pattern MENTION = Pattern.compile("@\\[([^\\]]+)\\]\\(([0-9a-fA-F-]{36})\\)|@([\\w.-]+)");
+    /** Avertissement générique — ne révèle ni existence ni accès. */
+    public static final String MENTION_NO_NOTIFY =
+            "Cette personne ne sera pas notifiée";
+    /** Uniquement `@[Nom](uuid)` (autocomplétion) — pas de `@texte` libre. */
+    private static final Pattern MENTION_REF =
+            Pattern.compile("@\\[([^\\]]*)\\]\\(([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\)");
+    private static final int MENTION_SUGGEST_MIN_PREFIX = 2;
+    private static final int MENTION_SUGGEST_LIMIT = 10;
+    private static final int MENTION_SUGGEST_CANDIDATE_POOL = 50;
 
     private final JdbcTemplate jdbc;
     private final UserSyncService userSyncService;
@@ -404,37 +412,32 @@ public class CommentService {
     }
 
     /**
-     * Mentions : notifie uniquement si le mentionné peut lire le document.
-     * Jamais de titre / extrait document dans le payload si non accessible (donc jamais).
+     * Mentions : seules les formes {@code @[Nom](uuid)} (autocomplétion) sont résolues.
+     * {@code @texte} libre reste du texte. Avertissement générique si pas de notif
+     * (uuid inconnu ou sans accès — même message).
      */
     private List<MentionWarning> processMentions(
             UUID actorId, UUID documentId, String body, UUID commentId
     ) {
         List<MentionWarning> warnings = new ArrayList<>();
         Set<UUID> seen = new HashSet<>();
-        Matcher m = MENTION.matcher(body);
+        Matcher m = MENTION_REF.matcher(body);
         while (m.find()) {
-            UUID mentioned = null;
-            String label = null;
-            if (m.group(2) != null) {
+            UUID mentioned;
+            try {
                 mentioned = UUID.fromString(m.group(2));
-                label = m.group(1);
-            } else if (m.group(3) != null) {
-                label = m.group(3);
-                mentioned = findUserIdByHandle(label);
+            } catch (IllegalArgumentException e) {
+                continue;
             }
-            if (mentioned == null || !seen.add(mentioned) || mentioned.equals(actorId)) {
+            if (!seen.add(mentioned) || mentioned.equals(actorId)) {
                 continue;
             }
             boolean canRead = authorizationService.hasRelation(
                     mentioned, "document", documentId, "viewer");
             if (!canRead) {
-                String name = label != null ? label : mentioned.toString();
-                warnings.add(new MentionWarning(
-                        mentioned, name, name + " n'a pas accès à cette page"));
+                warnings.add(new MentionWarning(mentioned, "", MENTION_NO_NOTIFY));
                 continue;
             }
-            // Payload sans titre / extrait document — uniquement des ids
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("document_id", documentId.toString());
             payload.put("comment_id", commentId.toString());
@@ -444,15 +447,51 @@ public class CommentService {
         return warnings;
     }
 
-    private UUID findUserIdByHandle(String handle) {
-        List<UUID> ids = jdbc.query("""
-                SELECT id FROM users
-                 WHERE lower(email) = lower(?) OR lower(display_name) = lower(?)
-                 LIMIT 1
+    /**
+     * Autocomplétion {@code @} : réservée aux commentateurs ; candidats = utilisateurs
+     * pouvant <em>lire</em> le document ; préfixe ≥ 2 ; max 10.
+     */
+    @Transactional(readOnly = true)
+    public List<CommentDtos.MentionSuggestion> suggestMentions(
+            Jwt jwt, UUID documentId, String query
+    ) {
+        var user = userSyncService.syncFromJwt(jwt);
+        DocumentEntity doc = requireActiveDocument(documentId);
+        requireCanComment(user.getId(), documentId, doc.getSpaceId());
+
+        String q = query == null ? "" : query.strip();
+        if (q.length() < MENTION_SUGGEST_MIN_PREFIX) {
+            return List.of();
+        }
+        String like = q.toLowerCase() + "%";
+        List<MentionCandidateRow> candidates = jdbc.query("""
+                SELECT id, display_name, email
+                  FROM users
+                 WHERE status = 'active'
+                   AND (lower(display_name) LIKE ? OR lower(email) LIKE ?)
+                 ORDER BY lower(display_name) ASC
+                 LIMIT ?
                 """,
-                (rs, i) -> (UUID) rs.getObject("id"),
-                handle, handle);
-        return ids.isEmpty() ? null : ids.getFirst();
+                (rs, i) -> new MentionCandidateRow(
+                        (UUID) rs.getObject("id"),
+                        rs.getString("display_name"),
+                        rs.getString("email")),
+                like, like, MENTION_SUGGEST_CANDIDATE_POOL);
+
+        List<CommentDtos.MentionSuggestion> out = new ArrayList<>();
+        for (MentionCandidateRow c : candidates) {
+            if (c.id().equals(user.getId())) {
+                continue;
+            }
+            if (!authorizationService.hasRelation(c.id(), "document", documentId, "viewer")) {
+                continue;
+            }
+            out.add(new CommentDtos.MentionSuggestion(c.id(), c.displayName(), c.email()));
+            if (out.size() >= MENTION_SUGGEST_LIMIT) {
+                break;
+            }
+        }
+        return out;
     }
 
     private DocumentEntity requireActiveDocument(UUID documentId) {
@@ -576,4 +615,6 @@ public class CommentService {
             String anchorBlockId, Integer anchorVersionNo,
             Instant createdAt, Instant updatedAt, UUID resolvedBy, Instant resolvedAt
     ) {}
+
+    private record MentionCandidateRow(UUID id, String displayName, String email) {}
 }

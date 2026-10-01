@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -40,6 +41,15 @@ public class CommentController {
             @RequestParam(required = false) Integer version
     ) {
         return commentService.list(jwt, documentId, status, version);
+    }
+
+    @GetMapping("/documents/{documentId}/comments/mention-suggestions")
+    public List<CommentDtos.MentionSuggestion> mentionSuggestions(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID documentId,
+            @RequestParam(defaultValue = "") String q
+    ) {
+        return commentService.suggestMentions(jwt, documentId, q);
     }
 
     @PostMapping("/documents/{documentId}/comments")

@@ -67,6 +67,9 @@ class CommentServiceTest {
     static final UUID USER_A = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     static final UUID USER_B = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     static final UUID OWNER = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
+    static final UUID MARTIN_A = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd");
+    static final UUID MARTIN_B = UUID.fromString("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+    static final UUID UNKNOWN = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
     static final UUID SPACE = UUID.fromString("11111111-1111-1111-1111-111111111111");
     static final UUID DOC = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
@@ -139,10 +142,12 @@ class CommentServiceTest {
                   anchor_version_no INTEGER
                 )
                 """);
-        jdbc.update("INSERT INTO users VALUES (?,?,?,?), (?,?,?,?), (?,?,?,?)",
+        jdbc.update("INSERT INTO users VALUES (?,?,?,?), (?,?,?,?), (?,?,?,?), (?,?,?,?), (?,?,?,?)",
                 USER_A, "a@ex.com", "Alice", "active",
                 USER_B, "b@ex.com", "Bob", "active",
-                OWNER, "o@ex.com", "Owner", "active");
+                OWNER, "o@ex.com", "Owner", "active",
+                MARTIN_A, "ma@ex.com", "Martin", "active",
+                MARTIN_B, "mb@ex.com", "Martin", "active");
         jdbc.update("INSERT INTO spaces (id, name, comment_policy) VALUES (?,?,?)",
                 SPACE, "Eng", "members");
         jdbc.update("""
@@ -247,16 +252,57 @@ class CommentServiceTest {
     }
 
     @Test
-    void mention_withoutAccess_noNotification_withWarning() {
+    void mention_withoutAccess_genericWarning_noNotification() {
         when(authorizationService.hasRelation(USER_A, "document", DOC, "editor")).thenReturn(true);
         when(authorizationService.hasRelation(USER_B, "document", DOC, "viewer")).thenReturn(false);
 
         var created = service.create(jwt(USER_A), DOC, new CreateCommentRequest(
                 "Salut @[Bob](" + USER_B + ")", null, null));
 
-        assertThat(created.mentionWarnings()).isNotEmpty();
-        assertThat(created.mentionWarnings().getFirst().message()).contains("n'a pas accès");
+        assertThat(created.mentionWarnings()).hasSize(1);
+        assertThat(created.mentionWarnings().getFirst().message())
+                .isEqualTo(CommentService.MENTION_NO_NOTIFY);
         verify(notificationService, never()).create(eq(USER_B), any(), anyMap());
+    }
+
+    @Test
+    void mention_unknownUuid_sameGenericWarningAsNoAccess() {
+        when(authorizationService.hasRelation(USER_A, "document", DOC, "editor")).thenReturn(true);
+        when(authorizationService.hasRelation(UNKNOWN, "document", DOC, "viewer")).thenReturn(false);
+
+        var created = service.create(jwt(USER_A), DOC, new CreateCommentRequest(
+                "Hey @[Ghost](" + UNKNOWN + ")", null, null));
+
+        assertThat(created.mentionWarnings()).hasSize(1);
+        assertThat(created.mentionWarnings().getFirst().message())
+                .isEqualTo(CommentService.MENTION_NO_NOTIFY);
+        verify(notificationService, never()).create(any(), any(), anyMap());
+    }
+
+    @Test
+    void mention_freeTextMartin_notifiesNobody_evenIfTwoMartinsExist() {
+        when(authorizationService.hasRelation(USER_A, "document", DOC, "editor")).thenReturn(true);
+        when(authorizationService.hasRelation(MARTIN_A, "document", DOC, "viewer")).thenReturn(true);
+        when(authorizationService.hasRelation(MARTIN_B, "document", DOC, "viewer")).thenReturn(true);
+
+        var created = service.create(jwt(USER_A), DOC, new CreateCommentRequest(
+                "Ping @Martin please", null, null));
+
+        assertThat(created.mentionWarnings()).isEmpty();
+        verify(notificationService, never()).create(any(), any(), anyMap());
+    }
+
+    @Test
+    void mention_structuredMartinB_notifiesOnlyB() {
+        when(authorizationService.hasRelation(USER_A, "document", DOC, "editor")).thenReturn(true);
+        when(authorizationService.hasRelation(MARTIN_A, "document", DOC, "viewer")).thenReturn(true);
+        when(authorizationService.hasRelation(MARTIN_B, "document", DOC, "viewer")).thenReturn(true);
+
+        service.create(jwt(USER_A), DOC, new CreateCommentRequest(
+                "Ping @[Martin](" + MARTIN_B + ")", null, null));
+
+        verify(notificationService).create(eq(MARTIN_B), eq(CommentService.NOTIF_TYPE_MENTION), anyMap());
+        verify(notificationService, never()).create(eq(MARTIN_A), any(), anyMap());
     }
 
     @Test
@@ -272,6 +318,26 @@ class CommentServiceTest {
         verify(notificationService).create(eq(USER_B), eq(CommentService.NOTIF_TYPE_MENTION), payload.capture());
         assertThat(payload.getValue()).containsKeys("document_id", "comment_id", "mentioned_by");
         assertThat(payload.getValue()).doesNotContainKeys("title", "document_title", "excerpt", "body");
+    }
+
+    @Test
+    void suggestMentions_requiresCommentPermission_andFiltersReaders() {
+        when(authorizationService.hasRelation(USER_B, "document", DOC, "editor")).thenReturn(false);
+        when(authorizationService.hasRelation(USER_B, "space", SPACE, "viewer")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.suggestMentions(jwt(USER_B), DOC, "Ma"))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN));
+
+        when(authorizationService.hasRelation(USER_A, "document", DOC, "editor")).thenReturn(true);
+        when(authorizationService.hasRelation(MARTIN_A, "document", DOC, "viewer")).thenReturn(true);
+        when(authorizationService.hasRelation(MARTIN_B, "document", DOC, "viewer")).thenReturn(false);
+
+        assertThat(service.suggestMentions(jwt(USER_A), DOC, "M")).isEmpty(); // préfixe < 2
+        var suggestions = service.suggestMentions(jwt(USER_A), DOC, "Ma");
+        assertThat(suggestions).extracting(s -> s.userId()).containsExactly(MARTIN_A);
+        assertThat(suggestions).hasSizeLessThanOrEqualTo(10);
     }
 
     @Test

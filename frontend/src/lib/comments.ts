@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import DOMPurify from 'dompurify'
 import type { AxiosInstance } from 'axios'
 
 export type CommentStatus = 'ouvert' | 'resolu'
@@ -64,7 +65,12 @@ export type CreateCommentBody = {
 export type MentionCandidate = {
   userId: string
   displayName: string
+  email?: string | null
 }
+
+export const MENTION_SUGGEST_MIN_PREFIX = 2
+export const MENTION_SUGGEST_LIMIT = 10
+export const MENTION_NO_NOTIFY = 'Cette personne ne sera pas notifiée'
 
 export const COMMENT_BODY_MAX = 10_000
 
@@ -142,6 +148,21 @@ export async function reopenComment(
 ): Promise<CommentView> {
   const { data } = await api.post<CommentView>(`/api/v1/comments/${commentId}/reopen`)
   return data
+}
+
+/** Autocomplétion @ — commentateurs seulement ; lecteurs du document ; q ≥ 2. */
+export async function fetchMentionSuggestions(
+  api: AxiosInstance,
+  documentId: string,
+  q: string,
+): Promise<MentionCandidate[]> {
+  const query = q.trim()
+  if (query.length < MENTION_SUGGEST_MIN_PREFIX) return []
+  const { data } = await api.get<MentionCandidate[]>(
+    `/api/v1/documents/${documentId}/comments/mention-suggestions`,
+    { params: { q: query } },
+  )
+  return (data ?? []).slice(0, MENTION_SUGGEST_LIMIT)
 }
 
 export function isSafeHttpUrl(url: string | null | undefined): boolean {
@@ -222,7 +243,7 @@ function escapeHtml(s: string): string {
 
 /**
  * Rendu HTML limité : gras, italique, code inline, liens http(s), mentions.
- * Le corps est échappé d'abord ; seules les balises générées ici sont injectées.
+ * Échappement puis balises générées ; passe finale DOMPurify (liste blanche).
  */
 export function renderCommentMarkdown(raw: string): string {
   let plain: string
@@ -232,6 +253,7 @@ export function renderCommentMarkdown(raw: string): string {
     plain = raw.replace(HTML_TAGS, '').trim()
   }
 
+  // Échapper une fois le texte ; les URLs des liens ne sont pas ré-échappées ensuite.
   let s = escapeHtml(plain)
 
   s = s.replace(MENTION_PATTERN, (_full, name?: string, uuid?: string, handle?: string) => {
@@ -247,14 +269,37 @@ export function renderCommentMarkdown(raw: string): string {
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>')
 
   s = s.replace(MD_LINK, (_m, label: string, url: string) => {
-    const href = isSafeHttpUrl(url.trim()) ? escapeHtml(url.trim()) : '#'
+    // url déjà échappé (ex. & → &amp;) — ne pas re-échapper
+    const decoded = url.trim().replace(/&amp;/g, '&')
+    const href = isSafeHttpUrl(decoded) ? url.trim() : '#'
     return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`
   })
 
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
   s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  s = s.replace(/\n/g, '<br/>')
 
-  return s.replace(/\n/g, '<br/>')
+  return purifyCommentHtml(s)
+}
+
+function purifyCommentHtml(html: string): string {
+  const clean = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['strong', 'em', 'code', 'br', 'a', 'span'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-user-id'],
+    ALLOW_DATA_ATTR: false,
+  })
+  if (typeof document === 'undefined') return clean
+  const wrap = document.createElement('div')
+  wrap.innerHTML = clean
+  wrap.querySelectorAll('a').forEach((a) => {
+    const href = a.getAttribute('href') ?? ''
+    if (!isSafeHttpUrl(href)) {
+      a.setAttribute('href', '#')
+    }
+    a.setAttribute('target', '_blank')
+    a.setAttribute('rel', 'noopener noreferrer')
+  })
+  return wrap.innerHTML
 }
 
 export type ParsedMention =
@@ -283,7 +328,7 @@ export function formatMention(displayName: string, userId: string): string {
 /** Messages à afficher après création (warnings API). */
 export function mentionWarningsDisplay(warnings: MentionWarning[] | null | undefined): string[] {
   if (!warnings?.length) return []
-  return warnings.map((w) => w.message?.trim() || `${w.displayName} n'a pas accès à cette page`)
+  return warnings.map((w) => w.message?.trim() || MENTION_NO_NOTIFY)
 }
 
 export function authorInitials(name: string | null | undefined): string {

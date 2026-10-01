@@ -61,6 +61,8 @@ public final class CommentDtos {
 
     public record MentionWarning(UUID userId, String displayName, String message) {}
 
+    public record MentionSuggestion(UUID userId, String displayName, String email) {}
+
     public record CommentsPage(
             UUID documentId,
             int versionNo,

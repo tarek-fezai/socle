@@ -10,9 +10,6 @@ const resolveComment = vi.fn()
 const reopenComment = vi.fn()
 
 vi.mock('../lib/api', () => ({ api: {} }))
-vi.mock('../lib/access', () => ({
-  listAccess: vi.fn().mockResolvedValue({ entries: [] }),
-}))
 vi.mock('../lib/comments', async () => {
   const actual = await vi.importActual<typeof import('../lib/comments')>('../lib/comments')
   return {
@@ -21,6 +18,7 @@ vi.mock('../lib/comments', async () => {
     createComment: (...args: unknown[]) => createComment(...args),
     resolveComment: (...args: unknown[]) => resolveComment(...args),
     reopenComment: (...args: unknown[]) => reopenComment(...args),
+    fetchMentionSuggestions: vi.fn().mockResolvedValue([]),
   }
 })
 

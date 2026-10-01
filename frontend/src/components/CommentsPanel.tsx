@@ -2,23 +2,23 @@
 import {
   FormEvent,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
 } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { listAccess } from '../lib/access'
 import { apiErrorMessage } from '../lib/approvals'
 import {
   authorInitials,
   commentsQueryKey,
   createComment,
+  fetchMentionSuggestions,
   formatMention,
   formatRelativeTimeFr,
   listComments,
   mentionWarningsDisplay,
+  MENTION_SUGGEST_MIN_PREFIX,
   reopenComment,
   renderCommentMarkdown,
   resolveComment,
@@ -33,7 +33,7 @@ export type CommentsPanelProps = {
   versionNo?: number
   canComment: boolean
   readOnly?: boolean
-  /** Pour l’autocomplete @ via listAccess(space) */
+  /** Conservé pour compat ; l’autocomplete @ utilise l’API document. */
   spaceId?: string | null
   draftAnchor?: CommentAnchorInput | null
   onDraftAnchorClear?: () => void
@@ -50,7 +50,7 @@ export function CommentsPanel({
   versionNo,
   canComment,
   readOnly = false,
-  spaceId,
+  spaceId: _spaceId,
   draftAnchor = null,
   onDraftAnchorClear,
   onClose,
@@ -74,32 +74,15 @@ export function CommentsPanel({
     enabled: Boolean(documentId),
   })
 
-  const members = useQuery({
-    queryKey: ['space-access-mentions', spaceId],
-    queryFn: async (): Promise<MentionCandidate[]> => {
-      if (!spaceId) return []
-      try {
-        const access = await listAccess(api, 'space', spaceId)
-        const seen = new Set<string>()
-        const out: MentionCandidate[] = []
-        for (const e of access.entries) {
-          if (e.subjectType !== 'user' || !e.subjectId || seen.has(e.subjectId)) continue
-          seen.add(e.subjectId)
-          const label = e.subject?.includes('|')
-            ? e.subject.split('|').pop()?.trim()
-            : e.subject
-          out.push({
-            userId: e.subjectId,
-            displayName: (label && label !== e.subjectId ? label : e.subject) || e.subjectId,
-          })
-        }
-        return out
-      } catch {
-        return []
-      }
-    },
-    enabled: Boolean(spaceId) && canComment && !readOnly,
-    staleTime: 60_000,
+  const mentionSuggest = useQuery({
+    queryKey: ['mention-suggestions', documentId, mentionQuery],
+    queryFn: () => fetchMentionSuggestions(api, documentId, mentionQuery),
+    enabled:
+      mentionOpen &&
+      canComment &&
+      !readOnly &&
+      mentionQuery.trim().length >= MENTION_SUGGEST_MIN_PREFIX,
+    staleTime: 30_000,
   })
 
   useEffect(() => {
@@ -147,13 +130,7 @@ export function CommentsPanel({
     onError: (e) => setError(apiErrorMessage(e, 'Réouverture impossible')),
   })
 
-  const mentionSuggestions = useMemo(() => {
-    if (!mentionOpen) return []
-    const q = mentionQuery.toLowerCase()
-    return (members.data ?? [])
-      .filter((m) => !q || m.displayName.toLowerCase().includes(q) || m.userId.includes(q))
-      .slice(0, 8)
-  }, [mentionOpen, mentionQuery, members.data])
+  const mentionSuggestions = mentionOpen ? (mentionSuggest.data ?? []) : []
 
   function onComposerChange(value: string) {
     setComposer(value)
@@ -161,7 +138,7 @@ export function CommentsPanel({
     const caret = ta?.selectionStart ?? value.length
     const before = value.slice(0, caret)
     const at = before.match(/@([^@\s[\]]{0,40})$/)
-    if (at && members.data && members.data.length > 0) {
+    if (at && canComment && !readOnly) {
       setMentionOpen(true)
       setMentionQuery(at[1] ?? '')
     } else {

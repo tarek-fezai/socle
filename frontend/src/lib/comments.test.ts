@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   formatMention,
   highlightAnchorsHtml,
   mentionWarningsDisplay,
+  MENTION_NO_NOTIFY,
   parseMentions,
   renderCommentMarkdown,
   sanitizeCommentBody,
@@ -37,11 +38,43 @@ describe('renderCommentMarkdown', () => {
     expect(html).toContain('<code>code</code>')
     expect(html).toContain('href="https://ex.com"')
     expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).toContain('target="_blank"')
   })
 
-  it('échappe le HTML injecté et refuse javascript:', () => {
-    const html = renderCommentMarkdown('danger <img src=x onerror=1> [bad](javascript:alert(1))')
+  it('échappe une seule fois les & dans les URL', () => {
+    const html = renderCommentMarkdown('[q](https://ex.com/search?a=1&b=2)')
+    expect(html).toContain('href="https://ex.com/search?a=1&amp;b=2"')
+    expect(html).not.toContain('&amp;amp;')
+  })
+
+  it('XSS : refuse <img onerror>', () => {
+    const html = renderCommentMarkdown('danger <img src=x onerror=alert(1)> suite')
     expect(html).not.toContain('<img')
+    expect(html).not.toMatch(/onerror/i)
+  })
+
+  it('XSS : refuse javascript: et data:', () => {
+    expect(renderCommentMarkdown('[bad](javascript:alert(1))')).toContain('href="#"')
+    expect(renderCommentMarkdown('[bad](data:text/html,x)')).toContain('href="#"')
+    expect(renderCommentMarkdown('[bad](javascript:alert(1))')).not.toContain('javascript:')
+  })
+
+  it('XSS : attribut injecté via le label d’un lien', () => {
+    const html = renderCommentMarkdown('[" onclick="alert(1)](https://ex.com)')
+    const wrap = document.createElement('div')
+    wrap.innerHTML = html
+    const a = wrap.querySelector('a')
+    expect(a).toBeTruthy()
+    expect(a!.getAttribute('href')).toBe('https://ex.com')
+    expect(a!.getAttributeNames().every((n) => !/^on/i.test(n))).toBe(true)
+    // texte échappé dans le contenu — pas d’attribut HTML
+    expect(a!.textContent).toContain('onclick')
+  })
+
+  it('XSS : markdown imbriqué cassant des balises', () => {
+    const html = renderCommentMarkdown('**gras <img src=x onerror=1> ** et [a](javascript:1)')
+    expect(html).not.toContain('<img')
+    expect(html).not.toMatch(/onerror/i)
     expect(html).toContain('href="#"')
   })
 
@@ -77,17 +110,17 @@ describe('mentionWarningsDisplay', () => {
     expect(mentionWarningsDisplay([])).toEqual([])
   })
 
-  it('affiche le message API ou un fallback', () => {
+  it('affiche le message API générique ou le fallback identique', () => {
     expect(
       mentionWarningsDisplay([
         {
           userId: 'u1',
-          displayName: 'Bob',
-          message: "Bob n'a pas accès à cette page",
+          displayName: '',
+          message: MENTION_NO_NOTIFY,
         },
         { userId: 'u2', displayName: 'Alice', message: '  ' },
       ]),
-    ).toEqual(["Bob n'a pas accès à cette page", "Alice n'a pas accès à cette page"])
+    ).toEqual([MENTION_NO_NOTIFY, MENTION_NO_NOTIFY])
   })
 })
 
@@ -103,5 +136,15 @@ describe('highlightAnchorsHtml', () => {
     const html = highlightAnchorsHtml('Alpha beta', [{ exact: 'beta', attached: false }])
     expect(html).toBe('Alpha beta')
     expect(html).not.toContain('<mark')
+  })
+})
+
+describe('fetchMentionSuggestions', () => {
+  it('ne appelle pas l’API si préfixe < 2', async () => {
+    const { fetchMentionSuggestions } = await import('./comments')
+    const get = vi.fn()
+    const api = { get } as unknown as import('axios').AxiosInstance
+    await expect(fetchMentionSuggestions(api, 'doc', 'M')).resolves.toEqual([])
+    expect(get).not.toHaveBeenCalled()
   })
 })
