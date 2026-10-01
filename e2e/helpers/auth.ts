@@ -82,8 +82,4 @@ export async function loginViaUi(
         await logout.waitFor({ state: 'visible', timeout: 90_000 })
       }),
   ])
-
-  if (page.url().includes('/callback')) {
-    await page.waitForURL((url) => !url.pathname.includes('/callback'), { timeout: 30_000 })
-  }
 }
