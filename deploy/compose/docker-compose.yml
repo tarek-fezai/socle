@@ -95,21 +95,26 @@ services:
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
+        set -eux
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
-          -u "$${POSTGRES_USER}" --pw "$${POSTGRES_PASSWORD}" --db temporal \
+          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
+          --connect-attributes sslmode=disable \
           setup-schema -v 0.0
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
-          -u "$${POSTGRES_USER}" --pw "$${POSTGRES_PASSWORD}" --db temporal \
+          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
+          --connect-attributes sslmode=disable \
           update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
-          -u "$${POSTGRES_USER}" --pw "$${POSTGRES_PASSWORD}" --db temporal_visibility \
+          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
+          --connect-attributes sslmode=disable \
           setup-schema -v 0.0 --visibility
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
-          -u "$${POSTGRES_USER}" --pw "$${POSTGRES_PASSWORD}" --db temporal_visibility \
+          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
+          --connect-attributes sslmode=disable \
           update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned --visibility
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SQL_USER: ${POSTGRES_USER}
+      SQL_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
