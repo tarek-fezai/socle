@@ -103,7 +103,7 @@ class DocumentVisibilityServiceTest {
         doNothing().when(authorizationService).requireSpaceRelation(CREATOR, SPACE, "editor");
         when(jdbc.query(any(String.class), any(ResultSetExtractor.class), any(Object.class)))
                 .thenReturn(DocumentVisibility.ORGANISATION);
-        when(authorizationService.provisionDocumentAccess(any(), any(), any(), any()))
+        when(authorizationService.provisionDocumentAccess(any(), any(), any(), any(), any()))
                 .thenReturn(List.of());
 
         var res = service.create(
@@ -112,7 +112,7 @@ class DocumentVisibilityServiceTest {
 
         assertThat(res.visibility()).isEqualTo(DocumentVisibility.ORGANISATION);
         verify(authorizationService).provisionDocumentAccess(
-                DOC, SPACE, CREATOR, DocumentVisibility.ORGANISATION);
+                DOC, SPACE, null, CREATOR, DocumentVisibility.ORGANISATION);
         verify(authorizationService, never()).grantDocumentOwner(any(), any());
     }
 

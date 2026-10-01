@@ -94,7 +94,7 @@ class AuditEventWiringTest {
         doNothing().when(authorizationService).requireSpaceRelation(any(), any(), any());
         doNothing().when(authorizationService).linkDocumentToSpace(any(), any(), any());
         doNothing().when(authorizationService).grantDocumentEditor(any(), any());
-        when(authorizationService.provisionDocumentAccess(any(), any(), any(), any()))
+        when(authorizationService.provisionDocumentAccess(any(), any(), any(), any(), any()))
                 .thenReturn(List.of());
 
         DocumentEntity saved = new DocumentEntity();
