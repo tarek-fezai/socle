@@ -40,7 +40,7 @@ services:
         condition: service_healthy
 
   temporal:
-    image: temporalio/auto-setup:1.25.2
+    image: temporalio/auto-setup:1.29.1
     container_name: socle-temporal
     environment:
       DB: postgres12
@@ -57,7 +57,7 @@ services:
         condition: service_healthy
 
   temporal-ui:
-    image: temporalio/ui:2.31.2
+    image: temporalio/ui:2.34.0
     container_name: socle-temporal-ui
     environment:
       TEMPORAL_ADDRESS: temporal:7233
