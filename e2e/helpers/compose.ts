@@ -19,11 +19,16 @@ export function composeExec(args: string, envFile = '.env.ci'): string {
   })
 }
 
+function postgresUser(): string {
+  return process.env.POSTGRES_USER ?? 'socle'
+}
+
 /** Postgres + git volume backup for restore smoke (stack should be running). */
 export function backupSocleCoreAndGit(backupDir: string): void {
+  const pgUser = postgresUser()
   execSync(`mkdir -p "${backupDir}"`, { shell: '/bin/bash' })
   execSync(
-    `${composeCmd('exec -T postgres pg_dump -U socle_app -Fc socle_core')} > "${backupDir}/socle_core.dump"`,
+    `${composeCmd(`exec -T postgres pg_dump -U ${pgUser} -Fc socle_core`)} > "${backupDir}/socle_core.dump"`,
     { cwd: composeDir, shell: '/bin/bash' },
   )
   const project = process.env.COMPOSE_PROJECT_NAME ?? 'socle-production'
@@ -34,15 +39,21 @@ export function backupSocleCoreAndGit(backupDir: string): void {
 }
 
 export function restoreSocleCoreAndGit(backupDir: string): void {
+  const pgUser = postgresUser()
   composeExec('stop backend webhook-worker frontend caddy')
   execSync(
-    `${composeCmd('exec -T postgres pg_restore -U socle_app -d socle_core --clean --if-exists')} < "${backupDir}/socle_core.dump"`,
+    `${composeCmd(`exec -T postgres pg_restore -U ${pgUser} -d socle_core --clean --if-exists`)} < "${backupDir}/socle_core.dump"`,
     { cwd: composeDir, shell: '/bin/bash' },
   )
   const project = process.env.COMPOSE_PROJECT_NAME ?? 'socle-production'
   execSync(
-    `docker run --rm -v ${project}_git-content:/data -v "${backupDir}:/backup" alpine sh -c "cd /data && rm -rf ./* && tar xzf /backup/git-content.tgz"`,
+    `docker run --rm -v ${project}_git-content:/data -v "${backupDir}:/backup" alpine sh -c "cd /data && rm -rf ./* ./.[!.]* 2>/dev/null; tar xzf /backup/git-content.tgz"`,
     { encoding: 'utf8', shell: '/bin/bash' },
   )
   composeExec('start backend frontend caddy webhook-worker')
+  // Wait for backend readiness after restore.
+  execSync(
+    `bash -c 'for i in $(seq 1 60); do curl -sf http://127.0.0.1/actuator/health/readiness >/dev/null && exit 0; sleep 2; done; exit 1'`,
+    { shell: '/bin/bash' },
+  )
 }

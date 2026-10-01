@@ -42,7 +42,6 @@ export async function loginViaUi(
   try {
     await page.waitForURL(/realms\/socle|\/protocol\/openid-connect/, { timeout: 60_000 })
   } catch (err) {
-    // Fallback: click login if auto-redirect did not run (e.g. requireLogin=false).
     const loginBtn = page.getByRole('button', { name: /se connecter|connexion|login/i })
     if (await loginBtn.isVisible().catch(() => false)) {
       await loginBtn.click()
@@ -59,18 +58,32 @@ export async function loginViaUi(
   await page.locator('#password, input[name="password"]').fill(password)
   await page.locator('#kc-login, button[type="submit"], input[type="submit"]').first().click()
 
-  // After code exchange, land on app origin (past /callback) and wait for session UI.
+  // Leave Keycloak; may land briefly on /callback then /docs.
   await page.waitForURL(
     (url) =>
       (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
       url.port !== '8081' &&
-      !url.pathname.includes('/protocol/openid-connect') &&
-      url.pathname !== '/callback' &&
-      url.pathname !== '/silent-renew',
+      !url.pathname.includes('/protocol/openid-connect'),
     { timeout: 60_000 },
   )
-  await page.getByRole('button', { name: /déconnexion|logout/i }).waitFor({
-    state: 'visible',
-    timeout: 60_000,
-  })
+
+  const logout = page.getByRole('button', { name: /déconnexion|logout/i })
+  const oidcError = page.getByText(/connexion échouée|connexion oidc/i)
+  await Promise.race([
+    logout.waitFor({ state: 'visible', timeout: 90_000 }),
+    oidcError
+      .waitFor({ state: 'visible', timeout: 90_000 })
+      .then(async () => {
+        const text = await page.locator('main').innerText().catch(() => '')
+        if (/échouée|échoue/i.test(text)) {
+          throw new Error(`OIDC callback failed: ${text}. Console: ${consoleErrors.join(' | ')}`)
+        }
+        // Still showing "Connexion OIDC…" — keep waiting for logout.
+        await logout.waitFor({ state: 'visible', timeout: 90_000 })
+      }),
+  ])
+
+  if (page.url().includes('/callback')) {
+    await page.waitForURL((url) => !url.pathname.includes('/callback'), { timeout: 30_000 })
+  }
 }

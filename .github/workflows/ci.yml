@@ -137,6 +137,8 @@ jobs:
           BASE_URL: http://127.0.0.1
           KEYCLOAK_BASE_URL: http://127.0.0.1:8081
           E2E_RUN_BACKUP: "1"
+          POSTGRES_USER: socle
+          COMPOSE_PROJECT_NAME: socle-production
         run: |
           set -euo pipefail
           chmod +x e2e/scripts/*.sh

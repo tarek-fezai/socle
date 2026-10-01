@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { handleCallback } from '../lib/auth'
 import { useAuth } from '../auth/AuthProvider'
@@ -8,8 +8,13 @@ export function CallbackPage() {
   const navigate = useNavigate()
   const { refreshMe } = useAuth()
   const [error, setError] = useState<string | null>(null)
+  const started = useRef(false)
 
   useEffect(() => {
+    // OIDC authorization code is single-use — React StrictMode must not consume it twice.
+    if (started.current) return
+    started.current = true
+
     void (async () => {
       try {
         await handleCallback()
