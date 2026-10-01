@@ -51,7 +51,7 @@ socle.identity:
   # mapping 1:1 par défaut
 ```
 
-Realm local : `infra/keycloak/realm-socle.json`. Comptes de démo : contributeur / auditeur / integrateur.
+Realm local : `infra/keycloak/realm-socle.dev.json` (**DEV UNIQUEMENT** — comptes de test). Comptes de démo : contributeur / auditeur / integrateur.
 
 ### Microsoft Entra ID
 

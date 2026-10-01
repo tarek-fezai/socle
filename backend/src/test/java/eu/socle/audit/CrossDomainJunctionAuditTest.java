@@ -281,7 +281,8 @@ class CrossDomainJunctionAuditTest {
 
         var activities = new eu.socle.document.ApprovalActivitiesImpl(
                 mockJdbc, auditService, reliabilityScoreService, store,
-                new com.fasterxml.jackson.databind.ObjectMapper());
+                new com.fasterxml.jackson.databind.ObjectMapper(),
+                mock(eu.socle.document.ApprovalRoleResolver.class));
 
         activities.recordSubmission(
                 DOC_VISIBLE, USER, UUID.randomUUID(), UUID.randomUUID(), "wf", 1, 24);

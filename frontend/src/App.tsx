@@ -14,6 +14,7 @@ import { TrashPage } from './pages/TrashPage'
 import { WebhookDeliveriesPage } from './pages/WebhookDeliveriesPage'
 import { IntegrationsPage } from './pages/IntegrationsPage'
 import { WorkflowsPage } from './pages/WorkflowsPage'
+import { ApprovalRolesPage } from './pages/ApprovalRolesPage'
 import { SpacesPage } from './pages/SpacesPage'
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage'
 import { TeamPage } from './pages/TeamPage'
@@ -247,6 +248,14 @@ function AppShell() {
           element={
             <RequireAuth>
               <WorkflowsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/approval-roles"
+          element={
+            <RequireAuth>
+              <ApprovalRolesPage />
             </RequireAuth>
           }
         />

@@ -54,7 +54,7 @@ docker compose -f infra/docker-compose.yml --env-file .env up -d
 docker compose -f infra/docker-compose.yml --env-file .env up -d
 ```
 
-Cela démarre notamment **Postgres** et **Keycloak** (exemple de développement OIDC — realm `socle` importé depuis `infra/keycloak/realm-socle.json`). Tout autre IdP OIDC se configure via `socle.identity` / `GET /api/v1/public/auth-config` — voir `docs/identity-providers.md`.
+Cela démarre notamment **Postgres** et **Keycloak** (exemple de développement OIDC — realm `socle` importé depuis `infra/keycloak/realm-socle.dev.json`, **DEV UNIQUEMENT**). Tout autre IdP OIDC se configure via `socle.identity` / `GET /api/v1/public/auth-config` — voir `docs/identity-providers.md`.
 
 Puis backend + frontend :
 
@@ -172,7 +172,7 @@ Health : http://localhost:8090/healthz — Metrics : http://localhost:8090/metri
 
 Keycloak local n’est **pas** un prérequis produit — c’est l’IdP d’exemple. Autres IdP : `docs/identity-providers.md`.
 
-- Realm : `socle` (export versionné : `infra/keycloak/realm-socle.json`)
+- Realm : `socle` (export versionné **DEV UNIQUEMENT** : `infra/keycloak/realm-socle.dev.json`)
 - Utilisateur de test : **contributeur@example.com** / **contributeur** (username `contributeur`, rôle realm `contributeur`)
 - Client SPA : `socle-frontend` (public, PKCE, redirect `http://127.0.0.1:5173/*`)
 - Client API : `socle-backend` (confidentiel, bearer-only)

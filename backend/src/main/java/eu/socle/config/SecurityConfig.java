@@ -83,6 +83,10 @@ public class SecurityConfig {
                                 .access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.PUT, "/api/v1/approval-workflows/**").access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/approval-workflows/**").access(DENY_AUDITEUR_ONLY)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/approval-role-assignments", "/api/v1/approval-role-assignments/**")
+                                .access(DENY_AUDITEUR_ONLY)
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/approval-role-assignments/**")
+                                .access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.GET, "/api/v1/documents/*/export").access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.GET, "/api/v1/folders/*/export").access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/*/export").access(DENY_AUDITEUR_ONLY)
@@ -95,6 +99,8 @@ public class SecurityConfig {
                                 "/api/v1/approval-workflows/**",
                                 "/api/v1/global-roles",
                                 "/api/v1/global-roles/**",
+                                "/api/v1/approval-role-assignments",
+                                "/api/v1/approval-role-assignments/**",
                                 "/api/v1/notifications",
                                 "/api/v1/notifications/**",
                                 "/api/v1/trash",
