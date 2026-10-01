@@ -12,11 +12,11 @@ DOMAIN=127.0.0.1
 VERSION=local
 COMPOSE_PROJECT_NAME=socle-production
 
-POSTGRES_USER=socle_app
+POSTGRES_USER=socle
 POSTGRES_PASSWORD=${PG_PASS}
 
 SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/socle_core
-SPRING_DATASOURCE_USERNAME=socle_app
+SPRING_DATASOURCE_USERNAME=socle
 SPRING_DATASOURCE_PASSWORD=${PG_PASS}
 
 SOCLE_STORAGE_PROVIDER=git
@@ -41,7 +41,7 @@ OIDC_FRONTEND_CLIENT_ID=socle-frontend
 SOCLE_INSTANCE_DISPLAY_NAME=Socle E2E
 CORS_ALLOWED_ORIGINS=http://127.0.0.1,http://localhost
 
-DATABASE_URL=postgres://socle_app:${PG_PASS}@postgres:5432/socle_core?sslmode=disable
+DATABASE_URL=postgres://socle:${PG_PASS}@postgres:5432/socle_core?sslmode=disable
 
 KEYCLOAK_ADMIN=e2e_admin
 KEYCLOAK_ADMIN_PASSWORD=${KC_PASS}
