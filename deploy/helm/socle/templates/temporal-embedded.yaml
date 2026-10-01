@@ -1,0 +1,98 @@
+{{- if eq .Values.temporal.mode "embedded" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "socle.fullname" . }}-temporal
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal
+spec:
+  selector:
+    app.kubernetes.io/component: temporal
+    {{- include "socle.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: grpc
+      port: 7233
+      targetPort: 7233
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "socle.fullname" . }}-temporal-schema
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: schema
+          image: {{ .Values.temporal.embedded.image.adminTools }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
+                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal setup-schema -v 0.0
+              temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
+                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal \
+                update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
+              temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
+                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal_visibility setup-schema -v 0.0 --visibility
+              temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
+                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal_visibility \
+                update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned --visibility
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "socle.secretName" . }}
+                  key: SPRING_DATASOURCE_PASSWORD
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "socle.fullname" . }}-temporal
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: temporal
+      {{- include "socle.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: temporal
+        {{- include "socle.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: temporal
+          image: {{ .Values.temporal.embedded.image.server }}
+          env:
+            - name: DB
+              value: postgres12
+            - name: DB_PORT
+              value: {{ .Values.postgres.port | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.username | quote }}
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "socle.secretName" . }}
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: POSTGRES_SEEDS
+              value: {{ include "socle.postgres.host" . | quote }}
+            - name: DBNAME
+              value: temporal
+            - name: VISIBILITY_DBNAME
+              value: temporal_visibility
+            - name: DYNAMIC_CONFIG_FILE_PATH
+              value: config/dynamicconfig/docker.yaml
+            - name: BIND_ON_IP
+              value: 0.0.0.0
+          ports:
+            - containerPort: 7233
+              name: grpc
+{{- end }}

@@ -1,0 +1,45 @@
+model
+  schema 1.1
+
+type user
+
+# Accès via groupe hérité (Access.dc.html / Team.dc.html)
+type group
+  relations
+    define member: [user]
+
+type organisation
+  relations
+    define owner: [user, group#member]
+    define editor: [user, group#member] or owner
+    define viewer: [user, group#member] or editor
+
+# Cascade organisation → space ; accès direct + groupe + héritage parent
+type space
+  relations
+    define parent: [organisation]
+    define owner: [user, group#member] or owner from parent
+    define editor: [user, group#member] or owner or editor from parent
+    define viewer: [user, group#member] or editor or viewer from parent
+
+# parent = gouvernance (owner) ; inherit_from = lecture/écriture héritée
+type folder
+  relations
+    define parent: [space, folder]
+    define inherit_from: [space, folder]
+    define owner: [user, group#member] or owner from parent
+    define editor: [user, group#member] or owner or editor from inherit_from
+    define viewer: [user, user:*, group#member] or editor or viewer from inherit_from
+
+# parent = gouvernance (owner from parent)
+# inherit_from = editor/viewer hérités (organisation|space ; absent si restricted)
+# user:* = viewer public d'instance (organisation)
+# direct_access = index ListObjects uniquement — n'accorde AUCUN droit (hors viewer)
+type document
+  relations
+    define parent: [space, folder]
+    define inherit_from: [space, folder]
+    define direct_access: [user, group#member]
+    define owner: [user, group#member] or owner from parent
+    define editor: [user, group#member] or owner or editor from inherit_from
+    define viewer: [user, user:*, group#member] or editor or viewer from inherit_from

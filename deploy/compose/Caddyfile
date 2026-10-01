@@ -1,0 +1,22 @@
+# Public hostname — set DOMAIN in .env (defaults to localhost for local TLS / HTTP).
+{$DOMAIN:localhost} {
+	@api path /api/*
+	@actuator path /actuator/*
+	@ws path /ws*
+
+	handle @api {
+		reverse_proxy backend:8080
+	}
+	handle @actuator {
+		reverse_proxy backend:8080
+	}
+	handle @ws {
+		reverse_proxy backend:8080
+	}
+	handle {
+		reverse_proxy frontend:8080
+	}
+}
+
+# Optional: mount custom TLS certs instead of automatic HTTPS:
+# tls /certs/fullchain.pem /certs/privkey.pem

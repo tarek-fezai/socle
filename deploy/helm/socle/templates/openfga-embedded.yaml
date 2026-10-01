@@ -1,0 +1,52 @@
+{{- if eq .Values.openfga.mode "embedded" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "socle.fullname" . }}-openfga
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+spec:
+  selector:
+    app.kubernetes.io/component: openfga
+    {{- include "socle.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "socle.fullname" . }}-openfga
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: openfga
+      {{- include "socle.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: openfga
+        {{- include "socle.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: openfga
+          image: {{ .Values.openfga.embedded.image }}
+          args: ["run"]
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              value: {{ printf "postgres://%s:%s@%s:%d/openfga?sslmode=disable" .Values.postgres.username .Values.secrets.postgresPassword (include "socle.postgres.host" .) (int .Values.postgres.port) | quote }}
+          ports:
+            - containerPort: 8080
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+{{- end }}

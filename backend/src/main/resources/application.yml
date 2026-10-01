@@ -66,10 +66,15 @@ socle:
   temporal:
     target: ${TEMPORAL_TARGET:localhost:7233}
     namespace: ${TEMPORAL_NAMESPACE:default}
+  security:
+    # Production / compose : true — refuse change-me, admin, socle, secrets vides.
+    reject-weak-secrets: ${SOCLE_REJECT_WEAK_SECRETS:false}
   openfga:
     api-url: ${OPENFGA_API_URL:http://localhost:8082}
     store-id: ${OPENFGA_STORE_ID:}
     authorization-model-id: ${OPENFGA_MODEL_ID:}
+    auto-init: ${OPENFGA_AUTO_INIT:false}
+    state-dir: ${OPENFGA_STATE_DIR:./data/openfga}
     # Plafond OpenFGA ListObjects (OPENFGA_LIST_OBJECTS_MAX_RESULTS côté serveur, 1000 par défaut).
     # Quand listObjects renvoie exactement cette taille → warning (résultats potentiellement tronqués).
     list-objects-max-results: ${OPENFGA_LIST_OBJECTS_MAX_RESULTS:1000}

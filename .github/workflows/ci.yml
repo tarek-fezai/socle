@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: "0 2 * * *"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -101,3 +103,57 @@ jobs:
           fga version
       - name: Test authorization model
         run: fga model test --tests infra/openfga/model.fga.yaml
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, worker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            e2e_relevant:
+              - 'deploy/**'
+              - '**/Dockerfile'
+              - '.github/workflows/release.yml'
+              - 'e2e/**'
+
+      - name: Skip when paths do not match (PR/push only)
+        if: |
+          github.event_name != 'schedule' &&
+          steps.changes.outputs.e2e_relevant != 'true'
+        run: echo "E2E skipped — no deploy/Dockerfile/release/e2e changes."
+
+      - name: E2E stack and Playwright
+        if: |
+          github.event_name == 'schedule' ||
+          steps.changes.outputs.e2e_relevant == 'true'
+        env:
+          BASE_URL: http://127.0.0.1
+          KEYCLOAK_BASE_URL: http://127.0.0.1:8081
+          E2E_RUN_BACKUP: "1"
+        run: |
+          set -euo pipefail
+          chmod +x e2e/scripts/*.sh
+          bash e2e/scripts/generate-ci-env.sh deploy/compose/.env.ci
+          # Demo IdP: keycloak DB is already in init-databases.sql
+          cd deploy/compose
+          docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
+            --env-file .env.ci --profile demo-idp up -d --build
+          cd ../..
+          bash e2e/scripts/wait-stack.sh .env.ci
+          cd e2e
+          npm install
+          npx playwright install chromium --with-deps
+          npm test
+        timeout-minutes: 45
+
+      - name: Tear down Compose
+        if: always() && (github.event_name == 'schedule' || steps.changes.outputs.e2e_relevant == 'true')
+        run: |
+          cd deploy/compose
+          docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
+            --env-file .env.ci --profile demo-idp down -v --remove-orphans || true

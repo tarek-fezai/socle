@@ -5,6 +5,7 @@ import {
   type User,
   type UserManagerSettings,
 } from 'oidc-client-ts'
+import { apiBaseUrl } from './urls'
 
 /** Platform roles from GET /api/v1/me — never read from access-token claims. */
 export const SocleRole = {
@@ -43,10 +44,6 @@ export function organizationDisplayName(config?: PublicAuthConfig | null): strin
 
 export function getCachedAuthConfig(): PublicAuthConfig | null {
   return cachedAuthConfig
-}
-
-function apiBaseUrl(): string {
-  return (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 }
 
 function isOidcCallbackPath(pathname = window.location.pathname): boolean {

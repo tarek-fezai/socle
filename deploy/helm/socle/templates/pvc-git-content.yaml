@@ -1,0 +1,14 @@
+{{- if and (eq .Values.storage.provider "git") (not .Values.storage.git.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "socle.fullname" . }}-git-content
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+{{- end }}

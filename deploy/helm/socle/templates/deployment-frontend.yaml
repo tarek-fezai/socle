@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "socle.fullname" . }}-frontend
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "socle.frontend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "socle.frontend.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "socle.serviceAccountName" . }}
+      containers:
+        - name: frontend
+          image: {{ include "socle.image" (dict "Values" .Values "Chart" .Chart "repository" .Values.frontend.image.repository "tag" .Values.frontend.image.tag) }}
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            {{- toYaml .Values.frontend.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /var/cache/nginx
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}

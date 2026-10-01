@@ -1,0 +1,133 @@
+# Default values for socle. Override per environment; secrets via `existingSecret` or `secrets.*`.
+
+global:
+  imageRegistry: ghcr.io/tarek-fezai
+  imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+postgres:
+  embedded: false
+  host: ""
+  port: 5432
+  database: socle_core
+  username: socle_app
+  # When embedded=true, password is generated into Secret template.
+  password: ""
+
+storage:
+  provider: git # git | relational
+  git:
+    mountPath: /data/git-content
+    existingClaim: "" # required when provider=git and embedded PVC disabled
+
+openfga:
+  mode: external # embedded | external
+  autoInit: true
+  stateDir: /openfga-config
+  embedded:
+    image: openfga/openfga:v1.8.16
+  external:
+    apiUrl: http://openfga:8080
+    storeId: ""
+    modelId: ""
+
+temporal:
+  mode: external # embedded | external
+  external:
+    target: temporal:7233
+    namespace: default
+  embedded:
+    image:
+      server: temporalio/server:1.29.1
+      adminTools: temporalio/admin-tools:1.29.1
+
+idp:
+  issuerUri: ""
+  jwkSetUri: ""
+  clientId: socle-backend
+  clientSecret: ""
+  frontendClientId: socle-frontend
+
+backend:
+  replicas: 1
+  image:
+    repository: socle-backend
+    tag: ""
+    pullPolicy: IfNotPresent
+  resources: {}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+  podSecurityContext:
+    fsGroup: 1000
+  existingSecret: ""
+  extraEnv: {}
+  probes:
+    livenessPath: /actuator/health/liveness
+    readinessPath: /actuator/health/readiness
+
+frontend:
+  replicas: 2
+  image:
+    repository: socle-frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+  resources: {}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    readOnlyRootFilesystem: true
+
+webhookWorker:
+  enabled: true
+  replicas: 1
+  image:
+    repository: socle-worker
+    tag: ""
+    pullPolicy: IfNotPresent
+  resources: {}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: socle.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /actuator
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: socle-tls
+      hosts:
+        - socle.example.com
+
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+secrets:
+  # Plain values merged into Secret when existingSecret is empty (prefer External Secrets in prod).
+  postgresPassword: ""
+  oidcClientSecret: ""
+
+serviceAccount:
+  create: true
+  name: ""

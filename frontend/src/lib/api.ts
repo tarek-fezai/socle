@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import axios from 'axios'
 import { getAccessToken, login } from './auth'
+import { apiBaseUrl } from './urls'
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8080',
+  baseURL: apiBaseUrl(),
   timeout: 15_000,
 })
 
