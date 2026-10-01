@@ -14,6 +14,7 @@ import java.nio.file.Path;
 
 /**
  * Verrou fichier JVM sur le dépôt Git — une seule instance backend par dépôt.
+ * Fichier sous {@code .git/socle-instance.lock} (hors working tree).
  * Limite documentée : le verrou n'est pas distribué hors processus locaux partageant le FS.
  */
 final class GitRepositoryLock implements AutoCloseable {
@@ -23,19 +24,20 @@ final class GitRepositoryLock implements AutoCloseable {
     private final RandomAccessFile raf;
     private final FileChannel channel;
     private final FileLock lock;
-    private final Path lockPath;
 
-    private GitRepositoryLock(RandomAccessFile raf, FileChannel channel, FileLock lock, Path lockPath) {
+    private GitRepositoryLock(RandomAccessFile raf, FileChannel channel, FileLock lock) {
         this.raf = raf;
         this.channel = channel;
         this.lock = lock;
-        this.lockPath = lockPath;
     }
 
-    static GitRepositoryLock acquire(Path repoPath) {
+    /**
+     * @param gitDir chemin du répertoire {@code .git} déjà initialisé
+     */
+    static GitRepositoryLock acquire(Path gitDir) {
         try {
-            Files.createDirectories(repoPath);
-            Path lockPath = repoPath.resolve(".socle-instance.lock");
+            Files.createDirectories(gitDir);
+            Path lockPath = gitDir.resolve("socle-instance.lock");
             RandomAccessFile raf = new RandomAccessFile(lockPath.toFile(), "rw");
             FileChannel channel = raf.getChannel();
             FileLock lock;
@@ -43,33 +45,35 @@ final class GitRepositoryLock implements AutoCloseable {
                 lock = channel.tryLock();
             } catch (java.nio.channels.OverlappingFileLockException overlapping) {
                 raf.close();
-                log.error(
-                        "Une autre instance Socle détient déjà le verrou Git sur {} — "
-                                + "mode git = 1 seule réplique backend (verrou JVM fichier)",
-                        repoPath);
-                throw new IllegalStateException(
-                        "socle.storage.provider=git : instance concurrente détectée sur " + repoPath
-                                + " (replicas>1 interdit — voir docs/operations/install.md)",
-                        overlapping);
+                failConcurrent(gitDir, overlapping);
+                throw new IllegalStateException("unreachable");
             }
             if (lock == null) {
                 raf.close();
-                log.error(
-                        "Une autre instance Socle détient déjà le verrou Git sur {} — "
-                                + "mode git = 1 seule réplique backend (verrou JVM fichier)",
-                        repoPath);
-                throw new IllegalStateException(
-                        "socle.storage.provider=git : instance concurrente détectée sur " + repoPath
-                                + " (replicas>1 interdit — voir docs/operations/install.md)");
+                failConcurrent(gitDir, null);
             }
             String payload = "pid=" + ProcessHandle.current().pid() + " started=" + System.currentTimeMillis() + "\n";
             raf.setLength(0);
             raf.write(payload.getBytes(StandardCharsets.UTF_8));
             log.info("Verrou Git acquis: {}", lockPath);
-            return new GitRepositoryLock(raf, channel, lock, lockPath);
+            return new GitRepositoryLock(raf, channel, lock);
         } catch (IOException e) {
-            throw new IllegalStateException("Impossible d'acquérir le verrou Git sur " + repoPath, e);
+            throw new IllegalStateException("Impossible d'acquérir le verrou Git sur " + gitDir, e);
         }
+    }
+
+    private static void failConcurrent(Path gitDir, Throwable cause) {
+        log.error(
+                "Une autre instance Socle détient déjà le verrou Git sur {} — "
+                        + "mode git = 1 seule réplique backend (verrou JVM fichier)",
+                gitDir);
+        IllegalStateException ex = new IllegalStateException(
+                "socle.storage.provider=git : instance concurrente détectée sur " + gitDir
+                        + " (replicas>1 interdit — voir docs/operations/install.md)");
+        if (cause != null) {
+            ex.initCause(cause);
+        }
+        throw ex;
     }
 
     @Override
