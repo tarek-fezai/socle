@@ -98,20 +98,16 @@ services:
         set -eux
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
-          --connect-attributes sslmode=disable \
           setup-schema -v 0.0
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
-          --connect-attributes sslmode=disable \
           update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
-          --connect-attributes sslmode=disable \
-          setup-schema -v 0.0 --visibility
+          setup-schema -v 0.0
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
-          --connect-attributes sslmode=disable \
-          update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned --visibility
+          update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned
     environment:
       SQL_USER: ${POSTGRES_USER}
       SQL_PASSWORD: ${POSTGRES_PASSWORD}
