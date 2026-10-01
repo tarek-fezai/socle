@@ -89,12 +89,31 @@ class DocumentVersioningTest {
         assertThat(archived.getBodySnapshot()).isEqualTo(Map.of("blocks", List.of("old")));
         assertThat(archived.getChangeSummary()).isEqualTo("fix");
         assertThat(archived.getAuthorId()).isEqualTo(USER);
+        assertThat(archived.getArchivedBy()).isEqualTo(USER);
         assertThat(response.currentVersionNo()).isEqualTo(2);
         assertThat(response.body()).isEqualTo(newBody);
+        assertThat(entity.getUpdatedBy()).isEqualTo(USER);
 
         verify(auditService).record(
                 eq(USER), eq(false), eq(AuditActions.DOCUMENT_VERSION_CREATED),
                 eq("document"), eq(DOC), anyMap(), isNull());
+    }
+
+    @Test
+    void update_archivesWithPreviousContentAuthor_notCurrentEditor() {
+        UUID alice = UUID.fromString("aaaaaaaa-1111-1111-1111-111111111111");
+        DocumentEntity entity = document(DOC, Map.of("blocks", List.of("old")), 1);
+        entity.setUpdatedBy(alice);
+        when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
+        doNothing().when(authorizationService).requireDocumentRelation(USER, DOC, "editor");
+
+        service.update(jwt(), DOC, new UpdateDocumentRequest("Titre", Map.of("blocks", List.of("new")), "edit"));
+
+        ArgumentCaptor<DocumentVersionEntity> versionCap = ArgumentCaptor.forClass(DocumentVersionEntity.class);
+        verify(versionRepository).save(versionCap.capture());
+        assertThat(versionCap.getValue().getAuthorId()).isEqualTo(alice);
+        assertThat(versionCap.getValue().getArchivedBy()).isEqualTo(USER);
+        assertThat(entity.getUpdatedBy()).isEqualTo(USER);
     }
 
     @Test
@@ -161,12 +180,15 @@ class DocumentVersioningTest {
         assertThat(archived.getVersionNo()).isEqualTo(3);
         assertThat(archived.getBodySnapshot()).isEqualTo(Map.of("blocks", List.of("current")));
         assertThat(archived.getChangeSummary()).isEqualTo("Restauration de la version 1");
+        assertThat(archived.getAuthorId()).isEqualTo(USER);
+        assertThat(archived.getArchivedBy()).isEqualTo(USER);
 
         // Historique existant (v1) non réécrit
         verify(versionRepository, never()).save(argThat(v -> v != null && v.getVersionNo() == 1));
 
         assertThat(response.body()).isEqualTo(Map.of("blocks", List.of("old")));
         assertThat(response.currentVersionNo()).isEqualTo(4);
+        assertThat(entity.getUpdatedBy()).isEqualTo(USER);
 
         verify(auditService).record(
                 eq(USER), eq(false), eq(AuditActions.DOCUMENT_VERSION_RESTORED),
@@ -191,6 +213,8 @@ class DocumentVersioningTest {
         d.setBody(body);
         d.setStatus("brouillon");
         d.setCurrentVersionNo(versionNo);
+        d.setCreatedBy(USER);
+        d.setUpdatedBy(USER);
         return d;
     }
 
