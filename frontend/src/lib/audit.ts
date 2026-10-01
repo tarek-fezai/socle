@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 export type AuditEvent = {
   id: number
   actorId: string | null

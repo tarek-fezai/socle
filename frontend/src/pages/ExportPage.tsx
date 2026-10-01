@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useParams } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'

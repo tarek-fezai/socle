@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.team;
 
 import eu.socle.audit.AuditActions;

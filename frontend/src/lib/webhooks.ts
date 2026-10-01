@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 export type WebhookDeliveryStatus = 'pending' | 'delivered' | 'failed' | 'retrying'
 
 export type WebhookDelivery = {

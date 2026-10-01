@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.storage;
 
 import eu.socle.authz.AuthorizationService;

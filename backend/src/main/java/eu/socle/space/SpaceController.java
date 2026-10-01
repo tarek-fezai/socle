@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.space;
 
 import eu.socle.document.ContentHealthDtos.ContentHealthResponse;
