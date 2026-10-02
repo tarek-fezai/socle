@@ -188,12 +188,60 @@ Si `true`, à la première connexion d'une identité inconnue, rattachement **au
 
 **Risque** : un IdP qui ment sur `email_verified`, ou une réattribution d'e-mail mal gérée, peut permettre une **prise de contrôle de compte**. Ne l'activer que si l'intégrateur fait confiance absolue à la vérification e-mail de l'IdP. Le rattachement admin / CSV reste le chemin sûr.
 
+## Politique d'accès (`socle.identity.access-policy`)
+
+```yaml
+socle.identity:
+  access-policy:
+    mode: jit                 # jit | require-group | provisioned-only
+    allowed-groups: []        # require-group : au moins un groupe du JWT doit figurer ici
+    groups-claim: groups      # chemin pointé dans le JWT (lu via IdentityClaimsMapper)
+    allowed-email-domains: [] # vide = tous ; sinon domaine ∈ liste ET email_verified=true
+  passkey-acr-values: ""      # exposés via auth-config (affichage)
+  idp-display-name: ""
+  support-contact: ""
+```
+
+| Mode | Comportement |
+|------|--------------|
+| `jit` | compte créé à la première connexion si domaine OK |
+| `require-group` | idem, mais le JWT doit porter un des `allowed-groups` (liste vide = personne) |
+| `provisioned-only` | l'identité `(issuer, sub)` doit déjà exister dans `user_identities` — aucun compte créé |
+
+- Refus : HTTP `403 {"error":"access_denied","reason":"…"}` avec `reason` ∈ `not_in_allowed_group`,
+  `account_disabled`, `not_provisioned`, `email_domain_not_allowed`. Aucun compte n'est créé sur refus.
+- `AccessPolicyFilter` (après `BearerTokenAuthenticationFilter`, `/api/**` authentifié hors `/api/v1/public/**`)
+  met la décision en cache 60 s par `(issuer, sub)` ; le cache est invalidé par `disable` / `enable`.
+- Admin (`ADMINISTRATEUR_SYSTEME`) : `POST /api/v1/admin/users/{id}/disable` et `/enable`
+  (`users.status` = `disabled` / `active`, migration `V28`). Le dernier administrateur système ne peut pas être désactivé.
+- Audit : `auth.access_granted` (première connexion réussie), `auth.access_denied` (au plus 1 par
+  utilisateur et motif toutes les 10 min, par instance), `user.disabled`, `user.enabled`. Jamais de token.
+- `GET /api/v1/public/auth-config` n'expose **jamais** `allowed-groups` ni `allowed-email-domains`
+  (seulement `passkeyAcrValues`, `idpDisplayName`, `supportContact`, `organizationName`).
+
+## Clés de sécurité / passkeys (`passkey-acr-values`)
+
+Le bouton « Continuer avec une clé de sécurité » envoie `signinRedirect` avec
+`acr_values` = `socle.identity.passkey-acr-values`. **Vide → bouton masqué** (mise en page
+inchangée). Valeurs typiques selon l'IdP :
+
+| IdP | `passkey-acr-values` (exemple) | Notes |
+|-----|-------------------------------|--------|
+| **Keycloak** | `phr` ou `http://schemas.openid.net/pape/policies/2007/06/phishing-resistant` | Configurer un Authentication Flow / ACR map vers WebAuthn ; `phr` = Phishing-Resistant (OIDC) |
+| **Zitadel** | `urn:zitadel:iam:org:project:id:zitadel:aud` n'est **pas** un ACR — utiliser le niveau configuré, ex. `http://schemas.openid.net/pape/policies/2007/06/phishing-resistant` | Activer WebAuthn / Passkeys sur l'org ; mapper un ACR dédié si défini |
+| **Authentik** | valeur du stage ACR (ex. `authentik_authenticator_webauthn`) ou `phr` | Dépend de la policy Authentik ; exposer l'ACR dans le provider OIDC |
+| **Entra ID** | `urn:microsoft:policies:conditionalaccess` / Conditional Access « Authentication strength » (Passkeys / phishing-resistant) | Entra n'utilise pas toujours `acr_values` OIDC classique ; préférer Conditional Access côté tenant et laisser le bouton masqué (`""`) si non supporté |
+
+Documenter la valeur réelle de votre IdP dans la config d'instance ; ne jamais hardcoder un ACR
+IdP-spécifique dans le frontend.
+
 ## Migration schéma
 
 | Version | Contenu |
 |---------|---------|
 | `V20` | `users.issuer` / `users.subject`, `user_platform_roles` |
 | `V21` | `user_identities` ; drop unique e-mail ; colonnes issuer/subject migrées hors `users` |
+| `V28` | `users.status` : ajout de `disabled` au CHECK |
 
 ## Tests de non-régression
 

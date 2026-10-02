@@ -30,9 +30,10 @@ import { ContentHealthPage } from './pages/ContentHealthPage'
 import { DocumentExportPage, FolderExportPage, TagExportPage } from './pages/ExportPage'
 import { CallbackPage } from './pages/CallbackPage'
 import { SilentRenewPage } from './pages/SilentRenewPage'
+import { LoginPage, LoginErrorPage } from './pages/login/LoginPage'
 
 function HomePage() {
-  const { me, login, logout, loading, authenticated, organizationName } = useAuth()
+  const { me, logout, loading, authenticated, organizationName } = useAuth()
   const roles = me?.roles ?? []
   const isAuditeur = roles.includes(SocleRole.AUDITEUR)
   const isIntegrateur = roles.includes(SocleRole.INTEGRATEUR)
@@ -50,9 +51,9 @@ function HomePage() {
 
       <div className="mt-10 flex flex-wrap items-center gap-4">
         {!loading && !authenticated && (
-          <button type="button" onClick={() => void login()} className="btn-primary">
+          <Link to="/login" className="btn-primary">
             Se connecter
-          </button>
+          </Link>
         )}
         {authenticated && (
           <>
@@ -157,6 +158,8 @@ function AppShell() {
       {!loading && authenticated ? <AppNav /> : null}
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login/erreur" element={<LoginErrorPage />} />
         <Route path="/callback" element={<CallbackPage />} />
         <Route path="/silent-renew" element={<SilentRenewPage />} />
         <Route

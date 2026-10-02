@@ -39,6 +39,11 @@ backend/data/
 # Sorties de tests locales
 mvn-*.txt
 frontend-*.txt
+frontend/test-results/
+frontend/playwright-report/
+frontend/e2e-visual/test-results/
+.tmp-e2e*/
+.tmp-helm-logs.txt
 
 # Infra local data
 infra/data/

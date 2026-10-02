@@ -25,15 +25,19 @@ export type PublicAuthConfig = {
   tokenEndpoint?: string
   endSessionEndpoint?: string
   jwksUri?: string
-  /** Optional org brand when backend exposes it. */
   displayName?: string
   organizationName?: string
+  passkeyAcrValues?: string
+  idpDisplayName?: string
+  supportContact?: string
 }
 
 let userManager: UserManager | null = null
 let userManagerPromise: Promise<UserManager> | null = null
 let initPromise: Promise<boolean> | null = null
 let cachedAuthConfig: PublicAuthConfig | null = null
+
+const RETURN_TO_STATE_KEY = 'socle.returnTo'
 
 /** Org / product label from auth-config when present, else "Socle". */
 export function organizationDisplayName(config?: PublicAuthConfig | null): string {
@@ -46,8 +50,70 @@ export function getCachedAuthConfig(): PublicAuthConfig | null {
   return cachedAuthConfig
 }
 
+function containsBackslash(value: string): boolean {
+  if (value.includes('\\')) return true
+  try {
+    return decodeURIComponent(value).includes('\\')
+  } catch {
+    return true
+  }
+}
+
+function hasControlChars(value: string): boolean {
+  return /[\u0000-\u001F\u007F]/.test(value)
+}
+
+/**
+ * Open-redirect protection: relative same-origin path only.
+ * Rejects `//…`, `\`, control chars, leading whitespace, `/\…`, and off-origin URLs.
+ * Returns `pathname + search + hash`, else `/`.
+ */
+export function sanitizeReturnTo(raw: string | null | undefined): string {
+  if (raw == null || raw === '') return '/'
+  if (/^\s/.test(raw)) return '/'
+  if (containsBackslash(raw) || hasControlChars(raw)) return '/'
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/'
+
+  try {
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : 'http://127.0.0.1'
+    const resolved = new URL(raw, origin)
+    if (resolved.origin !== origin) return '/'
+    const out = `${resolved.pathname}${resolved.search}${resolved.hash}`
+    if (containsBackslash(out) || hasControlChars(out)) return '/'
+    if (!out.startsWith('/') || out.startsWith('//')) return '/'
+    return out
+  } catch {
+    return '/'
+  }
+}
+
+export function storeReturnTo(path: string): void {
+  try {
+    sessionStorage.setItem(RETURN_TO_STATE_KEY, sanitizeReturnTo(path))
+  } catch {
+    // ignore
+  }
+}
+
+export function consumeReturnTo(): string {
+  try {
+    const v = sessionStorage.getItem(RETURN_TO_STATE_KEY)
+    sessionStorage.removeItem(RETURN_TO_STATE_KEY)
+    return sanitizeReturnTo(v)
+  } catch {
+    return '/'
+  }
+}
+
 function isOidcCallbackPath(pathname = window.location.pathname): boolean {
   return pathname === '/callback' || pathname === '/silent-renew'
+}
+
+function isLoginPath(pathname = window.location.pathname): boolean {
+  return pathname === '/login' || pathname.startsWith('/login/')
 }
 
 export async function fetchAuthConfig(): Promise<PublicAuthConfig> {
@@ -68,7 +134,7 @@ function buildSettings(config: PublicAuthConfig): UserManagerSettings {
     client_id: config.clientId,
     redirect_uri: `${origin}/callback`,
     silent_redirect_uri: `${origin}/silent-renew`,
-    post_logout_redirect_uri: `${origin}/`,
+    post_logout_redirect_uri: `${origin}/login`,
     response_type: 'code',
     scope,
     automaticSilentRenew: true,
@@ -114,13 +180,16 @@ async function currentUser(): Promise<User | null> {
   return um.getUser()
 }
 
-export async function initAuth(requireLogin = false): Promise<boolean> {
+/**
+ * Initialise la session OIDC. Ne redirige plus vers l'IdP :
+ * les routes protégées envoient vers `/login`.
+ */
+export async function initAuth(_requireLogin = false): Promise<boolean> {
   if (!initPromise) {
     initPromise = (async () => {
       const um = await getUserManager()
 
-      if (isOidcCallbackPath()) {
-        // CallbackPage / SilentRenewPage own the OIDC callback handlers
+      if (isOidcCallbackPath() || isLoginPath()) {
         return false
       }
 
@@ -133,12 +202,7 @@ export async function initAuth(requireLogin = false): Promise<boolean> {
         }
       }
 
-      const authenticated = Boolean(user && !user.expired)
-      if (!authenticated && requireLogin) {
-        await um.signinRedirect()
-        return false
-      }
-      return authenticated
+      return Boolean(user && !user.expired)
     })()
   }
   return initPromise
@@ -161,16 +225,45 @@ export async function getAccessToken(): Promise<string | null> {
     try {
       user = await um.signinSilent()
     } catch {
-      await um.signinRedirect()
       return null
     }
   }
   return user?.access_token ?? null
 }
 
-export async function login(): Promise<void> {
+type SigninExtra = {
+  login_hint?: string
+  acr_values?: string
+  state?: string
+}
+
+async function signinRedirect(extra: SigninExtra = {}, returnTo = '/'): Promise<void> {
+  const safe = sanitizeReturnTo(returnTo)
+  storeReturnTo(safe)
   const um = await getUserManager()
-  await um.signinRedirect()
+  await um.signinRedirect({
+    state: safe,
+    extraQueryParams: {
+      ...(extra.login_hint ? { login_hint: extra.login_hint } : {}),
+      ...(extra.acr_values ? { acr_values: extra.acr_values } : {}),
+    },
+  })
+}
+
+export async function login(returnTo = '/'): Promise<void> {
+  await signinRedirect({}, returnTo)
+}
+
+export async function loginWithHint(email: string, returnTo = '/'): Promise<void> {
+  await signinRedirect({ login_hint: email }, returnTo)
+}
+
+export async function loginWithSso(returnTo = '/'): Promise<void> {
+  await signinRedirect({}, returnTo)
+}
+
+export async function loginWithAcr(acrValues: string, returnTo = '/'): Promise<void> {
+  await signinRedirect({ acr_values: acrValues }, returnTo)
 }
 
 export async function logout(): Promise<void> {
@@ -178,7 +271,21 @@ export async function logout(): Promise<void> {
   await um.signoutRedirect()
 }
 
+/** Drop local OIDC session without IdP round-trip (retry after access denied). */
+export async function clearLocalSession(): Promise<void> {
+  const um = await getUserManager()
+  await um.removeUser()
+  initPromise = null
+}
+
 export async function isAuthenticated(): Promise<boolean> {
   const user = await currentUser()
   return Boolean(user && !user.expired)
+}
+
+/** Resolve returnTo from OIDC state or sessionStorage fallback. */
+export function resolveReturnTo(user: User | null): string {
+  const fromState = typeof user?.state === 'string' ? user.state : null
+  if (fromState) return sanitizeReturnTo(fromState)
+  return consumeReturnTo()
 }

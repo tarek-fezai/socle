@@ -1,25 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { ReactNode } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthProvider'
+import { LoginLoadingLayout } from '../pages/login/LoginPage'
 
-/** Garde UI tant que la session OIDC n'est pas confirmée (init requireLogin). */
+/** Garde UI : sans session → `/login?returnTo=…` (jamais l'IdP directement). */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { loading, authenticated } = useAuth()
+  const location = useLocation()
 
   if (loading) {
-    return (
-      <main className="mx-auto max-w-lg px-6 py-20 text-center text-socle-slate">
-        Connexion OIDC…
-      </main>
-    )
+    return <LoginLoadingLayout message="Vérification de la session…" />
   }
 
   if (!authenticated) {
-    return (
-      <main className="mx-auto max-w-lg px-6 py-20 text-center text-socle-slate">
-        Redirection vers l&apos;IdP…
-      </main>
-    )
+    const returnTo = `${location.pathname}${location.search}${location.hash}`
+    return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />
   }
 
   return <>{children}</>

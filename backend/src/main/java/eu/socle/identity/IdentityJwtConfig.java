@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.identity;
 
+import eu.socle.user.UserEntity;
 import eu.socle.user.UserSyncService;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -12,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -37,7 +39,14 @@ public class IdentityJwtConfig {
             UserSyncService userSyncService,
             RoleProvider roleProvider
     ) {
-        var user = userSyncService.syncFromJwt(jwt);
+        UserEntity user;
+        try {
+            user = userSyncService.syncFromJwt(jwt);
+        } catch (AccessPolicyDeniedException denied) {
+            // Aucune autorité : AccessPolicyFilter (juste après l'authentification Bearer)
+            // répond 403 {"error":"access_denied","reason":…} et audite le refus.
+            return List.of();
+        }
         return roleProvider.resolve(jwt, user.getId()).stream()
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(role.authority()))
                 .collect(Collectors.toList());

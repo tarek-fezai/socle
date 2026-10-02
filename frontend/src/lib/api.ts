@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import axios from 'axios'
-import { getAccessToken, login } from './auth'
+import { getAccessToken } from './auth'
 import { apiBaseUrl } from './urls'
 
 export const api = axios.create({
@@ -20,7 +20,14 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      await login()
+      const returnTo = `${window.location.pathname}${window.location.search}`
+      window.location.assign(`/login?returnTo=${encodeURIComponent(returnTo)}`)
+    }
+    if (error.response?.status === 403) {
+      const reason = (error.response.data as { reason?: string } | undefined)?.reason
+      if (reason && !window.location.pathname.startsWith('/login')) {
+        window.location.assign(`/login/erreur?reason=${encodeURIComponent(reason)}`)
+      }
     }
     return Promise.reject(error)
   },

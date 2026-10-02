@@ -58,15 +58,23 @@ jobs:
         run: set -o pipefail && pnpm test 2>&1 | tee vitest-output.txt
       - name: Build
         run: pnpm build
-      - name: Upload Vitest / build logs
-        if: failure()
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+      - name: Visual login comparison
+        shell: bash
+        run: set -o pipefail && pnpm test:visual 2>&1 | tee playwright-visual.txt
+      - name: Upload Vitest / visual artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-test-output
           path: |
             frontend/vitest-output.txt
+            frontend/playwright-visual.txt
             frontend/coverage/
             frontend/test-results/
+            frontend/e2e-visual/test-results/
+            frontend/playwright-report/
           if-no-files-found: ignore
 
   worker:

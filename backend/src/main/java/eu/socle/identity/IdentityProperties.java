@@ -57,6 +57,70 @@ public class IdentityProperties {
      */
     private boolean linkByVerifiedEmail = false;
 
+    /** Politique d'accès (qui peut se connecter) — jamais exposée au frontend. */
+    private AccessPolicy accessPolicy = new AccessPolicy();
+
+    /** Valeurs {@code acr_values} proposées pour un parcours passkey (exposé via auth-config). */
+    private String passkeyAcrValues = "";
+    /** Nom affiché de l'IdP sur l'écran de connexion (exposé via auth-config). */
+    private String idpDisplayName = "";
+    /** Contact support affiché lors d'un refus d'accès (exposé via auth-config). */
+    private String supportContact = "";
+
+    public enum AccessMode {
+        /** Création de compte à la première connexion si la politique le permet. */
+        JIT,
+        /** Comme JIT, mais l'utilisateur doit appartenir à un groupe autorisé. */
+        REQUIRE_GROUP,
+        /** Seuls les comptes déjà rattachés à une identité (issuer, sub) peuvent se connecter. */
+        PROVISIONED_ONLY
+    }
+
+    /**
+     * Politique d'accès : {@code socle.identity.access-policy}.
+     * Ne jamais renvoyer {@code allowedGroups} / {@code allowedEmailDomains} à un client.
+     */
+    public static class AccessPolicy {
+
+        private AccessMode mode = AccessMode.JIT;
+        private List<String> allowedGroups = new ArrayList<>();
+        private String groupsClaim = "groups";
+        /** Vide = tous les domaines. */
+        private List<String> allowedEmailDomains = new ArrayList<>();
+
+        public AccessMode getMode() {
+            return mode;
+        }
+
+        public void setMode(AccessMode mode) {
+            this.mode = mode != null ? mode : AccessMode.JIT;
+        }
+
+        public List<String> getAllowedGroups() {
+            return allowedGroups;
+        }
+
+        public void setAllowedGroups(List<String> allowedGroups) {
+            this.allowedGroups = allowedGroups != null ? allowedGroups : new ArrayList<>();
+        }
+
+        public String getGroupsClaim() {
+            return groupsClaim;
+        }
+
+        public void setGroupsClaim(String groupsClaim) {
+            this.groupsClaim = groupsClaim != null && !groupsClaim.isBlank() ? groupsClaim : "groups";
+        }
+
+        public List<String> getAllowedEmailDomains() {
+            return allowedEmailDomains;
+        }
+
+        public void setAllowedEmailDomains(List<String> allowedEmailDomains) {
+            this.allowedEmailDomains = allowedEmailDomains != null ? allowedEmailDomains : new ArrayList<>();
+        }
+    }
+
     private static Map<String, SocleRole> defaultRoleMapping() {
         Map<String, SocleRole> m = new LinkedHashMap<>();
         m.put("contributeur", SocleRole.CONTRIBUTEUR);
@@ -192,5 +256,37 @@ public class IdentityProperties {
 
     public void setLinkByVerifiedEmail(boolean linkByVerifiedEmail) {
         this.linkByVerifiedEmail = linkByVerifiedEmail;
+    }
+
+    public AccessPolicy getAccessPolicy() {
+        return accessPolicy;
+    }
+
+    public void setAccessPolicy(AccessPolicy accessPolicy) {
+        this.accessPolicy = accessPolicy != null ? accessPolicy : new AccessPolicy();
+    }
+
+    public String getPasskeyAcrValues() {
+        return passkeyAcrValues;
+    }
+
+    public void setPasskeyAcrValues(String passkeyAcrValues) {
+        this.passkeyAcrValues = passkeyAcrValues != null ? passkeyAcrValues : "";
+    }
+
+    public String getIdpDisplayName() {
+        return idpDisplayName;
+    }
+
+    public void setIdpDisplayName(String idpDisplayName) {
+        this.idpDisplayName = idpDisplayName != null ? idpDisplayName : "";
+    }
+
+    public String getSupportContact() {
+        return supportContact;
+    }
+
+    public void setSupportContact(String supportContact) {
+        this.supportContact = supportContact != null ? supportContact : "";
     }
 }

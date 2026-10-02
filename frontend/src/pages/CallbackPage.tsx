@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { handleCallback } from '../lib/auth'
+import axios from 'axios'
+import {
+  handleCallback,
+  resolveReturnTo,
+} from '../lib/auth'
 import { useAuth } from '../auth/AuthProvider'
+import { LoginLoadingLayout } from './login/LoginPage'
 
 export function CallbackPage() {
   const navigate = useNavigate()
@@ -17,9 +22,20 @@ export function CallbackPage() {
 
     void (async () => {
       try {
-        await handleCallback()
-        await refreshMe()
-        navigate('/docs', { replace: true })
+        const user = await handleCallback()
+        const returnTo = resolveReturnTo(user)
+        try {
+          await refreshMe()
+          navigate(returnTo, { replace: true })
+        } catch (e) {
+          if (axios.isAxiosError(e) && e.response?.status === 403) {
+            const reason =
+              (e.response.data as { reason?: string } | undefined)?.reason ?? 'not_provisioned'
+            navigate(`/login/erreur?reason=${encodeURIComponent(reason)}`, { replace: true })
+            return
+          }
+          throw e
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Connexion échouée')
       }
@@ -27,16 +43,8 @@ export function CallbackPage() {
   }, [navigate, refreshMe])
 
   if (error) {
-    return (
-      <main className="mx-auto max-w-lg px-6 py-20 text-center">
-        <p className="text-amber-700">{error}</p>
-      </main>
-    )
+    return <LoginLoadingLayout message={error} />
   }
 
-  return (
-    <main className="mx-auto max-w-lg px-6 py-20 text-center text-socle-slate">
-      Connexion OIDC…
-    </main>
-  )
+  return <LoginLoadingLayout message="Finalisation de la connexion…" />
 }

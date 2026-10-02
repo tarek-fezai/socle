@@ -121,6 +121,15 @@ socle:
     # Overridable via SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS (comma-separated subs).
     bootstrap-admin-subjects: []
     link-by-verified-email: false
+    # Politique d'accès — jamais exposée via auth-config (groupes / domaines = confidentiels).
+    access-policy:
+      mode: ${SOCLE_ACCESS_POLICY_MODE:jit}   # jit | require-group | provisioned-only
+      allowed-groups: []
+      groups-claim: groups
+      allowed-email-domains: []               # vide = tous les domaines
+    passkey-acr-values: ${SOCLE_IDENTITY_PASSKEY_ACR_VALUES:}
+    idp-display-name: ${SOCLE_IDENTITY_IDP_DISPLAY_NAME:}
+    support-contact: ${SOCLE_IDENTITY_SUPPORT_CONTACT:}
     client-id: ${OIDC_FRONTEND_CLIENT_ID:socle-frontend}
     scopes:
       - openid
