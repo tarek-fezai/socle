@@ -70,6 +70,7 @@ function hasControlChars(value: string): boolean {
  */
 export function sanitizeReturnTo(raw: string | null | undefined): string {
   if (raw == null || raw === '') return '/'
+  // Leading whitespace is rejected (do not trim).
   if (/^\s/.test(raw)) return '/'
   if (containsBackslash(raw) || hasControlChars(raw)) return '/'
   if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/'

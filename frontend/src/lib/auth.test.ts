@@ -123,7 +123,13 @@ describe('auth (oidc-client-ts)', () => {
     const { sanitizeReturnTo, loginWithHint } = await import('./auth')
     expect(sanitizeReturnTo('//evil.example')).toBe('/')
     expect(sanitizeReturnTo('https://evil.example')).toBe('/')
+    expect(sanitizeReturnTo('/\\evil.example')).toBe('/')
+    expect(sanitizeReturnTo('/%5Cevil.example')).toBe('/')
+    expect(sanitizeReturnTo('/\tevil')).toBe('/')
+    expect(sanitizeReturnTo(' javascript:alert(1)')).toBe('/')
+    expect(sanitizeReturnTo('javascript:alert(1)')).toBe('/')
     expect(sanitizeReturnTo('/docs/abc')).toBe('/docs/abc')
+    expect(sanitizeReturnTo('/ok?x=1#y')).toBe('/ok?x=1#y')
 
     signinRedirect.mockResolvedValue(undefined)
     await loginWithHint('tarek.fezai@example.com', '/spaces/1')

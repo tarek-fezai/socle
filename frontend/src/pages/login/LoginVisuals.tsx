@@ -19,6 +19,7 @@ export function LoginVisualSvg() {
         fontFamily="IBM Plex Sans"
         fontWeight="600"
         fill="#0E0E10"
+        data-mock-id="svg-socle"
       >
         Socle
       </text>
@@ -61,6 +62,7 @@ export function LoginErrorVisualSvg() {
         fontFamily="IBM Plex Sans"
         fontWeight="600"
         fill="#0E0E10"
+        data-mock-id="svg-socle"
       >
         Socle
       </text>
@@ -86,6 +88,7 @@ export function LoginErrorVisualSvg() {
         fontSize="10"
         fontFamily="IBM Plex Mono"
         fill="#B54708"
+        data-mock-id="svg-not-provisioned"
       >
         non provisionné
       </text>

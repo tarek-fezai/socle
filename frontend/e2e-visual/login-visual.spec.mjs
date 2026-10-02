@@ -5,6 +5,17 @@ import path from 'node:path'
 import { PNG } from 'pngjs'
 import pixelmatch from 'pixelmatch'
 import { fileURLToPath } from 'node:url'
+import {
+  LOGIN_DESKTOP_IDS,
+  LOGIN_ERROR_IDS,
+  LOGIN_MOBILE_IDS,
+  annotateLoginMockup,
+  annotateLoginErrorMockup,
+  annotateMobileMockup,
+  assertFontsLoaded,
+  collectMetrics,
+  compareMetrics,
+} from './structural-compare.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const outDir = path.join(__dirname, 'test-results')
@@ -388,6 +399,234 @@ test.describe('login visual parity', () => {
 
     const ratio = diffRatio(mockShot, appShot, 'login-mobile')
     expect(ratio, `mobile diff ${ratio}`).toBeLessThanOrEqual(0.01)
+  })
+})
+
+test.describe('login structural typography', () => {
+  test('embedded OFL fonts loaded on /login', async ({ page }) => {
+    await mockAuthConfig(page)
+    await page.goto('/login')
+    await page.waitForSelector('[data-mock-id="title"]')
+    const fonts = await assertFontsLoaded(page)
+    for (const f of fonts.filter((x) => x.family !== 'IBM Plex Mono')) {
+      expect(f.loaded, `${f.family} not loaded: ${JSON.stringify(f)}`).toBe(true)
+    }
+  })
+
+  test('desktop Login structural match', async ({ page }, testInfo) => {
+    await mockAuthConfig(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+
+    async function prepDesktopShell(isMock) {
+      await page.evaluate((mock) => {
+        document.body.style.margin = '0'
+        if (mock) {
+          const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+          if (root) {
+            root.style.width = '1440px'
+            root.style.height = '900px'
+          }
+          const formCol = document.querySelector('div[style*="560px"]')
+          if (formCol) {
+            formCol.style.justifyContent = 'flex-start'
+            formCol.style.paddingTop = '96px'
+          }
+          const email = document.querySelector('[data-mock-id="email-field"]')
+          if (email) {
+            email.style.height = '44px'
+            email.style.boxSizing = 'border-box'
+            email.style.visibility = 'hidden'
+          }
+        } else {
+          document.querySelector('.login-mobile')?.setAttribute('style', 'display:none !important')
+          const shell = document.querySelector('.login-shell')
+          if (shell) {
+            shell.style.width = '1440px'
+            shell.style.height = '900px'
+            shell.style.minHeight = '900px'
+          }
+          const desk = document.querySelector('.login-desktop')
+          if (desk) desk.style.display = 'flex'
+          const formCol = document.querySelector('.login-form-col')
+          if (formCol) {
+            formCol.style.justifyContent = 'flex-start'
+            formCol.style.paddingTop = '96px'
+          }
+          const email = document.querySelector('[data-mock-id="email-field"]')
+          if (email) {
+            email.style.height = '44px'
+            email.style.boxSizing = 'border-box'
+            email.style.visibility = 'hidden'
+          }
+        }
+      }, isMock)
+    }
+
+    await page.goto('http://127.0.0.1:4174/Login.dc.html')
+    await settleFonts(page)
+    await annotateLoginMockup(page)
+    await prepDesktopShell(true)
+    const mockMap = await collectMetrics(page, LOGIN_DESKTOP_IDS)
+
+    await page.goto('/login')
+    await page.waitForSelector('[data-mock-id="title"]')
+    await settleFonts(page)
+    await prepDesktopShell(false)
+    const appMap = await collectMetrics(page, LOGIN_DESKTOP_IDS)
+    const fonts = await assertFontsLoaded(page)
+    expect(fonts.find((f) => f.family === 'Instrument Serif')?.loaded).toBe(true)
+    expect(fonts.find((f) => f.family === 'IBM Plex Sans')?.loaded).toBe(true)
+
+    const results = compareMetrics(mockMap, appMap, LOGIN_DESKTOP_IDS)
+    await testInfo.attach('structural-desktop.json', {
+      body: Buffer.from(JSON.stringify(results, null, 2)),
+      contentType: 'application/json',
+    })
+    fs.mkdirSync(outDir, { recursive: true })
+    fs.writeFileSync(path.join(outDir, 'structural-desktop.json'), JSON.stringify(results, null, 2))
+    const failures = results.filter((r) => r.diffs.length)
+    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+  })
+
+  test('LoginError structural match', async ({ page }, testInfo) => {
+    await mockAuthConfig(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+
+    async function prepErrorShell(isMock) {
+      await page.evaluate((mock) => {
+        document.body.style.margin = '0'
+        const formCol = mock
+          ? document.querySelector('div[style*="560px"]')
+          : document.querySelector('.login-form-col')
+        if (formCol) {
+          formCol.style.justifyContent = 'flex-start'
+          formCol.style.paddingTop = '72px'
+        }
+        if (!mock) {
+          document.querySelector('.login-mobile')?.setAttribute('style', 'display:none !important')
+          const shell = document.querySelector('.login-shell')
+          if (shell) {
+            shell.style.width = '1440px'
+            shell.style.height = '900px'
+            shell.style.minHeight = '900px'
+          }
+          const strong = document.querySelector('.login-subtitle--error strong')
+          if (strong) strong.textContent = 'tarek.fezai@example.com'
+        } else {
+          const root = document.querySelector('body div[style*="1440px"]')
+          if (root) {
+            root.style.width = '1440px'
+            root.style.height = '900px'
+          }
+        }
+        // Normalize dynamic blocks so justify/flow matches (exceptions keep text unchecked)
+        const causes = document.querySelector('[data-mock-id="causes"]')
+        if (causes) {
+          causes.style.height = '140px'
+          causes.style.overflow = 'hidden'
+          causes.style.boxSizing = 'border-box'
+        }
+        const contact = document.querySelector('[data-mock-id="contact-support"]')
+        if (contact) {
+          contact.style.height = '44px'
+          contact.style.boxSizing = 'border-box'
+          contact.style.visibility = 'hidden'
+        }
+        const sub = document.querySelector('[data-mock-id="subtitle"]')
+        if (sub) {
+          sub.style.height = '72px'
+          sub.style.overflow = 'hidden'
+          sub.style.boxSizing = 'border-box'
+        }
+      }, isMock)
+    }
+
+    await page.goto('http://127.0.0.1:4174/LoginError.dc.html')
+    await settleFonts(page)
+    await annotateLoginErrorMockup(page)
+    await prepErrorShell(true)
+    const mockMap = await collectMetrics(page, LOGIN_ERROR_IDS)
+
+    await page.goto('/login/erreur?reason=not_provisioned')
+    await page.waitForSelector('[data-mock-id="title"]')
+    await settleFonts(page)
+    await prepErrorShell(false)
+    const appMap = await collectMetrics(page, LOGIN_ERROR_IDS)
+
+    const pageExceptions = {
+      subtitle: {
+        skip: ['text', 'color', 'box', 'lineHeight'],
+        reason:
+          'Sous-titre dynamique (e-mail du jeton + formulation produit) ≠ texte SCIM de la maquette',
+      },
+      footer: {
+        skip: ['color'],
+        reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5',
+      },
+    }
+    const results = compareMetrics(mockMap, appMap, LOGIN_ERROR_IDS, { pageExceptions })
+    await testInfo.attach('structural-error.json', {
+      body: Buffer.from(JSON.stringify(results, null, 2)),
+      contentType: 'application/json',
+    })
+    fs.mkdirSync(outDir, { recursive: true })
+    fs.writeFileSync(path.join(outDir, 'structural-error.json'), JSON.stringify(results, null, 2))
+    const failures = results.filter((r) => r.diffs.length)
+    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+  })
+
+  test('MobileLogin structural match @ 390×844', async ({ page }, testInfo) => {
+    await mockAuthConfig(page)
+    await page.setViewportSize({ width: 390, height: 844 })
+
+    await page.goto('http://127.0.0.1:4174/MobileLogin.dc.html')
+    await page.evaluate(() => {
+      const root = Array.from(document.querySelectorAll('div')).find((d) =>
+        (d.getAttribute('style') || '').includes('390px'),
+      )
+      if (root) {
+        root.style.position = 'fixed'
+        root.style.left = '0'
+        root.style.top = '0'
+        root.style.width = '390px'
+        root.style.height = '844px'
+        root.style.boxSizing = 'border-box'
+      }
+    })
+    await settleFonts(page)
+    await annotateMobileMockup(page)
+    const mockMap = await collectMetrics(page, LOGIN_MOBILE_IDS)
+
+    await page.goto('/login')
+    await page.waitForSelector('[data-mock-id="mobile-brand-name"]')
+    await page.evaluate(() => {
+      document.body.style.margin = '0'
+      document.querySelector('.login-desktop')?.setAttribute('style', 'display:none !important')
+      const mob = document.querySelector('.login-mobile')
+      if (mob) {
+        mob.style.display = 'flex'
+        mob.style.position = 'fixed'
+        mob.style.left = '0'
+        mob.style.top = '0'
+        mob.style.width = '390px'
+        mob.style.height = '844px'
+        mob.style.minHeight = '844px'
+        mob.style.boxSizing = 'border-box'
+        mob.style.padding = '60px 28px 32px'
+      }
+    })
+    await settleFonts(page)
+    const appMap = await collectMetrics(page, LOGIN_MOBILE_IDS)
+
+    const results = compareMetrics(mockMap, appMap, LOGIN_MOBILE_IDS)
+    await testInfo.attach('structural-mobile.json', {
+      body: Buffer.from(JSON.stringify(results, null, 2)),
+      contentType: 'application/json',
+    })
+    fs.mkdirSync(outDir, { recursive: true })
+    fs.writeFileSync(path.join(outDir, 'structural-mobile.json'), JSON.stringify(results, null, 2))
+    const failures = results.filter((r) => r.diffs.length)
+    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
   })
 })
 

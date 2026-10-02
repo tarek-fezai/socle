@@ -212,6 +212,14 @@ socle.identity:
   `account_disabled`, `not_provisioned`, `email_domain_not_allowed`. Aucun compte n'est créé sur refus.
 - `AccessPolicyFilter` (après `BearerTokenAuthenticationFilter`, `/api/**` authentifié hors `/api/v1/public/**`)
   met la décision en cache 60 s par `(issuer, sub)` ; le cache est invalidé par `disable` / `enable`.
+- **Décision « accordée » en cache** : une fois l'accès accepté, le filtre peut réutiliser ce résultat
+  jusqu'à **60 s**. Pendant cette fenêtre, un compte désactivé peut encore passer tant que le cache
+  n'a pas expiré (l'invalidation à `disable`/`enable` réduit ce risque côté instance qui émet
+  l'action).
+- **Groupes dans le JWT** : un jeton d'accès encore valide conserve les groupes (et autres claims)
+  qu'il contient **jusqu'à son expiration**. Le mode `require-group` ne re-interroge pas l'IdP :
+  seuls les claims du jeton présenté sont évalués. **Recommandation** : configurer l'IdP pour des
+  jetons d'accès courts (**≤ 10 min**) afin qu'un retrait de groupe prenne effet rapidement.
 - Admin (`ADMINISTRATEUR_SYSTEME`) : `POST /api/v1/admin/users/{id}/disable` et `/enable`
   (`users.status` = `disabled` / `active`, migration `V28`). Le dernier administrateur système ne peut pas être désactivé.
 - Audit : `auth.access_granted` (première connexion réussie), `auth.access_denied` (au plus 1 par

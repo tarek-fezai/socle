@@ -40,15 +40,19 @@ export function LoginLoadingLayout({ message }: { message: string }) {
         <div className="login-form-col">
           <div className="login-brand">
             <div className="login-mark" aria-hidden="true" />
-            <div className="login-brand-name">Socle</div>
+            <div className="login-brand-name" data-mock-id="brand-name">
+              Socle
+            </div>
           </div>
-          <h1 className="login-serif login-title">Se connecter</h1>
+          <h1 className="login-serif login-title" data-mock-id="title">
+            Se connecter
+          </h1>
           <p className="login-loading-msg">{message}</p>
         </div>
         <div className="login-visual">
           <LoginVisualSvg />
           <div className="login-quote">
-            <p className="login-serif">
+            <p className="login-serif" data-mock-id="quote">
               « La documentation qui suit la structure réelle de l&apos;organisation, pas l&apos;inverse. »
             </p>
           </div>
@@ -58,7 +62,9 @@ export function LoginLoadingLayout({ message }: { message: string }) {
         <div className="login-mobile-body">
           <div className="login-mobile-brand">
             <div className="login-mobile-mark" aria-hidden="true" />
-            <div className="login-serif login-mobile-name">Socle</div>
+            <div className="login-serif login-mobile-name" data-mock-id="mobile-brand-name">
+              Socle
+            </div>
           </div>
           <p className="login-mobile-note">{message}</p>
         </div>
@@ -115,17 +121,23 @@ export function LoginPage() {
         <div className="login-form-col">
           <div className="login-brand">
             <div className="login-mark" aria-hidden="true" />
-            <div className="login-brand-name">Socle</div>
+            <div className="login-brand-name" data-mock-id="brand-name">
+              Socle
+            </div>
           </div>
 
-          <h1 className="login-serif login-title">Se connecter</h1>
-          <p className="login-subtitle">Accédez à la documentation de votre organisation.</p>
+          <h1 className="login-serif login-title" data-mock-id="title">
+            Se connecter
+          </h1>
+          <p className="login-subtitle" data-mock-id="subtitle">
+            Accédez à la documentation de votre organisation.
+          </p>
 
           <form onSubmit={onContinueEmail} noValidate>
-            <label className="login-label" htmlFor="login-email">
+            <label className="login-label" htmlFor="login-email" data-mock-id="label-email">
               Adresse professionnelle
             </label>
-            <div className="login-email-wrap">
+            <div className="login-email-wrap" data-mock-id="email-field">
               <input
                 id="login-email"
                 className="login-email-input"
@@ -149,20 +161,28 @@ export function LoginPage() {
               </p>
             ) : null}
 
-            <button type="submit" className="login-cta">
+            <button type="submit" className="login-cta" data-mock-id="cta-continue">
               Continuer
             </button>
           </form>
 
           <div className="login-divider">
             <div className="login-divider-line" />
-            <span className="login-divider-text">ou</span>
+            <span className="login-divider-text" data-mock-id="divider-ou">
+              ou
+            </span>
             <div className="login-divider-line" />
           </div>
 
-          <button type="button" className="login-sso" onClick={() => void run(() => loginWithSso(returnTo))}>
+          <button
+            type="button"
+            className="login-sso"
+            onClick={() => void run(() => loginWithSso(returnTo))}
+          >
             <LockIcon />
-            <span className="login-sso-label">Continuer avec le SSO de l&apos;organisation</span>
+            <span className="login-sso-label" data-mock-id="sso-org">
+              Continuer avec le SSO de l&apos;organisation
+            </span>
           </button>
 
           {passkeyAcr ? (
@@ -172,11 +192,13 @@ export function LoginPage() {
               onClick={() => void run(() => loginWithAcr(passkeyAcr, returnTo))}
             >
               <PasskeyIcon />
-              <span className="login-sso-label">Continuer avec une clé de sécurité</span>
+              <span className="login-sso-label" data-mock-id="sso-passkey">
+                Continuer avec une clé de sécurité
+              </span>
             </button>
           ) : null}
 
-          <p className="login-footer">
+          <p className="login-footer" data-mock-id="footer">
             Réservé aux comptes provisionnés par votre organisation. Un problème d&apos;accès ? Contactez{' '}
             <IdentityTeamLabel config={config} />.
           </p>
@@ -185,7 +207,7 @@ export function LoginPage() {
         <div className="login-visual">
           <LoginVisualSvg />
           <div className="login-quote">
-            <p className="login-serif">
+            <p className="login-serif" data-mock-id="quote">
               « La documentation qui suit la structure réelle de l&apos;organisation, pas l&apos;inverse. »
             </p>
           </div>
@@ -197,8 +219,14 @@ export function LoginPage() {
         <div className="login-mobile-body">
           <div className="login-mobile-brand">
             <div className="login-mobile-mark" aria-hidden="true" />
-            <div className="login-serif login-mobile-name">Socle</div>
-            {orgName ? <div className="login-mobile-org">{orgName}</div> : null}
+            <div className="login-serif login-mobile-name" data-mock-id="mobile-brand-name">
+              Socle
+            </div>
+            {orgName ? (
+              <div className="login-mobile-org" data-mock-id="mobile-org">
+                {orgName}
+              </div>
+            ) : null}
           </div>
 
           <button
@@ -207,14 +235,18 @@ export function LoginPage() {
             onClick={() => void run(() => loginWithSso(returnTo))}
           >
             <LockIcon stroke="#FFFFFF" />
-            <span className="login-mobile-sso-label">Continuer avec le SSO de l&apos;organisation</span>
+            <span className="login-mobile-sso-label" data-mock-id="mobile-sso">
+              Continuer avec le SSO de l&apos;organisation
+            </span>
           </button>
 
-          <p className="login-mobile-note">Réservé aux comptes provisionnés par votre organisation.</p>
+          <p className="login-mobile-note" data-mock-id="mobile-note">
+            Réservé aux comptes provisionnés par votre organisation.
+          </p>
         </div>
 
         {supportMailto(config) ? (
-          <div className="login-mobile-help">
+          <div className="login-mobile-help" data-mock-id="mobile-help">
             Besoin d&apos;aide ?{' '}
             <a href={supportMailto(config)!}>Centre d&apos;aide</a>
           </div>
@@ -286,20 +318,24 @@ export function LoginErrorPage() {
         <div className="login-form-col">
           <div className="login-brand login-brand--error">
             <div className="login-mark" aria-hidden="true" />
-            <div className="login-brand-name">Socle</div>
+            <div className="login-brand-name" data-mock-id="brand-name">
+              Socle
+            </div>
           </div>
 
           <div className="login-alert-icon">
             <AlertIcon />
           </div>
 
-          <h1 className="login-serif login-title login-title--error">Connexion refusée</h1>
-          <p className="login-subtitle login-subtitle--error">
+          <h1 className="login-serif login-title login-title--error" data-mock-id="title">
+            Connexion refusée
+          </h1>
+          <p className="login-subtitle login-subtitle--error" data-mock-id="subtitle">
             L&apos;authentification SSO a réussi, mais l&apos;accès à Socle est refusé pour{' '}
             <strong style={{ color: '#0E0E10' }}>{email || 'votre compte'}</strong>.
           </p>
 
-          <div className="login-causes" data-testid="login-error-causes">
+          <div className="login-causes" data-testid="login-error-causes" data-mock-id="causes">
             <div className="login-causes-title">Causes possibles</div>
             <div className="login-cause">
               <span className="login-cause-dot" aria-hidden="true" />
@@ -307,17 +343,22 @@ export function LoginErrorPage() {
             </div>
           </div>
 
-          <button type="button" className="login-cta login-cta--error" onClick={() => void onRetry()}>
+          <button
+            type="button"
+            className="login-cta login-cta--error"
+            data-mock-id="cta-retry"
+            onClick={() => void onRetry()}
+          >
             Réessayer
           </button>
 
           {support ? (
-            <a className="login-ghost" href={support}>
+            <a className="login-ghost" href={support} data-mock-id="contact-support">
               Contacter l&apos;équipe Identité &amp; accès
             </a>
           ) : null}
 
-          <p className="login-footer login-footer--error">
+          <p className="login-footer login-footer--error" data-mock-id="footer">
             Un problème persiste ? Contactez <IdentityTeamLabel config={config} />
             {org ? <> de {org}</> : null}.
           </p>
@@ -326,7 +367,7 @@ export function LoginErrorPage() {
         <div className="login-visual login-visual--error">
           <LoginErrorVisualSvg />
           <div className="login-quote">
-            <p className="login-serif">
+            <p className="login-serif" data-mock-id="quote">
               « L&apos;accès suit la structure de l&apos;organisation — pas l&apos;inverse, y compris quand elle
               change. »
             </p>
