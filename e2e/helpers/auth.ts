@@ -24,7 +24,7 @@ export async function fetchPasswordToken(username: string, password: string): Pr
 
 /**
  * Browser login via Keycloak form.
- * The SPA uses AuthProvider requireLogin, so / already redirects to the IdP.
+ * Unauthenticated routes land on /login; "Se connecter" triggers the IdP redirect.
  */
 export async function loginViaUi(
   page: import('@playwright/test').Page,
@@ -39,16 +39,27 @@ export async function loginViaUi(
 
   await page.goto('/')
 
+  const onIdp = /realms\/socle|\/protocol\/openid-connect/
   try {
-    await page.waitForURL(/realms\/socle|\/protocol\/openid-connect/, { timeout: 60_000 })
+    await page.waitForURL((url) => onIdp.test(url.href) || url.pathname === '/login', {
+      timeout: 60_000,
+    })
   } catch (err) {
-    const loginBtn = page.getByRole('button', { name: /se connecter|connexion|login/i })
-    if (await loginBtn.isVisible().catch(() => false)) {
-      await loginBtn.click()
-      await page.waitForURL(/realms\/socle|\/protocol\/openid-connect/, { timeout: 60_000 })
-    } else {
+    throw new Error(
+      `Neither /login nor IdP reached (url=${page.url()}). Console: ${consoleErrors.join(' | ') || '(none)'}`,
+      { cause: err },
+    )
+  }
+
+  if (!onIdp.test(page.url())) {
+    const loginBtn = page.getByRole('button', { name: /se connecter/i })
+    await loginBtn.waitFor({ state: 'visible', timeout: 15_000 })
+    await loginBtn.click()
+    try {
+      await page.waitForURL(onIdp, { timeout: 60_000 })
+    } catch (err) {
       throw new Error(
-        `OIDC redirect failed (url=${page.url()}). Console: ${consoleErrors.join(' | ') || '(none)'}`,
+        `OIDC redirect failed after /login (url=${page.url()}). Console: ${consoleErrors.join(' | ') || '(none)'}`,
         { cause: err },
       )
     }
@@ -67,10 +78,13 @@ export async function loginViaUi(
     { timeout: 60_000 },
   )
 
-  const logout = page.getByRole('button', { name: /déconnexion|logout/i })
+  // AppShell exposes the signed-in user control; legacy AppNav used a "Déconnexion" button.
+  const signedIn = page.locator(
+    '[data-mock-id="shell-user"], button:has-text("Déconnexion"), button:has-text("Logout")',
+  )
   const oidcError = page.getByText(/connexion échouée|connexion oidc/i)
   await Promise.race([
-    logout.waitFor({ state: 'visible', timeout: 90_000 }),
+    signedIn.waitFor({ state: 'visible', timeout: 90_000 }),
     oidcError
       .waitFor({ state: 'visible', timeout: 90_000 })
       .then(async () => {
@@ -78,8 +92,8 @@ export async function loginViaUi(
         if (/échouée|échoue/i.test(text)) {
           throw new Error(`OIDC callback failed: ${text}. Console: ${consoleErrors.join(' | ')}`)
         }
-        // Still showing "Connexion OIDC…" — keep waiting for logout.
-        await logout.waitFor({ state: 'visible', timeout: 90_000 })
+        // Still showing "Connexion OIDC…" — keep waiting for the shell.
+        await signedIn.waitFor({ state: 'visible', timeout: 90_000 })
       }),
   ])
 }
