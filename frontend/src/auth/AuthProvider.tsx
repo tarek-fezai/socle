@@ -24,6 +24,8 @@ type Me = {
   email: string
   displayName: string
   avatarInitials: string
+  /** Prénom OIDC / SCIM si fourni par /me. */
+  givenName?: string | null
   /** SocleRole names from GET /api/v1/me — never from the access token. */
   roles?: SocleRoleName[] | string[]
 }

@@ -42,15 +42,18 @@ public class DocumentController {
     private final DocumentService service;
     private final DocumentApprovalService approvalService;
     private final ApprovalWorkflowDefinitionService workflowDefinitions;
+    private final DocumentViewService documentViewService;
 
     public DocumentController(
             DocumentService service,
             DocumentApprovalService approvalService,
-            ApprovalWorkflowDefinitionService workflowDefinitions
+            ApprovalWorkflowDefinitionService workflowDefinitions,
+            DocumentViewService documentViewService
     ) {
         this.service = service;
         this.approvalService = approvalService;
         this.workflowDefinitions = workflowDefinitions;
+        this.documentViewService = documentViewService;
     }
 
     @GetMapping
@@ -65,6 +68,13 @@ public class DocumentController {
     @GetMapping("/{id}")
     public DocumentResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         return service.get(jwt, id);
+    }
+
+    /** Incrémente le compteur de vues agrégé du jour (aucun user_id stocké). */
+    @PostMapping("/{id}/view")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void recordView(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        documentViewService.recordView(jwt, id);
     }
 
     /**

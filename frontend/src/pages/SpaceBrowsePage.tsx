@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Breadcrumb } from '../components/Breadcrumb'
+import { FavoriteStar } from '../components/shell/FavoriteStar'
 import { FolderContents } from '../components/FolderContents'
 import { MoveDialog, type MoveTarget } from '../components/MoveDialog'
 import { NewFolderDialog } from '../components/NewFolderDialog'
@@ -80,7 +81,10 @@ export function SpaceBrowsePage() {
           </div>
         </div>
 
-        <h1 className="serif-title">{spaceName || 'Espace'}</h1>
+        <h1 className="serif-title flex items-center gap-3">
+          {spaceName || 'Espace'}
+          <FavoriteStar resourceType="space" resourceId={spaceId} />
+        </h1>
         <div className="mb-6 mt-3 flex flex-wrap gap-4 text-sm">
           <Link to={`/spaces/${spaceId}`} className={linkCls}>
             Paramètres →

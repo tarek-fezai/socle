@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Navigate, Route, Routes, Link } from 'react-router-dom'
-import { AuthProvider, useAuth } from './auth/AuthProvider'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './auth/AuthProvider'
 import { RequireAuth } from './auth/RequireAuth'
-import { AppNav } from './components/AppNav'
-import { SocleRole } from './lib/auth'
+import { AppShellLayout } from './components/shell/AppShell'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { DocumentEditPage } from './pages/DocumentEditPage'
 import { DocumentHistoryPage } from './pages/DocumentHistoryPage'
@@ -31,379 +30,61 @@ import { DocumentExportPage, FolderExportPage, TagExportPage } from './pages/Exp
 import { CallbackPage } from './pages/CallbackPage'
 import { SilentRenewPage } from './pages/SilentRenewPage'
 import { LoginPage, LoginErrorPage } from './pages/login/LoginPage'
+import { HomeDashboardPage } from './pages/home/HomeDashboardPage'
+import { FavoritesPage } from './pages/FavoritesPage'
 
-function HomePage() {
-  const { me, logout, loading, authenticated, organizationName } = useAuth()
-  const roles = me?.roles ?? []
-  const isAuditeur = roles.includes(SocleRole.AUDITEUR)
-  const isIntegrateur = roles.includes(SocleRole.INTEGRATEUR)
-  const isAdmin = roles.includes(SocleRole.ADMINISTRATEUR_SYSTEME)
-
+function ProtectedShell() {
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-60px)] max-w-3xl flex-col justify-center px-6 py-16">
-      <p className="mb-3 text-sm font-medium tracking-[0.2em] text-socle-accent uppercase">
-        {organizationName} · Documentation
-      </p>
-      <h1 className="font-display text-5xl font-normal text-socle-ink md:text-6xl">Socle</h1>
-      <p className="mt-4 max-w-xl text-lg text-socle-slate">
-        Documentation d&apos;entreprise — auth OIDC, API Spring protégée.
-      </p>
-
-      <div className="mt-10 flex flex-wrap items-center gap-4">
-        {!loading && !authenticated && (
-          <Link to="/login" className="btn-primary">
-            Se connecter
-          </Link>
-        )}
-        {authenticated && (
-          <>
-            <span className="text-sm text-socle-slate">
-              {me ? `${me.displayName} (${me.email})` : 'Connecté'}
-            </span>
-            <Link className="font-semibold text-socle-accent underline-offset-4 hover:underline" to="/docs">
-              Documents →
-            </Link>
-            <Link
-              className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-              to="/docs/new"
-            >
-              Nouveau document →
-            </Link>
-            {isAdmin && (
-              <Link
-                className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-                to="/admin/templates"
-              >
-                Modèles →
-              </Link>
-            )}
-            <Link className="font-semibold text-socle-accent underline-offset-4 hover:underline" to="/approvals">
-              Approbations →
-            </Link>
-            <Link
-              className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-              to="/notifications"
-            >
-              Notifications →
-            </Link>
-            {isAuditeur && (
-              <Link className="font-semibold text-socle-accent underline-offset-4 hover:underline" to="/audit">
-                Audit →
-              </Link>
-            )}
-            <Link className="font-semibold text-socle-accent underline-offset-4 hover:underline" to="/trash">
-              Corbeille →
-            </Link>
-            <Link
-              className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-              to="/admin/workflows"
-            >
-              Workflows →
-            </Link>
-            {isIntegrateur && (
-              <Link
-                className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-                to="/integrations"
-              >
-                Intégrations →
-              </Link>
-            )}
-            {(isAuditeur || isIntegrateur) && (
-              <Link
-                className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-                to="/integrations/webhooks/deliveries"
-              >
-                Livraisons webhook →
-              </Link>
-            )}
-            <Link
-              className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-              to="/search"
-            >
-              Recherche →
-            </Link>
-            <Link
-              className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-              to="/spaces"
-            >
-              Espaces →
-            </Link>
-            <Link
-              className="font-semibold text-socle-accent underline-offset-4 hover:underline"
-              to="/team"
-            >
-              Équipes →
-            </Link>
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="text-sm text-socle-slate underline-offset-4 hover:underline"
-            >
-              Déconnexion
-            </button>
-          </>
-        )}
-      </div>
-      <p className="mt-6 text-xs text-socle-muted">
-        Rôles plateforme (via /me) — CONTRIBUTEUR · AUDITEUR · INTEGRATEUR · ADMINISTRATEUR_SYSTEME
-      </p>
-    </main>
-  )
-}
-
-function AppShell() {
-  const { authenticated, loading } = useAuth()
-  return (
-    <>
-      {!loading && authenticated ? <AppNav /> : null}
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/login/erreur" element={<LoginErrorPage />} />
-        <Route path="/callback" element={<CallbackPage />} />
-        <Route path="/silent-renew" element={<SilentRenewPage />} />
-        <Route
-          path="/docs"
-          element={
-            <RequireAuth>
-              <DocumentsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/docs/new"
-          element={
-            <RequireAuth>
-              <NewDocumentPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/templates"
-          element={
-            <RequireAuth>
-              <TemplatesAdminPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/docs/:id"
-          element={
-            <RequireAuth>
-              <DocumentEditPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/docs/:id/view"
-          element={
-            <RequireAuth>
-              <CompositePage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/docs/:id/history"
-          element={
-            <RequireAuth>
-              <DocumentHistoryPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/docs/:id/export"
-          element={
-            <RequireAuth>
-              <DocumentExportPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/folders/:id/export"
-          element={
-            <RequireAuth>
-              <FolderExportPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/tags/:id/export"
-          element={
-            <RequireAuth>
-              <TagExportPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/documents/:id/history"
-          element={
-            <RequireAuth>
-              <DocumentHistoryPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/approvals"
-          element={
-            <RequireAuth>
-              <ApprovalsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/notifications"
-          element={
-            <RequireAuth>
-              <NotificationsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/audit"
-          element={
-            <RequireAuth>
-              <AuditPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/trash"
-          element={
-            <RequireAuth>
-              <TrashPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/integrations"
-          element={
-            <RequireAuth>
-              <IntegrationsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/workflows"
-          element={
-            <RequireAuth>
-              <WorkflowsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/approval-roles"
-          element={
-            <RequireAuth>
-              <ApprovalRolesPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/integrations/webhooks/deliveries"
-          element={
-            <RequireAuth>
-              <WebhookDeliveriesPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/spaces"
-          element={
-            <RequireAuth>
-              <SpacesPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/spaces/:spaceId"
-          element={
-            <RequireAuth>
-              <SpaceSettingsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/spaces/:spaceId/tree"
-          element={
-            <RequireAuth>
-              <SpaceBrowsePage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/folders/:id"
-          element={
-            <RequireAuth>
-              <FolderPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/spaces/:spaceId/graph"
-          element={
-            <RequireAuth>
-              <GraphPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/spaces/:spaceId/content-health"
-          element={
-            <RequireAuth>
-              <ContentHealthPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/team"
-          element={
-            <RequireAuth>
-              <TeamPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/search"
-          element={
-            <RequireAuth>
-              <SearchPage />
-            </RequireAuth>
-          }
-        />
-        <Route path="/access" element={<Navigate to="/spaces" replace />} />
-        <Route
-          path="/spaces/:spaceId/access"
-          element={
-            <RequireAuth>
-              <AccessPage objectType="space" />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/folders/:folderId/access"
-          element={
-            <RequireAuth>
-              <AccessPage objectType="folder" />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/documents/:documentId/access"
-          element={
-            <RequireAuth>
-              <AccessPage objectType="document" />
-            </RequireAuth>
-          }
-        />
-      </Routes>
-    </>
+    <RequireAuth>
+      <AppShellLayout />
+    </RequireAuth>
   )
 }
 
 export default function App() {
   return (
-    <AuthProvider requireLogin>
-      <AppShell />
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login/erreur" element={<LoginErrorPage />} />
+        <Route path="/callback" element={<CallbackPage />} />
+        <Route path="/silent-renew" element={<SilentRenewPage />} />
+
+        <Route element={<ProtectedShell />}>
+          <Route path="/" element={<HomeDashboardPage />} />
+          <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/docs" element={<DocumentsPage />} />
+          <Route path="/docs/new" element={<NewDocumentPage />} />
+          <Route path="/admin/templates" element={<TemplatesAdminPage />} />
+          <Route path="/docs/:id" element={<DocumentEditPage />} />
+          <Route path="/docs/:id/view" element={<CompositePage />} />
+          <Route path="/docs/:id/history" element={<DocumentHistoryPage />} />
+          <Route path="/docs/:id/export" element={<DocumentExportPage />} />
+          <Route path="/folders/:id/export" element={<FolderExportPage />} />
+          <Route path="/tags/:id/export" element={<TagExportPage />} />
+          <Route path="/documents/:id/history" element={<DocumentHistoryPage />} />
+          <Route path="/approvals" element={<ApprovalsPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/audit" element={<AuditPage />} />
+          <Route path="/trash" element={<TrashPage />} />
+          <Route path="/integrations" element={<IntegrationsPage />} />
+          <Route path="/admin/workflows" element={<WorkflowsPage />} />
+          <Route path="/admin/approval-roles" element={<ApprovalRolesPage />} />
+          <Route path="/integrations/webhooks/deliveries" element={<WebhookDeliveriesPage />} />
+          <Route path="/spaces" element={<SpacesPage />} />
+          <Route path="/spaces/:spaceId" element={<SpaceSettingsPage />} />
+          <Route path="/spaces/:spaceId/tree" element={<SpaceBrowsePage />} />
+          <Route path="/folders/:id" element={<FolderPage />} />
+          <Route path="/spaces/:spaceId/graph" element={<GraphPage />} />
+          <Route path="/spaces/:spaceId/content-health" element={<ContentHealthPage />} />
+          <Route path="/team" element={<TeamPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/access" element={<Navigate to="/spaces" replace />} />
+          <Route path="/spaces/:spaceId/access" element={<AccessPage objectType="space" />} />
+          <Route path="/folders/:folderId/access" element={<AccessPage objectType="folder" />} />
+          <Route path="/documents/:documentId/access" element={<AccessPage objectType="document" />} />
+        </Route>
+      </Routes>
     </AuthProvider>
   )
 }

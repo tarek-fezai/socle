@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CommentsPanel, CommentSelectionButton } from '../components/CommentsPanel'
 import { DocumentReliabilityStatus } from '../components/ReliabilityDisplay'
 import { Breadcrumb } from '../components/Breadcrumb'
+import { FavoriteStar } from '../components/shell/FavoriteStar'
 import { MoveDialog } from '../components/MoveDialog'
 import { PlaceholderBanner } from '../components/PlaceholderBanner'
 import { SaveAsTemplateDialog } from '../components/SaveAsTemplateDialog'
@@ -226,6 +227,7 @@ export function DocumentEditPage() {
         />
         <div className="mb-6 flex items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-4">
+            <FavoriteStar resourceType="document" resourceId={id!} />
             <Link to="/docs" className="text-sm font-semibold text-socle-accent">
               ← Documents
             </Link>

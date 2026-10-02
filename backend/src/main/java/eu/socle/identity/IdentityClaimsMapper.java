@@ -53,7 +53,7 @@ public class IdentityClaimsMapper {
         if (name != null) {
             return name;
         }
-        String given = asString(jwt.getClaim("given_name"));
+        String given = givenName(jwt);
         String family = asString(jwt.getClaim("family_name"));
         if (given == null && family == null) {
             return null;
@@ -65,6 +65,11 @@ public class IdentityClaimsMapper {
             return given;
         }
         return given + " " + family;
+    }
+
+    /** Claim OIDC {@code given_name} (prénom pour salutation home). */
+    public String givenName(Jwt jwt) {
+        return asString(jwt.getClaim("given_name"));
     }
 
     public String issuer(Jwt jwt) {

@@ -3,11 +3,14 @@ package eu.socle.document;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.socle.activity.ActivityEventService;
+import eu.socle.activity.ActivityEventTypes;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.storage.DocumentStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,7 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
     private final DocumentStore documentStore;
     private final ObjectMapper objectMapper;
     private final ApprovalRoleResolver approvalRoleResolver;
+    private ActivityEventService activityEventService;
 
     public ApprovalActivitiesImpl(
             JdbcTemplate jdbcTemplate,
@@ -45,6 +49,11 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         this.documentStore = documentStore;
         this.objectMapper = objectMapper;
         this.approvalRoleResolver = approvalRoleResolver;
+    }
+
+    @Autowired(required = false)
+    void setActivityEventService(ActivityEventService activityEventService) {
+        this.activityEventService = activityEventService;
     }
 
     @Override
@@ -152,6 +161,15 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                 ),
                 null
         );
+
+        if (activityEventService != null) {
+            activityEventService.record(
+                    ActivityEventTypes.SUBMISSION,
+                    requesterId,
+                    documentId,
+                    loadSpaceId(documentId),
+                    Map.of("approvalRequestId", approvalRequestId.toString()));
+        }
 
         return "en_cours";
     }
@@ -446,6 +464,18 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         return rows.getFirst();
     }
 
+    private UUID loadSpaceId(UUID documentId) {
+        List<UUID> rows = jdbcTemplate.query("""
+                SELECT space_id FROM documents WHERE id = ?
+                """,
+                (rs, i) -> (UUID) rs.getObject("space_id"),
+                documentId);
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        return rows.getFirst();
+    }
+
     @Override
     @Transactional
     public String recordFinalDecision(
@@ -502,6 +532,16 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         // Recalcul hors chemin critique : après commit TX, async.
         if ("approuve".equals(decision)) {
             reliabilityScoreService.requestRecalculationAfterCommit(documentId);
+            if (activityEventService != null && actorId != null) {
+                activityEventService.record(
+                        ActivityEventTypes.PUBLICATION,
+                        actorId,
+                        documentId,
+                        loadSpaceId(documentId),
+                        Map.of(
+                                "approvalRequestId", approvalRequestId.toString(),
+                                "decision", decision));
+            }
         } else {
             reliabilityScoreService.clearScoreInDb(documentId);
         }

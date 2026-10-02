@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.document;
 
+import eu.socle.activity.ActivityEventService;
+import eu.socle.activity.ActivityEventTypes;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
@@ -57,6 +59,7 @@ public class DocumentService {
     private final JdbcTemplate jdbc;
     private final DocumentLinkService documentLinkService;
     private final TemplateService templateService;
+    private ActivityEventService activityEventService;
 
     /**
      * Constructeur tests unitaires — provider relational implicite ;
@@ -162,6 +165,11 @@ public class DocumentService {
         this.stalenessService = stalenessService != null
                 ? stalenessService
                 : new StalenessService(documentStore, new StalenessProperties());
+    }
+
+    @Autowired(required = false)
+    void setActivityEventService(ActivityEventService activityEventService) {
+        this.activityEventService = activityEventService;
     }
 
     private static final int DEFAULT_LIST_LIMIT = 20;
@@ -525,6 +533,16 @@ public class DocumentService {
                 updateMeta,
                 null
         );
+        if (activityEventService != null
+                && "valide".equals(statusTransition.before())
+                && "en_revue".equals(statusTransition.after())) {
+            activityEventService.record(
+                    ActivityEventTypes.EDIT_PROPOSAL,
+                    user.getId(),
+                    saved.getId(),
+                    saved.getSpaceId(),
+                    Map.of("title", saved.getTitle()));
+        }
         return toResponse(saved);
     }
 

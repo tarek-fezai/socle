@@ -212,3 +212,26 @@ export async function restoreVersion(
   )
   return data
 }
+
+const VIEW_SESSION_PREFIX = 'socle.docView.'
+
+/** Enregistre une vue document (une fois par onglet / session navigateur). */
+export async function recordDocumentView(
+  api: { post: <T>(url: string, body?: unknown) => Promise<{ data: T }> },
+  documentId: string,
+) {
+  const key = `${VIEW_SESSION_PREFIX}${documentId}`
+  try {
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(key)) {
+      return
+    }
+  } catch {
+    // ignore quota / private mode
+  }
+  await api.post(`/api/v1/documents/${documentId}/view`)
+  try {
+    sessionStorage.setItem(key, '1')
+  } catch {
+    // ignore
+  }
+}
