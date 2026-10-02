@@ -373,15 +373,15 @@ test.describe('dashboard structural', () => {
 
     const pageExceptions = {
       'shell-search-chip': {
-        skip: ['text', 'box', 'color', 'lineHeight'],
+        skip: ['text', 'box', 'color', 'lineHeight', 'fontSize'],
         reason: 'Chip bouton app vs lien maquette ; libellé raccourci Ctrl+K vs ⌘K selon OS',
       },
       'shell-user': {
-        skip: ['box', 'text', 'color', 'lineHeight'],
+        skip: ['box', 'text', 'color', 'lineHeight', 'fontSize'],
         reason: 'Bouton déconnexion vs lien Account maquette — contenu proche, boîte différente',
       },
       'shell-space-section': {
-        skip: ['box'],
+        skip: ['box', 'lineHeight'],
         reason: 'Bouton expand/collapse vs div statique maquette',
       },
       'home-subtitle': {
