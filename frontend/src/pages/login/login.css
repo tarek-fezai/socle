@@ -130,7 +130,9 @@
 }
 
 .login-cta {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   box-sizing: border-box;
   text-align: center;
@@ -140,10 +142,13 @@
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
+  line-height: 1;
   margin-bottom: 20px;
   border: none;
   cursor: pointer;
   font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .login-cta:hover {
@@ -192,6 +197,9 @@
   width: 100%;
   box-sizing: border-box;
   font-family: inherit;
+  line-height: normal;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .login-sso:last-of-type {
@@ -415,6 +423,9 @@
     cursor: pointer;
     width: 100%;
     font-family: inherit;
+    line-height: normal;
+    appearance: none;
+    -webkit-appearance: none;
   }
 
   .login-mobile-sso:hover {

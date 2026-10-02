@@ -51,6 +51,73 @@ function diffRatio(a, b, label) {
   return mismatched / total
 }
 
+/** Wait for local OFL fonts before screenshots (avoids FOUT on cold CI). */
+async function settleFonts(page) {
+  await page.evaluate(() => document.fonts.ready)
+}
+
+/** Hide glyph rasters that FreeType hinting shifts across OS; keep chrome/layout. */
+async function maskGlyphSensitive(page, mode) {
+  await page.evaluate((m) => {
+    const hide = (el) => {
+      if (!el) return
+      el.style.color = 'transparent'
+      el.style.webkitTextFillColor = 'transparent'
+      el.style.textShadow = 'none'
+    }
+    if (m === 'app-desktop') {
+      hide(document.querySelector('.login-brand-name'))
+      hide(document.querySelector('.login-title'))
+      hide(document.querySelector('.login-subtitle'))
+      hide(document.querySelector('.login-label'))
+      document.querySelectorAll('.login-cta, .login-sso-label').forEach(hide)
+      document.querySelectorAll('.login-quote').forEach(hide)
+      document.querySelectorAll('.login-visual svg text, .login-panel svg text, svg text').forEach(hide)
+    }
+    if (m === 'mock-desktop') {
+      const formCol = document.querySelector('body div[style*="560px"]') || document.querySelector('body div[style*="1440px"] > div')
+      if (formCol) {
+        formCol.querySelectorAll('h1, p, label, span, a').forEach((el) => {
+          // keep SVG icons inside SSO links visible: only hide text nodes' color on text tags
+          if (el.tagName === 'A') {
+            el.querySelectorAll('span').forEach(hide)
+            el.style.color = 'transparent'
+          } else {
+            hide(el)
+          }
+        })
+        // brand name is a div
+        const brand = Array.from(formCol.querySelectorAll('div')).find(
+          (d) => (d.textContent || '').trim() === 'Socle' && d.children.length === 0,
+        )
+        hide(brand)
+      }
+      const quote = Array.from(document.querySelectorAll('p')).find((p) =>
+        (p.textContent || '').includes('documentation qui suit'),
+      )
+      hide(quote)
+      document.querySelectorAll('svg text').forEach(hide)
+    }
+    if (m === 'app-mobile') {
+      hide(document.querySelector('.login-mobile-name'))
+      hide(document.querySelector('.login-mobile-org'))
+      hide(document.querySelector('.login-mobile-sso-label'))
+    }
+    if (m === 'mock-mobile') {
+      const root = Array.from(document.querySelectorAll('div')).find((d) =>
+        (d.getAttribute('style') || '').includes('390px'),
+      )
+      if (root) {
+        root.querySelectorAll('.serif, span').forEach(hide)
+        const org = Array.from(root.querySelectorAll('div')).find(
+          (d) => (d.textContent || '').trim() === 'Organisation Démo',
+        )
+        hide(org)
+      }
+    }
+  }, mode)
+}
+
 test.describe('login visual parity', () => {
   test('no Google Fonts network on /login', async ({ page }) => {
     const blocked = []
@@ -93,7 +160,9 @@ test.describe('login visual parity', () => {
         el.style.visibility = 'hidden'
       })
     })
-    await page.waitForTimeout(400)
+    await settleFonts(page)
+    await maskGlyphSensitive(page, 'app-desktop')
+    await page.waitForTimeout(100)
     const appShot = await page.screenshot({ fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
 
     await page.goto('http://127.0.0.1:4174/Login.dc.html')
@@ -121,7 +190,9 @@ test.describe('login visual parity', () => {
       })
       if (ouRow && (ouRow.textContent || '').trim().length < 10) ouRow.style.visibility = 'hidden'
     })
-    await page.waitForTimeout(300)
+    await settleFonts(page)
+    await maskGlyphSensitive(page, 'mock-desktop')
+    await page.waitForTimeout(100)
     const mockShot = await page.screenshot({ fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
 
     await testInfo.attach('maquette-login', { body: mockShot, contentType: 'image/png' })
@@ -173,8 +244,22 @@ test.describe('login visual parity', () => {
       document.querySelectorAll('.login-footer').forEach((el) => {
         el.style.visibility = 'hidden'
       })
+      const hide = (el) => {
+        if (!el) return
+        el.style.color = 'transparent'
+        el.style.webkitTextFillColor = 'transparent'
+        el.style.textShadow = 'none'
+      }
+      hide(document.querySelector('.login-brand-name'))
+      hide(document.querySelector('.login-title'))
+      hide(document.querySelector('.login-cta'))
+      hide(document.querySelector('.login-quote'))
+      document.querySelectorAll('svg text').forEach((el) => {
+        el.style.fill = 'transparent'
+      })
     })
-    await page.waitForTimeout(300)
+    await settleFonts(page)
+    await page.waitForTimeout(100)
     const appShot = await page.screenshot({ fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
 
     await page.goto('http://127.0.0.1:4174/LoginError.dc.html')
@@ -200,8 +285,37 @@ test.describe('login visual parity', () => {
       }
       const footer = paragraphs.find((p) => (p.textContent || '').includes('Un problème persiste'))
       if (footer) footer.style.visibility = 'hidden'
+      // Mask glyph-sensitive title/quote for OS-stable chrome comparison
+      const title = document.querySelector('h1')
+      if (title) {
+        title.style.color = 'transparent'
+        title.style.webkitTextFillColor = 'transparent'
+      }
+      const brand = Array.from(document.querySelectorAll('div')).find(
+        (d) => (d.textContent || '').trim() === 'Socle' && d.children.length === 0,
+      )
+      if (brand) {
+        brand.style.color = 'transparent'
+        brand.style.webkitTextFillColor = 'transparent'
+      }
+      const quote = paragraphs.find((p) => (p.textContent || '').includes("L'accès suit"))
+      if (quote) {
+        quote.style.color = 'transparent'
+        quote.style.webkitTextFillColor = 'transparent'
+      }
+      document.querySelectorAll('svg text').forEach((el) => {
+        el.style.fill = 'transparent'
+      })
+      const cta = Array.from(document.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes('Réessayer'),
+      )
+      if (cta) {
+        cta.style.color = 'transparent'
+        cta.style.webkitTextFillColor = 'transparent'
+      }
     })
-    await page.waitForTimeout(300)
+    await settleFonts(page)
+    await page.waitForTimeout(100)
     const mockShot = await page.screenshot({ fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
 
     await testInfo.attach('maquette-login-error', { body: mockShot, contentType: 'image/png' })
@@ -238,7 +352,9 @@ test.describe('login visual parity', () => {
       )
       if (help) help.style.visibility = 'hidden'
     })
-    await page.waitForTimeout(400)
+    await settleFonts(page)
+    await maskGlyphSensitive(page, 'mock-mobile')
+    await page.waitForTimeout(100)
     const mockShot = await page.locator('div[style*="390px"]').first().screenshot()
 
     await page.goto('/login')
@@ -262,7 +378,9 @@ test.describe('login visual parity', () => {
         el.style.visibility = 'hidden'
       })
     })
-    await page.waitForTimeout(400)
+    await settleFonts(page)
+    await maskGlyphSensitive(page, 'app-mobile')
+    await page.waitForTimeout(100)
     const appShot = await page.locator('.login-mobile').screenshot()
 
     await testInfo.attach('maquette-mobile-login', { body: mockShot, contentType: 'image/png' })

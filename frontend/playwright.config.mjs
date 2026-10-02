@@ -21,8 +21,19 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4173',
     trace: 'on-first-retry',
     locale: 'fr-FR',
+    colorScheme: 'light',
+    deviceScaleFactor: 1,
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        deviceScaleFactor: 1,
+        colorScheme: 'light',
+      },
+    },
+  ],
   webServer: [
     {
       command: 'node e2e-visual/serve-mockups.mjs',
