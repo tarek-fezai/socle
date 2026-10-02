@@ -97,7 +97,7 @@ class DocumentViewServiceTest {
                   title TEXT NOT NULL, deleted_at TIMESTAMPTZ
                 )
                 """);
-        String sql = new ClassPathResource("db/migration/V30__document_view_counts.sql")
+        String sql = new ClassPathResource("db/migration/V31__document_view_counts.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
         jdbc.execute(sql);
 

@@ -96,7 +96,7 @@ class FavoriteServiceTest {
                   id UUID PRIMARY KEY, space_id UUID NOT NULL, title TEXT NOT NULL, deleted_at TIMESTAMPTZ
                 )
                 """);
-        String favoritesSql = new ClassPathResource("db/migration/V29__favorites.sql")
+        String favoritesSql = new ClassPathResource("db/migration/V30__favorites.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
         jdbc.execute(favoritesSql);
 

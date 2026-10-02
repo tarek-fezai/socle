@@ -70,7 +70,7 @@ class ActivityEventServiceTest {
                   id UUID PRIMARY KEY, space_id UUID NOT NULL REFERENCES spaces(id), title TEXT NOT NULL
                 )
                 """);
-        String sql = new ClassPathResource("db/migration/V31__activity_events.sql")
+        String sql = new ClassPathResource("db/migration/V32__activity_events.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
         jdbc.execute(sql);
 

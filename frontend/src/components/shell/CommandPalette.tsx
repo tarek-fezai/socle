@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
@@ -43,7 +43,7 @@ export function CommandPalette({ open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return
-    function onKey(e: KeyboardEvent) {
+    function onKey(e: globalThis.KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault()
         onClose()
@@ -56,7 +56,7 @@ export function CommandPalette({ open, onClose }: Props) {
   // Focus trap
   useEffect(() => {
     if (!open) return
-    function trap(e: KeyboardEvent) {
+    function trap(e: globalThis.KeyboardEvent) {
       if (e.key !== 'Tab') return
       const root = listRef.current?.closest('.cmdk-dialog')
       if (!root) return
@@ -85,7 +85,7 @@ export function CommandPalette({ open, onClose }: Props) {
     navigate(documentHref(hit.id))
   }
 
-  function onInputKey(e: KeyboardEvent) {
+  function onInputKey(e: ReactKeyboardEvent) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       setActive((i) => Math.min(i + 1, Math.max(results.length - 1, 0)))

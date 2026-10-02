@@ -15,7 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Garde-fou : {@code DocumentScope.global()} réservé à {@code DocumentService.list}.
+ * Garde-fou : {@code DocumentScope.global()} réservé aux listes instance-wide
+ * ({@code DocumentService.list}, {@code HomeService.getHome}).
  * {@code listViewableDocumentIds(userId, null)} interdit.
  */
 class DocumentScopeGlobalUsageTest {
@@ -37,6 +38,7 @@ class DocumentScopeGlobalUsageTest {
             walk.filter(p -> p.toString().endsWith(".java"))
                     .filter(p -> !p.getFileName().toString().equals("DocumentScope.java"))
                     .filter(p -> !p.getFileName().toString().equals("DocumentService.java"))
+                    .filter(p -> !p.getFileName().toString().equals("HomeService.java"))
                     .forEach(p -> {
                         try {
                             String src = Files.readString(p);
@@ -49,7 +51,7 @@ class DocumentScopeGlobalUsageTest {
                     });
         }
         assertThat(offenders)
-                .as("DocumentScope.global() hors DocumentService — périmètre instance interdit")
+                .as("DocumentScope.global() hors DocumentService/HomeService — périmètre instance interdit")
                 .isEmpty();
     }
 

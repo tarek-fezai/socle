@@ -112,9 +112,9 @@ class HomeServiceTest {
                   deleted_at TIMESTAMPTZ
                 )
                 """);
-        jdbc.execute(new ClassPathResource("db/migration/V30__document_view_counts.sql")
+        jdbc.execute(new ClassPathResource("db/migration/V31__document_view_counts.sql")
                 .getContentAsString(StandardCharsets.UTF_8));
-        jdbc.execute(new ClassPathResource("db/migration/V31__activity_events.sql")
+        jdbc.execute(new ClassPathResource("db/migration/V32__activity_events.sql")
                 .getContentAsString(StandardCharsets.UTF_8));
 
         jdbc.update("INSERT INTO users (id, email, display_name, status) VALUES (?, 'u@x', 'Tarek Fezai', 'active')", USER);
