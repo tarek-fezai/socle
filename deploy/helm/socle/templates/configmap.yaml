@@ -7,13 +7,13 @@ metadata:
 data:
   SOCLE_STORAGE_PROVIDER: {{ .Values.storage.provider | quote }}
   SOCLE_STORAGE_GIT_PATH: {{ .Values.storage.git.mountPath | quote }}
-  OPENFGA_API_URL: {{ if eq .Values.openfga.mode "embedded" }}{{ printf "http://%s-openfga:8080" (include "socle.fullname" .) }}{{ else }}{{ .Values.openfga.external.apiUrl }}{{ end | quote }}
+  OPENFGA_API_URL: {{ if eq .Values.openfga.mode "embedded" }}{{ printf "http://%s-openfga:8080" (include "socle.fullname" .) | quote }}{{ else }}{{ .Values.openfga.external.apiUrl | quote }}{{ end }}
   OPENFGA_STORE_ID: {{ .Values.openfga.external.storeId | quote }}
   OPENFGA_MODEL_ID: {{ .Values.openfga.external.modelId | quote }}
   OPENFGA_AUTO_INIT: {{ .Values.openfga.autoInit | default true | quote }}
   OPENFGA_STATE_DIR: {{ .Values.openfga.stateDir | default "/openfga-config" | quote }}
   SOCLE_REJECT_WEAK_SECRETS: "true"
-  TEMPORAL_TARGET: {{ if eq .Values.temporal.mode "embedded" }}{{ printf "%s-temporal:7233" (include "socle.fullname" .) }}{{ else }}{{ .Values.temporal.external.target }}{{ end | quote }}
+  TEMPORAL_TARGET: {{ if eq .Values.temporal.mode "embedded" }}{{ printf "%s-temporal:7233" (include "socle.fullname" .) | quote }}{{ else }}{{ .Values.temporal.external.target | quote }}{{ end }}
   TEMPORAL_NAMESPACE: {{ .Values.temporal.external.namespace | quote }}
   OIDC_ISSUER_URI: {{ required "idp.issuerUri is required" .Values.idp.issuerUri | quote }}
   {{- if .Values.idp.clientIssuerUri }}
