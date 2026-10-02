@@ -1,0 +1,29 @@
+# Overlay for Playwright / CI — demo IdP realm with Caddy-friendly redirect URIs.
+services:
+  keycloak:
+    environment:
+      # Browser / JWT iss claim must match OIDC_ISSUER_URI (http://127.0.0.1:8081/realms/socle).
+      KC_HOSTNAME: 127.0.0.1
+      KC_HOSTNAME_PORT: ${KEYCLOAK_HTTP_PORT:-8081}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_URL: http://127.0.0.1:${KEYCLOAK_HTTP_PORT:-8081}
+      KC_HTTP_ENABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health/ready || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 36
+      start_period: 90s
+    volumes:
+      - ../../e2e/realm-socle.ci.json:/opt/keycloak/data/import/realm-socle.dev.json:ro
+
+  caddy:
+    environment:
+      # http:// prefix disables Caddy automatic HTTPS (required for Playwright on :80).
+      DOMAIN: http://127.0.0.1
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s

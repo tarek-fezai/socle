@@ -47,11 +47,13 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
     private final DocumentVersionRepository versionRepository;
     private final Path repoPath;
     private final Git git;
+    private final GitRepositoryLock instanceLock;
     private final ConcurrentHashMap<UUID, Object> documentLocks = new ConcurrentHashMap<>();
 
     public GitDocumentStore(DocumentVersionRepository versionRepository, Path repoPath) {
         this.versionRepository = versionRepository;
         this.repoPath = repoPath;
+        GitRepositoryLock acquired = null;
         try {
             Files.createDirectories(repoPath);
             Path gitDir = repoPath.resolve(".git");
@@ -66,6 +68,7 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
                 repository = FileRepositoryBuilder.create(gitDir.toFile());
                 repository.create();
             }
+            acquired = GitRepositoryLock.acquire(gitDir);
             this.git = new Git(repository);
             if (repository.resolve("HEAD") == null) {
                 // Commit vide initial pour avoir une branche
@@ -77,8 +80,12 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
                         .call();
             }
         } catch (IOException | GitAPIException e) {
+            if (acquired != null) {
+                acquired.close();
+            }
             throw new IllegalStateException("Impossible d'initialiser le dépôt Git: " + repoPath, e);
         }
+        this.instanceLock = acquired;
     }
 
     @Override
@@ -230,7 +237,11 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
 
     @Override
     public void close() {
-        git.close();
+        try {
+            git.close();
+        } finally {
+            instanceLock.close();
+        }
     }
 
     private void commitFile(

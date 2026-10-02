@@ -1,0 +1,179 @@
+# Default values for socle. Override per environment; secrets via `existingSecret` or `secrets.*`.
+
+global:
+  imageRegistry: ghcr.io/tarek-fezai
+  imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+postgres:
+  embedded: false
+  host: ""
+  port: 5432
+  database: socle_core
+  username: socle
+  # When embedded=true, password is generated into Secret template.
+  password: ""
+  storageSize: 20Gi
+
+storage:
+  provider: git # git | relational
+  git:
+    mountPath: /data/git-content
+    existingClaim: "" # empty → chart creates PVC when provider=git
+    storageSize: 20Gi
+
+openfga:
+  mode: external # embedded | external
+  autoInit: true
+  stateDir: /openfga-config
+  embedded:
+    image: openfga/openfga:v1.8.16
+  external:
+    apiUrl: http://openfga:8080
+    storeId: ""
+    modelId: ""
+
+temporal:
+  mode: external # embedded | external
+  external:
+    target: temporal:7233
+    namespace: default
+  embedded:
+    image:
+      adminTools: temporalio/admin-tools:1.29.1-tctl-1.18.4-cli-1.5.0
+      server: temporalio/server:1.29.1
+
+idp:
+  issuerUri: ""
+  jwkSetUri: ""
+  clientIssuerUri: "" # optional: issuer URL reachable from the backend pod (e.g. in-cluster Keycloak)
+  clientId: socle-backend
+  clientSecret: ""
+  frontendClientId: socle-frontend
+  roleSource: CLAIMS
+  corsAllowedOrigins: "*"
+
+# DEMO ONLY — deploy Keycloak for CI / lab. Never use in production.
+demoIdp:
+  enabled: false
+  image: quay.io/keycloak/keycloak:26.0
+  adminUser: admin
+  adminPassword: "" # required when enabled
+  httpPort: 8080
+
+backend:
+  replicas: 1
+  image:
+    repository: socle-backend
+    tag: ""
+    pullPolicy: IfNotPresent
+  resources: {}
+  # Image runs as UID/GID 10001 (see backend/Dockerfile).
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+  podSecurityContext:
+    fsGroup: 10001
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  existingSecret: ""
+  extraEnv: {}
+  probes:
+    livenessPath: /actuator/health/liveness
+    readinessPath: /actuator/health/readiness
+
+frontend:
+  replicas: 2
+  image:
+    repository: socle-frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+  resources: {}
+  # nginxinc/nginx-unprivileged → UID/GID 101
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+  podSecurityContext:
+    fsGroup: 101
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+webhookWorker:
+  enabled: true
+  replicas: 1
+  image:
+    repository: socle-worker
+    tag: ""
+    pullPolicy: IfNotPresent
+  resources: {}
+  # gcr.io/distroless/static-debian12:nonroot → UID/GID 65532
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+  podSecurityContext:
+    fsGroup: 65532
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: socle.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /actuator
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: socle-tls
+      hosts:
+        - socle.example.com
+
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+secrets:
+  # Plain values merged into Secret when existingSecret is empty (prefer External Secrets in prod).
+  postgresPassword: ""
+  oidcClientSecret: ""
+
+serviceAccount:
+  create: true
+  name: ""

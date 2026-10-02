@@ -1,0 +1,127 @@
+{{- if and (eq .Values.storage.provider "git") (gt (int .Values.backend.replicas) 1) }}
+{{- fail "storage.provider=git requires backend.replicas=1 (JVM file lock limit)" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "socle.fullname" . }}-backend
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "socle.backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "socle.backend.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "socle.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.backend.podSecurityContext | nindent 8 }}
+      initContainers:
+        {{- if eq .Values.openfga.mode "embedded" }}
+        - name: wait-openfga
+          image: busybox:1.36
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              set -eu
+              URL=http://{{ include "socle.fullname" . }}-openfga:8080/healthz
+              for i in $(seq 1 90); do
+                wget -qO- "$URL" >/dev/null 2>&1 && exit 0
+                sleep 2
+              done
+              echo "OpenFGA not ready: $URL" >&2
+              exit 1
+          securityContext:
+            runAsUser: 65532
+            runAsGroup: 65532
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+        {{- end }}
+        {{- if eq .Values.temporal.mode "embedded" }}
+        - name: ensure-temporal-namespace
+          image: {{ .Values.temporal.embedded.image.adminTools }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              set -eux
+              ADDR={{ include "socle.fullname" . }}-temporal:7233
+              NS={{ .Values.temporal.external.namespace | default "default" }}
+              for i in $(seq 1 90); do
+                temporal operator cluster health --address "$ADDR" >/dev/null 2>&1 && break
+                sleep 2
+              done
+              temporal operator namespace describe --namespace "$NS" --address "$ADDR" \
+                || temporal operator namespace create --namespace "$NS" --address "$ADDR"
+          securityContext:
+            # temporalio/admin-tools runs as root; override pod runAsNonRoot for this init only.
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+        {{- end }}
+      containers:
+        - name: backend
+          image: {{ include "socle.image" (dict "Values" .Values "Chart" .Chart "repository" .Values.backend.image.repository "tag" .Values.backend.image.tag) }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: {{ include "socle.fullname" . }}-config
+            - secretRef:
+                name: {{ include "socle.secretName" . }}
+          {{- with .Values.backend.extraEnv }}
+          env:
+            {{- range $k, $v := . }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.backend.securityContext | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.backend.probes.readinessPath }}
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.backend.probes.livenessPath }}
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            {{- if eq .Values.storage.provider "git" }}
+            - name: git-content
+              mountPath: {{ .Values.storage.git.mountPath }}
+            {{- end }}
+            - name: openfga-state
+              mountPath: {{ .Values.openfga.stateDir | default "/openfga-config" }}
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        {{- if eq .Values.storage.provider "git" }}
+        - name: git-content
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-git-content" (include "socle.fullname" .)) .Values.storage.git.existingClaim }}
+        {{- end }}
+        - name: openfga-state
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

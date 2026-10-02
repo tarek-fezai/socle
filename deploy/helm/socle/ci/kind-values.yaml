@@ -1,0 +1,82 @@
+# CI / kind smoke values — demo IdP + embedded dependencies.
+# Not for production.
+
+postgres:
+  embedded: true
+  username: socle
+  database: socle_core
+  storageSize: 8Gi
+
+storage:
+  provider: relational
+
+openfga:
+  mode: embedded
+  autoInit: true
+  external:
+    storeId: ""
+    modelId: ""
+
+temporal:
+  mode: embedded
+  external:
+    target: unused
+    namespace: default
+
+idp:
+  # Browser/JWT issuer as seen by clients; for kind we port-forward Keycloak if needed.
+  # Backend uses clientIssuerUri for in-cluster discovery.
+  issuerUri: http://socle-keycloak:8080/realms/master
+  clientIssuerUri: http://socle-keycloak:8080/realms/master
+  jwkSetUri: http://socle-keycloak:8080/realms/master/protocol/openid-connect/certs
+  clientId: socle-backend
+  frontendClientId: account
+  roleSource: CLAIMS
+  corsAllowedOrigins: "*"
+
+demoIdp:
+  enabled: true
+  adminUser: kindadmin
+  adminPassword: KindAdminPass1!
+  httpPort: 8080
+
+backend:
+  replicas: 1
+  image:
+    repository: socle-backend
+    tag: kind
+    pullPolicy: Never
+  extraEnv:
+    # Kind smoke only needs actuator UP; weak-secret check still requires non-placeholder OIDC secret.
+    SPRING_MAIN_LAZY_INITIALIZATION: "false"
+
+frontend:
+  replicas: 1
+  image:
+    repository: socle-frontend
+    tag: kind
+    pullPolicy: Never
+
+webhookWorker:
+  enabled: true
+  replicas: 1
+  image:
+    repository: socle-worker
+    tag: kind
+    pullPolicy: Never
+
+ingress:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+global:
+  imageRegistry: ""
+
+secrets:
+  postgresPassword: KindPgPass1!
+  oidcClientSecret: KindOidcSecret1!

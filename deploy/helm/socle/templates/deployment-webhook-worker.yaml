@@ -1,0 +1,53 @@
+{{- if .Values.webhookWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "socle.fullname" . }}-webhook-worker
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webhook-worker
+spec:
+  replicas: {{ .Values.webhookWorker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "socle.webhookWorker.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "socle.webhookWorker.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "socle.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.webhookWorker.podSecurityContext | nindent 8 }}
+      containers:
+        - name: webhook-worker
+          image: {{ include "socle.image" (dict "Values" .Values "Chart" .Chart "repository" .Values.webhookWorker.image.repository "tag" .Values.webhookWorker.image.tag) }}
+          imagePullPolicy: {{ .Values.webhookWorker.image.pullPolicy }}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "socle.secretName" . }}
+                  key: DATABASE_URL
+            - name: HTTP_ADDR
+              value: ":8090"
+          ports:
+            - name: http
+              containerPort: 8090
+          securityContext:
+            {{- toYaml .Values.webhookWorker.securityContext | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.webhookWorker.resources | nindent 12 }}
+{{- end }}

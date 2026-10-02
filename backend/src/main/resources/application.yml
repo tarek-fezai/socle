@@ -20,6 +20,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # V27 seed TipTap JSON uses PostgreSQL $json$…$json$ dollar-quotes; Flyway would
+    # otherwise treat `${"type":…}` as a placeholder.
+    placeholder-replacement: false
   security:
     oauth2:
       resourceserver:
@@ -36,7 +39,8 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           keycloak:
-            issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8081/realms/socle}
+            # Reachable from the backend container (may differ from public JWT iss).
+            issuer-uri: ${OIDC_CLIENT_ISSUER_URI:${OIDC_ISSUER_URI:http://localhost:8081/realms/socle}}
 
 management:
   endpoints:
@@ -66,10 +70,15 @@ socle:
   temporal:
     target: ${TEMPORAL_TARGET:localhost:7233}
     namespace: ${TEMPORAL_NAMESPACE:default}
+  security:
+    # Production / compose : true — refuse change-me, admin, socle, secrets vides.
+    reject-weak-secrets: ${SOCLE_REJECT_WEAK_SECRETS:false}
   openfga:
     api-url: ${OPENFGA_API_URL:http://localhost:8082}
     store-id: ${OPENFGA_STORE_ID:}
     authorization-model-id: ${OPENFGA_MODEL_ID:}
+    auto-init: ${OPENFGA_AUTO_INIT:false}
+    state-dir: ${OPENFGA_STATE_DIR:./data/openfga}
     # Plafond OpenFGA ListObjects (OPENFGA_LIST_OBJECTS_MAX_RESULTS côté serveur, 1000 par défaut).
     # Quand listObjects renvoie exactement cette taille → warning (résultats potentiellement tronqués).
     list-objects-max-results: ${OPENFGA_LIST_OBJECTS_MAX_RESULTS:1000}
@@ -102,13 +111,14 @@ socle:
     email-claim: email
     name-claim: name
     roles-claim: realm_access.roles
-    role-source: CLAIMS
+    role-source: ${SOCLE_IDENTITY_ROLE_SOURCE:CLAIMS}
     default-role: CONTRIBUTEUR
     role-mapping:
       contributeur: CONTRIBUTEUR
       auditeur: AUDITEUR
       integrateur: INTEGRATEUR
       administrateur-systeme: ADMINISTRATEUR_SYSTEME
+    # Overridable via SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS (comma-separated subs).
     bootstrap-admin-subjects: []
     link-by-verified-email: false
     client-id: ${OIDC_FRONTEND_CLIENT_ID:socle-frontend}

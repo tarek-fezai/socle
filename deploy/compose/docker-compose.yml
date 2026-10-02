@@ -1,0 +1,259 @@
+# Socle production stack — configure via `.env` (see `.env.production.example`).
+# Secrets must be set explicitly; weak values are not defaulted here.
+
+name: socle-production
+
+x-backend-env: &backend-env
+  SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+  SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-${POSTGRES_USER}}
+  SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+  SOCLE_STORAGE_PROVIDER: ${SOCLE_STORAGE_PROVIDER:-git}
+  SOCLE_STORAGE_GIT_PATH: ${SOCLE_STORAGE_GIT_REPOSITORY_PATH:-/data/git-content}
+  OPENFGA_API_URL: ${OPENFGA_API_URL:-http://openfga:8080}
+  OPENFGA_STORE_ID: ${OPENFGA_STORE_ID:-}
+  OPENFGA_MODEL_ID: ${OPENFGA_MODEL_ID:-}
+  OPENFGA_AUTO_INIT: ${OPENFGA_AUTO_INIT:-true}
+  OPENFGA_STATE_DIR: ${OPENFGA_STATE_DIR:-/openfga-config}
+  SOCLE_REJECT_WEAK_SECRETS: ${SOCLE_REJECT_WEAK_SECRETS:-true}
+  TEMPORAL_TARGET: ${TEMPORAL_TARGET:-temporal:7233}
+  TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+  OIDC_ISSUER_URI: ${OIDC_ISSUER_URI:?OIDC_ISSUER_URI must be set}
+  OIDC_CLIENT_ISSUER_URI: ${OIDC_CLIENT_ISSUER_URI:-}
+  OIDC_JWK_SET_URI: ${OIDC_JWK_SET_URI:-}
+  OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-socle-backend}
+  OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET must be set}
+  OIDC_FRONTEND_CLIENT_ID: ${OIDC_FRONTEND_CLIENT_ID:-socle-frontend}
+  SOCLE_IDENTITY_ROLE_SOURCE: ${SOCLE_IDENTITY_ROLE_SOURCE:-CLAIMS}
+  SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS: ${SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS:-}
+  SOCLE_INSTANCE_DISPLAY_NAME: ${SOCLE_INSTANCE_DISPLAY_NAME:-Socle}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  openfga-migrate:
+    image: openfga/openfga:v1.8.16
+    command: ["migrate"]
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/openfga?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  openfga:
+    image: openfga/openfga:v1.8.16
+    command: ["run"]
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/openfga?sslmode=disable
+      OPENFGA_HTTP_ADDR: 0.0.0.0:8080
+      OPENFGA_GRPC_ADDR: 0.0.0.0:8081
+      OPENFGA_PLAYGROUND_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      openfga-migrate:
+        condition: service_completed_successfully
+    # Image distroless-like: pas de wget/curl — la disponibilité est attendue par openfga-init.
+    restart: unless-stopped
+
+  openfga-init:
+    image: alpine:3.20
+    entrypoint: ["/bin/sh", "/scripts/openfga-init.sh"]
+    environment:
+      OPENFGA_API_URL: http://openfga:8080
+    volumes:
+      - ./scripts/openfga-init.sh:/scripts/openfga-init.sh:ro
+    depends_on:
+      openfga:
+        condition: service_started
+    restart: "no"
+
+  temporal-schema:
+    image: temporalio/admin-tools:1.29.1-tctl-1.18.4-cli-1.5.0
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        set -eux
+        temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
+          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
+          setup-schema -v 0.0
+        temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
+          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
+          update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
+        temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
+          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
+          setup-schema -v 0.0
+        temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
+          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
+          update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned
+    environment:
+      SQL_USER: ${POSTGRES_USER}
+      SQL_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  temporal:
+    image: temporalio/server:1.29.1
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgres
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/docker.yaml
+      BIND_ON_IP: 0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal-schema:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 7233"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  temporal-namespace:
+    image: temporalio/admin-tools:1.29.1-tctl-1.18.4-cli-1.5.0
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        set -eux
+        i=0
+        until temporal operator cluster health --address temporal:7233 >/dev/null 2>&1; do
+          i=$$((i + 1))
+          if [ "$$i" -ge 60 ]; then
+            echo "temporal not ready" >&2
+            exit 1
+          fi
+          sleep 2
+        done
+        temporal operator namespace describe --namespace default --address temporal:7233 >/dev/null 2>&1 \
+          || temporal operator namespace create --namespace default --address temporal:7233
+    depends_on:
+      temporal:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    image: ghcr.io/tarek-fezai/socle-backend:${VERSION:-latest}
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    environment:
+      <<: *backend-env
+    volumes:
+      - git-content:/data/git-content
+      - openfga-config:/openfga-config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      openfga:
+        condition: service_started
+      openfga-init:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_healthy
+      temporal-namespace:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/tarek-fezai/socle-frontend:${VERSION:-latest}
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  webhook-worker:
+    image: ghcr.io/tarek-fezai/socle-worker:${VERSION:-latest}
+    build:
+      context: ../../webhook-worker
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+      HTTP_ADDR: ":8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+  # DEMO ONLY — local IdP; do not use in production.
+  keycloak:
+    profiles: ["demo-idp"]
+    image: quay.io/keycloak/keycloak:26.0
+    ports:
+      - "${KEYCLOAK_HTTP_PORT:-8081}:8080"
+    command: ["start", "--import-realm", "--http-enabled=true", "--hostname-strict=false"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN required for demo-idp}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD required for demo-idp}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HTTP_PORT: 8080
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ../../infra/keycloak/realm-socle.dev.json:/opt/keycloak/data/import/realm-socle.dev.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  git-content:
+  openfga-config:
+  caddy-data:
+  caddy-config:
