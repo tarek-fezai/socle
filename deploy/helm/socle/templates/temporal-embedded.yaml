@@ -15,39 +15,6 @@ spec:
       port: 7233
       targetPort: 7233
 ---
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: {{ include "socle.fullname" . }}-temporal-schema
-  labels:
-    {{- include "socle.labels" . | nindent 4 }}
-spec:
-  template:
-    spec:
-      restartPolicy: OnFailure
-      containers:
-        - name: schema
-          image: {{ .Values.temporal.embedded.image.adminTools }}
-          command: ["/bin/sh", "-ec"]
-          args:
-            - |
-              temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
-                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal setup-schema -v 0.0
-              temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
-                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal \
-                update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
-              temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
-                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal_visibility setup-schema -v 0.0
-              temporal-sql-tool --plugin postgres12 --ep {{ include "socle.postgres.host" . }} -p {{ .Values.postgres.port }} \
-                -u {{ .Values.postgres.username }} --pw "$POSTGRES_PASSWORD" --db temporal_visibility \
-                update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned
-          env:
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "socle.secretName" . }}
-                  key: SPRING_DATASOURCE_PASSWORD
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -67,6 +34,45 @@ spec:
         app.kubernetes.io/component: temporal
         {{- include "socle.selectorLabels" . | nindent 8 }}
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: schema
+          image: {{ .Values.temporal.embedded.image.adminTools }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              set -eux
+              EP={{ include "socle.postgres.host" . }}
+              PORT={{ .Values.postgres.port }}
+              USER={{ .Values.postgres.username }}
+              for i in $(seq 1 60); do
+                pg_isready -h "$EP" -p "$PORT" -U "$USER" && break
+                sleep 2
+              done
+              temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
+                -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal setup-schema -v 0.0 || true
+              temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
+                -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal \
+                update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
+              temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
+                -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal_visibility setup-schema -v 0.0 || true
+              temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
+                -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal_visibility \
+                update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "socle.secretName" . }}
+                  key: SPRING_DATASOURCE_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
       containers:
         - name: temporal
           image: {{ .Values.temporal.embedded.image.server }}
@@ -95,4 +101,15 @@ spec:
           ports:
             - containerPort: 7233
               name: grpc
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 15
+            periodSeconds: 10
 {{- end }}

@@ -1,5 +1,19 @@
 {{- if .Values.postgres.embedded }}
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "socle.fullname" . }}-postgres-init
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+data:
+  01-init-databases.sql: |
+    CREATE DATABASE socle_core;
+    CREATE DATABASE openfga;
+    CREATE DATABASE temporal;
+    CREATE DATABASE temporal_visibility;
+    CREATE DATABASE keycloak;
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "socle.fullname" . }}-postgres
@@ -35,6 +49,10 @@ spec:
         app.kubernetes.io/component: postgres
         {{- include "socle.selectorLabels" . | nindent 8 }}
     spec:
+      securityContext:
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -51,12 +69,29 @@ spec:
                   key: SPRING_DATASOURCE_PASSWORD
             - name: POSTGRES_DB
               value: postgres
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
+            seccompProfile:
+              type: RuntimeDefault
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.username | quote }}]
+            initialDelaySeconds: 5
+            periodSeconds: 5
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init
+          configMap:
+            name: {{ include "socle.fullname" . }}-postgres-init
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -64,5 +99,5 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: 20Gi
+            storage: {{ .Values.postgres.storageSize | default "20Gi" | quote }}
 {{- end }}

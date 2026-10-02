@@ -10,5 +10,5 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 10Gi
+      storage: {{ .Values.storage.git.storageSize | default "10Gi" | quote }}
 {{- end }}

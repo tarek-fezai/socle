@@ -34,6 +34,48 @@ spec:
         app.kubernetes.io/component: openfga
         {{- include "socle.selectorLabels" . | nindent 8 }}
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: wait-postgres
+          image: postgres:16-alpine
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              set -eu
+              EP={{ include "socle.postgres.host" . }}
+              for i in $(seq 1 60); do
+                pg_isready -h "$EP" -p {{ .Values.postgres.port }} -U {{ .Values.postgres.username | quote }} && exit 0
+                sleep 2
+              done
+              exit 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+        - name: migrate
+          image: {{ .Values.openfga.embedded.image }}
+          args: ["migrate"]
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "socle.secretName" . }}
+                  key: OPENFGA_DATASTORE_URI
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
       containers:
         - name: openfga
           image: {{ .Values.openfga.embedded.image }}
@@ -42,11 +84,26 @@ spec:
             - name: OPENFGA_DATASTORE_ENGINE
               value: postgres
             - name: OPENFGA_DATASTORE_URI
-              value: {{ printf "postgres://%s:%s@%s:%d/openfga?sslmode=disable" .Values.postgres.username .Values.secrets.postgresPassword (include "socle.postgres.host" .) (int .Values.postgres.port) | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "socle.secretName" . }}
+                  key: OPENFGA_DATASTORE_URI
+            - name: OPENFGA_HTTP_ADDR
+              value: "0.0.0.0:8080"
           ports:
             - containerPort: 8080
           securityContext:
             runAsNonRoot: true
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
 {{- end }}

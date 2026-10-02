@@ -23,14 +23,16 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
-import java.security.MessageDigest;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
- * Crée le store OpenFGA et charge / met à jour le modèle s'ils sont absents
- * ou si le fingerprint du modèle classpath a changé. Idempotent — n'écrit pas dans {@code .env}.
+ * Bootstrap OpenFGA : un seul store nommé {@code socle}, modèle classpath.
+ * Idempotent. N'écrit pas dans {@code .env}. {@code store.id} local n'est qu'un cache.
  */
 @Component
 @Order(1)
@@ -67,6 +69,9 @@ public class OpenFgaBootstrap implements ApplicationRunner {
             try {
                 bootstrapOnce();
                 return;
+            } catch (DuplicateOpenFgaStoreException | MissingConfiguredOpenFgaStoreException e) {
+                // Configuration / data integrity — do not retry.
+                throw e;
             } catch (Exception e) {
                 last = e;
                 log.warn("OpenFGA bootstrap tentative {}/30: {}", attempts, e.toString());
@@ -77,11 +82,7 @@ public class OpenFgaBootstrap implements ApplicationRunner {
     }
 
     private void bootstrapOnce() throws Exception {
-        String storeId = properties.openfga().storeId();
-        if (storeId == null || storeId.isBlank()) {
-            storeId = findOrCreateStore();
-            log.info("OpenFGA store prêt (auto): {}", storeId);
-        }
+        String storeId = resolveStoreId();
         client.setStoreId(storeId);
 
         String fingerprint = modelFingerprint();
@@ -89,6 +90,7 @@ public class OpenFgaBootstrap implements ApplicationRunner {
         Path modelIdFile = stateDir.resolve("model.id");
         Path storeIdFile = stateDir.resolve("store.id");
 
+        // Cache only — never a source of truth for which store to use.
         Files.createDirectories(stateDir);
         Files.writeString(storeIdFile, storeId, StandardCharsets.UTF_8);
 
@@ -117,17 +119,52 @@ public class OpenFgaBootstrap implements ApplicationRunner {
         log.info("OpenFGA modèle publié: {} (fingerprint={})", modelId, fingerprint);
     }
 
-    private String findOrCreateStore() throws Exception {
-        ClientListStoresResponse listed = client.listStores().get();
-        if (listed.getStores() != null) {
-            for (Store store : listed.getStores()) {
-                if (STORE_NAME.equals(store.getName())) {
-                    return store.getId();
-                }
+    /**
+     * If {@code OPENFGA_STORE_ID} is set, verify it exists (never create another store).
+     * Otherwise find the unique store named {@code socle}, or create it if absent.
+     * Multiple stores named {@code socle} → fail fast.
+     */
+    String resolveStoreId() throws Exception {
+        String configured = properties.openfga().storeId();
+        List<Store> stores = listStores();
+
+        if (configured != null && !configured.isBlank()) {
+            boolean found = stores.stream().anyMatch(s -> configured.equals(s.getId()));
+            if (!found) {
+                throw new MissingConfiguredOpenFgaStoreException(configured, stores);
             }
+            log.info("OpenFGA store configuré vérifié: {}", configured);
+            return configured;
         }
+
+        return findOrCreateStore(stores);
+    }
+
+    String findOrCreateStore(List<Store> stores) throws Exception {
+        List<Store> named = stores.stream()
+                .filter(s -> STORE_NAME.equals(s.getName()))
+                .collect(Collectors.toList());
+
+        if (named.size() > 1) {
+            throw new DuplicateOpenFgaStoreException(named);
+        }
+        if (named.size() == 1) {
+            String id = named.getFirst().getId();
+            log.info("OpenFGA store existant réutilisé: {} ({})", STORE_NAME, id);
+            return id;
+        }
+
         ClientCreateStoreResponse created = client.createStore(new CreateStoreRequest().name(STORE_NAME)).get();
+        log.info("OpenFGA store créé: {} ({})", STORE_NAME, created.getId());
         return created.getId();
+    }
+
+    private List<Store> listStores() throws Exception {
+        ClientListStoresResponse listed = client.listStores().get();
+        if (listed.getStores() == null) {
+            return List.of();
+        }
+        return List.copyOf(listed.getStores());
     }
 
     private String writeModel() throws Exception {
@@ -149,5 +186,37 @@ public class OpenFgaBootstrap implements ApplicationRunner {
         }
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         return HexFormat.of().formatHex(md.digest(bytes));
+    }
+
+    /** Plus d'un store nommé {@code socle} — démarrage refusé. */
+    public static final class DuplicateOpenFgaStoreException extends IllegalStateException {
+        public DuplicateOpenFgaStoreException(List<Store> stores) {
+            super(format(stores));
+        }
+
+        private static String format(List<Store> stores) {
+            String details = stores.stream()
+                    .map(s -> "id=" + s.getId()
+                            + " created=" + Objects.toString(s.getCreatedAt(), "?")
+                            + " updated=" + Objects.toString(s.getUpdatedAt(), "?"))
+                    .collect(Collectors.joining("; "));
+            return "Plusieurs stores OpenFGA nommés '" + STORE_NAME + "' (" + stores.size() + "): "
+                    + details
+                    + ". Refus de démarrer — ne jamais choisir un store au hasard. "
+                    + "Procédure : docs/operations/backup-restore.md (section « Store OpenFGA en double »).";
+        }
+    }
+
+    /** {@code OPENFGA_STORE_ID} configuré mais absent côté serveur. */
+    public static final class MissingConfiguredOpenFgaStoreException extends IllegalStateException {
+        public MissingConfiguredOpenFgaStoreException(String storeId, List<Store> existing) {
+            super("OPENFGA_STORE_ID=" + storeId + " introuvable dans OpenFGA. "
+                    + "Stores présents: "
+                    + existing.stream()
+                    .map(s -> s.getId() + "(" + s.getName() + ")")
+                    .collect(Collectors.joining(", ", "[", "]"))
+                    + ". Refus de créer un store à côté — corrigez l'id ou restaurez la base OpenFGA. "
+                    + "Voir docs/operations/backup-restore.md.");
+        }
     }
 }

@@ -16,8 +16,13 @@ data:
   TEMPORAL_TARGET: {{ if eq .Values.temporal.mode "embedded" }}{{ printf "%s-temporal:7233" (include "socle.fullname" .) }}{{ else }}{{ .Values.temporal.external.target }}{{ end | quote }}
   TEMPORAL_NAMESPACE: {{ .Values.temporal.external.namespace | quote }}
   OIDC_ISSUER_URI: {{ required "idp.issuerUri is required" .Values.idp.issuerUri | quote }}
+  {{- if .Values.idp.clientIssuerUri }}
+  OIDC_CLIENT_ISSUER_URI: {{ .Values.idp.clientIssuerUri | quote }}
+  {{- end }}
   OIDC_JWK_SET_URI: {{ .Values.idp.jwkSetUri | quote }}
   OIDC_CLIENT_ID: {{ .Values.idp.clientId | quote }}
   OIDC_FRONTEND_CLIENT_ID: {{ .Values.idp.frontendClientId | quote }}
   SPRING_DATASOURCE_URL: {{ printf "jdbc:postgresql://%s:%d/%s" (include "socle.postgres.host" .) (int .Values.postgres.port) .Values.postgres.database | quote }}
   SPRING_DATASOURCE_USERNAME: {{ .Values.postgres.username | quote }}
+  SOCLE_IDENTITY_ROLE_SOURCE: {{ .Values.idp.roleSource | default "CLAIMS" | quote }}
+  CORS_ALLOWED_ORIGINS: {{ .Values.idp.corsAllowedOrigins | default "*" | quote }}

@@ -78,12 +78,8 @@ services:
     entrypoint: ["/bin/sh", "/scripts/openfga-init.sh"]
     environment:
       OPENFGA_API_URL: http://openfga:8080
-      OPENFGA_CONFIG_DIR: /openfga-config
-      OPENFGA_MODEL_FILE: /openfga/model.fga
     volumes:
       - ./scripts/openfga-init.sh:/scripts/openfga-init.sh:ro
-      - ./openfga/model.fga:/openfga/model.fga:ro
-      - openfga-config:/openfga-config
     depends_on:
       openfga:
         condition: service_started
@@ -184,7 +180,7 @@ services:
       temporal-namespace:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/actuator/health/readiness"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/actuator/health/readiness"]
       interval: 10s
       timeout: 5s
       retries: 30

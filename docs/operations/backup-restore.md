@@ -8,10 +8,30 @@
 | PostgreSQL `openfga` | Authorization tuples | Required for access control |
 | PostgreSQL `temporal` + `temporal_visibility` | Workflow history & visibility | In-flight approvals survive restore if consistent |
 | Git content volume | `git-content` / `SOCLE_STORAGE_GIT_PATH` | **Required** when `SOCLE_STORAGE_PROVIDER=git` — canonical document bodies |
-| OpenFGA config volume | `openfga-config/store.env` | Optional convenience (store/model ids are recoverable) |
+| OpenFGA config volume | `openfga-config/` (`store.id`, `model.id`, fingerprint) | **Cache only** — store/model ids are recoverable from the OpenFGA DB; losing this volume must not create a second store |
 | Caddy TLS | `caddy-data` | Only if not using external cert manager |
 
 Configuration secrets (`.env`, K8s Secrets) should be backed up in your secret manager, not only on disk.
+
+## Store OpenFGA en double
+
+Le backend (`OpenFgaBootstrap`) n'accepte **qu'un** store nommé `socle`. S'il en trouve plusieurs au démarrage, il **refuse de démarrer** (message avec ids et dates) au lieu d'en choisir un au hasard.
+
+Causes fréquentes :
+
+- un ancien script d'init qui créait un store à chaque run ;
+- restauration de la base `openfga` **sans** aligner `OPENFGA_STORE_ID` ;
+- volume `openfga-config` perdu alors qu'`OPENFGA_STORE_ID` n'était pas fixé, suivi d'une création alors que des stores orphelins existaient déjà.
+
+Procédure :
+
+1. Lister les stores : `GET {OPENFGA_API_URL}/stores` (ou CLI `fga store list`).
+2. Identifier le store dont les tuples correspondent à votre backup Postgres `openfga` (en général le plus ancien / celui référencé par l'ancien `OPENFGA_STORE_ID`).
+3. Fixer `OPENFGA_STORE_ID=<id choisi>` dans l'environnement (Compose `.env` / Helm values / Secret).
+4. Supprimer **manuellement** les stores orphelins une fois la vérif faite (`fga store delete` / API) — jamais automatiquement au boot.
+5. Si `OPENFGA_STORE_ID` pointe vers un id inexistant, le backend refuse aussi de démarrer (pas de création « à côté »).
+
+Après une perte du volume de cache (`openfga-config`), laissez `OPENFGA_STORE_ID` vide **uniquement** s'il n'existe qu'un store `socle` : le backend le retrouve par nom. Sinon, configurez l'id explicitement.
 
 ## Consistency order
 

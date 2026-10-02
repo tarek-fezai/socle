@@ -12,15 +12,17 @@ postgres:
   host: ""
   port: 5432
   database: socle_core
-  username: socle_app
+  username: socle
   # When embedded=true, password is generated into Secret template.
   password: ""
+  storageSize: 20Gi
 
 storage:
   provider: git # git | relational
   git:
     mountPath: /data/git-content
-    existingClaim: "" # required when provider=git and embedded PVC disabled
+    existingClaim: "" # empty → chart creates PVC when provider=git
+    storageSize: 20Gi
 
 openfga:
   mode: external # embedded | external
@@ -46,9 +48,20 @@ temporal:
 idp:
   issuerUri: ""
   jwkSetUri: ""
+  clientIssuerUri: "" # optional: issuer URL reachable from the backend pod (e.g. in-cluster Keycloak)
   clientId: socle-backend
   clientSecret: ""
   frontendClientId: socle-frontend
+  roleSource: CLAIMS
+  corsAllowedOrigins: "*"
+
+# DEMO ONLY — deploy Keycloak for CI / lab. Never use in production.
+demoIdp:
+  enabled: false
+  image: quay.io/keycloak/keycloak:26.0
+  adminUser: admin
+  adminPassword: "" # required when enabled
+  httpPort: 8080
 
 backend:
   replicas: 1
@@ -57,13 +70,22 @@ backend:
     tag: ""
     pullPolicy: IfNotPresent
   resources: {}
+  # Image runs as UID/GID 10001 (see backend/Dockerfile).
   securityContext:
     runAsNonRoot: true
-    runAsUser: 1000
+    runAsUser: 10001
+    runAsGroup: 10001
     readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
   podSecurityContext:
-    fsGroup: 1000
+    fsGroup: 10001
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
   existingSecret: ""
   extraEnv: {}
   probes:
@@ -77,10 +99,22 @@ frontend:
     tag: ""
     pullPolicy: IfNotPresent
   resources: {}
+  # nginxinc/nginx-unprivileged → UID/GID 101
   securityContext:
     runAsNonRoot: true
     runAsUser: 101
+    runAsGroup: 101
     readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+  podSecurityContext:
+    fsGroup: 101
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
 
 webhookWorker:
   enabled: true
@@ -90,10 +124,22 @@ webhookWorker:
     tag: ""
     pullPolicy: IfNotPresent
   resources: {}
+  # gcr.io/distroless/static-debian12:nonroot → UID/GID 65532
   securityContext:
     runAsNonRoot: true
-    runAsUser: 1000
+    runAsUser: 65532
+    runAsGroup: 65532
     readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+  podSecurityContext:
+    fsGroup: 65532
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
 
 ingress:
   enabled: true

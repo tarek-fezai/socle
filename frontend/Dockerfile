@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # syntax=docker/dockerfile:1
 
+# node:20-alpine (build)
 FROM node@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS build
 
 WORKDIR /app
@@ -17,6 +18,7 @@ ENV VITE_YJS_WS_URL=""
 
 RUN pnpm build
 
+# nginxinc/nginx-unprivileged:1.27-alpine — runtime UID/GID 101
 FROM nginxinc/nginx-unprivileged@sha256:65e3e85dbaed8ba248841d9d58a899b6197106c23cb0ff1a132b7bfe0547e4c0 AS runtime
 
 COPY --from=build /app/dist /usr/share/nginx/html

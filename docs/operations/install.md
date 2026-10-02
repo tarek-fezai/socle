@@ -58,7 +58,20 @@ Temporal and OpenFGA run in-process with Postgres in the default Compose stack; 
    VERSION=local docker compose --env-file .env up -d --build
    ```
 
-7. **OpenFGA store/model** — if `OPENFGA_STORE_ID` / `OPENFGA_MODEL_ID` are empty, the `openfga-init` one-shot writes `store.env` on the `openfga-config` volume. Copy values into `.env` and restart `backend`, or export them before start (see [`configuration.md`](configuration.md)).
+7. **OpenFGA store/model** — with `OPENFGA_AUTO_INIT=true` (Compose default), the **backend** creates or reuses the unique store named `socle` and publishes the model. Do **not** rely on `openfga-init` to create stores (it only waits for OpenFGA health). Prefer setting `OPENFGA_STORE_ID` explicitly after the first bootstrap; see [`backup-restore.md`](backup-restore.md) if several stores named `socle` appear.
+
+### Volumes and permissions (non-root backend UID 10001)
+
+Named Compose volumes for `/data/git-content` and `/openfga-config` inherit ownership from the image on first create (directories exist in the image as UID 10001).
+
+For **bind mounts**, fix ownership on the host before start:
+
+```bash
+sudo mkdir -p /var/lib/socle/git-content /var/lib/socle/openfga-config
+sudo chown -R 10001:10001 /var/lib/socle/git-content /var/lib/socle/openfga-config
+```
+
+Then map them in Compose (`./data/git:/data/git-content:rw`, etc.). The container no longer runs as root to `chown` at startup.
 
 ### Demo IdP profile (non-production)
 
@@ -84,8 +97,8 @@ For local demos only:
      -f my-values.yaml
    ```
 
-3. When `storage.provider=git`, provision a PVC (`storage.git.existingClaim`) — content is not in Postgres alone.
-4. Wire ingress to backend (`/api`, `/actuator`) and frontend (`/`).
+3. When `storage.provider=git`, the chart creates a PVC unless `storage.git.existingClaim` is set. Use `backend.replicas=1` (the chart **fails** if replicas > 1 with git). Backend runs as UID/GID **10001** (`fsGroup: 10001`).
+4. Wire ingress to backend (`/api`, `/actuator`) and frontend (`/`). Container UIDs: backend **10001**, frontend (nginx-unprivileged) **101**, worker (distroless nonroot) **65532**.
 
 ## Storage choice: `relational` vs `git`
 
