@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.config;
 
+import eu.socle.identity.AccessPolicyFilter;
 import eu.socle.identity.SocleRole;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +16,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 
@@ -44,7 +46,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            ObjectProvider<Converter<Jwt, ? extends AbstractAuthenticationToken>> jwtAuthenticationConverter
+            ObjectProvider<Converter<Jwt, ? extends AbstractAuthenticationToken>> jwtAuthenticationConverter,
+            ObjectProvider<AccessPolicyFilter> accessPolicyFilter
     ) throws Exception {
         Converter<Jwt, ? extends AbstractAuthenticationToken> converter =
                 jwtAuthenticationConverter.getIfAvailable(SecurityConfig::fallbackJwtConverter);
@@ -128,6 +131,12 @@ public class SecurityConfig {
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(converter)));
+
+        // Politique d'accès après validation du JWT (absente des @WebMvcTest qui n'importent que cette config).
+        AccessPolicyFilter policyFilter = accessPolicyFilter.getIfAvailable();
+        if (policyFilter != null) {
+            http.addFilterAfter(policyFilter, BearerTokenAuthenticationFilter.class);
+        }
 
         return http.build();
     }

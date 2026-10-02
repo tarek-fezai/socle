@@ -95,6 +95,15 @@ public class IdentityClaimsMapper {
     }
 
     /**
+     * Valeurs du claim de groupes ({@code access-policy.groups-claim}) — liste, chaîne
+     * espace-séparée ou chemin pointé. Vide si absent.
+     */
+    public List<String> groups(Jwt jwt) {
+        Object node = resolvePath(jwt, properties.getAccessPolicy().getGroupsClaim());
+        return flattenRoleValues(node);
+    }
+
+    /**
      * Mappe les valeurs brutes vers {@link SocleRole} ; inclut toujours {@code defaultRole}.
      * Les valeurs non mappées sont loguées une seule fois en DEBUG.
      */

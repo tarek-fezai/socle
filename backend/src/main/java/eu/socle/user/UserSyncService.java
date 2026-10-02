@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.user;
 
+import eu.socle.identity.AccessAuditService;
+import eu.socle.identity.AccessDeniedReason;
+import eu.socle.identity.AccessPolicyDeniedException;
+import eu.socle.identity.AccessPolicyService;
 import eu.socle.identity.IdentityClaimsMapper;
 import eu.socle.identity.IdentityProperties;
 import eu.socle.identity.PlatformRoleService;
@@ -10,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -29,6 +35,8 @@ public class UserSyncService {
     private final IdentityClaimsMapper claimsMapper;
     private final IdentityProperties identityProperties;
     private final PlatformRoleService platformRoleService;
+    private final AccessPolicyService accessPolicyService;
+    private final AccessAuditService accessAuditService;
 
     public UserSyncService(
             UserRepository userRepository,
@@ -36,8 +44,12 @@ public class UserSyncService {
             UserIdentityRepository identityRepository,
             IdentityClaimsMapper claimsMapper,
             IdentityProperties identityProperties,
-            PlatformRoleService platformRoleService
+            PlatformRoleService platformRoleService,
+            AccessPolicyService accessPolicyService,
+            AccessAuditService accessAuditService
     ) {
+        this.accessPolicyService = accessPolicyService;
+        this.accessAuditService = accessAuditService;
         this.userRepository = userRepository;
         this.identityService = identityService;
         this.identityRepository = identityRepository;
@@ -65,14 +77,23 @@ public class UserSyncService {
         boolean firstLogin = byIdentity.isEmpty();
 
         UserEntity user;
+        boolean newAccount = false;
         if (byIdentity.isPresent()) {
             user = byIdentity.get();
+            if (AccessPolicyService.isDisabled(user)) {
+                throw new AccessPolicyDeniedException(AccessDeniedReason.ACCOUNT_DISABLED);
+            }
         } else {
             Optional<UserEntity> linked = maybeLinkByVerifiedEmail(issuer, emailRaw, emailVerified);
             if (linked.isPresent()) {
                 user = linked.get();
                 firstLogin = false;
+                // Compte existant rattaché à cette identité : désactivé / domaine / groupe.
+                requireGranted(accessPolicyService.evaluate(jwt, user));
             } else {
+                // Aucune création avant décision de la politique d'accès.
+                requireGranted(accessPolicyService.evaluate(jwt, null));
+                newAccount = true;
                 user = new UserEntity();
                 user.setId(allocateId(subject));
                 user.setSystemAccount(false);
@@ -85,6 +106,8 @@ public class UserSyncService {
         user.setEmail(email.toLowerCase(Locale.ROOT));
         user.setDisplayName(name);
         user.setAvatarInitials(initials(name));
+        // Première connexion réussie : nouveau compte, ou compte provisionné jamais connecté.
+        boolean firstGrant = newAccount || user.getLastLoginAt() == null;
         user.setLastLoginAt(Instant.now());
 
         UserEntity saved = userRepository.save(user);
@@ -96,7 +119,35 @@ public class UserSyncService {
         if (firstLogin) {
             maybeBootstrapAdmin(saved, subject);
         }
+        if (firstGrant) {
+            auditAccessGrantedAfterCommit(saved.getId(), issuer, subject);
+        }
         return saved;
+    }
+
+    private static void requireGranted(AccessPolicyService.Decision decision) {
+        if (!decision.granted()) {
+            throw new AccessPolicyDeniedException(decision.reason());
+        }
+    }
+
+    /**
+     * Audit {@code auth.access_granted} (actor_id → users) : après commit pour que la FK soit
+     * satisfaite par l'écriture asynchrone.
+     */
+    private void auditAccessGrantedAfterCommit(UUID userId, String issuer, String subject) {
+        IdentityProperties.AccessMode mode = identityProperties.getAccessPolicy().getMode();
+        Runnable audit = () -> accessAuditService.recordGranted(userId, issuer, subject, mode);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    audit.run();
+                }
+            });
+        } else {
+            audit.run();
+        }
     }
 
     /**

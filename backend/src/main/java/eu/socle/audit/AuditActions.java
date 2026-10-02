@@ -77,6 +77,12 @@ public final class AuditActions {
     public static final String USER_IDENTITY_UNLINKED = "user.identity_unlinked";
     public static final String USER_IDENTITIES_IMPORTED = "user.identities_imported";
 
+    /** Politique d'accès OIDC (première connexion accordée / refus rate-limité). */
+    public static final String AUTH_ACCESS_GRANTED = "auth.access_granted";
+    public static final String AUTH_ACCESS_DENIED = "auth.access_denied";
+    public static final String USER_DISABLED = "user.disabled";
+    public static final String USER_ENABLED = "user.enabled";
+
     public static final String COMMENT_CREATED = "comment.created";
     public static final String COMMENT_EDITED = "comment.edited";
     public static final String COMMENT_DELETED = "comment.deleted";

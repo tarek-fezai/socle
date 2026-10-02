@@ -1,0 +1,476 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/*
+ * Pixel-faithful login styles from Login.dc.html / LoginError.dc.html / MobileLogin.dc.html.
+ * Informative muted text: mockup #B0B0B5 fails WCAG 4.5:1 on white (~2.9:1);
+ * use #75757C (closest AA-compliant) ONLY for that informative copy.
+ */
+
+.login-root {
+  margin: 0;
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: #ffffff;
+  color: #0e0e10;
+  min-height: 100vh;
+}
+
+.login-root a {
+  text-decoration: none;
+}
+
+.login-serif {
+  font-family: 'Instrument Serif', serif;
+}
+
+.login-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.login-shell {
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.login-form-col {
+  width: 560px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 72px;
+  box-sizing: border-box;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 48px;
+}
+
+.login-brand--error {
+  margin-bottom: 40px;
+}
+
+.login-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #3730e0;
+  flex-shrink: 0;
+}
+
+.login-brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0e0e10;
+  line-height: 1.2;
+}
+
+.login-title {
+  font-weight: 400;
+  font-size: 34px;
+  margin: 0 0 8px;
+  color: #0e0e10;
+  line-height: 1.2;
+}
+
+.login-title--error {
+  font-size: 30px;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #9b9ba1;
+  margin: 0 0 32px;
+  line-height: 1.2;
+}
+
+.login-subtitle--error {
+  color: #6b6b72;
+  line-height: 1.6;
+  margin: 0 0 22px;
+}
+
+.login-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #43434a;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.login-email-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ececee;
+  border-radius: 9px;
+  padding: 11px 14px;
+  margin-bottom: 16px;
+  background: #ffffff;
+}
+
+.login-email-wrap:focus-within {
+  outline: 2px solid #3730e0;
+  outline-offset: 2px;
+}
+
+.login-email-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: #0e0e10;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.login-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 12px;
+  border-radius: 9px;
+  background: #3730e0;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 20px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.login-cta:hover {
+  background: #2c27c7;
+}
+
+.login-cta:focus-visible {
+  outline: 2px solid #3730e0;
+  outline-offset: 3px;
+}
+
+.login-cta--error {
+  margin-bottom: 10px;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.login-divider-line {
+  flex-grow: 1;
+  height: 1px;
+  background: #ececee;
+}
+
+.login-divider-text {
+  /* mockup #B0B0B5 fails 4.5:1; #75757C is the closest AA-compliant */
+  font-size: 11.5px;
+  color: #75757c;
+}
+
+.login-sso {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #ececee;
+  border-radius: 9px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  line-height: normal;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.login-sso:last-of-type {
+  margin-bottom: 0;
+}
+
+.login-sso:hover {
+  border-color: #3730e0;
+}
+
+.login-sso:focus-visible {
+  outline: 2px solid #3730e0;
+  outline-offset: 2px;
+}
+
+.login-sso-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #33333c;
+}
+
+.login-footer {
+  /* mockup #B0B0B5 → #75757C for AA contrast on informative text only */
+  font-size: 12px;
+  color: #75757c;
+  margin-top: 28px;
+  line-height: 1.6;
+}
+
+.login-footer a {
+  color: #3730e0;
+  font-weight: 500;
+}
+
+.login-footer a:focus-visible {
+  outline: 2px solid #3730e0;
+  outline-offset: 2px;
+}
+
+.login-footer--error {
+  margin-top: 24px;
+}
+
+.login-visual {
+  flex-grow: 1;
+  background: #0e0e10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-visual svg {
+  opacity: 0.9;
+}
+
+.login-visual--error svg {
+  opacity: 0.5;
+}
+
+.login-quote {
+  position: absolute;
+  bottom: 56px;
+  left: 60px;
+  right: 60px;
+}
+
+.login-quote p {
+  font-size: 22px;
+  color: #f2f3f4;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.login-alert-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #fceeea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.login-causes {
+  border: 1px solid #ececee;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+}
+
+.login-causes-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9b9ba1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.login-cause {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.login-cause-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b0b0b5;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.login-cause-text {
+  font-size: 13px;
+  color: #43434a;
+}
+
+.login-ghost {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 12px;
+  border-radius: 9px;
+  border: 1px solid #ececee;
+  color: #43434a;
+  font-size: 14px;
+  font-weight: 500;
+  background: #ffffff;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+}
+
+.login-ghost:hover {
+  background: #f5f5f7;
+}
+
+.login-ghost:focus-visible {
+  outline: 2px solid #3730e0;
+  outline-offset: 2px;
+}
+
+.login-loading-msg {
+  font-size: 14px;
+  color: #9b9ba1;
+  margin: 0;
+}
+
+/* —— Mobile (< 768px) = MobileLogin.dc.html —— */
+.login-mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .login-desktop {
+    display: none;
+  }
+
+  .login-mobile {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+    box-sizing: border-box;
+    background: #ffffff;
+    overflow: hidden;
+    position: relative;
+    padding: 60px 28px 32px;
+  }
+
+  .login-mobile-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .login-mobile-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40px;
+  }
+
+  .login-mobile-mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #3730e0;
+    margin-bottom: 14px;
+  }
+
+  .login-mobile-name {
+    font-size: 26px;
+    color: #0e0e10;
+    line-height: 1.2;
+  }
+
+  .login-mobile-org {
+    font-size: 13px;
+    color: #9b9ba1;
+    margin-top: 4px;
+    line-height: 1.2;
+  }
+
+  .login-mobile-sso {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px 0;
+    border-radius: 10px;
+    background: #3730e0;
+    margin-bottom: 14px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    font-family: inherit;
+    line-height: normal;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .login-mobile-sso:hover {
+    background: #2c27c7;
+  }
+
+  .login-mobile-sso:focus-visible {
+    outline: 2px solid #3730e0;
+    outline-offset: 3px;
+  }
+
+  .login-mobile-sso-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .login-mobile-note {
+    font-size: 12px;
+    color: #75757c;
+    text-align: center;
+    line-height: 1.6;
+    margin: 8px 0 0;
+  }
+
+  .login-mobile-help {
+    text-align: center;
+    font-size: 12px;
+    color: #9b9ba1;
+    line-height: normal;
+  }
+
+  .login-mobile-help a {
+    color: #3730e0;
+    font-weight: 500;
+  }
+
+  .login-mobile-help a:focus-visible {
+    outline: 2px solid #3730e0;
+    outline-offset: 2px;
+  }
+}

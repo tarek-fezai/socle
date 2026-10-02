@@ -65,6 +65,8 @@ export function AuthProvider({
     setMe(data)
   }, [])
 
+  // refreshMe may throw 403 (access_denied) — callers (CallbackPage) handle it.
+
   useEffect(() => {
     void (async () => {
       try {

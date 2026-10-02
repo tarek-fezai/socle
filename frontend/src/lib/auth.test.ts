@@ -88,14 +88,13 @@ describe('auth (oidc-client-ts)', () => {
     expect(token).toBe('tok-fresh')
   })
 
-  it('getAccessToken redirige vers login si le renew silencieux échoue', async () => {
+  it('getAccessToken renvoie null si le renew silencieux échoue (sans rediriger vers IdP)', async () => {
     getUser.mockResolvedValue({ access_token: 'x', expired: true })
     signinSilent.mockRejectedValue(new Error('silent failed'))
-    signinRedirect.mockResolvedValue(undefined)
 
     const token = await getAccessToken()
     expect(token).toBeNull()
-    expect(signinRedirect).toHaveBeenCalled()
+    expect(signinRedirect).not.toHaveBeenCalled()
   })
 
   it('logout déclenche signoutRedirect', async () => {
@@ -111,14 +110,46 @@ describe('auth (oidc-client-ts)', () => {
     expect(signinRedirect).not.toHaveBeenCalled()
   })
 
-  it('initAuth requireLogin sans session → signinRedirect', async () => {
+  it('initAuth sans session ne redirige plus vers IdP (page /login)', async () => {
     getUser.mockResolvedValue(null)
     signinSilent.mockRejectedValue(new Error('no session'))
-    signinRedirect.mockResolvedValue(undefined)
 
     const ok = await initAuth(true)
     expect(ok).toBe(false)
-    expect(signinRedirect).toHaveBeenCalled()
+    expect(signinRedirect).not.toHaveBeenCalled()
+  })
+
+  it('sanitizeReturnTo bloque les redirections ouvertes', async () => {
+    const { sanitizeReturnTo, loginWithHint } = await import('./auth')
+    expect(sanitizeReturnTo('//evil.example')).toBe('/')
+    expect(sanitizeReturnTo('https://evil.example')).toBe('/')
+    expect(sanitizeReturnTo('/\\evil.example')).toBe('/')
+    expect(sanitizeReturnTo('/%5Cevil.example')).toBe('/')
+    expect(sanitizeReturnTo('/\tevil')).toBe('/')
+    expect(sanitizeReturnTo(' javascript:alert(1)')).toBe('/')
+    expect(sanitizeReturnTo('javascript:alert(1)')).toBe('/')
+    expect(sanitizeReturnTo('/docs/abc')).toBe('/docs/abc')
+    expect(sanitizeReturnTo('/ok?x=1#y')).toBe('/ok?x=1#y')
+
+    signinRedirect.mockResolvedValue(undefined)
+    await loginWithHint('tarek.fezai@example.com', '/spaces/1')
+    expect(signinRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: '/spaces/1',
+        extraQueryParams: expect.objectContaining({ login_hint: 'tarek.fezai@example.com' }),
+      }),
+    )
+  })
+
+  it('loginWithAcr transmet acr_values', async () => {
+    const { loginWithAcr } = await import('./auth')
+    signinRedirect.mockResolvedValue(undefined)
+    await loginWithAcr('phr', '/docs')
+    expect(signinRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extraQueryParams: expect.objectContaining({ acr_values: 'phr' }),
+      }),
+    )
   })
 
   it('expose les noms de rôles Socle (pas les claims Keycloak)', () => {

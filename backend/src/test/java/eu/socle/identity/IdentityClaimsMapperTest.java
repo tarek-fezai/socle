@@ -103,6 +103,31 @@ class IdentityClaimsMapperTest {
         assertThat(mapper.rolesFromClaims(jwt)).containsExactly(SocleRole.CONTRIBUTEUR);
     }
 
+    @Test
+    void groups_readsConfiguredGroupsClaim() {
+        Jwt jwt = base().claim("sub", "x")
+                .claim("groups", List.of("a", " b ", ""))
+                .claim("memberOf", "x y")
+                .build();
+
+        assertThat(mapper.groups(jwt)).containsExactly("a", "b");
+
+        properties.getAccessPolicy().setGroupsClaim("memberOf");
+        assertThat(mapper.groups(jwt)).containsExactly("x", "y");
+    }
+
+    @Test
+    void groups_supportsDottedPath_andMissingClaim() {
+        properties.getAccessPolicy().setGroupsClaim("resource_access.socle.groups");
+        Jwt jwt = base().claim("sub", "x")
+                .claim("resource_access", Map.of("socle", Map.of("groups", List.of("g1"))))
+                .build();
+        assertThat(mapper.groups(jwt)).containsExactly("g1");
+
+        properties.getAccessPolicy().setGroupsClaim("nope");
+        assertThat(mapper.groups(jwt)).isEmpty();
+    }
+
     private static Jwt.Builder base() {
         return Jwt.withTokenValue("t")
                 .header("alg", "none")

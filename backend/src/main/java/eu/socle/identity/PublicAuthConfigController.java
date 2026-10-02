@@ -38,6 +38,10 @@ public class PublicAuthConfigController {
         body.put("scopes", properties.getScopes());
         body.put("displayName", instanceDisplayName());
         body.put("organizationName", instanceDisplayName());
+        // Affichage uniquement — jamais access-policy (groupes / domaines autorisés).
+        body.put("passkeyAcrValues", properties.getPasskeyAcrValues());
+        body.put("idpDisplayName", properties.getIdpDisplayName());
+        body.put("supportContact", properties.getSupportContact());
         if (properties.getAuthorizationEndpoint() != null) {
             body.put("authorizationEndpoint", properties.getAuthorizationEndpoint());
         }

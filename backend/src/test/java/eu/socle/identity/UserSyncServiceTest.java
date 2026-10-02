@@ -42,6 +42,7 @@ class UserSyncServiceTest {
     @Mock UserIdentityRepository identityRepository;
     @Mock UserIdentityService identityService;
     @Mock PlatformRoleService platformRoleService;
+    @Mock AccessAuditService accessAuditService;
 
     IdentityProperties properties;
     IdentityClaimsMapper claimsMapper;
@@ -53,7 +54,9 @@ class UserSyncServiceTest {
         claimsMapper = new IdentityClaimsMapper(properties);
         syncService = new UserSyncService(
                 userRepository, identityService, identityRepository,
-                claimsMapper, properties, platformRoleService);
+                claimsMapper, properties, platformRoleService,
+                new AccessPolicyService(properties, claimsMapper, identityService),
+                accessAuditService);
     }
 
     @Test
