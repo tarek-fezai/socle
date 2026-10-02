@@ -35,7 +35,6 @@ spec:
         {{- include "socle.selectorLabels" . | nindent 8 }}
     spec:
       securityContext:
-        runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       initContainers:
@@ -52,6 +51,10 @@ spec:
               done
               exit 1
           securityContext:
+            # postgres:16-alpine defaults to root; run as the postgres UID so pod runAsNonRoot is satisfied.
+            runAsUser: 70
+            runAsGroup: 70
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]

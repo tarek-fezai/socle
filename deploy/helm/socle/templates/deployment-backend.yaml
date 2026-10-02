@@ -21,6 +21,56 @@ spec:
       serviceAccountName: {{ include "socle.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.backend.podSecurityContext | nindent 8 }}
+      initContainers:
+        {{- if eq .Values.openfga.mode "embedded" }}
+        - name: wait-openfga
+          image: busybox:1.36
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              set -eu
+              URL=http://{{ include "socle.fullname" . }}-openfga:8080/healthz
+              for i in $(seq 1 90); do
+                wget -qO- "$URL" >/dev/null 2>&1 && exit 0
+                sleep 2
+              done
+              echo "OpenFGA not ready: $URL" >&2
+              exit 1
+          securityContext:
+            runAsUser: 65532
+            runAsGroup: 65532
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+        {{- end }}
+        {{- if eq .Values.temporal.mode "embedded" }}
+        - name: ensure-temporal-namespace
+          image: {{ .Values.temporal.embedded.image.adminTools }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              set -eux
+              ADDR={{ include "socle.fullname" . }}-temporal:7233
+              NS={{ .Values.temporal.external.namespace | default "default" }}
+              for i in $(seq 1 90); do
+                temporal operator cluster health --address "$ADDR" >/dev/null 2>&1 && break
+                sleep 2
+              done
+              temporal operator namespace describe --namespace "$NS" --address "$ADDR" \
+                || temporal operator namespace create --namespace "$NS" --address "$ADDR"
+          securityContext:
+            # temporalio/admin-tools runs as root; override pod runAsNonRoot for this init only.
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+        {{- end }}
       containers:
         - name: backend
           image: {{ include "socle.image" (dict "Values" .Values "Chart" .Chart "repository" .Values.backend.image.repository "tag" .Values.backend.image.tag) }}
