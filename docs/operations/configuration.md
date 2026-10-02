@@ -88,6 +88,10 @@ YAML-only defaults below can be overridden via env (Spring relaxed binding).
 | `SOCLE_IDENTITY_TOKEN_ENDPOINT` | derived | no | no | Override token URL |
 | `SOCLE_IDENTITY_END_SESSION_ENDPOINT` | derived | no | no | Override logout URL |
 | `SOCLE_IDENTITY_JWKS_URI` | derived | no | no | Override JWKS URL for SPA hints |
+| `SOCLE_ACCESS_POLICY_MODE` | `jit` | no | no | Access policy: `jit`, `require-group`, or `provisioned-only` (`socle.identity.access-policy.mode`) |
+| `SOCLE_IDENTITY_PASSKEY_ACR_VALUES` | empty | no | no | OIDC `acr_values` for passkey button; empty hides the button |
+| `SOCLE_IDENTITY_IDP_DISPLAY_NAME` | empty | no | no | Optional IdP label exposed on public auth-config |
+| `SOCLE_IDENTITY_SUPPORT_CONTACT` | empty | no | no | Support email for login / access-denied mailto links |
 
 Role mapping keys (`socle.identity.role-mapping.*`) map IdP role names to platform roles; configure in YAML or `SOCLE_IDENTITY_ROLE_MAPPING_<KEY>`.
 
