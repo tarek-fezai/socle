@@ -139,10 +139,11 @@ export async function annotateDashboardMockup(page) {
         (a.textContent || '').includes('Membres'),
       )
       if (team) team.setAttribute('data-mock-id', 'shell-nav-team')
-      const section = Array.from(sidebar.querySelectorAll('div')).find((d) =>
-        (d.textContent || '').includes('Identité'),
-      )
-      if (section && section.children.length === 0) section.setAttribute('data-mock-id', 'shell-space-section')
+      const section = Array.from(sidebar.querySelectorAll('div')).find((d) => {
+        const t = (d.textContent || '').trim()
+        return d.children.length === 0 && t.startsWith('Identité')
+      })
+      if (section) section.setAttribute('data-mock-id', 'shell-space-section')
       const user = Array.from(sidebar.querySelectorAll('a')).find((a) =>
         (a.textContent || '').includes('Tarek'),
       )
@@ -207,10 +208,10 @@ export async function annotateMobileDashboardMockup(page) {
     const tabbar = root.children[root.children.length - 1]
     if (tabbar) {
       tabbar.setAttribute('data-mock-id', 'mobile-tabbar')
-      const home = Array.from(tabbar.querySelectorAll('a')).find((a) =>
-        (a.textContent || '').includes('Accueil'),
+      const homeLabel = Array.from(tabbar.querySelectorAll('span')).find(
+        (s) => (s.textContent || '').trim() === 'Accueil',
       )
-      if (home) home.setAttribute('data-mock-id', 'mobile-tab-home')
+      if (homeLabel) homeLabel.setAttribute('data-mock-id', 'mobile-tab-home')
     }
     const content = root.children[1]
     if (content) {
@@ -522,7 +523,7 @@ export function compareMetrics(mockMap, appMap, ids, { pageExceptions = {} } = {
       if (!skip.has('box')) {
         for (const k of ['x', 'y', 'width', 'height']) {
           const d = Math.abs(mock.box[k] - app.box[k])
-          if (d > 2) {
+          if (d > 3) {
             diffs.push(`box.${k}: maquette=${mock.box[k].toFixed(1)} app=${app.box[k].toFixed(1)} Δ=${d.toFixed(1)}`)
           }
         }

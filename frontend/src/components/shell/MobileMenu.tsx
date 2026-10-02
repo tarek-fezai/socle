@@ -263,7 +263,7 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
         <Link to="/team" className="shell-drawer-user" onClick={onClose} data-mock-id="mobile-menu-user">
           <span className="shell-avatar" aria-hidden>
             {initials}
-          </span>
+          </span>{' '}
           <span>{displayName}</span>
         </Link>
       </div>

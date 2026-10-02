@@ -47,6 +47,8 @@
   align-items: center;
   gap: 9px;
   padding: 0 2px;
+  color: #0e0e10;
+  text-decoration: none;
 }
 
 .shell-logo-mark {
@@ -77,6 +79,9 @@
   box-sizing: border-box;
   text-align: left;
   font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: #0e0e10;
 }
 
 .shell-search-chip span.label {
@@ -167,6 +172,9 @@
   background: transparent;
   cursor: pointer;
   font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: #0e0e10;
   width: 100%;
   text-align: left;
 }
@@ -266,6 +274,7 @@
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1;
   text-decoration: none;
   display: inline-flex;
   align-items: center;

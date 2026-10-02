@@ -204,7 +204,7 @@ export function ShellSidebar({ onOpenSearch }: Props) {
       >
         <span className="shell-avatar" aria-hidden>
           {initials}
-        </span>
+        </span>{' '}
         <span className="shell-user-name">{displayName}</span>
       </button>
     </aside>

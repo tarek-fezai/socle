@@ -55,14 +55,9 @@ export function MobileTabBar() {
       {tabs.map((t) => {
         const active = t.match(pathname)
         return (
-          <Link
-            key={t.to}
-            to={t.to}
-            className={`shell-tab${active ? ' active' : ''}`}
-            data-mock-id={t.to === '/' ? 'mobile-tab-home' : undefined}
-          >
+          <Link key={t.to} to={t.to} className={`shell-tab${active ? ' active' : ''}`}>
             {t.icon}
-            <span>{t.label}</span>
+            <span data-mock-id={t.to === '/' ? 'mobile-tab-home' : undefined}>{t.label}</span>
           </Link>
         )
       })}
