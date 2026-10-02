@@ -109,9 +109,13 @@ class FavoriteServiceTest {
         String favoritesSql = new ClassPathResource("db/migration/V30__favorites.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
         for (String stmt : favoritesSql.split(";")) {
-            String trimmed = stmt.trim();
-            if (!trimmed.isEmpty() && !trimmed.startsWith("--")) {
-                jdbc.execute(trimmed);
+            String sql = stmt.lines()
+                    .map(String::trim)
+                    .filter(l -> !l.isEmpty() && !l.startsWith("--"))
+                    .reduce((a, b) -> a + "\n" + b)
+                    .orElse("");
+            if (!sql.isEmpty()) {
+                jdbc.execute(sql);
             }
         }
 
