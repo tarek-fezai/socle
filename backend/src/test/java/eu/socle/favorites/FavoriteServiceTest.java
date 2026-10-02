@@ -96,9 +96,24 @@ class FavoriteServiceTest {
                   id UUID PRIMARY KEY, space_id UUID NOT NULL, title TEXT NOT NULL, deleted_at TIMESTAMPTZ
                 )
                 """);
+        // Schéma V1 puis migration V30 (rename resource_* → target_*).
+        jdbc.execute("""
+                CREATE TABLE favorites (
+                  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                  resource_type TEXT NOT NULL CHECK (resource_type IN ('document','folder','space')),
+                  resource_id UUID NOT NULL,
+                  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                  PRIMARY KEY (user_id, resource_type, resource_id)
+                )
+                """);
         String favoritesSql = new ClassPathResource("db/migration/V30__favorites.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
-        jdbc.execute(favoritesSql);
+        for (String stmt : favoritesSql.split(";")) {
+            String trimmed = stmt.trim();
+            if (!trimmed.isEmpty() && !trimmed.startsWith("--")) {
+                jdbc.execute(trimmed);
+            }
+        }
 
         jdbc.update("INSERT INTO users (id, email, display_name, status) VALUES (?, 'u@x', 'User', 'active')", USER);
         jdbc.update("INSERT INTO spaces (id, name) VALUES (?, 'Espace')", SPACE);
