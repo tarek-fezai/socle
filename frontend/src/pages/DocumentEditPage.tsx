@@ -1,91 +1,219 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { FormEvent, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Link, useOutletContext, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CommentsPanel, CommentSelectionButton } from '../components/CommentsPanel'
-import { DocumentReliabilityStatus } from '../components/ReliabilityDisplay'
-import { Breadcrumb } from '../components/Breadcrumb'
-import { FavoriteStar } from '../components/shell/FavoriteStar'
-import { MoveDialog } from '../components/MoveDialog'
+import type { Editor } from '@tiptap/react'
+import { useAuth } from '../auth/AuthProvider'
+import { CommentSelectionButton, CommentsPanel } from '../components/CommentsPanel'
 import { PlaceholderBanner } from '../components/PlaceholderBanner'
-import { SaveAsTemplateDialog } from '../components/SaveAsTemplateDialog'
-import { SpaceTreeLayout } from '../components/SpaceTreeSidebar'
-import { StaleBadge } from '../components/StaleBadge'
+import type { ShellOutletContext } from '../components/shell/shellUtils'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
+import { canCommentOnSpace, listComments, type CommentAnchorInput } from '../lib/comments'
 import {
-  canCommentOnSpace,
-  type CommentAnchorInput,
-  listComments,
-} from '../lib/comments'
-import { emptyDocBody, getDocument, updateDocument } from '../lib/documents'
+  customFieldsKey,
+  listDocumentCustomFields,
+  setDocumentCustomField,
+  type CustomFieldView,
+} from '../lib/customFields'
 import {
-  acquireEditLock,
-  editLockBannerText,
-  heartbeatEditLock,
-  releaseEditLock,
-} from '../lib/editLock'
-import { buildBreadcrumb, getSpaceTree, spaceTreeKey } from '../lib/folders'
+  emptyDocBody,
+  getDocument,
+  updateDocument,
+  type DocumentDetail,
+  type TagRef,
+  type TipTapNode,
+} from '../lib/documents'
+import { folderPath, getSpaceTree, spaceTreeKey } from '../lib/folders'
 import { getSpace } from '../lib/spaces'
+import { attachTag, detachTag, sortTags } from '../lib/tags'
 import { placeholderConflictMessage } from '../lib/templates'
-import { fetchApplicableWorkflow, matchLevelLabel } from '../lib/workflows'
+import { fetchApplicableWorkflow } from '../lib/workflows'
+import {
+  DEFAULT_LONG_PARAGRAPH_WORDS,
+  findLongParagraphs,
+  getWritingHints,
+  writingHintsKey,
+} from '../lib/writingAssistant'
 import { DocumentEditor } from './DocumentEditor'
+import { DocumentMobileTabs, DocumentMobileTop, DocumentTabs, type Crumb } from './document/DocumentChrome'
+import { EditLockBanner, EditNotice, EditTopBar } from './document/DocumentEditChrome'
+import { EditAssistantPanel } from './document/EditAssistantPanel'
+import { TipTapReadView, analyzeBody } from './document/TipTapReadView'
+import {
+  countWordsFromTipTap,
+  findUnsupportedContent,
+  formatWordStats,
+  hasUnsupportedContent,
+  lockHeldByOther,
+  presenceAvatars,
+  reliabilityShortLabel,
+  reviewButtonState,
+  reviewCadenceLabel,
+} from './document/documentEditUtils'
+import { documentPermissions, ownerLabel } from './document/documentPageUtils'
+import { useAutosave } from './document/useAutosave'
+import { useEditLock } from './document/useEditLock'
+import './document/document-page.css'
+import './document/document-edit.css'
 
 type ApprovalCurrent = {
   approvalRequestId: string
-  documentId: string
-  documentTitle: string
   temporalWorkflowId: string
   status: string
   currentStepOrder: number
-  slaDeadlineAt: string | null
-  submittedVersionNo: number | null
-  baselineVersionNo: number | null
-  requestedBy: string
-  createdAt: string
 }
+
+type Draft = { title: string; body: Record<string, unknown> }
+
+function saveErrorMessage(e: unknown): string {
+  if (e instanceof Error && !('response' in e)) return e.message
+  return apiErrorMessage(e, "Échec de l'enregistrement")
+}
+
+/** Navigation du texte : minutes écoulées depuis l'acquisition du verrou (≥ 1). */
+function minutesSince(iso: string | null | undefined, nowMs = Date.now()): number | null {
+  if (!iso) return null
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return null
+  return Math.max(1, Math.round((nowMs - t) / 60_000))
+}
+
+/* ------------------------------------------------------------------ */
+/* Page : chargement du document                                        */
+/* ------------------------------------------------------------------ */
 
 export function DocumentEditPage() {
   const { id = '' } = useParams()
-  const queryClient = useQueryClient()
-  const [title, setTitle] = useState('')
-  const [docType, setDocType] = useState('')
-  const [body, setBody] = useState<Record<string, unknown>>(emptyDocBody)
-  const [savedAt, setSavedAt] = useState<string | null>(null)
-  const [approvalMsg, setApprovalMsg] = useState<string | null>(null)
-  const [approvalError, setApprovalError] = useState<string | null>(null)
-
   const doc = useQuery({
     queryKey: ['document', id],
     queryFn: () => getDocument(api, id),
     enabled: Boolean(id),
+    // Le brouillon local démarre du contenu serveur le plus récent, jamais d'un cache périmé.
+    gcTime: 0,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
 
-  const spaceId = doc.data?.spaceId ?? ''
-  const tree = useQuery({
-    queryKey: spaceTreeKey(spaceId),
-    queryFn: () => getSpaceTree(api, spaceId),
-    enabled: Boolean(spaceId),
-  })
-  const [moveOpen, setMoveOpen] = useState(false)
-  const [templateOpen, setTemplateOpen] = useState(false)
+  if (doc.isLoading) {
+    return (
+      <div className="doc-page doc-page--state" data-testid="edit-loading">
+        <p className="doc-state">Chargement…</p>
+      </div>
+    )
+  }
+
+  if (doc.isError || !doc.data) {
+    return (
+      <div className="doc-page doc-page--state">
+        <Link to="/docs" className="doc-back">
+          ← Documents
+        </Link>
+        <p className="doc-state doc-state--error" role="alert">
+          Document introuvable ou accès refusé.
+        </p>
+      </div>
+    )
+  }
+
+  return <EditSurface key={doc.data.id} doc={doc.data} />
+}
+
+/* ------------------------------------------------------------------ */
+/* Écran Modifier                                                       */
+/* ------------------------------------------------------------------ */
+
+function EditSurface({ doc }: { doc: DocumentDetail }) {
+  const id = doc.id
+  const qc = useQueryClient()
+  const shell = useOutletContext<ShellOutletContext | null | undefined>()
+  const { me } = useAuth()
+  const perms = documentPermissions(doc.permissions)
+
+  /* ---------- brouillon local ---------- */
+
+  const initialBody = useMemo(() => (doc.body ?? emptyDocBody) as Record<string, unknown>, [doc.body])
+  const initial = useMemo<Draft>(() => ({ title: doc.title, body: initialBody }), [doc.title, initialBody])
+  const [title, setTitle] = useState(doc.title)
+  const [body, setBody] = useState<Record<string, unknown>>(initialBody)
+  const [tags, setTags] = useState<TagRef[]>(doc.tags ?? [])
+  const [previewing, setPreviewing] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [draftAnchor, setDraftAnchor] = useState<CommentAnchorInput | null>(null)
+  const [approvalMsg, setApprovalMsg] = useState<string | null>(null)
+  const [approvalError, setApprovalError] = useState<string | null>(null)
+  const [tagError, setTagError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [savingFields, setSavingFields] = useState<Record<string, boolean>>({})
+  const editorRef = useRef<Editor | null>(null)
+  const previewingRef = useRef(false)
+  previewingRef.current = previewing
   const contentRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLTextAreaElement>(null)
+  const versionRef = useRef<number | null>(doc.currentVersionNo ?? null)
 
+  // Blocs / marques hors schéma : TipTap les supprimerait au premier enregistrement.
+  const unsupported = useMemo(() => findUnsupportedContent(initialBody), [initialBody])
+  const bodyLocked = hasUnsupportedContent(unsupported)
+
+  /* ---------- verrou exclusif / présence ---------- */
+
+  const lockState = useEditLock(id, perms.canEdit)
+  const holder = lockHeldByOther(lockState.lock)
+  const lockPending = perms.canEdit && !lockState.settled
+  const canWrite = perms.canEdit && !holder && !lockPending
+  const bodyEditable = canWrite && !bodyLocked
+
+  /* ---------- enregistrement automatique ---------- */
+
+  const draft = useMemo<Draft>(() => ({ title, body }), [title, body])
+  const autosave = useAutosave<Draft>({
+    value: draft,
+    initial,
+    enabled: canWrite,
+    initialSavedAt: doc.updatedAt ? new Date(doc.updatedAt) : null,
+    describeError: saveErrorMessage,
+    save: async (d) => {
+      if (!d.title.trim()) throw new Error('Le titre du document ne peut pas être vide.')
+      const updated = await updateDocument(
+        api,
+        id,
+        d.title.trim(),
+        d.body,
+        doc.docType?.trim() || null,
+        versionRef.current,
+      )
+      versionRef.current = updated.currentVersionNo ?? versionRef.current
+      qc.setQueryData(['document', id], (prev: DocumentDetail | undefined) =>
+        prev ? { ...prev, currentVersionNo: updated.currentVersionNo, updatedAt: updated.updatedAt } : prev,
+      )
+      void qc.invalidateQueries({ queryKey: ['documents'] })
+      void qc.invalidateQueries({ queryKey: ['document-resolved', id] })
+      void qc.invalidateQueries({ queryKey: ['applicable-workflow', id] })
+      void qc.invalidateQueries({ queryKey: writingHintsKey(id) })
+      return updated
+    },
+  })
+
+  /* ---------- données annexes ---------- */
+
+  const spaceId = doc.spaceId
   const space = useQuery({
     queryKey: ['space', spaceId],
     queryFn: () => getSpace(api, spaceId),
     enabled: Boolean(spaceId),
   })
-
+  const tree = useQuery({
+    queryKey: spaceTreeKey(spaceId),
+    queryFn: () => getSpaceTree(api, spaceId),
+    enabled: Boolean(spaceId),
+  })
   const openComments = useQuery({
     queryKey: ['document-comments', id, 'ouvert', ''],
     queryFn: () => listComments(api, id, { status: 'ouvert' }),
-    enabled: Boolean(id),
     refetchInterval: commentsOpen ? false : 30_000,
   })
-
   const currentApproval = useQuery({
     queryKey: ['approval', id],
     queryFn: async () => {
@@ -94,359 +222,344 @@ export function DocumentEditPage() {
       })
       return res.status === 204 ? null : res.data
     },
-    enabled: Boolean(id),
     refetchInterval: (q) => (q.state.data ? 3000 : false),
   })
-
   const applicable = useQuery({
-    queryKey: ['applicable-workflow', id, doc.data?.spaceId, doc.data?.docType],
+    queryKey: ['applicable-workflow', id, doc.spaceId, doc.docType],
     queryFn: () => fetchApplicableWorkflow(api, id),
-    enabled: Boolean(id) && Boolean(doc.data) && !currentApproval.data,
+    enabled: !currentApproval.data,
+    retry: false,
+  })
+  const hints = useQuery({
+    queryKey: writingHintsKey(id),
+    queryFn: () => getWritingHints(api, id),
+    retry: false,
+    staleTime: 0,
+  })
+  const customFields = useQuery({
+    queryKey: customFieldsKey(id),
+    queryFn: () => listDocumentCustomFields(api, id),
+    retry: false,
   })
 
-  useEffect(() => {
-    if (!doc.data) return
-    setTitle(doc.data.title)
-    setDocType(doc.data.docType ?? '')
-    setBody(doc.data.body ?? emptyDocBody)
-  }, [doc.data])
+  /* ---------- dérivés ---------- */
 
-  const editLock = useQuery({
-    queryKey: ['edit-lock', id],
-    queryFn: () => acquireEditLock(api, id),
-    enabled: Boolean(id) && Boolean(doc.data),
-    refetchInterval: (q) => {
-      const secs = q.state.data?.heartbeatSeconds ?? 15
-      return secs * 1000
-    },
-  })
-
-  useEffect(() => {
-    if (!id || !doc.data) return
-    const secs = editLock.data?.heartbeatSeconds ?? 15
-    const timer = window.setInterval(() => {
-      void heartbeatEditLock(api, id)
-        .then((lock) => queryClient.setQueryData(['edit-lock', id], lock))
-        .catch(() => undefined)
-    }, secs * 1000)
-    return () => {
-      window.clearInterval(timer)
-      void releaseEditLock(api, id).catch(() => undefined)
-      void queryClient.removeQueries({ queryKey: ['edit-lock', id] })
+  const spaceName = space.data?.name ?? tree.data?.spaceName ?? ''
+  const folderId = doc.folderId ?? tree.data?.documents.find((d) => d.id === id)?.folderId ?? null
+  const crumbs = useMemo<Crumb[]>(() => {
+    const items: Crumb[] = [{ label: spaceName || 'Espace', to: `/spaces/${spaceId}/tree` }]
+    for (const f of folderPath(tree.data?.folders ?? [], folderId)) {
+      items.push({ label: f.name, to: `/folders/${f.id}` })
     }
-  }, [id, doc.data, editLock.data?.heartbeatSeconds, queryClient])
+    items.push({ label: title.trim() || 'Sans titre' })
+    return items
+  }, [spaceName, spaceId, tree.data?.folders, folderId, title])
 
-  const save = useMutation({
-    mutationFn: () =>
-      updateDocument(
-        api,
-        id,
-        title,
-        body,
-        docType.trim() || null,
-        doc.data?.currentVersionNo ?? null,
-      ),
-    onSuccess: (updated) => {
-      setSavedAt(updated.updatedAt)
-      void queryClient.invalidateQueries({ queryKey: ['documents'] })
-      void queryClient.setQueryData(['document', id], updated)
-      void queryClient.invalidateQueries({ queryKey: ['applicable-workflow', id] })
-      void releaseEditLock(api, id).catch(() => undefined)
-    },
+  const wordStats = useMemo(() => formatWordStats(countWordsFromTipTap(body)), [body])
+  const threshold = hints.data?.longParagraphThresholdWords ?? DEFAULT_LONG_PARAGRAPH_WORDS
+  const longParagraphs = useMemo(
+    () => findLongParagraphs(body as TipTapNode, threshold),
+    [body, threshold],
+  )
+  const analysis = useMemo(() => (previewing ? analyzeBody(body as TipTapNode) : undefined), [previewing, body])
+
+  const pending = currentApproval.data
+  const review = reviewButtonState({
+    canPublish: perms.canPublish,
+    hasWorkflow: applicable.isSuccess && Boolean(applicable.data),
+    workflowLoading: !pending && applicable.isLoading,
+    pending: Boolean(pending),
+    lockedByOther: Boolean(holder),
+    submitting: false,
   })
+  const canComment = perms.canComment || (space.data ? canCommentOnSpace(space.data) : false)
+  const canEditMeta = canWrite
+  const avatars = presenceAvatars(lockState.lock, me)
 
-  const submitApproval = useMutation({
+  /* ---------- actions ---------- */
+
+  const send = useMutation({
     mutationFn: async () => {
-      const { data } = await api.post<{
-        approvalRequestId: string
-        temporalWorkflowId: string
-        status: string
-      }>(`/api/v1/documents/${id}/approvals`)
+      const saved = await autosave.flush()
+      if (!saved) throw new Error("L'enregistrement a échoué : corrigez-le avant d'envoyer en révision.")
+      const { data } = await api.post<{ approvalRequestId: string; temporalWorkflowId: string; status: string }>(
+        `/api/v1/documents/${id}/approvals`,
+      )
       return data
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       setApprovalError(null)
-      setApprovalMsg(`En cours d'approbation · workflow ${data.temporalWorkflowId}`)
-      void queryClient.invalidateQueries({ queryKey: ['document', id] })
-      void queryClient.invalidateQueries({ queryKey: ['documents'] })
-      void queryClient.invalidateQueries({ queryKey: ['approval', id] })
-      void queryClient.invalidateQueries({ queryKey: ['approvals', 'mine'] })
+      setApprovalMsg('Document envoyé en révision.')
+      void qc.invalidateQueries({ queryKey: ['document', id] })
+      void qc.invalidateQueries({ queryKey: ['document-resolved', id] })
+      void qc.invalidateQueries({ queryKey: ['documents'] })
+      void qc.invalidateQueries({ queryKey: ['approval', id] })
+      void qc.invalidateQueries({ queryKey: ['approvals', 'mine'] })
     },
     onError: (err) => {
       setApprovalMsg(null)
       setApprovalError(
-        placeholderConflictMessage(err) ??
-          apiErrorMessage(err, 'Échec de la soumission pour approbation'),
+        err instanceof Error && !('response' in err)
+          ? err.message
+          : (placeholderConflictMessage(err) ??
+              apiErrorMessage(err, 'Échec de la soumission pour approbation')),
       )
     },
   })
 
-  function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    save.mutate()
+  const addTag = useMutation({
+    mutationFn: (tag: { tagId: string } | { name: string }) => attachTag(api, id, tag),
+    onSuccess: (tag) => {
+      setTagError(null)
+      setTags((prev) => (prev.some((t) => t.id === tag.id) ? prev : sortTags([...prev, tag])))
+      void qc.invalidateQueries({ queryKey: ['document-resolved', id] })
+      void qc.invalidateQueries({ queryKey: ['tags-search'] })
+    },
+    onError: (e) => setTagError(apiErrorMessage(e, "Impossible d'ajouter ce tag")),
+  })
+  const removeTag = useMutation({
+    mutationFn: (tag: TagRef) => detachTag(api, id, tag.id),
+    onSuccess: (_v, tag) => {
+      setTagError(null)
+      setTags((prev) => prev.filter((t) => t.id !== tag.id))
+      void qc.invalidateQueries({ queryKey: ['document-resolved', id] })
+    },
+    onError: (e) => setTagError(apiErrorMessage(e, 'Impossible de retirer ce tag')),
+  })
+
+  const saveField = useCallback(
+    async (field: CustomFieldView, value: unknown) => {
+      setSavingFields((s) => ({ ...s, [field.id]: true }))
+      try {
+        const updated = await setDocumentCustomField(api, id, field.id, value)
+        setFieldErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => k !== field.id)))
+        qc.setQueryData(customFieldsKey(id), (prev: CustomFieldView[] | undefined) =>
+          prev?.map((f) => (f.id === field.id ? { ...f, value: updated.value } : f)),
+        )
+      } catch (e) {
+        setFieldErrors((errs) => ({ ...errs, [field.id]: apiErrorMessage(e, 'Impossible d’enregistrer ce champ') }))
+      } finally {
+        setSavingFields((s) => ({ ...s, [field.id]: false }))
+      }
+    },
+    [id, qc],
+  )
+
+  const goToParagraph = useCallback((index: number) => {
+    const focus = () => {
+      const ed = editorRef.current
+      if (!ed) return
+      let n = 0
+      let target = -1
+      ed.state.doc.descendants((node, pos) => {
+        if (target >= 0) return false
+        if (node.type.name === 'paragraph') {
+          if (n === index) {
+            target = pos
+            return false
+          }
+          n += 1
+        }
+        return true
+      })
+      if (target < 0) return
+      ed.chain().focus().setTextSelection(target + 1).run()
+      const dom = ed.view.nodeDOM(target)
+      if (dom instanceof HTMLElement) dom.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+    if (previewingRef.current) {
+      setPreviewing(false)
+      // L'éditeur est de nouveau visible au prochain rendu.
+      window.setTimeout(focus, 0)
+    } else {
+      focus()
+    }
+  }, [])
+
+  /* ---------- titre : hauteur automatique (repli si field-sizing absent) ---------- */
+
+  useLayoutEffect(() => {
+    const el = titleRef.current
+    if (!el) return
+    if (typeof CSS !== 'undefined' && CSS.supports?.('field-sizing', 'content')) return
+    el.style.height = 'auto'
+    if (el.scrollHeight > 0) el.style.height = `${el.scrollHeight}px`
+  }, [title, previewing])
+
+  // Les erreurs d'envoi se dissipent dès que le brouillon change.
+  useEffect(() => {
+    setApprovalMsg(null)
+  }, [draft])
+
+  const toggleComments = useCallback(() => {
+    setCommentsOpen((v) => !v)
+    setDraftAnchor(null)
+  }, [])
+
+  const saveErr = autosave.status.kind === 'error' ? autosave.status.message : null
+  const titleSlot = (
+    <textarea
+      ref={titleRef}
+      className="edit-title"
+      rows={1}
+      value={title}
+      placeholder="Titre du document"
+      aria-label="Titre du document"
+      readOnly={!canWrite}
+      maxLength={300}
+      data-mock-id="edit-title"
+      data-testid="edit-title"
+      onChange={(e) => setTitle(e.target.value.replace(/\n/g, ' '))}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          editorRef.current?.chain().focus('start').run()
+        }
+      }}
+    />
+  )
+
+  const tabProps = {
+    documentId: id,
+    current: 'edit' as const,
+    mockPrefix: 'edit' as const,
+    showEdit: perms.canEdit,
+    showAccess: perms.canManageAccess || perms.canEdit,
+    openComments: openComments.data?.openThreadCount ?? 0,
+    commentsOpen,
+    onToggleComments: toggleComments,
   }
-
-  if (doc.isLoading) {
-    return <main className="page-shell text-socle-muted">Chargement…</main>
-  }
-
-  if (doc.isError || !doc.data) {
-    return (
-      <main className="page-shell">
-        <Link to="/docs" className="text-sm font-semibold text-socle-accent">
-          ← Documents
-        </Link>
-        <p className="mt-4 text-socle-danger">Document introuvable ou accès refusé.</p>
-      </main>
-    )
-  }
-
-  const pending = currentApproval.data
-  const status = doc.data.status
-  const canSubmit = !pending && (status === 'brouillon' || status === 'en_revue')
-  const lockBanner = editLock.data ? editLockBannerText(editLock.data) : null
-  const canComment = space.data ? canCommentOnSpace(space.data) : true
-
-  const treeFolders = tree.data?.folders ?? []
-  const folderId =
-    doc.data.folderId ?? tree.data?.documents.find((d) => d.id === id)?.folderId ?? null
 
   return (
-    <SpaceTreeLayout spaceId={doc.data.spaceId} currentDocumentId={id}>
-      <div className="flex min-h-0 flex-1">
-      <main className={`page-shell min-w-0 flex-1 ${commentsOpen ? 'max-w-none pr-6' : ''}`}>
-        <Breadcrumb
-          className="mb-4"
-          items={buildBreadcrumb({
-            spaceId: doc.data.spaceId,
-            spaceName: tree.data?.spaceName ?? '',
-            folders: treeFolders,
-            folderId,
-            leaf: title || doc.data.title || 'Sans titre',
-          })}
-        />
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <FavoriteStar resourceType="document" resourceId={id!} />
-            <Link to="/docs" className="text-sm font-semibold text-socle-accent">
-              ← Documents
-            </Link>
-            <Link
-              to={`/docs/${id}/history`}
-              className="text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
-            >
-              Voir l&apos;historique
-            </Link>
-            <Link
-              to={`/docs/${id}`}
-              className="text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
-              data-testid="edit-to-read"
-            >
-              Lire
-            </Link>
-            <Link
-              to={`/docs/${id}/export`}
-              className="text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
-            >
-              Exporter
-            </Link>
-            <button
-              type="button"
-              onClick={() => setCommentsOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
-              data-testid="toggle-comments"
-            >
-              Commentaires
-              {(openComments.data?.openThreadCount ?? 0) > 0 && (
-                <span className="rounded-lg bg-socle-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                  {openComments.data!.openThreadCount}
-                </span>
-              )}
-            </button>
-            <Link
-              to={`/documents/${id}/access`}
-              className="text-sm text-socle-muted hover:text-socle-accent"
-            >
-              Accès
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMoveOpen(true)}
-              className="text-sm text-socle-muted hover:text-socle-accent"
-            >
-              Déplacer
-            </button>
-            <button
-              type="button"
-              onClick={() => setTemplateOpen(true)}
-              className="text-sm text-socle-muted hover:text-socle-accent"
-            >
-              Enregistrer comme modèle
-            </button>
-          </div>
-          <p className="text-xs text-socle-muted">
-            {save.isSuccess && savedAt
-              ? `Enregistré ${new Date(savedAt).toLocaleTimeString('fr-FR')}`
-              : ''}
-          </p>
-        </div>
+    <div className="doc-page edit-page" data-testid="document-edit-page" data-mock-id="edit-page">
+      <DocumentMobileTop
+        title={title || doc.title}
+        spaceName={spaceName}
+        onOpenMenu={shell?.openMenu}
+        onOpenSearch={shell?.openSearch}
+      />
+      <EditTopBar
+        crumbs={crumbs}
+        save={autosave.status}
+        onRetrySave={() => void autosave.retry()}
+        wordStats={wordStats}
+        presence={avatars}
+        previewing={previewing}
+        onTogglePreview={() => setPreviewing((v) => !v)}
+        reviewLabel={send.isPending ? 'Envoi…' : pending ? 'En révision' : 'Envoyer en révision'}
+        reviewDisabled={review.disabled || send.isPending}
+        reviewReason={review.reason}
+        onSendReview={() => send.mutate()}
+      />
+      {holder && (
+        <EditLockBanner name={holder.name} initials={holder.initials} minutes={minutesSince(holder.since)} />
+      )}
+      {!perms.canEdit && (
+        <EditNotice testId="edit-readonly-banner" tone="warn">
+          Vous n&apos;avez pas le droit de modifier ce document : il est affiché en lecture seule.
+        </EditNotice>
+      )}
+      <DocumentTabs {...tabProps} />
 
-        {lockBanner ? (
-          <div
-            className="mb-4 rounded-lg border border-[#E8D9A8] bg-[#FBF3E4] px-4 py-2.5 text-sm text-socle-warn"
-            data-testid="edit-lock-banner"
-          >
-            {lockBanner}
-            <span className="ml-1 font-normal text-socle-muted">
-              — l&apos;édition reste possible ; un conflit à la sauvegarde renverra une erreur 409.
-            </span>
-          </div>
-        ) : null}
+      <div className="edit-body">
+        <div className="edit-main" data-mock-id="edit-main">
+          <div className="edit-column" ref={contentRef} data-comment-root>
+            {saveErr && autosave.status.kind === 'error' && (
+              <p className="edit-alert edit-alert--error" role="alert" data-testid="edit-save-error">
+                {saveErr}
+              </p>
+            )}
+            {approvalError && (
+              <p className="edit-alert edit-alert--error" role="alert" data-testid="edit-approval-error">
+                {approvalError}
+              </p>
+            )}
+            {approvalMsg && !approvalError && (
+              <p className="edit-alert" role="status" data-testid="edit-approval-msg">
+                {approvalMsg}{' '}
+                <Link to={`/docs/${id}`} className="doc-back">
+                  Voir la page
+                </Link>
+              </p>
+            )}
+            {bodyLocked && (
+              <EditNotice testId="edit-unsupported-banner" tone="warn">
+                Ce document contient des éléments que l&apos;éditeur ne sait pas encore représenter (
+                {[...unsupported.nodes, ...unsupported.marks].join(', ')}). Le corps est affiché en lecture seule
+                pour éviter de les perdre ; le titre et les métadonnées restent modifiables.
+              </EditNotice>
+            )}
+            <PlaceholderBanner body={body} />
 
-        {save.isError ? (
-          <p className="mb-4 text-sm text-socle-danger" data-testid="save-conflict-error">
-            {apiErrorMessage(save.error, 'Échec de l’enregistrement')}
-          </p>
-        ) : null}
-
-        <DocumentReliabilityStatus
-          score={doc.data.reliabilityScore}
-          computedAt={doc.data.reliabilityComputedAt}
-          status={doc.data.status}
-          createdAt={doc.data.createdAt}
-        />
-        <div className="mb-4">
-          <StaleBadge stale={doc.data.stale} contentModifiedAt={doc.data.contentModifiedAt} />
-        </div>
-
-        <PlaceholderBanner body={body} />
-
-        <form onSubmit={onSubmit} className="space-y-4">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full border-0 border-b border-socle-line bg-transparent font-display text-3xl font-normal text-socle-ink outline-none focus:border-socle-accent"
-            placeholder="Titre du document"
-          />
-
-          <label className="block max-w-sm text-sm">
-            <span className="text-socle-muted">Type de document (scope workflow)</span>
-            <input
-              value={docType}
-              onChange={(e) => setDocType(e.target.value)}
-              disabled={Boolean(pending)}
-              className="mt-1 w-full rounded-lg border border-socle-line bg-white px-3 py-2 text-sm"
-              placeholder="ex. politique, procédure"
+            <DocumentEditor
+              variant="document"
+              content={body}
+              onChange={setBody}
+              editable={bodyEditable}
+              hidden={previewing}
+              titleSlot={titleSlot}
+              onEditorReady={(ed) => {
+                editorRef.current = ed
+              }}
             />
-          </label>
 
-          <div className="relative" ref={contentRef} data-comment-root>
-            <DocumentEditor content={body} onChange={setBody} />
+            {previewing && (
+              <div className="edit-preview" data-testid="edit-preview-body">
+                <h1 className="edit-title">{title || 'Sans titre'}</h1>
+                <TipTapReadView body={body as TipTapNode} analysis={analysis} />
+              </div>
+            )}
             <CommentSelectionButton
               rootRef={contentRef}
-              enabled={canComment}
+              enabled={canComment && commentsOpen}
               onComment={(anchor) => {
                 setDraftAnchor(anchor)
                 setCommentsOpen(true)
               }}
             />
           </div>
+        </div>
 
-          {canSubmit && applicable.data && (
-            <div className="rounded-xl border border-socle-line bg-[#FAFAFB] px-4 py-3 text-sm text-socle-ink">
-              <p className="font-medium">
-                Workflow applicable : {applicable.data.name}
-                <span className="ml-2 font-normal text-socle-muted">
-                  ({applicable.data.stepCount} étape
-                  {applicable.data.stepCount > 1 ? 's' : ''} ·{' '}
-                  {matchLevelLabel(applicable.data.matchLevel)})
-                </span>
-              </p>
-            </div>
-          )}
-
-          <div className="flex flex-wrap justify-end gap-2">
-            {canSubmit && (
-              <button
-                type="button"
-                disabled={submitApproval.isPending}
-                onClick={() => submitApproval.mutate()}
-                className="btn-ghost"
-              >
-                {submitApproval.isPending ? 'Soumission…' : 'Soumettre pour approbation'}
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={save.isPending || !title.trim() || Boolean(pending)}
-              className="btn-primary"
-            >
-              {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
+        {commentsOpen ? (
+          <div className="edit-comments-col" data-testid="edit-comments-col">
+            <CommentsPanel
+              documentId={id}
+              versionNo={doc.currentVersionNo}
+              canComment={canComment}
+              spaceId={doc.spaceId}
+              draftAnchor={draftAnchor}
+              onDraftAnchorClear={() => setDraftAnchor(null)}
+              className="doc-comments-panel"
+              onClose={() => {
+                setCommentsOpen(false)
+                setDraftAnchor(null)
+              }}
+            />
           </div>
-          {pending && (
-            <div className="rounded-xl border border-[#C7C6F5] bg-socle-mist/60 px-4 py-3 text-sm text-socle-ink">
-              <p className="font-medium">En cours d&apos;approbation</p>
-              <p className="mt-1 font-mono text-xs text-socle-slate">
-                {pending.temporalWorkflowId}
-              </p>
-              <p className="mt-2 text-xs text-socle-slate">
-                Étape {pending.currentStepOrder}
-                {pending.slaDeadlineAt
-                  ? ` · SLA ${new Date(pending.slaDeadlineAt).toLocaleString('fr-FR')}`
-                  : ''}
-              </p>
-              <Link
-                to="/approvals"
-                className="mt-2 inline-block text-xs font-semibold text-socle-accent underline-offset-4 hover:underline"
-              >
-                Voir mes approbations →
-              </Link>
-            </div>
-          )}
-          {approvalMsg && !pending && (
-            <p className="text-right text-xs text-socle-slate">{approvalMsg}</p>
-          )}
-          {approvalError && <p className="text-right text-xs text-socle-danger">{approvalError}</p>}
-        </form>
-        <SaveAsTemplateDialog
-          open={templateOpen}
-          onOpenChange={setTemplateOpen}
-          documentId={id}
-          spaceId={doc.data.spaceId}
-          documentTitle={title || doc.data.title}
-          visibility={doc.data.visibility}
-        />
-        <MoveDialog
-          open={moveOpen}
-          onOpenChange={setMoveOpen}
-          spaceId={doc.data.spaceId}
-          spaceName={tree.data?.spaceName ?? ''}
-          folders={treeFolders}
-          target={{
-            kind: 'document',
-            id,
-            name: doc.data.title || 'Sans titre',
-            currentParentId: folderId,
-          }}
-          onMoved={() => void queryClient.invalidateQueries({ queryKey: ['document', id] })}
-        />
-      </main>
-      {commentsOpen && (
-        <CommentsPanel
-          documentId={id}
-          versionNo={doc.data.currentVersionNo}
-          canComment={canComment}
-          spaceId={doc.data.spaceId}
-          draftAnchor={draftAnchor}
-          onDraftAnchorClear={() => setDraftAnchor(null)}
-          onClose={() => {
-            setCommentsOpen(false)
-            setDraftAnchor(null)
-          }}
-        />
-      )}
+        ) : (
+          <EditAssistantPanel
+            spaceId={spaceId}
+            threshold={threshold}
+            longParagraphs={longParagraphs}
+            brokenLinks={hints.data?.brokenLinks ?? []}
+            onGoToParagraph={goToParagraph}
+            owner={ownerLabel(spaceName)}
+            reliability={reliabilityShortLabel(doc.reliabilityScore)}
+            reviewCadence={reviewCadenceLabel(doc.stalenessThresholdDays)}
+            tags={tags}
+            canEditMeta={canEditMeta}
+            tagError={tagError}
+            onAddTag={(t) => addTag.mutate(t)}
+            onRemoveTag={(t) => removeTag.mutate(t)}
+            customFields={customFields.data ?? []}
+            fieldErrors={fieldErrors}
+            savingFields={savingFields}
+            onSaveField={(f, v) => void saveField(f, v)}
+          />
+        )}
       </div>
-    </SpaceTreeLayout>
+
+      <DocumentMobileTabs {...tabProps} />
+    </div>
   )
 }

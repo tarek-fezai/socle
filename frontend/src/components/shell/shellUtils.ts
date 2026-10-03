@@ -18,6 +18,20 @@ export function isDocumentReadPath(pathname: string): boolean {
   return Boolean(m) && m![1] !== 'new'
 }
 
+/**
+ * `/docs/:id/edit` (écran Modifier, Edit.dc.html) - barre haute, onglets et barre mobile fournis
+ * par la page : le shell masque aussi `ShellHeader`, `MobileTopBar` et `MobileTabBar`.
+ */
+export function isDocumentEditPath(pathname: string): boolean {
+  const m = /^\/docs\/([^/]+)\/edit\/?$/.exec(pathname)
+  return Boolean(m) && m![1] !== 'new'
+}
+
+/** Pages documentaires qui portent leur propre chrome (lecture, modification). */
+export function hasOwnDocumentChrome(pathname: string): boolean {
+  return isDocumentReadPath(pathname) || isDocumentEditPath(pathname)
+}
+
 /** Actions du shell exposées aux pages qui remplacent la barre mobile (via `<Outlet context>`). */
 export type ShellOutletContext = {
   openMenu: () => void

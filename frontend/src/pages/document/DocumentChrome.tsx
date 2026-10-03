@@ -248,6 +248,10 @@ export function DocumentTopBar({
 
 export type DocTabsProps = {
   documentId: string
+  /** Onglet courant (défaut : Lire). */
+  current?: 'read' | 'edit'
+  /** Préfixe des `data-mock-id` (défaut : `doc`). */
+  mockPrefix?: 'doc' | 'edit'
   showEdit: boolean
   showAccess: boolean
   openComments: number
@@ -257,6 +261,8 @@ export type DocTabsProps = {
 
 export function DocumentTabs({
   documentId,
+  current = 'read',
+  mockPrefix = 'doc',
   showEdit,
   showAccess,
   openComments,
@@ -264,12 +270,25 @@ export function DocumentTabs({
   onToggleComments,
 }: DocTabsProps) {
   return (
-    <div className="doc-tabs" role="tablist" aria-label="Sections du document" data-mock-id="doc-tabs">
-      <Link to={`/docs/${documentId}`} role="tab" aria-selected className="doc-tab is-active" data-mock-id="doc-tab-read">
+    <div className="doc-tabs" role="tablist" aria-label="Sections du document" data-mock-id={`${mockPrefix}-tabs`}>
+      <Link
+        to={`/docs/${documentId}`}
+        role="tab"
+        aria-selected={current === 'read'}
+        className={`doc-tab${current === 'read' ? ' is-active' : ''}`}
+        data-mock-id={current === 'read' ? `${mockPrefix}-tab-read` : undefined}
+      >
         Lire
       </Link>
       {showEdit && (
-        <Link to={`/docs/${documentId}/edit`} role="tab" aria-selected={false} className="doc-tab" data-testid="tab-edit">
+        <Link
+          to={`/docs/${documentId}/edit`}
+          role="tab"
+          aria-selected={current === 'edit'}
+          className={`doc-tab${current === 'edit' ? ' is-active' : ''}`}
+          data-testid="tab-edit"
+          data-mock-id={current === 'edit' ? `${mockPrefix}-tab-edit` : undefined}
+        >
           Modifier
         </Link>
       )}
@@ -418,6 +437,7 @@ const svgProps = {
 /** Barre d'onglets du bas (MobilePage.dc.html) : Lire / Modifier / Historique / Commentaires / Accès. */
 export function DocumentMobileTabs({
   documentId,
+  current = 'read',
   showEdit,
   showAccess,
   openComments,
@@ -429,7 +449,7 @@ export function DocumentMobileTabs({
       <MobileTab
         to={`/docs/${documentId}`}
         label="Lire"
-        active={!commentsOpen}
+        active={current === 'read' && !commentsOpen}
         id="doc-mobile-tab-read"
         icon={
           <svg {...svgProps}>
@@ -442,6 +462,7 @@ export function DocumentMobileTabs({
         <MobileTab
           to={`/docs/${documentId}/edit`}
           label="Modifier"
+          active={current === 'edit' && !commentsOpen}
           icon={
             <svg {...svgProps}>
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" />

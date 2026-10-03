@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Placeholder } from '../lib/placeholderExtension'
 import { DEFAULT_PLACEHOLDER_HINT, PLACEHOLDER_NODE_TYPE, TEMPLATE_VARIABLES } from '../lib/templates'
+import { EditToolbar } from './document/EditToolbar'
 
 type Props = {
   content: Record<string, unknown>
@@ -11,10 +12,33 @@ type Props = {
   editable?: boolean
   /** Mode édition de modèle : insertion de zones à compléter et de variables {{date}}… */
   templateTools?: boolean
+  /**
+   * `classic` : cadre + mini barre (modèles). `document` : écran Modifier (Edit.dc.html) —
+   * barre d'outils complète, `titleSlot` entre la barre et le corps, aucun cadre.
+   */
+  variant?: 'classic' | 'document'
+  /** Variante `document` : contenu rendu entre la barre d'outils et le corps (titre). */
+  titleSlot?: ReactNode
+  /** Instance TipTap disponible (aller au paragraphe, focus…) ; `null` au démontage. */
+  onEditorReady?: (editor: Editor | null) => void
+  /** Variante `document` : masque l'éditeur (aperçu) sans le démonter. */
+  hidden?: boolean
 }
 
-export function DocumentEditor({ content, onChange, editable = true, templateTools = false }: Props) {
+export function DocumentEditor({
+  content,
+  onChange,
+  editable = true,
+  templateTools = false,
+  variant = 'classic',
+  titleSlot,
+  onEditorReady,
+  hidden = false,
+}: Props) {
   const [hint, setHint] = useState('')
+  const lastEmitted = useRef<Record<string, unknown> | null>(null)
+  const initialContent = useRef<Record<string, unknown>>(content)
+  const documentVariant = variant === 'document'
   const editor = useEditor({
     extensions: [StarterKit, Placeholder],
     content,
@@ -22,25 +46,56 @@ export function DocumentEditor({ content, onChange, editable = true, templateToo
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class:
-          'prose prose-slate max-w-none min-h-[280px] focus:outline-none px-1 py-2',
+        class: documentVariant
+          ? 'edit-prose focus:outline-none'
+          : 'prose prose-slate max-w-none min-h-[280px] focus:outline-none px-1 py-2',
+        ...(documentVariant ? { 'aria-label': 'Contenu du document', 'data-testid': 'edit-prosemirror' } : {}),
       },
     },
     onUpdate: ({ editor: ed }) => {
-      onChange(ed.getJSON() as Record<string, unknown>)
+      const json = ed.getJSON() as Record<string, unknown>
+      lastEmitted.current = json
+      onChange(json)
     },
   })
 
   useEffect(() => {
+    onEditorReady?.(editor ?? null)
+    return () => onEditorReady?.(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor])
+
+  useEffect(() => {
     if (!editor) return
+    // Pas de `update` : changer l'état éditable n'est pas une modification du contenu
+    // (sinon l'enregistrement automatique créerait une version à l'ouverture).
+    if (editor.isEditable !== editable) editor.setEditable(editable, false)
+  }, [editor, editable])
+
+  useEffect(() => {
+    if (!editor) return
+    // Contenu issu de notre propre saisie ou fourni à la création : rien à resynchroniser.
+    if (lastEmitted.current === content || initialContent.current === content) return
+    initialContent.current = content
     const current = JSON.stringify(editor.getJSON())
     const next = JSON.stringify(content)
     if (current !== next) {
-      editor.commands.setContent(content)
+      // Remplacement externe : pas d'événement `update` (ce n'est pas une saisie).
+      editor.commands.setContent(content, false)
     }
   }, [content, editor])
 
   if (!editor) return null
+
+  if (documentVariant) {
+    return (
+      <div className="edit-editor" hidden={hidden} data-testid="edit-editor">
+        <EditToolbar editor={editor} readOnly={!editable} />
+        {titleSlot}
+        <EditorContent editor={editor} className="edit-editor-content" />
+      </div>
+    )
+  }
 
   function insertPlaceholder() {
     editor

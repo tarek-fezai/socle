@@ -7,7 +7,7 @@ import { MobileTabBar } from './MobileTabBar'
 import { MobileTopBar } from './MobileTopBar'
 import { ShellHeader } from './ShellHeader'
 import { ShellSidebar } from './ShellSidebar'
-import { isApplePlatform, isDocumentReadPath, type ShellOutletContext } from './shellUtils'
+import { hasOwnDocumentChrome, isApplePlatform, type ShellOutletContext } from './shellUtils'
 import './appshell.css'
 
 /** Shell authentifié : sidebar + header (desktop), top bar + drawer + tabs (mobile). */
@@ -16,7 +16,7 @@ export function AppShellLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
   // Page de lecture : barre haute + onglets fournis par la page (Main.dc.html / MobilePage.dc.html).
-  const ownChrome = isDocumentReadPath(pathname)
+  const ownChrome = hasOwnDocumentChrome(pathname)
 
   const openSearch = useCallback(() => {
     setMenuOpen(false)
