@@ -104,6 +104,18 @@ public class EditLockService {
         return currentView(documentId, user.getId());
     }
 
+    /**
+     * Vrai si {@code userId} détient un verrou d'édition actif (heartbeat dans le TTL).
+     * Lecture seule — aucun nettoyage de ligne expirée, aucun contrôle d'accès (à faire par l'appelant).
+     */
+    @Transactional(readOnly = true)
+    public boolean isHeldBy(UUID documentId, UUID userId) {
+        Instant cutoff = clock.instant().minusSeconds(properties.getTtlSeconds());
+        return load(documentId)
+                .filter(row -> row.heartbeatAt().isAfter(cutoff) && row.holderUserId().equals(userId))
+                .isPresent();
+    }
+
     @Transactional
     public EditLockView heartbeat(Jwt jwt, UUID documentId) {
         return acquire(jwt, documentId);

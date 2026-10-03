@@ -508,6 +508,7 @@ public class DocumentService {
         }
 
         syncDocumentLinks(saved, newBody);
+        discardDraft(saved.getId(), user.getId());
 
         auditService.record(
                 user.getId(),
@@ -695,6 +696,17 @@ public class DocumentService {
                 null
         );
         return toResponse(saved, user.getId());
+    }
+
+    /**
+     * Sauvegarde explicite réussie : le brouillon autosave de l'auteur est consommé (même
+     * transaction — rollback de la version = brouillon conservé).
+     */
+    private void discardDraft(UUID documentId, UUID userId) {
+        if (jdbc == null) {
+            return;
+        }
+        jdbc.update("DELETE FROM document_drafts WHERE document_id = ? AND user_id = ?", documentId, userId);
     }
 
     private void syncDocumentLinks(DocumentEntity doc, Map<String, Object> tipTapBody) {
