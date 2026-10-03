@@ -1,0 +1,895 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/*
+ * Écran « Historique » d'un document — fidèle à History.dc.html (1440×900), Diff.dc.html,
+ * RestoreVersion.dc.html et MobileHistory.dc.html (390×844).
+ * Partage les jetons de document-page.css (barre haute, onglets, onglets mobiles) ; préfixes
+ * `hist-` (historique, modale) et `diff-` (comparaison).
+ * Polices : Instrument Serif (titre), IBM Plex Sans (corps), IBM Plex Mono (diff). Aucune police ajoutée.
+ * Couleurs : #3730E0 accent · #0E0E10 encre · #43434A corps · #9B9BA1 secondaire · #ECECEE filets ·
+ * #1E8E5A ajouts · #B54708 suppressions · #B7791F avertissement.
+ *
+ * Attention : les maquettes n'appliquent aucun reset `box-sizing` (content-box) alors que le projet
+ * utilise le preflight Tailwind (border-box) ; les pastilles bordées de la timeline sont donc
+ * explicitement en content-box.
+ */
+
+/* —— Boutons partagés (barre haute, modale) —— */
+
+.hist-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hist-ghost {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid #ececee;
+  background: none;
+  color: #43434a;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: normal;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.hist-ghost:hover:not(:disabled) {
+  background: #f5f5f7;
+}
+
+.hist-ghost:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.hist-cta {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: #3730e0;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: normal;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.hist-cta:hover:not(:disabled) {
+  background: #2c27c7;
+}
+
+.hist-cta:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* —— Contenu (desktop) —— */
+
+.hist-content {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 48px 40px 48px;
+}
+
+.hist-column {
+  width: 760px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hist-title {
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-size: 36px;
+  line-height: normal;
+  margin: 0 0 6px;
+  color: #0e0e10;
+}
+
+.hist-sub {
+  font-size: 14px;
+  color: #9b9ba1;
+  margin: 0 0 32px;
+}
+
+.hist-banner {
+  margin: 0 0 20px;
+  border: 1px solid #f2cfc2;
+  border-radius: 10px;
+  background: #fceeea;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #7c2d12;
+}
+
+.hist-note {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: #43434a;
+}
+
+.hist-error {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: #b54708;
+}
+
+.hist-empty {
+  font-size: 14px;
+  color: #9b9ba1;
+}
+
+/* —— Timeline —— */
+
+.hist-timeline {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 28px;
+  list-style: none;
+}
+
+.hist-timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: #ececee;
+}
+
+.hist-item {
+  position: relative;
+  margin: 0 0 28px;
+}
+
+.hist-item:last-child {
+  margin-bottom: 0;
+}
+
+.hist-dot {
+  position: absolute;
+  left: -28px;
+  top: 4px;
+  box-sizing: content-box;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #dedee1;
+}
+
+.hist-dot.is-current {
+  background: #3730e0;
+  border: 0;
+}
+
+.hist-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.hist-v {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0e0e10;
+}
+
+.hist-date {
+  font-size: 12px;
+  color: #9b9ba1;
+}
+
+.hist-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e8e5a;
+}
+
+.hist-current-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #1e8e5a;
+  flex-shrink: 0;
+}
+
+.hist-summary {
+  font-size: 14px;
+  color: #43434a;
+  margin-bottom: 6px;
+}
+
+.hist-item-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hist-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hist-author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hist-author-name {
+  font-size: 12.5px;
+  color: #6b6b72;
+}
+
+.hist-added {
+  font-size: 12px;
+  color: #1e8e5a;
+}
+
+.hist-removed {
+  font-size: 12px;
+  color: #b54708;
+}
+
+.hist-row-actions {
+  display: flex;
+  align-items: center;
+}
+
+.hist-link {
+  display: block;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: normal;
+  color: #3730e0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.hist-link:hover:not(:disabled) {
+  background: #f0effc;
+}
+
+.hist-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hist-more {
+  margin: 28px 0 0 28px;
+}
+
+/* —— Avatars d'auteur —— */
+
+.hist-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 8.5px;
+  font-weight: 600;
+}
+
+.hist-avatar--self {
+  background: #0e0e10;
+  color: #ffffff;
+}
+
+.hist-avatar--other {
+  background: #eeedfd;
+  color: #3730e0;
+}
+
+.hist-avatar--system {
+  background: #f1efea;
+  color: #6b6862;
+}
+
+.hist-avatar--lg {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+}
+
+.hist-avatar--lg.hist-avatar--system {
+  font-weight: 400;
+}
+
+/* —— Modale « Restaurer » (RestoreVersion.dc.html) —— */
+
+.hist-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(14, 14, 16, 0.45);
+}
+
+.hist-modal {
+  position: fixed;
+  z-index: 61;
+  top: 200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 28px 28px 24px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(14, 14, 16, 0.28);
+  font-family: 'IBM Plex Sans', sans-serif;
+  line-height: normal;
+  color: #0e0e10;
+}
+
+.hist-modal:focus {
+  outline: none;
+}
+
+.hist-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.hist-modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fbf3e7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hist-modal-title {
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-size: 22px;
+  line-height: normal;
+  margin: 0;
+  color: #0e0e10;
+}
+
+.hist-modal-text {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #43434a;
+  margin: 0 0 8px;
+}
+
+.hist-modal-text--last {
+  margin-bottom: 20px;
+}
+
+.hist-modal-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  border: 1px solid #ececee;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 22px;
+}
+
+.hist-modal-warning-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b7791f;
+  flex-shrink: 0;
+}
+
+.hist-modal-warning-text {
+  font-size: 12.5px;
+  color: #6b6b72;
+}
+
+.hist-modal-note {
+  margin: -8px 0 22px;
+  border-radius: 8px;
+  background: #fbf3e7;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #7a5314;
+}
+
+.hist-modal-error {
+  margin: -8px 0 16px;
+  font-size: 13px;
+  color: #b54708;
+}
+
+.hist-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.hist-modal .hist-ghost {
+  padding: 9px 15px;
+}
+
+.hist-modal .hist-cta {
+  padding: 9px 18px;
+}
+
+/* —— Mobile (MobileHistory.dc.html, 390 px) —— */
+
+.hist-mobile-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 56px;
+  padding: 0 10px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid #ececee;
+  background: #ffffff;
+}
+
+.hist-mobile-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hist-mobile-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0e0e10;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hist-m-list {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  padding: 16px 16px 12px;
+}
+
+.hist-m-item {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f7;
+}
+
+.hist-m-body {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.hist-m-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0e0e10;
+}
+
+.hist-m-ver {
+  font-weight: 400;
+  color: #9b9ba1;
+}
+
+.hist-m-date {
+  font-size: 11.5px;
+  color: #9b9ba1;
+}
+
+.hist-m-date.has-actions {
+  margin-bottom: 6px;
+}
+
+/* Liens en ligne dans un bloc (comme la maquette) : la hauteur de ligne suit le corps de texte (16 px). */
+.hist-m-actions {
+  display: block;
+}
+
+.hist-m-link + .hist-m-link {
+  margin-left: 14px;
+}
+
+.hist-m-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: normal;
+  color: #3730e0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.hist-m-link--muted {
+  color: #6b6b72;
+}
+
+.hist-m-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* —— Comparaison (Diff.dc.html) —— */
+
+.diff-page .hist-topbar a.doc-crumb {
+  color: #9b9ba1;
+}
+
+.diff-controls {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  /* Hauteur calée sur Diff.dc.html (padding 14 + ligne ~28 + bordure = 58). */
+  height: 58px;
+  padding: 0 44px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid #ececee;
+  background: #fafafb;
+}
+
+.diff-sel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid #ececee;
+  border-radius: 8px;
+  background: #ffffff;
+  line-height: 1;
+}
+
+.diff-sel:hover {
+  border-color: #c7c6c6;
+}
+
+.diff-sel-label {
+  font-size: 11px;
+  color: #9b9ba1;
+}
+
+.diff-sel-select {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  height: 13px;
+  color: #0e0e10;
+  cursor: pointer;
+}
+
+.diff-sel-select:focus-visible {
+  outline: 2px solid #3730e0;
+  outline-offset: 4px;
+}
+
+.diff-arrow {
+  flex-shrink: 0;
+}
+
+.diff-added {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e8e5a;
+  margin-left: 8px;
+}
+
+.diff-removed {
+  font-size: 12px;
+  font-weight: 600;
+  color: #b54708;
+}
+
+.diff-toggle {
+  margin-left: auto;
+  display: flex;
+  border: 1px solid #ececee;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.diff-seg {
+  padding: 6px 13px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1;
+  color: #9b9ba1;
+  cursor: pointer;
+}
+
+.diff-seg:first-child {
+  border-right: 1px solid #ececee;
+}
+
+.diff-seg:hover {
+  background: #ececee;
+}
+
+.diff-seg.is-active {
+  font-weight: 600;
+  background: #ffffff;
+  color: #0e0e10;
+}
+
+.diff-body {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  padding: 20px 44px 48px;
+}
+
+.diff-box {
+  border: 1px solid #ececee;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.diff-state {
+  font-size: 14px;
+  color: #9b9ba1;
+  margin: 0;
+}
+
+.diff-hunk {
+  display: flex;
+  background: #f0effc;
+  border-top: 1px solid #ececee;
+  border-bottom: 1px solid #ececee;
+}
+
+.diff-hunk-cell {
+  flex-grow: 1;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 600;
+  color: #3730e0;
+  white-space: pre-wrap;
+}
+
+.diff-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 14px;
+  border: 0;
+  border-top: 1px solid #ececee;
+  border-bottom: 1px solid #ececee;
+  background: #fafafb;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: normal;
+  color: #6b6b72;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diff-folded-note {
+  margin: 0;
+  box-sizing: border-box;
+  padding: 6px 14px;
+  border-top: 1px solid #ececee;
+  border-bottom: 1px solid #ececee;
+  background: #fafafb;
+  font-size: 12px;
+  color: #6b6b72;
+}
+
+.diff-collapsed:hover {
+  background: #f5f5f7;
+}
+
+.diff-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 24px;
+}
+
+.diff-side {
+  width: 50%;
+  display: flex;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.diff-side--old {
+  border-right: 1px solid #ececee;
+}
+
+.diff-ln,
+.diff-cell {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.diff-ln {
+  width: 42px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  text-align: right;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #b0b0b5;
+  user-select: none;
+  background: #fafafb;
+}
+
+.diff-cell {
+  flex-grow: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 3px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #33333c;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #ffffff;
+}
+
+.diff-cell strong {
+  font-weight: 700;
+}
+
+.diff-side.is-del .diff-ln {
+  background: #f6c6ba;
+  color: #7c2d12;
+}
+
+.diff-side.is-del .diff-cell {
+  background: #fceeea;
+}
+
+.diff-side.is-add .diff-ln {
+  background: #b7e4c7;
+  color: #14532d;
+}
+
+.diff-side.is-add .diff-cell {
+  background: #dff3e6;
+}
+
+.diff-side.is-empty .diff-ln,
+.diff-side.is-empty .diff-cell {
+  background: repeating-linear-gradient(135deg, #f5f5f7, #f5f5f7 4px, #efeff1 4px, #efeff1 8px);
+}
+
+/* Unifié (pas de maquette dédiée : mêmes jetons que le côte à côte) */
+
+.diff-row--unified .diff-ln {
+  width: 42px;
+}
+
+.diff-row--unified.is-del .diff-ln {
+  background: #f6c6ba;
+  color: #7c2d12;
+}
+
+.diff-row--unified.is-del .diff-cell {
+  background: #fceeea;
+}
+
+.diff-row--unified.is-add .diff-ln {
+  background: #b7e4c7;
+  color: #14532d;
+}
+
+.diff-row--unified.is-add .diff-cell {
+  background: #dff3e6;
+}
+
+.diff-sign {
+  width: 18px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 3px 0 3px 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #6b6b72;
+  background: #ffffff;
+  user-select: none;
+}
+
+.diff-row--unified.is-del .diff-sign {
+  background: #fceeea;
+  color: #7c2d12;
+}
+
+.diff-row--unified.is-add .diff-sign {
+  background: #dff3e6;
+  color: #14532d;
+}
+
+@media (max-width: 767px) {
+  .hist-content {
+    padding: 20px 18px 24px;
+  }
+
+  .hist-modal {
+    top: 96px;
+  }
+
+  .diff-controls {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .diff-added {
+    margin-left: 0;
+  }
+
+  .diff-toggle {
+    margin-left: 0;
+  }
+
+  .diff-body {
+    padding: 14px 14px 24px;
+  }
+}
+
+@media print {
+  .diff-controls,
+  .hist-actions,
+  .hist-row-actions,
+  .hist-m-actions,
+  .hist-modal-overlay {
+    display: none !important;
+  }
+}

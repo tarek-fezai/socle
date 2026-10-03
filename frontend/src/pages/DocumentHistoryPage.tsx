@@ -1,61 +1,122 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { DiffViewer } from '../components/DiffViewer'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../auth/AuthProvider'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
 import {
-  fetchVersionDiff,
+  VERSION_PAGE_SIZE,
   getDocument,
   listVersions,
   restoreVersion,
-  type VersionSummary,
+  type DocumentDetail,
+  type VersionPage,
 } from '../lib/documents'
+import { useIsMobile } from '../lib/useMediaQuery'
+import { DocumentMobileTabs, DocumentTabs } from './document/DocumentChrome'
+import {
+  HistoryMobileTop,
+  HistoryTopBar,
+  RestoreDialog,
+  VersionAvatar,
+} from './document/DocumentHistoryChrome'
+import { documentPermissions } from './document/documentPageUtils'
+import { useDocumentCrumbs } from './document/useDocumentCrumbs'
+import { useHistoryTabProps } from './document/useHistoryTabProps'
+import {
+  buildVersionRows,
+  formatLinesAdded,
+  formatLinesRemoved,
+  formatVersionDateTime,
+  formatVersionDateTimeMobile,
+  versionAuthor,
+  versionsCountLabel,
+  type VersionRow,
+} from './document/versionHistoryUtils'
+import './document/document-page.css'
+import './document/document-history.css'
+
+const NO_SUMMARY_LABEL = 'Aucun résumé'
+
+/** Lien « Comparer » : la version contre sa précédente (route `/docs/:id/history/compare`). */
+function compareHref(docId: string, from: number, to: number): string {
+  return `/docs/${docId}/history/compare?from=${from}&to=${to}`
+}
 
 export function DocumentHistoryPage() {
   const { id = '' } = useParams()
-  const queryClient = useQueryClient()
-  const [compareA, setCompareA] = useState<number | null>(null)
-  const [compareB, setCompareB] = useState<number | null>(null)
-  const [restoreTarget, setRestoreTarget] = useState<VersionSummary | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [statusNote, setStatusNote] = useState<string | null>(null)
-
   const doc = useQuery({
     queryKey: ['document', id],
     queryFn: () => getDocument(api, id),
     enabled: Boolean(id),
   })
 
-  const versions = useQuery({
+  if (doc.isLoading) {
+    return (
+      <div className="doc-page doc-page--state" data-testid="history-loading">
+        <p className="doc-state">Chargement…</p>
+      </div>
+    )
+  }
+
+  if (doc.isError || !doc.data) {
+    return (
+      <div className="doc-page doc-page--state">
+        <Link to="/docs" className="doc-back">
+          ← Documents
+        </Link>
+        <p className="doc-state doc-state--error" role="alert">
+          Accès refusé ou document introuvable — l&apos;historique n&apos;est pas accessible.
+        </p>
+      </div>
+    )
+  }
+
+  return <HistorySurface doc={doc.data} />
+}
+
+function HistorySurface({ doc }: { doc: DocumentDetail }) {
+  const id = doc.id
+  const qc = useQueryClient()
+  const { me } = useAuth()
+  const isMobile = useIsMobile()
+  const perms = documentPermissions(doc.permissions)
+  const isArchived = doc.status === 'archive'
+
+  const [restoreTarget, setRestoreTarget] = useState<VersionRow | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [statusNote, setStatusNote] = useState<string | null>(null)
+
+  const versions = useInfiniteQuery({
     queryKey: ['document-versions', id],
-    queryFn: () => listVersions(api, id),
-    enabled: Boolean(id) && doc.isSuccess,
+    queryFn: ({ pageParam }) => listVersions(api, id, { offset: pageParam, limit: VERSION_PAGE_SIZE }),
+    initialPageParam: 0,
+    getNextPageParam: (last: VersionPage, pages) => {
+      const loaded = pages.reduce((n, p) => n + p.items.length, 0)
+      return last.items.length > 0 && loaded < last.total ? loaded : undefined
+    },
   })
 
-  const currentVersionNo = doc.data?.currentVersionNo
-  const status = doc.data?.status
-  const isArchived = status === 'archive'
-  const isValide = status === 'valide'
+  const tabProps = useHistoryTabProps(doc)
+  const { crumbs } = useDocumentCrumbs(doc)
 
-  const sorted = useMemo(() => {
-    const items = versions.data?.items ?? []
-    return [...items].sort((a, b) => b.versionNo - a.versionNo)
-  }, [versions.data])
-
-  const canCompare = compareA != null && compareB != null && compareA !== compareB
-
-  const diff = useQuery({
-    queryKey: ['document-diff', id, compareA, compareB],
-    queryFn: () =>
-      fetchVersionDiff(api, id, Math.min(compareA!, compareB!), Math.max(compareA!, compareB!)),
-    enabled: Boolean(id) && canCompare,
-  })
+  const loaded = useMemo(() => versions.data?.pages.flatMap((p) => p.items) ?? [], [versions.data])
+  const total = versions.data?.pages[0]?.total ?? 0
+  // La version courante n'est reconstituée que si le serveur l'a omise et que tout est chargé.
+  const { rows, synthesizedCurrent } = useMemo(
+    () =>
+      buildVersionRows(loaded, doc, {
+        includeCurrent: versions.isSuccess && !versions.hasNextPage,
+        hasMore: Boolean(versions.hasNextPage),
+      }),
+    [loaded, doc, versions.isSuccess, versions.hasNextPage],
+  )
+  const count = total + (synthesizedCurrent ? 1 : 0)
+  const currentRow = rows.find((r) => r.isCurrent)
 
   const restore = useMutation({
-    mutationFn: (versionNo: number) =>
-      restoreVersion(api, id, versionNo, doc.data?.currentVersionNo ?? null),
+    mutationFn: (versionNo: number) => restoreVersion(api, id, versionNo, doc.currentVersionNo ?? null),
     onSuccess: (updated) => {
       setActionError(null)
       setRestoreTarget(null)
@@ -64,271 +125,282 @@ export function DocumentHistoryPage() {
           ? `Version restaurée — statut ${updated.status} (nouvelle approbation requise si publication).`
           : `Version restaurée — statut ${updated.status}.`,
       )
-      void queryClient.setQueryData(['document', id], updated)
-      void queryClient.invalidateQueries({ queryKey: ['document-versions', id] })
-      void queryClient.invalidateQueries({ queryKey: ['documents'] })
-      void queryClient.invalidateQueries({ queryKey: ['document', id] })
+      qc.setQueryData(['document', id], updated)
+      void qc.invalidateQueries({ queryKey: ['document-versions', id] })
+      void qc.invalidateQueries({ queryKey: ['documents'] })
+      void qc.invalidateQueries({ queryKey: ['document-resolved', id] })
     },
-    onError: (err) => {
-      setActionError(apiErrorMessage(err, 'Échec de la restauration'))
-    },
+    onError: (err) => setActionError(apiErrorMessage(err, 'Échec de la restauration')),
   })
 
-  function toggleCompare(versionNo: number) {
+  const canAct = perms.canEdit
+  const openRestore = (row: VersionRow) => {
     setActionError(null)
-    if (compareA === versionNo) {
-      setCompareA(null)
-      return
-    }
-    if (compareB === versionNo) {
-      setCompareB(null)
-      return
-    }
-    if (compareA == null) {
-      setCompareA(versionNo)
-      return
-    }
-    if (compareB == null) {
-      setCompareB(versionNo)
-      return
-    }
-    setCompareA(compareB)
-    setCompareB(versionNo)
+    setStatusNote(null)
+    setRestoreTarget(row)
   }
 
-  if (doc.isLoading) {
-    return <main className="page-shell text-socle-muted">Chargement…</main>
-  }
+  const restoreDialog = (
+    <RestoreDialog
+      open={restoreTarget != null}
+      onOpenChange={(o) => {
+        if (!o) {
+          setRestoreTarget(null)
+          setActionError(null)
+        }
+      }}
+      target={
+        restoreTarget
+          ? {
+              versionNo: restoreTarget.versionNo,
+              createdAt: restoreTarget.createdAt,
+              authorName: versionAuthor(restoreTarget).name,
+            }
+          : null
+      }
+      currentVersionNo={doc.currentVersionNo}
+      currentChangeSummary={currentRow?.changeSummary}
+      status={doc.status}
+      pending={restore.isPending}
+      error={actionError}
+      onConfirm={() => restoreTarget && restore.mutate(restoreTarget.versionNo)}
+    />
+  )
 
-  if (doc.isError || !doc.data) {
-    return (
-      <main className="page-shell">
-        <div className="breadcrumb mb-6">
-          <Link to="/docs">Documents</Link>
-          <span className="text-[#DEDEE1]">→</span>
-          <span className="font-medium text-socle-ink">Historique</span>
-        </div>
-        <p className="text-socle-danger">
-          Accès refusé ou document introuvable — l&apos;historique n&apos;est pas accessible.
-        </p>
-      </main>
-    )
-  }
-
-  return (
-    <main className="page-shell">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="breadcrumb">
-          <Link to={`/docs/${id}`}>Retour à la page</Link>
-          <span className="text-[#DEDEE1]">→</span>
-          <span className="font-medium text-socle-ink">Historique des versions</span>
-        </div>
-      </div>
-
-      <h1 className="serif-title">Historique des versions</h1>
-      <p className="mt-2 text-sm text-socle-muted">
-        {doc.data.title} · statut {status}
-        {currentVersionNo != null ? (
-          <>
-            {' '}
-            · version courante{' '}
-            <span className="font-medium text-socle-ink">v{currentVersionNo}</span>
-          </>
-        ) : null}
-        {sorted.length > 0 ? (
-          <>
-            {' '}
-            — {sorted.length} version{sorted.length === 1 ? '' : 's'} archivée
-            {sorted.length === 1 ? '' : 's'}
-          </>
-        ) : null}
-      </p>
-
+  const feedback = (
+    <>
       {isArchived && (
-        <p className="mt-4 rounded-lg border border-[#F2CFC2] bg-[#FCEEEA] px-4 py-3 text-sm text-[#7C2D12]">
+        <p className="hist-banner" data-testid="history-archived">
           Document archivé — la restauration est désactivée (le backend refuse toute mutation).
         </p>
       )}
+      {statusNote && (
+        <p className="hist-note" role="status" data-testid="history-status-note">
+          {statusNote}
+        </p>
+      )}
+      {actionError && !restoreTarget && (
+        <p className="hist-error" role="alert">
+          {actionError}
+        </p>
+      )}
+    </>
+  )
 
-      {versions.isLoading && <p className="mt-6 text-socle-muted">Chargement des versions…</p>}
+  const listState = (
+    <>
+      {versions.isLoading && <p className="hist-empty">Chargement des versions…</p>}
       {versions.isError && (
-        <p className="mt-6 text-socle-danger">
+        <p className="hist-error" role="alert">
           {apiErrorMessage(versions.error, 'Impossible de charger l’historique.')}
         </p>
       )}
-      {versions.isSuccess && sorted.length === 0 && (
-        <p className="mt-6 text-socle-muted">
-          Aucune version archivée pour l&apos;instant (seule la version courante v
-          {currentVersionNo ?? '?'} existe).
-        </p>
+      {versions.isSuccess && rows.length === 0 && (
+        <p className="hist-empty">Aucune version publiée pour l&apos;instant.</p>
       )}
+    </>
+  )
 
-      <ul className="mt-8 space-y-0 border-l-2 border-socle-line pl-5">
-        {sorted.map((v) => {
-          const isCurrent = currentVersionNo != null && v.versionNo === currentVersionNo
-          const selected = compareA === v.versionNo || compareB === v.versionNo
-          return (
-            <li key={v.versionNo} className="relative pb-6 last:pb-0">
-              <span
-                className={`absolute -left-[1.4rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
-                  isCurrent ? 'bg-socle-success' : 'bg-[#C2C2C6]'
-                }`}
-                aria-hidden
-              />
-              <div
-                className={`rounded-xl border px-4 py-3 ${
-                  isCurrent
-                    ? 'border-[#D3EBD9] bg-[#F1F8F3]'
-                    : selected
-                      ? 'border-[#C7C6F5] bg-socle-mist'
-                      : 'border-socle-line bg-white'
-                }`}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="flex flex-wrap items-center gap-2 font-medium text-socle-ink">
-                      v{v.versionNo}
-                      {isCurrent && (
-                        <span className="status-badge-ok">
-                          <span className="h-1.5 w-1.5 rounded-full bg-socle-success" />
-                          version courante
-                        </span>
-                      )}
-                    </p>
-                    <p className="mt-1 text-xs text-socle-muted">
-                      {new Date(v.createdAt).toLocaleString('fr-FR')}
-                      {v.authorId ? ` · auteur ${v.authorId.slice(0, 8)}…` : ' · auteur inconnu'}
-                      {v.archivedBy &&
-                      v.authorId &&
-                      v.archivedBy !== v.authorId
-                        ? ` · archivé par ${v.archivedBy.slice(0, 8)}…`
-                        : null}
-                    </p>
-                    <p className="mt-1 text-sm text-socle-slate">
-                      {v.changeSummary?.trim() ? v.changeSummary : 'Aucun résumé'}
-                    </p>
+  const more = versions.hasNextPage && (
+    <div className="hist-more">
+      <button
+        type="button"
+        className="hist-ghost"
+        disabled={versions.isFetchingNextPage}
+        onClick={() => void versions.fetchNextPage()}
+        data-testid="history-more"
+      >
+        {versions.isFetchingNextPage ? 'Chargement…' : 'Afficher les versions précédentes'}
+      </button>
+    </div>
+  )
+
+  /* ------------------------------ Mobile ------------------------------ */
+
+  if (isMobile) {
+    return (
+      <div className="doc-page hist-page" data-testid="document-history-page" data-mock-id="hist-page">
+        <HistoryMobileTop title="Historique" backTo={`/docs/${id}`} />
+        <div className="hist-m-list" data-mock-id="hist-m-list">
+          {feedback}
+          {listState}
+          {rows.map((v, i) => {
+            const author = versionAuthor(v)
+            const showCompare = canAct && !v.isCurrent && v.previousVersionNo != null
+            const showRestore = canAct && !v.isCurrent
+            const hasActions = showCompare || showRestore
+            return (
+              <div className="hist-m-item" key={v.versionNo} data-testid={`history-row-${v.versionNo}`}>
+                <VersionAvatar
+                  author={author}
+                  self={Boolean(me && v.authorId === me.id)}
+                  large
+                  mockId={`hist-m-avatar-${i}`}
+                />
+                <div className="hist-m-body">
+                  <div className="hist-m-name" data-mock-id={`hist-m-name-${i}`}>
+                    {author.name}{' '}
+                    <span className="hist-m-ver">
+                      · v{v.versionNo}
+                      {v.isCurrent ? ' (actuelle)' : ''}
+                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleCompare(v.versionNo)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-                        selected
-                          ? 'border-socle-accent text-socle-accent'
-                          : 'border-socle-line text-socle-slate hover:bg-socle-soft'
-                      }`}
-                    >
-                      {selected ? 'Sélectionnée' : 'Comparer'}
-                    </button>
-                    {!isCurrent && (
-                      <button
-                        type="button"
-                        disabled={isArchived || restore.isPending}
-                        title={
-                          isArchived
-                            ? 'Document archivé — restauration impossible'
-                            : 'Restaurer cette version'
-                        }
-                        onClick={() => {
-                          setActionError(null)
-                          setStatusNote(null)
-                          setRestoreTarget(v)
-                        }}
-                        className="rounded-lg border border-socle-line px-3 py-1.5 text-xs font-medium text-socle-slate hover:bg-socle-soft disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Restaurer
-                      </button>
+                  <div className={`hist-m-date${hasActions ? ' has-actions' : ''}`} data-mock-id={`hist-m-date-${i}`}>
+                    {formatVersionDateTimeMobile(v.createdAt)}
+                  </div>
+                  {hasActions && (
+                    <div className="hist-m-actions">
+                      {showCompare && (
+                        <Link
+                          to={compareHref(id, v.previousVersionNo!, v.versionNo)}
+                          className="hist-m-link"
+                          data-mock-id={`hist-m-compare-${i}`}
+                        >
+                          Voir les changements →
+                        </Link>
+                      )}
+                      {showRestore && (
+                        <button
+                          type="button"
+                          className="hist-m-link hist-m-link--muted"
+                          disabled={isArchived}
+                          onClick={() => openRestore(v)}
+                          data-mock-id={`hist-m-restore-${i}`}
+                        >
+                          Restaurer cette version
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+          {more}
+        </div>
+        <DocumentMobileTabs {...tabProps} />
+        {restoreDialog}
+      </div>
+    )
+  }
+
+  /* ------------------------------ Desktop ------------------------------ */
+
+  return (
+    <div className="doc-page hist-page" data-testid="document-history-page" data-mock-id="hist-page">
+      <HistoryTopBar crumbs={crumbs} mockPrefix="hist">
+        <Link to={`/docs/${id}`} className="hist-ghost" data-mock-id="hist-back">
+          Retour à la page
+        </Link>
+      </HistoryTopBar>
+      <DocumentTabs {...tabProps} />
+
+      <div className="hist-content">
+        <div className="hist-column">
+          <h1 className="hist-title" data-mock-id="hist-title">
+            Historique des versions
+          </h1>
+          {versions.isSuccess && (
+            <p className="hist-sub" data-mock-id="hist-subtitle" data-testid="history-count">
+              {versionsCountLabel(count)}
+            </p>
+          )}
+          {feedback}
+          {listState}
+
+          <ol className="hist-timeline" data-testid="history-timeline">
+            {rows.map((v, i) => {
+              const author = versionAuthor(v)
+              const added = formatLinesAdded(v.linesAdded)
+              const removed = formatLinesRemoved(v.linesRemoved)
+              const showCompare = canAct && !v.isCurrent && v.previousVersionNo != null
+              const showRestore = canAct && !v.isCurrent
+              const mid = (field: string) => `hist-r${i}-${field}`
+              return (
+                <li
+                  key={v.versionNo}
+                  className="hist-item"
+                  data-testid={`history-row-${v.versionNo}`}
+                  data-current={v.isCurrent ? 'true' : undefined}
+                >
+                  <span className={`hist-dot${v.isCurrent ? ' is-current' : ''}`} aria-hidden data-mock-id={mid('dot')} />
+                  <div className="hist-item-head">
+                    <span className="hist-v" data-mock-id={mid('version')}>
+                      v{v.versionNo}
+                    </span>
+                    <span className="hist-date" data-mock-id={mid('date')}>
+                      {formatVersionDateTime(v.createdAt)}
+                    </span>
+                    {v.isCurrent && (
+                      <span className="hist-current" data-mock-id={mid('badge')} data-testid="history-current-badge">
+                        <span className="hist-current-dot" aria-hidden />
+                        Actuelle
+                      </span>
                     )}
                   </div>
-                </div>
-                {!isCurrent && isArchived && (
-                  <p className="mt-2 text-xs text-socle-danger">
-                    Restauration désactivée : document archivé.
-                  </p>
-                )}
-              </div>
-            </li>
-          )
-        })}
-      </ul>
-
-      <section className="mt-10 rounded-xl border border-socle-line bg-white p-6">
-        <h2 className="font-display text-2xl font-normal text-socle-ink">
-          Comparer les versions
-        </h2>
-        <p className="mt-1 text-sm text-socle-muted">
-          Sélectionnez deux versions dans la liste pour comparer.
-          {canCompare
-            ? ` (v${Math.min(compareA!, compareB!)} → v${Math.max(compareA!, compareB!)})`
-            : ''}
-        </p>
-        {!canCompare && (
-          <p className="mt-3 text-sm text-socle-muted">Deux versions distinctes requises.</p>
-        )}
-        {canCompare && (
-          <div className="mt-4">
-            <DiffViewer
-              changes={diff.data?.changes ?? null}
-              loading={diff.isLoading}
-              error={diff.isError}
-            />
-          </div>
-        )}
-      </section>
-
-      {restoreTarget && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="restore-title"
-          className="fixed inset-0 z-20 flex items-center justify-center bg-socle-ink/40 px-4"
-        >
-          <div className="w-full max-w-md rounded-xl border border-socle-line bg-white p-6 shadow-lg">
-            <h2 id="restore-title" className="font-display text-2xl font-normal text-socle-ink">
-              Restaurer la v{restoreTarget.versionNo} ?
-            </h2>
-            <p className="mt-3 text-sm text-socle-slate">
-              Le contenu courant sera archivé, puis remplacé par le snapshot de cette version. La
-              version restaurée devient la nouvelle version courante ; l&apos;historique conserve
-              les versions précédentes.
-            </p>
-            {isValide && (
-              <p className="mt-3 rounded-lg bg-[#FBF3E7] px-3 py-2 text-sm text-socle-warn">
-                Ce document est actuellement <strong>valide</strong>. La restauration le fera
-                repasser en <strong>en_revue</strong> — une nouvelle approbation sera nécessaire
-                avant de republier.
-              </p>
-            )}
-            {actionError && <p className="mt-3 text-sm text-socle-danger">{actionError}</p>}
-            <div className="mt-6 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                disabled={restore.isPending}
-                onClick={() => {
-                  setRestoreTarget(null)
-                  setActionError(null)
-                }}
-                className="btn-ghost"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                disabled={restore.isPending || isArchived}
-                onClick={() => restore.mutate(restoreTarget.versionNo)}
-                className="btn-primary"
-              >
-                {restore.isPending ? 'Restauration…' : 'Confirmer la restauration'}
-              </button>
-            </div>
-          </div>
+                  <div className="hist-summary" data-mock-id={mid('summary')}>
+                    {v.changeSummary?.trim() ? v.changeSummary : NO_SUMMARY_LABEL}
+                  </div>
+                  <div className="hist-item-foot">
+                    <div className="hist-meta">
+                      <div className="hist-author">
+                        <VersionAvatar
+                          author={author}
+                          self={Boolean(me && v.authorId === me.id)}
+                          mockId={mid('avatar')}
+                        />
+                        <span className="hist-author-name" data-mock-id={mid('author')}>
+                          {author.name}
+                        </span>
+                      </div>
+                      {added && (
+                        <span className="hist-added" data-mock-id={mid('added')}>
+                          {added}
+                        </span>
+                      )}
+                      {removed && (
+                        <span className="hist-removed" data-mock-id={mid('removed')}>
+                          {removed}
+                        </span>
+                      )}
+                    </div>
+                    {(showCompare || showRestore) && (
+                      <div className="hist-row-actions">
+                        {showCompare && (
+                          <Link
+                            to={compareHref(id, v.previousVersionNo!, v.versionNo)}
+                            className="hist-link"
+                            data-mock-id={mid('compare')}
+                            title={`Comparer la v${v.versionNo} à la v${v.previousVersionNo}`}
+                          >
+                            Comparer
+                          </Link>
+                        )}
+                        {showRestore && (
+                          <button
+                            type="button"
+                            className="hist-link"
+                            disabled={isArchived || restore.isPending}
+                            title={isArchived ? 'Document archivé — restauration impossible' : 'Restaurer cette version'}
+                            data-mock-id={mid('restore')}
+                            onClick={() => openRestore(v)}
+                          >
+                            Restaurer
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+          {more}
         </div>
-      )}
+      </div>
 
-      {statusNote && <p className="mt-6 text-sm text-socle-slate">{statusNote}</p>}
-      {actionError && !restoreTarget && (
-        <p className="mt-4 text-sm text-socle-danger">{actionError}</p>
-      )}
-    </main>
+      <DocumentMobileTabs {...tabProps} />
+      {restoreDialog}
+    </div>
   )
 }
