@@ -101,12 +101,21 @@ export function pageDocument(variant = 'desktop') {
     reliabilityScore: 91,
     stale: false,
     createdBy: null, // « Système (migration) »
-    updatedBy: ME_TAREK.id,
+    updatedBy: { id: ME_TAREK.id, displayName: ME_TAREK.displayName, initials: 'TF' },
+    owner: { id: ME_TAREK.id, displayName: ME_TAREK.displayName, initials: 'TF' },
     tags: [
       { id: 'tag-iam', name: 'IAM', color: '#3730E0' },
       { id: 'tag-rgpd', name: 'RGPD', color: '#B7791F' },
       { id: 'tag-critique', name: 'Critique', color: '#B54708' },
     ],
+    permissions: {
+      canEdit: true,
+      // Maquette Main.dc.html affiche « Publier » même en Validé — conservé pour la parité visuelle.
+      canPublish: true,
+      canManageAccess: true,
+      canComment: true,
+      canManageAttestations: true,
+    },
   }
 }
 
@@ -140,6 +149,20 @@ export const PAGE_COMMENTS = {
   openThreadCount: 3,
 }
 
-/** Éditeur : `totals` présent (cf. isEditorFromFeedback). */
 export const PAGE_FEEDBACK_EDITOR = { myVote: null, totals: { yes: 18, no: 2 } }
 export const PAGE_FEEDBACK_VIEWER = { myVote: null }
+
+/** Document seed for a viewer (no edit/publish). */
+export function pageDocumentViewer(variant = 'desktop') {
+  const d = pageDocument(variant)
+  return {
+    ...d,
+    permissions: {
+      canEdit: false,
+      canPublish: false,
+      canManageAccess: false,
+      canComment: true,
+      canManageAttestations: false,
+    },
+  }
+}

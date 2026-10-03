@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '../../auth/AuthProvider'
 import { CommentSelectionButton, CommentsPanel } from '../../components/CommentsPanel'
 import { StaleBadge } from '../../components/StaleBadge'
 import type { ShellOutletContext } from '../../components/shell/shellUtils'
@@ -22,15 +21,10 @@ import {
 import { getResolvedDocument, recordDocumentView, type TipTapNode } from '../../lib/documents'
 import { documentLinksKey, getDocumentLinks, mergeRelatedLinks } from '../../lib/documentLinks'
 import { downloadExport } from '../../lib/export'
-import {
-  feedbackKey,
-  getFeedback,
-  isEditorFromFeedback,
-  putFeedback,
-} from '../../lib/feedback'
+import { feedbackKey, getFeedback, putFeedback } from '../../lib/feedback'
 import { folderPath, getSpaceTree, spaceTreeKey } from '../../lib/folders'
 import { reliabilityLevelLabel } from '../../lib/reliability'
-import { getSpace, listSpaceOwners } from '../../lib/spaces'
+import { getSpace } from '../../lib/spaces'
 import { placeholderConflictMessage } from '../../lib/templates'
 import {
   AttestationBanner,
@@ -44,9 +38,7 @@ import {
 import { DocumentRail } from './DocumentRail'
 import { TipTapReadView, analyzeBody } from './TipTapReadView'
 import {
-  canPublish,
-  canSeeAccessTab,
-  canSeeEditTab,
+  documentPermissions,
   formatLongDateFr,
   formatShortDateFr,
   revisedAt,
@@ -62,7 +54,6 @@ export function DocumentReadPage() {
   const { id = '' } = useParams()
   const [searchParams] = useSearchParams()
   const qc = useQueryClient()
-  const { me } = useAuth()
   const shell = useOutletContext<ShellOutletContext | null | undefined>()
 
   const [commentsOpen, setCommentsOpen] = useState(
@@ -127,14 +118,6 @@ export function DocumentReadPage() {
     enabled: Boolean(id),
     retry: false,
   })
-  // Annuaire minimal : seuls les owners d'espace peuvent lister les owners (sinon 403).
-  const owners = useQuery({
-    queryKey: ['space-owners', spaceId],
-    queryFn: () => listSpaceOwners(api, spaceId),
-    enabled: Boolean(spaceId) && space.data?.isOwner === true,
-    retry: false,
-  })
-
   useEffect(() => {
     if (!id) return
     void recordDocumentView(api, id).catch(() => {
@@ -151,8 +134,9 @@ export function DocumentReadPage() {
   const analysis = useMemo(() => analyzeBody(body), [body])
   const related = useMemo(() => mergeRelatedLinks(links.data), [links.data])
 
-  const isEditor = isEditorFromFeedback(feedback.data)
-  const canComment = space.data ? canCommentOnSpace(space.data) : false
+  const perms = documentPermissions(doc.data?.permissions)
+  const canComment =
+    perms.canComment || (space.data ? canCommentOnSpace(space.data) : false)
   const openCount = comments.data?.openThreadCount ?? 0
 
   const highlightAnchors = useMemo(() => {
@@ -161,13 +145,6 @@ export function DocumentReadPage() {
       .filter((t) => t.anchor?.exact && t.anchor.attached !== false)
       .map((t) => ({ exact: t.anchor!.exact, attached: t.anchor!.attached }))
   }, [comments.data])
-
-  const userNames = useMemo(() => {
-    const m: Record<string, string> = {}
-    for (const o of owners.data?.owners ?? []) m[o.userId] = o.displayName
-    if (me?.id) m[me.id] = me.displayName
-    return m
-  }, [owners.data, me])
 
   const spaceName = space.data?.name ?? tree.data?.spaceName ?? ''
   const folderId = doc.data?.folderId ?? tree.data?.documents.find((d) => d.id === id)?.folderId ?? null
@@ -314,9 +291,9 @@ export function DocumentReadPage() {
   const revised = revisedAt(d)
   const revisedLong = formatLongDateFr(revised)
   const revisedShort = formatShortDateFr(revised)
-  const showEdit = canSeeEditTab(isEditor)
-  const showAccess = canSeeAccessTab(isEditor, space.data?.canManage)
-  const showPublish = canPublish(isEditor, d.status)
+  const showEdit = perms.canEdit
+  const showAccess = perms.canManageAccess || perms.canEdit
+  const showPublish = perms.canPublish
   const banner = attestation.data
   const tags = d.tags ?? []
 
@@ -489,9 +466,8 @@ export function DocumentReadPage() {
           hasRelatedLinks={related.length > 0}
           activeId={activeId}
           onNavigate={scrollToHeading}
-          canEdit={isEditor}
+          canEdit={perms.canEdit}
           canViewAccess={showAccess}
-          userNames={userNames}
           infoOpen={infoOpen}
           onToggleInfo={() => setInfoOpen((v) => !v)}
           mobileActions={mobileActions}

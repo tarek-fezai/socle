@@ -29,12 +29,3 @@ export async function putFeedback(
 }
 
 export const feedbackKey = (documentId: string) => ['document-feedback', documentId] as const
-
-/**
- * Le backend n'expose `totals` qu'aux éditeurs du document (relation OpenFGA `editor`) :
- * c'est le signal fiable — sans appel mutant, sans droit de gestion — pour afficher
- * « Modifier » / « Publier » sur la page de lecture.
- */
-export function isEditorFromFeedback(f: DocumentFeedback | null | undefined): boolean {
-  return f?.totals != null
-}

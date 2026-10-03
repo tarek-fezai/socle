@@ -6,13 +6,12 @@
  * Documented exceptions (see also page-fixtures.mjs):
  *  - Onglet « Index » : bouton désactivé (title="bientôt") au lieu d'un lien Index.dc.html.
  *  - « Champs personnalisés » : omis tant qu'aucune définition n'existe (masqué dans la maquette).
- *  - Figures draw.io / captures d'écran : remplacées par « Bloc non pris en charge dans cette
- *    version » (hors cadre pixel : sous la ligne de flottaison ; exclues du test structurel).
+ *  - Figures draw.io / captures d'écran : « Bloc non pris en charge dans cette version » (lot 3).
  *  - Propriétaire : « Équipe {nom de l'espace} » (maquette : « Équipe Identité »).
- *  - Sélecteur de langue retiré de la maquette (commit déjà fait) : aucun sélecteur dans l'app.
+ *  - Bouton d'attestation : police IBM Plex (app) vs Arial UA (maquette).
+ *  - Sélecteur de langue retiré de la maquette (hors V1).
  *  - Shell (sidebar) : comparaison limitée à la colonne principale (x ≥ 268) en desktop.
- *  - Glyphes masqués dans les diffs pixel (rendu police dépendant de l'OS) ; le texte est couvert
- *    par le test structurel (data-mock-id).
+ *  - Glyphes masqués dans les diffs pixel ; le texte est couvert par le test structurel.
  */
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
@@ -21,6 +20,7 @@ import { PNG } from 'pngjs'
 import pixelmatch from 'pixelmatch'
 import { fileURLToPath } from 'node:url'
 import {
+  PAGE_BELOW_FOLD_IDS,
   PAGE_DESKTOP_IDS,
   PAGE_MOBILE_IDS,
   annotateMobilePageMockup,
@@ -41,6 +41,7 @@ import {
   TREE_IDENTITE,
   VISUAL_NOW,
   pageDocument,
+  pageDocumentViewer,
 } from './page-fixtures.mjs'
 import { FAVORITES_SEED, NOTIFICATIONS_SEED, SPACE_INFRA, TREE_INFRA } from './dashboard-fixtures.mjs'
 
@@ -95,7 +96,9 @@ async function injectOidcSession(page) {
 async function mockPageApis(page, { variant = 'desktop', attestation = true, editor = true, related = true } = {}) {
   await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
   await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
-  await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/resolved`, (route) => json(route, pageDocument(variant)))
+  await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/resolved`, (route) =>
+    json(route, editor ? pageDocument(variant) : pageDocumentViewer(variant)),
+  )
   await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/view`, (route) => route.fulfill({ status: 204 }))
   await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/comments**`, (route) => json(route, PAGE_COMMENTS))
   await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/feedback`, (route) =>
@@ -248,11 +251,6 @@ test.describe('document page structural', () => {
   const desktopExceptions = {
     'doc-topbar': { skip: ['text'], reason: 'Boutons d’action (aide, favori, export, Publier) : libellés dans les enfants' },
     'doc-breadcrumb': { skip: ['text'], reason: 'Séparateurs → et liens : textContent agrégé' },
-    'doc-switch-page': {
-      skip: ['box'],
-      reason: 'Sans bouton « ? » (raccourcis) : la maquette décale les onglets Page/Graphe/Index de 96px',
-    },
-    'doc-switch-graph': { skip: ['box'], reason: 'Idem (décalage horizontal)' },
     'doc-switch-index': {
       skip: ['box', 'lineHeight'],
       reason: 'Onglet Index désactivé (title="bientôt") : bouton au lieu du lien Index.dc.html',
@@ -268,18 +266,19 @@ test.describe('document page structural', () => {
       skip: ['box', 'fontFamily'],
       reason: 'Bouton de la maquette sans font-family (UA Arial) ; l’app applique IBM Plex Sans',
     },
-    'doc-related-title': {
-      skip: ['box'],
-      reason: 'Position verticale : figures draw.io / captures remplacées par « Bloc non pris en charge »',
-    },
-    'doc-related-link': { skip: ['box'], reason: 'Idem (position verticale)' },
-    'doc-feedback-label': {
-      skip: ['box', 'text'],
-      reason: 'Libellés desktop (« Cette page… ») + mobile (« Utile ? ») dans le même nœud ; position verticale (figures non supportées)',
-    },
     'rail-owner-name': {
       skip: ['text', 'box'],
       reason: 'Propriétaire = « Équipe {nom de l’espace} » (maquette : « Équipe Identité »)',
+    },
+  }
+
+  const belowFoldExceptions = {
+    // Box.y : figures lot 3 absentes côté app (exception lot 3).
+    'doc-related-title': { skip: ['box'], reason: 'Figures lot 3 absentes → décalage vertical' },
+    'doc-related-link': { skip: ['box'], reason: 'Figures lot 3 absentes → décalage vertical' },
+    'doc-feedback-label': {
+      skip: ['box', 'text'],
+      reason: 'Libellé desktop/mobile partagé ; y dépend des figures lot 3',
     },
   }
   test('desktop Page structural match', async ({ page }, testInfo) => {
@@ -333,6 +332,51 @@ test.describe('document page structural', () => {
     const results = compareMetrics(mockMap, appMap, PAGE_MOBILE_IDS, { pageExceptions })
     fs.mkdirSync(outDir, { recursive: true })
     fs.writeFileSync(path.join(outDir, 'structural-page-mobile.json'), JSON.stringify(results, null, 2))
+    const failures = results.filter((r) => r.diffs.length)
+    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+  })
+
+  test('desktop below-fold : Documents liés + feedback (après défilement)', async ({ page }, testInfo) => {
+    await prep(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+
+    await page.goto(`${MOCK}/Main.dc.html`)
+    await settleFonts(page)
+    await annotatePageMockup(page)
+    // Masquer figures draw.io / captures dans la maquette pour aligner la hauteur relative.
+    await page.evaluate(() => {
+      document.querySelectorAll('figure, .doc-unsupported').forEach((el) => {
+        el.style.display = 'none'
+      })
+      // Also hide the draw.io SVG blocks and dashed screenshot placeholders in the maquette
+      document.querySelectorAll('figure').forEach((el) => {
+        el.style.display = 'none'
+      })
+    })
+    for (const id of PAGE_BELOW_FOLD_IDS) {
+      const el = page.locator(`[data-mock-id="${id}"]`).first()
+      if (await el.count()) await el.scrollIntoViewIfNeeded()
+    }
+    const mockMap = await collectMetrics(page, PAGE_BELOW_FOLD_IDS)
+
+    await page.goto(`/docs/${PAGE_DOC_ID}`)
+    await page.waitForSelector('[data-mock-id="doc-related-title"]')
+    await page.waitForSelector('[data-mock-id="doc-feedback-label"]')
+    await settleFonts(page)
+    for (const id of PAGE_BELOW_FOLD_IDS) {
+      await page.locator(`[data-mock-id="${id}"]`).first().scrollIntoViewIfNeeded()
+    }
+    const appMap = await collectMetrics(page, PAGE_BELOW_FOLD_IDS)
+
+    const results = compareMetrics(mockMap, appMap, PAGE_BELOW_FOLD_IDS, {
+      pageExceptions: belowFoldExceptions,
+    })
+    fs.mkdirSync(outDir, { recursive: true })
+    fs.writeFileSync(path.join(outDir, 'structural-page-below-fold.json'), JSON.stringify(results, null, 2))
+    await testInfo.attach('structural-page-below-fold.json', {
+      body: Buffer.from(JSON.stringify(results, null, 2)),
+      contentType: 'application/json',
+    })
     const failures = results.filter((r) => r.diffs.length)
     expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
   })

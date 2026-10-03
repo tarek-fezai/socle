@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthProvider'
 import { FavoriteStar } from '../../components/shell/FavoriteStar'
 import { isApplePlatform } from '../../components/shell/shellUtils'
 import { api } from '../../lib/api'
+import { getCachedAuthConfig } from '../../lib/auth'
 import { formatAttestationDueDate, type ActiveAttestation } from '../../lib/attestations'
 import { listNotifications } from '../../lib/notifications'
 import { attestationNoun, attestationScopeLabel } from './documentPageUtils'
@@ -155,6 +156,9 @@ export function DocumentTopBar({
   onDownloadPdf: () => void
   exporting: boolean
 }) {
+  // S'abonner à AuthProvider pour relire supportContact une fois auth-config chargé.
+  useAuth()
+  const support = getCachedAuthConfig()?.supportContact?.trim() || ''
   return (
     <div className="doc-topbar" data-mock-id="doc-topbar">
       <nav className="doc-crumbs" aria-label="Fil d'Ariane" data-mock-id="doc-breadcrumb">
@@ -196,15 +200,17 @@ export function DocumentTopBar({
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </a>
-        <button
-          type="button"
-          className="doc-icon-btn doc-icon-btn--text"
-          aria-label="Raccourcis clavier (?)"
-          title="Raccourcis clavier"
-          onClick={() => window.alert('Raccourcis : Ctrl/⌘+K recherche · Ctrl/⌘+P imprimer · Esc fermer')}
-        >
-          ?
-        </button>
+        {support ? (
+          <a
+            href={`mailto:${support}`}
+            className="doc-icon-btn doc-icon-btn--text"
+            aria-label="Contacter le support"
+            title="Contacter le support"
+            data-mock-id="doc-help-shortcuts"
+          >
+            ?
+          </a>
+        ) : null}
         <FavoriteStar resourceType="document" resourceId={documentId} variant="page" />
 
         <span className="doc-switch is-active" aria-current="page" data-mock-id="doc-switch-page">

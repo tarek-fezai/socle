@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
+import { getCachedAuthConfig } from '../../lib/auth'
 import { listNotifications } from '../../lib/notifications'
 
 export function ShellHeader() {
   const { authenticated } = useAuth()
+  // Relire après chargement d'auth-config (useAuth force le re-render).
+  const support = getCachedAuthConfig()?.supportContact?.trim() || ''
   const unread = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => listNotifications(api, { unreadOnly: true, limit: 1 }),
@@ -49,18 +52,17 @@ export function ShellHeader() {
           <line x1="12" y1="17" x2="12.01" y2="17" />
         </svg>
       </a>
-      <button
-        type="button"
-        className="shell-icon-btn shell-icon-btn--muted"
-        aria-label="Raccourcis clavier (?)"
-        title="Raccourcis clavier"
-        data-mock-id="shell-header-shortcuts"
-        onClick={() => {
-          window.alert('Raccourcis : Ctrl/⌘+K recherche · Esc fermer')
-        }}
-      >
-        ?
-      </button>
+      {support ? (
+        <a
+          href={`mailto:${support}`}
+          className="shell-icon-btn shell-icon-btn--muted"
+          aria-label="Contacter le support"
+          title="Contacter le support"
+          data-mock-id="shell-header-shortcuts"
+        >
+          ?
+        </a>
+      ) : null}
       <Link
         to="/notifications"
         className="shell-icon-btn"

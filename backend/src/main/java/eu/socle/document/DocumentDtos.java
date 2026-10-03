@@ -38,6 +38,49 @@ public final class DocumentDtos {
 
     public record TagRef(UUID id, String name, String color) {}
 
+    /**
+     * Personne résolue pour l'affichage (auteur, propriétaire).
+     * Un champ {@code PersonRef} {@code null} dans une réponse signifie « inconnu / hérité /
+     * migration » (jamais une fausse personne) ; le frontend affiche « Système (migration) ».
+     */
+    public record PersonRef(UUID id, String displayName, String initials) {
+        public static final String DELETED_LABEL = "Utilisateur supprimé";
+
+        /** Compte supprimé / anonymisé : libellé neutre, l'identifiant technique est conservé. */
+        public static PersonRef deleted(UUID id) {
+            return new PersonRef(id, DELETED_LABEL, initialsOf(DELETED_LABEL));
+        }
+
+        /** Initiales : 1 mot → 2 premières lettres ; sinon première lettre du premier + dernier mot. */
+        public static String initialsOf(String name) {
+            if (name == null || name.isBlank()) {
+                return "?";
+            }
+            String[] parts = name.trim().split("\\s+");
+            if (parts.length == 1) {
+                return parts[0].substring(0, Math.min(2, parts[0].length()))
+                        .toUpperCase(java.util.Locale.ROOT);
+            }
+            return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1))
+                    .toUpperCase(java.util.Locale.ROOT);
+        }
+    }
+
+    /**
+     * Droits de l'appelant sur le document (calculés via un seul BatchCheck OpenFGA).
+     * Indications d'affichage : le serveur re-vérifie chaque action.
+     */
+    public record DocumentPermissions(
+            boolean canEdit,
+            boolean canPublish,
+            boolean canManageAccess,
+            boolean canComment,
+            boolean canManageAttestations
+    ) {
+        public static final DocumentPermissions NONE =
+                new DocumentPermissions(false, false, false, false, false);
+    }
+
     public record DocumentResponse(
             UUID id,
             UUID spaceId,
@@ -61,15 +104,20 @@ public final class DocumentDtos {
             UUID templateId,
             /** Version du modèle à la création. */
             Integer templateVersion,
-            /** Créateur du document (null si inconnu / données héritées). */
-            UUID createdBy,
-            /** Auteur du contenu courant (null si inconnu / données héritées). */
-            UUID updatedBy,
+            /** Créateur du document (null si inconnu / données héritées / migration). */
+            PersonRef createdBy,
+            /** Auteur du contenu courant (null si inconnu / données héritées / migration). */
+            PersonRef updatedBy,
+            /** Propriétaire résolu de l'espace (responsable en priorité, sinon premier owner). */
+            PersonRef owner,
             /** Étiquettes du document, triées par nom. */
-            List<TagRef> tags
+            List<TagRef> tags,
+            /** Droits de l'appelant sur ce document. */
+            DocumentPermissions permissions
     ) {
         public DocumentResponse {
             tags = tags == null ? List.of() : List.copyOf(tags);
+            permissions = permissions == null ? DocumentPermissions.NONE : permissions;
         }
 
         /** Compat appels sans auteurs ni étiquettes. */
@@ -98,7 +146,7 @@ public final class DocumentDtos {
                     id, spaceId, folderId, title, docType, body, status, currentVersionNo,
                     createdAt, updatedAt, reliabilityScore, reliabilityComputedAt,
                     stale, contentModifiedAt, stalenessThresholdDays, visibility, position,
-                    templateId, templateVersion, null, null, List.of());
+                    templateId, templateVersion, null, null, null, List.of(), DocumentPermissions.NONE);
         }
 
         /** Compat appels sans provenance modèle. */

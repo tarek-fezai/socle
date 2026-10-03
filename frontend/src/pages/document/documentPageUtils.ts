@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { DocumentDetail, TagRef } from '../../lib/documents'
 import type { ActiveAttestation } from '../../lib/attestations'
+import type {
+  DocumentDetail,
+  DocumentPermissions,
+  PersonRef,
+  TagRef,
+} from '../../lib/documents'
+import { emptyPermissions } from '../../lib/documents'
 import { reliabilityTone, type ReliabilityTone } from '../../lib/reliability'
 
 export type StatusMeta = { label: string; color: string }
@@ -111,19 +117,22 @@ export function reliabilityDot(score: number | null | undefined): string {
   }
 }
 
-/** Publier = soumettre à approbation : éditeur et brouillon uniquement. */
-export function canPublish(isEditor: boolean, status: string | null | undefined): boolean {
-  return isEditor && status === 'brouillon'
+/** Droits document — uniquement le champ `permissions` serveur. */
+export function documentPermissions(
+  perms: DocumentPermissions | null | undefined,
+): DocumentPermissions {
+  return perms ?? emptyPermissions
 }
 
-/** Onglet « Modifier » : éditeurs uniquement. */
-export function canSeeEditTab(isEditor: boolean): boolean {
-  return isEditor
+/** Libellé auteur / modificateur ; null → « Système (migration) ». */
+export function personLabel(person: PersonRef | null | undefined): string {
+  if (!person) return SYSTEM_AUTHOR_LABEL
+  return person.displayName
 }
 
-/** Onglet « Accès » : éditeurs et gestionnaires de l'espace. */
-export function canSeeAccessTab(isEditor: boolean, spaceCanManage: boolean | undefined): boolean {
-  return isEditor || spaceCanManage === true
+export function personInitials(person: PersonRef | null | undefined, fallback = '?'): string {
+  if (!person) return '⚙'
+  return person.initials || fallback
 }
 
 /** Libellé du type pour la bannière (« cette politique » / « ce document »). */

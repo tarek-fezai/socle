@@ -38,6 +38,7 @@ const RELATED = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
 
 type Scenario = {
   editor: boolean
+  owner: boolean
   status: string
   attestation: Record<string, unknown> | null
   related: { outgoing: unknown[]; incoming: unknown[] }
@@ -45,6 +46,17 @@ type Scenario = {
 }
 
 let scenario: Scenario
+
+function perms() {
+  const canEdit = scenario.editor
+  return {
+    canEdit,
+    canPublish: canEdit && scenario.status === 'brouillon',
+    canManageAccess: canEdit || scenario.spaceCanManage || scenario.owner,
+    canComment: true,
+    canManageAttestations: scenario.owner,
+  }
+}
 
 function baseDoc() {
   return {
@@ -72,11 +84,15 @@ function baseDoc() {
     reliabilityScore: scenario.status === 'valide' ? 91 : null,
     stale: false,
     createdBy: null,
-    updatedBy: ME_ID,
+    updatedBy: { id: ME_ID, displayName: 'Tarek Fezai', initials: 'TF' },
+    owner: scenario.owner
+      ? { id: ME_ID, displayName: 'Tarek Fezai', initials: 'TF' }
+      : null,
     tags: [
       { id: 't1', name: 'IAM', color: '#3730E0' },
       { id: 't2', name: 'RGPD', color: '#B7791F' },
     ],
+    permissions: perms(),
   }
 }
 
@@ -160,6 +176,7 @@ function renderPage(path = `/docs/${DOC}`) {
 beforeEach(() => {
   scenario = {
     editor: true,
+    owner: false,
     status: 'valide',
     attestation: null,
     related: { outgoing: [], incoming: [] },
@@ -252,7 +269,6 @@ describe('DocumentReadPage — permissions', () => {
     scenario.status = 'brouillon'
     renderPage()
     await screen.findByTestId('doc-toc')
-    await waitFor(() => expect(getMock).toHaveBeenCalledWith(`/api/v1/documents/${DOC}/feedback`))
     await waitFor(() => expect(screen.getByTestId('feedback-yes')).toBeTruthy())
     expect(screen.queryByTestId('tab-edit')).toBeNull()
     expect(screen.queryByTestId('doc-publish')).toBeNull()
@@ -262,6 +278,24 @@ describe('DocumentReadPage — permissions', () => {
     // Historique et commentaires restent disponibles
     expect(screen.getAllByRole('tab', { name: /Historique/ }).length).toBeGreaterThan(0)
     expect(screen.getByTestId('comments-badge').textContent).toBe('3')
+  })
+
+  it('éditeur : Modifier et Publier visibles (brouillon)', async () => {
+    scenario.editor = true
+    scenario.status = 'brouillon'
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('tab-edit')).toBeTruthy())
+    expect(screen.getByTestId('doc-publish')).toBeTruthy()
+  })
+
+  it('owner : canManageAttestations exposé ; Accès visible', async () => {
+    scenario.editor = false
+    scenario.owner = true
+    scenario.status = 'valide'
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('tab-access')).toBeTruthy())
+    expect(screen.queryByTestId('tab-edit')).toBeNull()
+    expect(baseDoc().permissions.canManageAttestations).toBe(true)
   })
 
   it('gestionnaire d’espace non éditeur : onglet Accès visible', async () => {

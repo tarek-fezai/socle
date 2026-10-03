@@ -10,8 +10,10 @@ import eu.socle.authz.DocumentScope;
 import eu.socle.document.DocumentDtos.CreateDocumentRequest;
 import eu.socle.document.DocumentDtos.DiffChange;
 import eu.socle.document.DocumentDtos.DocumentListPage;
+import eu.socle.document.DocumentDtos.DocumentPermissions;
 import eu.socle.document.DocumentDtos.DocumentResponse;
 import eu.socle.document.DocumentDtos.DocumentSummary;
+import eu.socle.document.DocumentDtos.PersonRef;
 import eu.socle.document.DocumentDtos.UpdateDocumentRequest;
 import eu.socle.document.DocumentDtos.VersionDetail;
 import eu.socle.document.DocumentDtos.VersionDiffResponse;
@@ -28,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -250,7 +253,7 @@ public class DocumentService {
     public DocumentResponse get(Jwt jwt, UUID id) {
         var user = userSyncService.syncFromJwt(jwt);
         authorizationService.requireDocumentRelation(user.getId(), id, "viewer");
-        return toResponse(require(id));
+        return toResponse(require(id), user.getId());
     }
 
     /**
@@ -264,7 +267,7 @@ public class DocumentService {
         DocumentEntity d = require(id);
         Map<String, Object> raw = documentStore.readCurrentContent(d.getId(), d.getBody());
         Map<String, Object> resolved = transclusionResolver.resolve(user.getId(), d.getId(), raw);
-        return toResponse(d, resolved);
+        return toResponse(d, resolved, user.getId());
     }
 
     @Transactional
@@ -382,7 +385,7 @@ public class DocumentService {
             repository.flush();
             templateService.afterDocumentCreated(user.getId(), template, saved.getId(), spaceId);
         }
-        return toResponse(saved);
+        return toResponse(saved, user.getId());
     }
 
     /**
@@ -397,7 +400,7 @@ public class DocumentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable"));
         String from = entity.getVisibility() == null ? DocumentVisibility.SPACE : entity.getVisibility();
         if (from.equals(to)) {
-            return toResponse(entity);
+            return toResponse(entity, user.getId());
         }
 
         String parentObject = resolveParentObject(entity);
@@ -419,7 +422,7 @@ public class DocumentService {
                 meta,
                 null
         );
-        return toResponse(saved);
+        return toResponse(saved, user.getId());
     }
 
     private String resolveCreateVisibility(UUID userId, UUID spaceId, String requested) {
@@ -543,7 +546,7 @@ public class DocumentService {
                     saved.getSpaceId(),
                     Map.of("title", saved.getTitle()));
         }
-        return toResponse(saved);
+        return toResponse(saved, user.getId());
     }
 
     /**
@@ -691,7 +694,7 @@ public class DocumentService {
                 restoreMeta,
                 null
         );
-        return toResponse(saved);
+        return toResponse(saved, user.getId());
     }
 
     private void syncDocumentLinks(DocumentEntity doc, Map<String, Object> tipTapBody) {
@@ -740,14 +743,19 @@ public class DocumentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable"));
     }
 
-    private DocumentResponse toResponse(DocumentEntity d) {
+    private DocumentResponse toResponse(DocumentEntity d, UUID callerId) {
         Map<String, Object> body = documentStore.readCurrentContent(d.getId(), d.getBody());
-        return toResponse(d, body);
+        return toResponse(d, body, callerId);
     }
 
-    private DocumentResponse toResponse(DocumentEntity d, Map<String, Object> body) {
+    private DocumentResponse toResponse(DocumentEntity d, Map<String, Object> body, UUID callerId) {
         var f = stalenessService.freshness(d.getId(), d.getCreatedAt());
         String vis = d.getVisibility() == null ? DocumentVisibility.SPACE : d.getVisibility();
+        SpaceContext spaceContext = loadSpaceContext(d.getSpaceId());
+        // Une seule requête users pour createdBy / updatedBy / owner.
+        Map<UUID, PersonRef> people = resolvePeople(
+                d.getCreatedBy(), d.getUpdatedBy(), spaceContext.ownerId());
+        DocumentPermissions permissions = computePermissions(callerId, d, spaceContext);
         return new DocumentResponse(
                 d.getId(),
                 d.getSpaceId(),
@@ -768,10 +776,143 @@ public class DocumentService {
                 d.getPosition(),
                 d.getTemplateId(),
                 d.getTemplateVersion(),
-                d.getCreatedBy(),
-                d.getUpdatedBy(),
-                loadTags(d.getId())
+                personOf(people, d.getCreatedBy()),
+                personOf(people, d.getUpdatedBy()),
+                personOf(people, spaceContext.ownerId()),
+                loadTags(d.getId()),
+                permissions
         );
+    }
+
+    /** Statuts {@code users.status} traités comme compte supprimé / anonymisé (RGPD). */
+    /** Compte anonymisé RGPD ou marqué deleted — pas un simple {@code disabled}. */
+    static final Set<String> REMOVED_USER_STATUSES = Set.of("deleted", "anonymized");
+
+    /** Données d'espace nécessaires à la réponse : politique de commentaire + owner résolu. */
+    record SpaceContext(String commentPolicy, UUID ownerId) {
+        static final SpaceContext EMPTY = new SpaceContext("members", null);
+    }
+
+    /**
+     * Une requête : {@code comment_policy} et propriétaire résolu (responsable en priorité,
+     * sinon le plus ancien owner utilisateur de {@code space_owners}).
+     */
+    private SpaceContext loadSpaceContext(UUID spaceId) {
+        if (jdbc == null || spaceId == null) {
+            return SpaceContext.EMPTY;
+        }
+        Object raw = jdbc.query("""
+                SELECT s.comment_policy,
+                       (SELECT so.user_id
+                          FROM space_owners so
+                         WHERE so.space_id = s.id
+                         ORDER BY so.is_responsible DESC, so.created_at ASC, so.user_id ASC
+                         LIMIT 1) AS owner_id
+                  FROM spaces s
+                 WHERE s.id = ? AND s.deleted_at IS NULL
+                """,
+                (ResultSetExtractor<Object>) rs -> {
+                    if (!rs.next()) {
+                        return SpaceContext.EMPTY;
+                    }
+                    String policy = rs.getString("comment_policy");
+                    return new SpaceContext(
+                            policy == null || policy.isBlank() ? "members" : policy,
+                            (UUID) rs.getObject("owner_id"));
+                },
+                spaceId);
+        return raw instanceof SpaceContext ctx ? ctx : SpaceContext.EMPTY;
+    }
+
+    /**
+     * Résout les personnes en <strong>une seule</strong> requête groupée sur {@code users}.
+     * Id absent de la map = id null (le champ de réponse reste null).
+     * Compte supprimé / anonymisé ou ligne introuvable → « Utilisateur supprimé ».
+     */
+    private Map<UUID, PersonRef> resolvePeople(UUID... ids) {
+        Set<UUID> wanted = new LinkedHashSet<>();
+        for (UUID id : ids) {
+            if (id != null) {
+                wanted.add(id);
+            }
+        }
+        if (wanted.isEmpty() || jdbc == null) {
+            return Map.of();
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(wanted.size(), "?"));
+        Map<UUID, PersonRef> found = new HashMap<>();
+        Object queried = jdbc.query(
+                "SELECT id, display_name, avatar_initials, status FROM users WHERE id IN ("
+                        + placeholders + ")",
+                (ResultSetExtractor<Object>) rs -> {
+                    while (rs.next()) {
+                        UUID id = (UUID) rs.getObject("id");
+                        found.put(id, toPersonRef(
+                                id,
+                                rs.getString("display_name"),
+                                rs.getString("avatar_initials"),
+                                rs.getString("status")));
+                    }
+                    return Boolean.TRUE;
+                },
+                wanted.toArray());
+        if (!Boolean.TRUE.equals(queried)) {
+            return Map.of();
+        }
+        Map<UUID, PersonRef> result = new HashMap<>(found);
+        for (UUID id : wanted) {
+            result.computeIfAbsent(id, PersonRef::deleted);
+        }
+        return result;
+    }
+
+    static PersonRef toPersonRef(UUID id, String displayName, String avatarInitials, String status) {
+        if (status != null && REMOVED_USER_STATUSES.contains(status.toLowerCase(java.util.Locale.ROOT))) {
+            return PersonRef.deleted(id);
+        }
+        String name = displayName == null || displayName.isBlank() ? null : displayName.trim();
+        if (name == null) {
+            return PersonRef.deleted(id);
+        }
+        String initials = avatarInitials == null || avatarInitials.isBlank()
+                ? PersonRef.initialsOf(name)
+                : avatarInitials.trim();
+        return new PersonRef(id, name, initials);
+    }
+
+    private static PersonRef personOf(Map<UUID, PersonRef> people, UUID id) {
+        return id == null ? null : people.get(id);
+    }
+
+    /**
+     * Droits d'affichage — un seul BatchCheck OpenFGA ({@code owner/editor/viewer} document,
+     * {@code owner/viewer} espace). Les règles reproduisent celles des services d'action :
+     * <ul>
+     *   <li>canEdit : editor (inclut owner) sur le document</li>
+     *   <li>canPublish : canEdit + statut {@code brouillon} + space viewer (cf. startApproval)</li>
+     *   <li>canManageAccess : owner du document (hérité de l'espace) — cf. AccessController</li>
+     *   <li>canComment : editor, ou politique {@code all_readers} → viewer doc, sinon space viewer
+     *       (cf. CommentService)</li>
+     *   <li>canManageAttestations : owner de l'espace (cf. AttestationService)</li>
+     * </ul>
+     */
+    private DocumentPermissions computePermissions(UUID callerId, DocumentEntity d, SpaceContext space) {
+        if (callerId == null || d.getSpaceId() == null) {
+            return DocumentPermissions.NONE;
+        }
+        AuthorizationService.DocumentPermissionChecks c =
+                authorizationService.batchCheckDocumentPermissions(callerId, d.getId(), d.getSpaceId());
+        if (c == null) {
+            return DocumentPermissions.NONE;
+        }
+        boolean canEdit = c.documentEditor() || c.documentOwner();
+        boolean canPublish = canEdit && "brouillon".equals(d.getStatus()) && c.spaceViewer();
+        boolean canManageAccess = c.documentOwner() || c.spaceOwner();
+        boolean canComment = canEdit
+                || ("all_readers".equals(space.commentPolicy()) ? c.documentViewer() : c.spaceViewer());
+        boolean canManageAttestations = c.spaceOwner();
+        return new DocumentPermissions(
+                canEdit, canPublish, canManageAccess, canComment, canManageAttestations);
     }
 
     private List<DocumentDtos.TagRef> loadTags(UUID documentId) {

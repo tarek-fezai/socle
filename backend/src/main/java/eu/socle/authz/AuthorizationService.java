@@ -669,6 +669,75 @@ public class AuthorizationService {
         return ordered.stream().filter(allowed::contains).toList();
     }
 
+    /** Relations OpenFGA brutes nécessaires au calcul des droits d'un document (un seul BatchCheck). */
+    public record DocumentPermissionChecks(
+            boolean documentOwner,
+            boolean documentEditor,
+            boolean documentViewer,
+            boolean spaceOwner,
+            boolean spaceViewer
+    ) {
+        public static final DocumentPermissionChecks NONE =
+                new DocumentPermissionChecks(false, false, false, false, false);
+    }
+
+    private static final String PERM_DOC_OWNER = "doc-owner";
+    private static final String PERM_DOC_EDITOR = "doc-editor";
+    private static final String PERM_DOC_VIEWER = "doc-viewer";
+    private static final String PERM_SPACE_OWNER = "space-owner";
+    private static final String PERM_SPACE_VIEWER = "space-viewer";
+
+    /**
+     * Droits bruts de l'utilisateur sur un document et son espace — <strong>un seul</strong>
+     * BatchCheck OpenFGA (5 checks). Repli sur des Checks unitaires si BatchCheck est indisponible.
+     */
+    public DocumentPermissionChecks batchCheckDocumentPermissions(
+            UUID userId, UUID documentId, UUID spaceId
+    ) {
+        String fgaUser = user(userId);
+        String doc = document(documentId);
+        String sp = space(spaceId);
+        List<ClientBatchCheckItem> checks = List.of(
+                batchItem(fgaUser, "owner", doc, PERM_DOC_OWNER),
+                batchItem(fgaUser, "editor", doc, PERM_DOC_EDITOR),
+                batchItem(fgaUser, "viewer", doc, PERM_DOC_VIEWER),
+                batchItem(fgaUser, "owner", sp, PERM_SPACE_OWNER),
+                batchItem(fgaUser, "viewer", sp, PERM_SPACE_VIEWER));
+        Set<String> allowed = new HashSet<>();
+        try {
+            var response = openFgaClient.batchCheck(ClientBatchCheckRequest.ofChecks(checks)).join();
+            for (ClientBatchCheckSingleResponse r : response.getResult()) {
+                if (r.isAllowed() && r.getCorrelationId() != null) {
+                    allowed.add(r.getCorrelationId());
+                }
+            }
+        } catch (Exception batchEx) {
+            log.debug("OpenFGA BatchCheck indisponible (permissions document) — fallback Checks", batchEx);
+            allowed.clear();
+            for (ClientBatchCheckItem item : checks) {
+                if (check(fgaUser, item.getRelation(), item.getObject())) {
+                    allowed.add(item.getCorrelationId());
+                }
+            }
+        }
+        return new DocumentPermissionChecks(
+                allowed.contains(PERM_DOC_OWNER),
+                allowed.contains(PERM_DOC_EDITOR),
+                allowed.contains(PERM_DOC_VIEWER),
+                allowed.contains(PERM_SPACE_OWNER),
+                allowed.contains(PERM_SPACE_VIEWER));
+    }
+
+    private static ClientBatchCheckItem batchItem(
+            String fgaUser, String relation, String object, String correlationId
+    ) {
+        return new ClientBatchCheckItem()
+                .user(fgaUser)
+                .relation(relation)
+                ._object(object)
+                .correlationId(correlationId);
+    }
+
     private void logCheckVolume(int count, String scopeLabel) {
         log.debug("OpenFGA document viewer checks: count={} scope={}", count, scopeLabel);
         if (count >= documentCheckWarnThreshold) {

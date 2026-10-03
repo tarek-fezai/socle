@@ -124,9 +124,6 @@ export const PAGE_DESKTOP_IDS = [
   'doc-title',
   'doc-lead',
   'doc-section-first',
-  'doc-related-title',
-  'doc-related-link',
-  'doc-feedback-label',
   'rail-toc-label',
   'rail-toc-link',
   'rail-owner-label',
@@ -142,6 +139,9 @@ export const PAGE_DESKTOP_IDS = [
   'rail-reliability-label',
   'rail-reliability-value',
 ]
+
+/** Sous la ligne de flottaison — comparés après défilement. */
+export const PAGE_BELOW_FOLD_IDS = ['doc-related-title', 'doc-related-link', 'doc-feedback-label']
 
 /** Document READ page — MobilePage.dc.html. */
 export const PAGE_MOBILE_IDS = [

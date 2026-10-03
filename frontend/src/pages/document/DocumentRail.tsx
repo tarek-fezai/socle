@@ -10,8 +10,9 @@ import {
   initialsOf,
   nextReviewAt,
   ownerLabel,
+  personInitials,
+  personLabel,
   reliabilityDot,
-  resolveUserName,
   SYSTEM_AUTHOR_LABEL,
   tagColors,
 } from './documentPageUtils'
@@ -31,7 +32,6 @@ export type DocumentRailProps = {
   canEdit: boolean
   /** Éditeur ou gestionnaire d'espace : le bloc Propriétaire mène à la page Accès. */
   canViewAccess: boolean
-  userNames: Record<string, string>
   /** Définitions de champs personnalisés + valeurs ; vide / absent → section omise. */
   customFields?: CustomFieldValue[]
   /** Mobile : panneau « Infos » replié/déplié. */
@@ -58,16 +58,16 @@ export function DocumentRail({
   onNavigate,
   canEdit,
   canViewAccess,
-  userNames,
   customFields,
   infoOpen = false,
   onToggleInfo,
   mobileActions,
 }: DocumentRailProps) {
+  // Libellé d'équipe (maquette) — exception visuelle acceptée vs « Équipe Identité ».
   const owner = ownerLabel(spaceName)
-  const authorName = resolveUserName(doc.createdBy, userNames)
+  const authorName = personLabel(doc.createdBy)
   const authorIsSystem = !doc.createdBy
-  const modifierName = resolveUserName(doc.updatedBy, userNames)
+  const modifierName = personLabel(doc.updatedBy)
   const modifierIsSystem = !doc.updatedBy
   const created = formatLongDateFr(doc.createdAt)
   const modified = formatDateTimeFr(doc.updatedAt)
@@ -84,7 +84,9 @@ export function DocumentRail({
     <>
       <Label id="rail-owner-label">Propriétaire</Label>
       <div className="doc-rail-person">
-        <div className="doc-avatar doc-avatar--dark">{initialsOf(spaceName || 'E')}</div>
+        <div className="doc-avatar doc-avatar--dark">
+          {doc.owner ? personInitials(doc.owner) : initialsOf(spaceName || 'E')}
+        </div>
         <span className="doc-rail-name" data-mock-id="rail-owner-name">
           {owner}
         </span>
@@ -152,7 +154,7 @@ export function DocumentRail({
           <Label id="rail-author-label">Auteur</Label>
           <Link to={`/docs/${doc.id}/history`} className="doc-rail-person">
             <div className={`doc-avatar ${authorIsSystem ? 'doc-avatar--system' : 'doc-avatar--dark'}`}>
-              {authorIsSystem ? '⚙' : initialsOf(authorName)}
+              {personInitials(doc.createdBy)}
             </div>
             <div>
               <div className="doc-rail-name" data-mock-id="rail-author-name">
@@ -171,7 +173,7 @@ export function DocumentRail({
           <Label id="rail-modified-label">Dernière modification</Label>
           <div className="doc-rail-person">
             <div className={`doc-avatar ${modifierIsSystem ? 'doc-avatar--system' : 'doc-avatar--dark'}`}>
-              {modifierIsSystem ? '⚙' : initialsOf(modifierName)}
+              {personInitials(doc.updatedBy)}
             </div>
             <div>
               <div className="doc-rail-name" data-mock-id="rail-modified-name">
