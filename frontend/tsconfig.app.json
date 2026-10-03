@@ -6,6 +6,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "allowJs": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
@@ -21,5 +22,12 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "e2e-visual/fixture-contract.test.ts",
+    "e2e-visual/dashboard-fixtures.mjs",
+    "e2e-visual/edit-fixtures.mjs",
+    "e2e-visual/history-fixtures.mjs",
+    "e2e-visual/page-fixtures.mjs"
+  ]
 }

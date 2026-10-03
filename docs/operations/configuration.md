@@ -69,6 +69,7 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SOCLE_EDIT_LOCK_HEARTBEAT_SECONDS` | `15` | no | no | Edit lock heartbeat interval |
 | `SOCLE_EDIT_LOCK_TTL_SECONDS` | `45` | no | no | Edit lock expiry |
 | `SOCLE_WRITING_ASSISTANT_LONG_PARAGRAPH_WORDS` | `120` | no | no | Writing assistant: flag paragraphs longer than N words (`socle.writing-assistant.long-paragraph-words`) |
+| `SOCLE_OPENAPI_ENABLED` | `true` | no | no | Enable springdoc `/api-docs` and Swagger UI `/ApiDocs.dc.html`. In production set `false`, or rely on the `ADMINISTRATEUR_SYSTEME` gate |
 
 ## Version comparison (`socle.diff` / `DiffProperties`)
 

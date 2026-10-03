@@ -32,7 +32,11 @@ export function HomeDashboardPage() {
   }
 
   const d = home.data
-  const k = d.kpis
+  const k = d.kpis ?? {}
+  const resume = d.resume ?? []
+  const recentlyPublished = d.recentlyPublished ?? []
+  const pendingApprovals = d.pendingApprovals ?? []
+  const teamActivity = d.teamActivity ?? []
   const reliability =
     k.averageReliabilityPercent == null ? null : Math.round(k.averageReliabilityPercent)
 
@@ -49,18 +53,18 @@ export function HomeDashboardPage() {
       <div className="home-kpis" data-mock-id="home-kpis">
         <div className="home-kpi" data-mock-id="home-kpi-published">
           <div className="home-kpi-label">Documents publiés</div>
-          <div className="home-kpi-value">{formatFrInteger(k.publishedDocuments)}</div>
+          <div className="home-kpi-value">{formatFrInteger(k.publishedDocuments ?? 0)}</div>
         </div>
         <div className="home-kpi" data-mock-id="home-kpi-pending">
           <div className="home-kpi-label">
             <span className="home-kpi-label-desktop">En attente d&apos;approbation</span>
             <span className="home-kpi-label-mobile">En attente</span>
           </div>
-          <div className="home-kpi-value home-kpi-value--warn">{formatFrInteger(k.pendingApprovals)}</div>
+          <div className="home-kpi-value home-kpi-value--warn">{formatFrInteger(k.pendingApprovals ?? 0)}</div>
         </div>
         <div className="home-kpi home-kpi--desktop-only" data-mock-id="home-kpi-views">
           <div className="home-kpi-label">Vues ce mois-ci</div>
-          <div className="home-kpi-value">{formatFrInteger(k.viewsThisMonth)}</div>
+          <div className="home-kpi-value">{formatFrInteger(k.viewsThisMonth ?? 0)}</div>
         </div>
         <div className="home-kpi home-kpi--desktop-only" data-mock-id="home-kpi-reliability">
           <div className="home-kpi-label">Fiabilité moyenne</div>
@@ -75,8 +79,8 @@ export function HomeDashboardPage() {
           <div className="home-section-title" data-mock-id="home-section-resume">
             Reprendre
           </div>
-          {d.resume.length === 0 && <p className="home-empty">Aucun brouillon récent.</p>}
-          {d.resume.map((item, i) => (
+          {resume.length === 0 && <p className="home-empty">Aucun brouillon récent.</p>}
+          {resume.map((item, i) => (
             <Link
               key={item.documentId}
               to={`/docs/${item.documentId}/edit`}
@@ -100,7 +104,7 @@ export function HomeDashboardPage() {
             Récemment publié
           </div>
           <div className="home-published-desktop">
-            {d.recentlyPublished.map((item, i) => (
+            {recentlyPublished.map((item, i) => (
               <Link
                 key={item.documentId}
                 to={`/docs/${item.documentId}`}
@@ -110,7 +114,7 @@ export function HomeDashboardPage() {
                 <div>
                   <div className="home-card-title">{item.title}</div>
                   <div className="home-card-meta">
-                    {item.spaceName} · publié le {formatShortDateFr(item.publishedAt)}
+                    {item.spaceName} · publié le {formatShortDateFr(item.publishedAt ?? '')}
                   </div>
                 </div>
                 <span className="home-dot" aria-hidden />
@@ -123,10 +127,10 @@ export function HomeDashboardPage() {
           <div className="home-section-title" data-mock-id="home-section-approvals">
             En attente de votre approbation
           </div>
-          {d.pendingApprovals.length === 0 && (
+          {pendingApprovals.length === 0 && (
             <p className="home-empty">Aucune approbation en attente.</p>
           )}
-          {d.pendingApprovals.map((item, i) => {
+          {pendingApprovals.map((item, i) => {
             const detailDesktop = item.slaRemainingLabel
               ? `${item.requesterName} demande une approbation · ${item.slaRemainingLabel}`
               : item.requesterName
@@ -157,8 +161,8 @@ export function HomeDashboardPage() {
             Activité de l&apos;équipe
           </div>
           <div className="home-activity" data-mock-id="home-activity">
-            {d.teamActivity.length === 0 && <p className="home-empty">Pas d&apos;activité récente.</p>}
-            {d.teamActivity.map((a, i) => (
+            {teamActivity.length === 0 && <p className="home-empty">Pas d&apos;activité récente.</p>}
+            {teamActivity.map((a, i) => (
               <div key={`${a.documentId ?? 'x'}-${a.createdAt}-${i}`} className="home-activity-row">
                 <div
                   className="home-activity-avatar"
@@ -168,7 +172,7 @@ export function HomeDashboardPage() {
                   }}
                   aria-hidden
                 >
-                  {a.you ? 'V' : initialsFromName(a.actorDisplayName)}
+                  {a.you ? 'V' : initialsFromName(a.actorDisplayName ?? '')}
                 </div>
                 <span>
                   {a.you ? (

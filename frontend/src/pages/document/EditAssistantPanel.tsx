@@ -12,7 +12,7 @@ import {
 import type { TagRef } from '../../lib/documents'
 import { filterTagSuggestions, searchTags } from '../../lib/tags'
 import {
-  brokenLinkLabel,
+  brokenLinkMessage,
   longParagraphMessage,
   type BrokenLink,
   type LongParagraph,
@@ -120,9 +120,7 @@ export function AssistantHints({
             title="Lien cassé détecté"
             mockId={i === 0 ? 'edit-card-link-text' : undefined}
           >
-            {l.accessible
-              ? `La référence vers « ${brokenLinkLabel(l)} » n'existe plus. Mettre à jour le lien.`
-              : `La référence vers « ${brokenLinkLabel(l)} » n'est pas accessible. Mettre à jour le lien.`}
+            {brokenLinkMessage(l)}
           </Card>
         </Link>
       ))}

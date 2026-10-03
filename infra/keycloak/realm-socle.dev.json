@@ -1,4 +1,5 @@
 {
+  "_comment": "DEV UNIQUEMENT — ne jamais importer en production. Importé seulement par le profil Compose demo-idp / IdP de démo (et e2e).",
   "realm": "socle",
   "enabled": true,
   "displayName": "Socle",

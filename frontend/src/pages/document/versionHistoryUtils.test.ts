@@ -28,7 +28,7 @@ const local = (y: number, m: number, d: number, h: number, min: number) =>
 const v = (n: number, over: Partial<VersionSummary> = {}): VersionSummary => ({
   versionNo: n,
   authorId: 'u1',
-  changeSummary: null,
+  changeSummary: undefined,
   createdAt: local(2026, 9, n, 10, 0),
   ...over,
 })
@@ -62,11 +62,11 @@ describe('formatVersionDateTime', () => {
 
 describe('versionAuthor', () => {
   it('authorId null → « Système (migration) » + engrenage', () => {
-    expect(versionAuthor({ authorId: null })).toEqual({ name: 'Système (migration)', initials: '⚙', system: true })
+    expect(versionAuthor({ authorId: undefined })).toEqual({ name: 'Système (migration)', initials: '⚙', system: true })
   })
 
   it('même si le serveur envoie un nom, un auteur null reste « Système (migration) »', () => {
-    expect(versionAuthor({ authorId: null, authorDisplayName: 'Quelqu’un', authorInitials: 'QQ' }).name).toBe(
+    expect(versionAuthor({ authorId: undefined, authorDisplayName: 'Quelqu’un', authorInitials: 'QQ' }).name).toBe(
       'Système (migration)',
     )
   })
@@ -249,7 +249,9 @@ describe('hunkHeaderLabel sans titre', () => {
     })
     expect(hunkHeaderLabel({ header: '', collapsedUnchanged: 0, lines: [line(7, null)] })).toBe('@@ ligne 7 @@')
     expect(hunkHeaderLabel({ header: ' ', collapsedUnchanged: 0, lines: [line(null, 4)] })).toBe('@@ ligne 4 @@')
-    expect(hunkHeaderLabel({ header: '', collapsedUnchanged: 3 })).toBe('@@ début du document — 3 lignes inchangées @@')
+    expect(hunkHeaderLabel({ header: '', collapsedUnchanged: 3, lines: [] })).toBe(
+      '@@ début du document — 3 lignes inchangées @@',
+    )
   })
 })
 

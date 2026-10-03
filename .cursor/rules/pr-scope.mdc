@@ -1,0 +1,9 @@
+---
+description: Scope des commits et signalement avant fusion
+alwaysApply: true
+---
+
+# Périmètre PR
+
+- Aucun commit hors périmètre dans une PR : rester sur le change set annoncé.
+- Après un rapport de relecture, tout nouveau commit doit être signalé explicitement (PR / revue) avant fusion.

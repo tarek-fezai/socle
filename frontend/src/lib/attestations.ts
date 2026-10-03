@@ -1,26 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { AxiosInstance } from 'axios'
+import type { components } from './api-types'
 
 /** Campagne ouverte vue par un utilisateur concerné (GET …/attestations/active). */
-export type ActiveAttestation = {
+export type ActiveAttestation = components['schemas']['ActiveAttestation'] & {
   campaignId: string
   documentId: string
   versionNo: number
   currentVersionNo: number
-  /** space_members | group */
-  audienceType: 'space_members' | 'group' | string
-  audienceRef?: string | null
-  /** ISO date (yyyy-MM-dd) ou null */
-  dueDate?: string | null
+  audienceType: string
+  dueDate: string
   overdue: boolean
   acknowledged: boolean
-  acknowledgedAt?: string | null
-  acknowledgedVersionNo?: number | null
-  /** X — accusés reçus */
-  ackCount: number
-  /** Y — taille d'audience figée à la création */
-  audienceSize: number
-  createdAt: string
 }
 
 type Client = Pick<AxiosInstance, 'get' | 'post'>

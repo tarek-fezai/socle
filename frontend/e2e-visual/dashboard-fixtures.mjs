@@ -14,7 +14,10 @@ export const ME_TAREK = {
   roles: ['CONTRIBUTEUR', 'ADMINISTRATEUR_SYSTEME'],
 }
 
-/** Aligné sur `eu.socle.home.HomeDtos` / GET /api/v1/home. */
+/**
+ * Aligné sur GET /api/v1/home (`HomeResponse`).
+ * @type {import('../src/lib/api-types.ts').components['schemas']['HomeResponse']}
+ */
 export const HOME_SEED = {
   greetingFirstName: 'Tarek',
   kpis: {
@@ -64,7 +67,8 @@ export const HOME_SEED = {
       requestId: 'a0000001-0000-4000-8000-000000000002',
       title: 'Procédure de provisioning',
       requesterName: 'Yanis M.',
-      slaRemainingLabel: null,
+      // Backend HomeService.slaRemainingLabel(null) → "—" (jamais null JSON).
+      slaRemainingLabel: '—',
     },
   ],
   teamActivity: [
@@ -83,8 +87,8 @@ export const HOME_SEED = {
       actorDisplayName: 'Yanis M.',
       you: false,
       actionLabel: 'a proposé une modification',
-      documentTitle: null,
-      documentId: null,
+      documentTitle: 'Procédure de provisioning',
+      documentId: 'd0000001-0000-4000-8000-000000000005',
       createdAt: new Date(VISUAL_NOW - 3 * 60 * 60_000).toISOString(),
       relativeLabel: 'il y a 3 h',
     },

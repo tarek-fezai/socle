@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { AxiosInstance } from 'axios'
+import type { components } from './api-types'
 
 /** Types du backend (document_custom_field_definitions.field_type). */
 export type CustomFieldType =
@@ -13,15 +14,12 @@ export type CustomFieldType =
   | 'multi_selection'
   | string
 
-export type CustomFieldView = {
+export type CustomFieldView = components['schemas']['CustomFieldView'] & {
   id: string
   name: string
   slug: string
-  fieldType: CustomFieldType
+  fieldType: string
   required: boolean
-  /** `liste` : tableau de choix (chaînes ou { value, label }). */
-  options?: unknown
-  value: unknown
 }
 
 export function customFieldsKey(documentId: string) {
