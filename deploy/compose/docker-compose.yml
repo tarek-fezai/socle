@@ -103,16 +103,24 @@ services:
           fi
           sleep 2
         done
-        # setup-schema est non idempotent ; || true pour volume déjà initialisé.
-        temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
-          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
-          setup-schema -v 0.0 || true
+        # setup-schema uniquement si schema_version absent (idempotent sans masquer d'erreurs).
+        if ! PGPASSWORD="$$SQL_PASSWORD" psql -h postgres -U "$$SQL_USER" -d temporal -tAc \
+            "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='schema_version'" \
+            | grep -q 1; then
+          temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
+            -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
+            setup-schema -v 0.0
+        fi
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
           update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
-        temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
-          -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
-          setup-schema -v 0.0 || true
+        if ! PGPASSWORD="$$SQL_PASSWORD" psql -h postgres -U "$$SQL_USER" -d temporal_visibility -tAc \
+            "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='schema_version'" \
+            | grep -q 1; then
+          temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
+            -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
+            setup-schema -v 0.0
+        fi
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
           update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned
