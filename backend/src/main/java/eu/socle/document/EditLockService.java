@@ -116,6 +116,19 @@ public class EditLockService {
                 .isPresent();
     }
 
+    /**
+     * Verrou d'édition actif détenu par un utilisateur <em>autre</em> que {@code userId}
+     * (heartbeat dans le TTL). Lecture seule, sans contrôle d'accès (à faire par l'appelant) ;
+     * vide si aucun verrou, verrou expiré ou verrou de {@code userId}.
+     */
+    @Transactional(readOnly = true)
+    public Optional<EditLockView> activeHolderOtherThan(UUID documentId, UUID userId) {
+        Instant cutoff = clock.instant().minusSeconds(properties.getTtlSeconds());
+        return load(documentId)
+                .filter(row -> row.heartbeatAt().isAfter(cutoff) && !row.holderUserId().equals(userId))
+                .map(row -> toView(row, userId, false));
+    }
+
     @Transactional
     public EditLockView heartbeat(Jwt jwt, UUID documentId) {
         return acquire(jwt, documentId);

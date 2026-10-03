@@ -64,6 +64,7 @@ public class DocumentService {
     private final DocumentLinkService documentLinkService;
     private final TemplateService templateService;
     private ActivityEventService activityEventService;
+    private EditLockService editLockService;
     private DiffProperties diffProperties;
 
     /**
@@ -175,6 +176,12 @@ public class DocumentService {
     @Autowired(required = false)
     void setActivityEventService(ActivityEventService activityEventService) {
         this.activityEventService = activityEventService;
+    }
+
+    /** Verrou d'édition : une restauration ne doit pas écraser le travail d'un autre éditeur actif. */
+    @Autowired(required = false)
+    void setEditLockService(EditLockService editLockService) {
+        this.editLockService = editLockService;
     }
 
     @Autowired(required = false)
@@ -744,7 +751,15 @@ public class DocumentService {
         DocumentEntity entity = repository.findActiveByIdForUpdate(documentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable"));
         assertExpectedVersion(entity, expectedVersionNo);
+        // Document archivé → 409 (règle commune update/restore) ; l'éventuelle bascule de statut
+        // est annulée avec la transaction si une règle ci-dessous échoue.
         StatusTransition statusTransition = applyBodyMutationStatusRules(entity);
+        // 404 : version cible inexistante (ou version courante, non archivée).
+        documentStore.findVersion(documentId, versionNo)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Version " + versionNo + " introuvable pour ce document"));
+        assertRestoreAllowed(documentId, user.getId());
         Map<String, Object> targetBody = transclusionResolver.normalizeForStorage(
                 documentStore.loadVersionBody(documentId, versionNo));
 
@@ -782,6 +797,9 @@ public class DocumentService {
         }
 
         syncDocumentLinks(saved, copyBody(targetBody));
+        // Comme update : la restauration est une sauvegarde explicite — brouillon du restaurateur
+        // consommé ; les brouillons des autres utilisateurs ne sont pas touchés.
+        discardDraft(saved.getId(), user.getId());
 
         auditService.record(
                 user.getId(),
@@ -811,6 +829,35 @@ public class DocumentService {
                 null
         );
         return toResponse(saved, user.getId());
+    }
+
+    /**
+     * Garde-fous de restauration (409) :
+     * <ul>
+     *   <li>un <em>autre</em> utilisateur détient un verrou d'édition actif (le restaurateur
+     *       lui-même, ou l'absence de verrou, sont acceptés) ;</li>
+     *   <li>une demande d'approbation est en cours (même message que les étiquettes gouvernées).</li>
+     * </ul>
+     */
+    private void assertRestoreAllowed(UUID documentId, UUID restorerId) {
+        if (editLockService != null) {
+            editLockService.activeHolderOtherThan(documentId, restorerId).ifPresent(lock -> {
+                String holder = lock.holderDisplayName() == null || lock.holderDisplayName().isBlank()
+                        ? "un autre utilisateur"
+                        : lock.holderDisplayName();
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Document en cours d'édition par " + holder + " : restauration impossible");
+            });
+        }
+        if (jdbc != null) {
+            Integer pending = jdbc.queryForObject(
+                    "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
+                    Integer.class, documentId);
+            if (pending != null && pending > 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
+            }
+        }
     }
 
     /**
