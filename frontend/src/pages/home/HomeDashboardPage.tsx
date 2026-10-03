@@ -3,12 +3,8 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { getHomeDashboard, homeQueryKey } from '../../lib/home'
-import {
-  formatFrInteger,
-  formatRelativeFr,
-  formatShortDateFr,
-  statusDraftLabel,
-} from '../../lib/relativeTime'
+import { formatFrInteger, formatShortDateFr } from '../../lib/relativeTime'
+import { initialsFromName } from '../../components/shell/shellUtils'
 import './home.css'
 
 export function HomeDashboardPage() {
@@ -37,6 +33,8 @@ export function HomeDashboardPage() {
 
   const d = home.data
   const k = d.kpis
+  const reliability =
+    k.averageReliabilityPercent == null ? null : Math.round(k.averageReliabilityPercent)
 
   return (
     <div className="home-page" data-mock-id="home-page">
@@ -67,7 +65,7 @@ export function HomeDashboardPage() {
         <div className="home-kpi home-kpi--desktop-only" data-mock-id="home-kpi-reliability">
           <div className="home-kpi-label">Fiabilité moyenne</div>
           <div className="home-kpi-value home-kpi-value--ok">
-            {Math.round(k.averageReliabilityPercent)}%
+            {reliability == null ? '—' : `${reliability}%`}
           </div>
         </div>
       </div>
@@ -88,7 +86,7 @@ export function HomeDashboardPage() {
               <div>
                 <div className="home-card-title">{item.title}</div>
                 <div className="home-card-meta">
-                  {statusDraftLabel(item.status)} · modifié {formatRelativeFr(item.modifiedAt)}
+                  Brouillon · modifié {item.relativeLabel}
                 </div>
               </div>
               <span className="home-card-action">Modifier →</span>
@@ -125,23 +123,19 @@ export function HomeDashboardPage() {
           <div className="home-section-title" data-mock-id="home-section-approvals">
             En attente de votre approbation
           </div>
-          {d.pendingYourApproval.length === 0 && (
+          {d.pendingApprovals.length === 0 && (
             <p className="home-empty">Aucune approbation en attente.</p>
           )}
-          {d.pendingYourApproval.map((item, i) => {
-            const detailDesktop =
-              item.detail ||
-              (item.slaRemainingHours != null
-                ? `${item.requesterName} demande une approbation · SLA ${item.slaRemainingHours}h restantes`
-                : item.requesterName)
-            const detailMobile =
-              item.detailShort ||
-              (item.slaRemainingHours != null
-                ? `${item.requesterName} · SLA ${item.slaRemainingHours}h restantes`
-                : item.requesterName)
+          {d.pendingApprovals.map((item, i) => {
+            const detailDesktop = item.slaRemainingLabel
+              ? `${item.requesterName} demande une approbation · ${item.slaRemainingLabel}`
+              : item.requesterName
+            const detailMobile = item.slaRemainingLabel
+              ? `${item.requesterName} · ${item.slaRemainingLabel}`
+              : item.requesterName
             return (
               <Link
-                key={item.approvalId}
+                key={item.requestId}
                 to={`/approvals`}
                 className="home-card home-card--block"
                 data-mock-id={i === 0 ? 'home-approval-card' : undefined}
@@ -164,24 +158,24 @@ export function HomeDashboardPage() {
           </div>
           <div className="home-activity" data-mock-id="home-activity">
             {d.teamActivity.length === 0 && <p className="home-empty">Pas d&apos;activité récente.</p>}
-            {d.teamActivity.map((a) => (
-              <div key={a.id} className="home-activity-row">
+            {d.teamActivity.map((a, i) => (
+              <div key={`${a.documentId ?? 'x'}-${a.createdAt}-${i}`} className="home-activity-row">
                 <div
                   className="home-activity-avatar"
                   style={{
-                    background: a.actorBg || '#EEEDFD',
-                    color: a.actorFg || '#3730E0',
+                    background: '#EEEDFD',
+                    color: '#3730E0',
                   }}
                   aria-hidden
                 >
-                  {a.actorInitials}
+                  {a.you ? 'V' : initialsFromName(a.actorDisplayName)}
                 </div>
                 <span>
-                  {a.isSelf ? (
-                    <>Vous avez {a.action}</>
+                  {a.you ? (
+                    <>Vous avez {a.actionLabel}</>
                   ) : (
                     <>
-                      <strong>{a.actorName}</strong> {a.action}
+                      <strong>{a.actorDisplayName}</strong> {a.actionLabel}
                     </>
                   )}
                   {a.documentTitle ? (
@@ -190,7 +184,7 @@ export function HomeDashboardPage() {
                       <em>{a.documentTitle}</em>
                     </>
                   ) : null}{' '}
-                  — {formatRelativeFr(a.occurredAt)}
+                  — {a.relativeLabel}
                 </span>
               </div>
             ))}

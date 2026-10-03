@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { AxiosInstance } from 'axios'
 
+/** Aligné sur `eu.socle.home.HomeDtos` (GET /api/v1/home). */
 export type HomeKpis = {
   publishedDocuments: number
   pendingApprovals: number
   viewsThisMonth: number
-  /** 0–100 (ex. 91) */
-  averageReliabilityPercent: number
+  /** 0–100, ou null s’il n’y a pas assez de données. */
+  averageReliabilityPercent: number | null
 }
 
 export type HomeResumeItem = {
   documentId: string
   title: string
-  status: string
-  modifiedAt: string
+  updatedAt: string
+  relativeLabel: string
 }
 
 export type HomePublishedItem = {
@@ -24,32 +25,22 @@ export type HomePublishedItem = {
 }
 
 export type HomeApprovalItem = {
-  approvalId: string
   documentId: string
+  requestId: string
   title: string
   requesterName: string
-  /** Texte secondaire desktop (SLA, etc.). */
-  detail?: string | null
-  /** Variante courte mobile. */
-  detailShort?: string | null
-  slaRemainingHours?: number | null
-  kind?: 'approval' | 'review' | string
+  slaRemainingLabel: string | null
 }
 
 export type HomeActivityItem = {
-  id: string
-  actorName: string
-  actorInitials: string
-  /** Couleur de fond avatar (ex. #EEEDFD). */
-  actorBg?: string | null
-  /** Couleur texte avatar (ex. #3730E0). */
-  actorFg?: string | null
-  /** true = « Vous avez … » sans nom en gras. */
-  isSelf?: boolean
-  action: string
+  eventType: string
+  actorDisplayName: string
+  you: boolean
   documentTitle?: string | null
   documentId?: string | null
-  occurredAt: string
+  createdAt: string
+  relativeLabel: string
+  actionLabel: string
 }
 
 export type HomeDashboard = {
@@ -57,7 +48,7 @@ export type HomeDashboard = {
   kpis: HomeKpis
   resume: HomeResumeItem[]
   recentlyPublished: HomePublishedItem[]
-  pendingYourApproval: HomeApprovalItem[]
+  pendingApprovals: HomeApprovalItem[]
   teamActivity: HomeActivityItem[]
 }
 
