@@ -39,10 +39,13 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d postgres"]
+      # TCP + dernière base créée par init-databases.sql : évite le « ready » du
+      # serveur temporaire unix-socket pendant docker-entrypoint-initdb.d.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$POSTGRES_USER -d temporal_visibility"]
       interval: 5s
       timeout: 5s
       retries: 30
+      start_period: 10s
     restart: unless-stopped
 
   openfga-migrate:
@@ -91,21 +94,33 @@ services:
     command:
       - |
         set -eux
+        i=0
+        until pg_isready -h postgres -p 5432 -U "$$SQL_USER" -d temporal_visibility >/dev/null 2>&1; do
+          i=$$((i + 1))
+          if [ "$$i" -ge 60 ]; then
+            echo "postgres temporal_visibility not ready" >&2
+            exit 1
+          fi
+          sleep 2
+        done
+        # setup-schema est non idempotent ; || true pour volume déjà initialisé.
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
-          setup-schema -v 0.0
+          setup-schema -v 0.0 || true
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal \
           update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
-          setup-schema -v 0.0
+          setup-schema -v 0.0 || true
         temporal-sql-tool --plugin postgres12 --ep postgres -p 5432 \
           -u "$$SQL_USER" --pw "$$SQL_PASSWORD" --db temporal_visibility \
           update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned
     environment:
       SQL_USER: ${POSTGRES_USER}
       SQL_PASSWORD: ${POSTGRES_PASSWORD}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy

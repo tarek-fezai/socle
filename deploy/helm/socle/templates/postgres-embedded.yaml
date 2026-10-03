@@ -79,9 +79,20 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           readinessProbe:
+            # TCP + dernière base créée par l'init ConfigMap (évite le ready unix-socket
+            # pendant docker-entrypoint-initdb.d).
             exec:
-              command: ["pg_isready", "-U", {{ .Values.postgres.username | quote }}]
-            initialDelaySeconds: 5
+              command:
+                - pg_isready
+                - -h
+                - 127.0.0.1
+                - -p
+                - {{ .Values.postgres.port | quote }}
+                - -U
+                - {{ .Values.postgres.username | quote }}
+                - -d
+                - temporal_visibility
+            initialDelaySeconds: 10
             periodSeconds: 5
           volumeMounts:
             - name: data

@@ -48,7 +48,13 @@ spec:
               PORT={{ .Values.postgres.port }}
               USER={{ .Values.postgres.username }}
               for i in $(seq 1 60); do
-                pg_isready -h "$EP" -p "$PORT" -U "$USER" && break
+                if pg_isready -h "$EP" -p "$PORT" -U "$USER" -d temporal_visibility >/dev/null 2>&1; then
+                  break
+                fi
+                if [ "$i" -ge 60 ]; then
+                  echo "postgres temporal_visibility not ready" >&2
+                  exit 1
+                fi
                 sleep 2
               done
               temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
