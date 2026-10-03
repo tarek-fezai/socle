@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.home;
 
-import eu.socle.activity.ActivityEventService;
 import eu.socle.activity.ActivityEventTypes;
 import eu.socle.authz.AuthorizationService;
-import eu.socle.authz.DocumentScope;
+import eu.socle.authz.AuthorizationService.ReadableScope;
 import eu.socle.document.DocumentApprovalService;
 import eu.socle.document.DocumentApprovalService.ApprovalView;
 import eu.socle.home.HomeDtos.HomeResponse;
@@ -24,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -34,28 +32,42 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * Agrégat home — SQL préselect → un batch OpenFGA ({@link AuthorizationService#listViewableDocumentIds})
- * → calculs en mémoire / SQL borné à l'ensemble viewable.
+ * Agrégat Accueil.
+ *
+ * <p><strong>Indicateurs</strong> (publiés, vues, fiabilité) : agrégats SQL sur la
+ * présélection de lisibilité ({@link AuthorizationService#READABLE_PREDICATE} via
+ * {@link AuthorizationService#readableScope}) — <em>sans</em> BatchCheck OpenFGA.
+ * Seuls des nombres sont exposés ; une divergence colonne / tuples OpenFGA est
+ * détectée par {@code visibility-drift} (voir {@code docs/privacy.md}).
+ *
+ * <p><strong>Listes</strong> (Reprendre, Récemment publié, Activité) : SQL avec la
+ * même présélection et {@code LIMIT} sur-dimensionné (×{@link #CANDIDATE_MULTIPLIER}),
+ * puis {@link AuthorizationService#filterByDocumentViewer} sur ces seuls candidats.
+ * Aucune information d'un document refusé ne sort.
+ *
+ * <p>Ne pas utiliser {@link eu.socle.authz.DocumentScope#global()} ici.
  */
 @Service
 public class HomeService {
 
-    private static final int RESUME_LIMIT = 5;
-    private static final int RECENT_PUBLISHED_LIMIT = 8;
-    private static final int TEAM_ACTIVITY_LIMIT = 10;
+    static final int RESUME_LIMIT = 5;
+    static final int RECENT_PUBLISHED_LIMIT = 8;
+    static final int TEAM_ACTIVITY_LIMIT = 10;
+    /** Sur-sélection SQL avant BatchCheck (bornée, indépendante du volume instance). */
+    static final int CANDIDATE_MULTIPLIER = 3;
 
     private final JdbcTemplate jdbc;
     private final UserSyncService userSyncService;
     private final AuthorizationService authorizationService;
     private final IdentityClaimsMapper claimsMapper;
     private final ObjectProvider<DocumentApprovalService> approvalService;
-    private final ActivityEventService activityEventService;
     private final Clock clock;
 
     public HomeService(
@@ -64,7 +76,6 @@ public class HomeService {
             AuthorizationService authorizationService,
             IdentityClaimsMapper claimsMapper,
             ObjectProvider<DocumentApprovalService> approvalService,
-            ActivityEventService activityEventService,
             Clock clock
     ) {
         this.jdbc = jdbc;
@@ -72,26 +83,20 @@ public class HomeService {
         this.authorizationService = authorizationService;
         this.claimsMapper = claimsMapper;
         this.approvalService = approvalService;
-        this.activityEventService = activityEventService;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public HomeResponse getHome(Jwt jwt) {
-        // Purge opportuniste (léger) en plus du scheduler.
-        activityEventService.purgeOlderThanRetention();
-
         UserEntity user = userSyncService.syncFromJwt(jwt);
-        List<UUID> viewable = authorizationService.listViewableDocumentIds(
-                user.getId(), DocumentScope.global());
-        Set<UUID> viewableSet = new HashSet<>(viewable);
+        ReadableScope readable = authorizationService.readableScope(user.getId());
 
         String greeting = resolveGreeting(jwt, user);
-        Kpis kpis = computeKpis(jwt, viewable);
-        List<ResumeItem> resume = loadResume(user.getId(), viewableSet);
-        List<RecentlyPublishedItem> recentlyPublished = loadRecentlyPublished(viewable);
+        Kpis kpis = computeKpis(jwt, readable);
+        List<ResumeItem> resume = loadResume(user.getId(), readable);
+        List<RecentlyPublishedItem> recentlyPublished = loadRecentlyPublished(user.getId(), readable);
         List<PendingApprovalItem> pending = loadPendingApprovals(jwt, user.getId());
-        List<TeamActivityItem> activity = loadTeamActivity(user.getId(), viewableSet);
+        List<TeamActivityItem> activity = loadTeamActivity(user.getId(), readable);
 
         return new HomeResponse(greeting, kpis, resume, recentlyPublished, pending, activity);
     }
@@ -105,33 +110,40 @@ public class HomeService {
         if (display == null || display.isBlank()) {
             return "";
         }
-        String first = display.trim().split("\\s+")[0];
-        return first;
+        return display.trim().split("\\s+")[0];
     }
 
-    private Kpis computeKpis(Jwt jwt, List<UUID> viewable) {
-        long published = 0;
+    /**
+     * KPIs numériques uniquement — présélection SQL, pas de BatchCheck.
+     * Peut légèrement diverger d'OpenFGA tant que {@code visibility-drift} n'est pas nul.
+     */
+    private Kpis computeKpis(Jwt jwt, ReadableScope readable) {
+        Map<String, Object> row = jdbc.query(
+                """
+                SELECT COUNT(*) FILTER (WHERE d.status = 'valide') AS published,
+                       AVG(d.reliability_score) FILTER (
+                         WHERE d.status = 'valide' AND d.reliability_score IS NOT NULL
+                       ) AS avg_rel
+                  FROM documents d
+                 WHERE d.deleted_at IS NULL
+                   AND %s
+                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                ps -> authorizationService.bindReadable(ps, 1, readable),
+                rs -> {
+                    rs.next();
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("published", rs.getLong("published"));
+                    m.put("avg_rel", rs.getObject("avg_rel"));
+                    return m;
+                });
+
+        long published = ((Number) row.get("published")).longValue();
         Integer avgReliability = null;
-        if (!viewable.isEmpty()) {
-            String in = placeholders(viewable.size());
-            Object[] args = viewable.toArray();
-            Map<String, Object> row = jdbc.queryForMap("""
-                    SELECT COUNT(*) FILTER (WHERE status = 'valide') AS published,
-                           AVG(reliability_score) FILTER (
-                             WHERE status = 'valide' AND reliability_score IS NOT NULL
-                           ) AS avg_rel
-                      FROM documents
-                     WHERE deleted_at IS NULL
-                       AND id IN (%s)
-                    """.formatted(in),
-                    args);
-            published = ((Number) row.get("published")).longValue();
-            Object avg = row.get("avg_rel");
-            if (avg instanceof BigDecimal bd) {
-                avgReliability = bd.setScale(0, RoundingMode.HALF_UP).intValue();
-            } else if (avg instanceof Number n) {
-                avgReliability = (int) Math.round(n.doubleValue());
-            }
+        Object avg = row.get("avg_rel");
+        if (avg instanceof BigDecimal bd) {
+            avgReliability = bd.setScale(0, RoundingMode.HALF_UP).intValue();
+        } else if (avg instanceof Number n) {
+            avgReliability = (int) Math.round(n.doubleValue());
         }
 
         long pendingCount = 0;
@@ -140,40 +152,50 @@ public class HomeService {
             pendingCount = approvals.listMine(jwt).size();
         }
 
-        long viewsThisMonth = 0;
-        if (!viewable.isEmpty()) {
-            YearMonth ym = YearMonth.from(LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC));
-            LocalDate start = ym.atDay(1);
-            LocalDate end = ym.atEndOfMonth();
-            String in = placeholders(viewable.size());
-            List<Object> args = new ArrayList<>();
-            args.add(java.sql.Date.valueOf(start));
-            args.add(java.sql.Date.valueOf(end));
-            args.addAll(viewable);
-            Long sum = jdbc.queryForObject("""
-                    SELECT COALESCE(SUM(count), 0)
-                      FROM document_view_counts
-                     WHERE day BETWEEN ? AND ?
-                       AND document_id IN (%s)
-                    """.formatted(in),
-                    Long.class,
-                    args.toArray());
-            viewsThisMonth = sum != null ? sum : 0L;
-        }
+        YearMonth ym = YearMonth.from(LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC));
+        LocalDate start = ym.atDay(1);
+        LocalDate end = ym.atEndOfMonth();
+        Long views = jdbc.query(
+                """
+                SELECT COALESCE(SUM(c.count), 0)
+                  FROM document_view_counts c
+                  JOIN documents d ON d.id = c.document_id
+                 WHERE d.deleted_at IS NULL
+                   AND c.day BETWEEN ? AND ?
+                   AND %s
+                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                ps -> {
+                    ps.setDate(1, java.sql.Date.valueOf(start));
+                    ps.setDate(2, java.sql.Date.valueOf(end));
+                    authorizationService.bindReadable(ps, 3, readable);
+                },
+                rs -> {
+                    rs.next();
+                    return rs.getLong(1);
+                });
+        long viewsThisMonth = views != null ? views : 0L;
 
         return new Kpis(published, pendingCount, viewsThisMonth, avgReliability);
     }
 
-    private List<ResumeItem> loadResume(UUID userId, Set<UUID> viewableSet) {
-        List<ResumeItem> raw = jdbc.query("""
-                SELECT id, title, updated_at
-                  FROM documents
-                 WHERE deleted_at IS NULL
-                   AND status = 'brouillon'
-                   AND updated_by = ?
-                 ORDER BY updated_at DESC
+    private List<ResumeItem> loadResume(UUID userId, ReadableScope readable) {
+        int candidateLimit = RESUME_LIMIT * CANDIDATE_MULTIPLIER;
+        List<ResumeItem> raw = jdbc.query(
+                """
+                SELECT d.id, d.title, d.updated_at
+                  FROM documents d
+                 WHERE d.deleted_at IS NULL
+                   AND d.status = 'brouillon'
+                   AND d.updated_by = ?
+                   AND %s
+                 ORDER BY d.updated_at DESC
                  LIMIT ?
-                """,
+                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                ps -> {
+                    ps.setObject(1, userId);
+                    int idx = authorizationService.bindReadable(ps, 2, readable);
+                    ps.setInt(idx, candidateLimit);
+                },
                 (rs, i) -> {
                     Instant updated = rs.getTimestamp("updated_at").toInstant();
                     return new ResumeItem(
@@ -181,45 +203,45 @@ public class HomeService {
                             rs.getString("title"),
                             updated,
                             relativeLabel(updated));
-                },
-                userId, RESUME_LIMIT * 3);
+                });
 
-        List<ResumeItem> out = new ArrayList<>();
-        for (ResumeItem item : raw) {
-            if (!viewableSet.contains(item.documentId())) {
-                continue;
-            }
-            out.add(item);
-            if (out.size() >= RESUME_LIMIT) {
-                break;
-            }
-        }
-        return out;
+        return keepAllowedInOrder(
+                raw,
+                ResumeItem::documentId,
+                userId,
+                "home-resume",
+                RESUME_LIMIT);
     }
 
-    private List<RecentlyPublishedItem> loadRecentlyPublished(List<UUID> viewable) {
-        if (viewable.isEmpty()) {
-            return List.of();
-        }
-        String in = placeholders(viewable.size());
-        List<Object> args = new ArrayList<>(viewable);
-        args.add(RECENT_PUBLISHED_LIMIT);
-        return jdbc.query("""
+    private List<RecentlyPublishedItem> loadRecentlyPublished(UUID userId, ReadableScope readable) {
+        int candidateLimit = RECENT_PUBLISHED_LIMIT * CANDIDATE_MULTIPLIER;
+        List<RecentlyPublishedItem> raw = jdbc.query(
+                """
                 SELECT d.id, d.title, s.name AS space_name, d.updated_at
                   FROM documents d
                   JOIN spaces s ON s.id = d.space_id
                  WHERE d.deleted_at IS NULL
                    AND d.status = 'valide'
-                   AND d.id IN (%s)
+                   AND %s
                  ORDER BY d.updated_at DESC
                  LIMIT ?
-                """.formatted(in),
+                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                ps -> {
+                    int idx = authorizationService.bindReadable(ps, 1, readable);
+                    ps.setInt(idx, candidateLimit);
+                },
                 (rs, i) -> new RecentlyPublishedItem(
                         (UUID) rs.getObject("id"),
                         rs.getString("title"),
                         rs.getString("space_name"),
-                        rs.getTimestamp("updated_at").toInstant()),
-                args.toArray());
+                        rs.getTimestamp("updated_at").toInstant()));
+
+        return keepAllowedInOrder(
+                raw,
+                RecentlyPublishedItem::documentId,
+                userId,
+                "home-recent-published",
+                RECENT_PUBLISHED_LIMIT);
     }
 
     private List<PendingApprovalItem> loadPendingApprovals(Jwt jwt, UUID currentUserId) {
@@ -253,21 +275,24 @@ public class HomeService {
         return out;
     }
 
-    private List<TeamActivityItem> loadTeamActivity(UUID currentUserId, Set<UUID> viewableSet) {
-        if (viewableSet.isEmpty()) {
-            return List.of();
-        }
-        // Préselect bornée puis filtre viewable (évite N+1 OpenFGA).
-        List<ActivityRow> rows = jdbc.query("""
+    private List<TeamActivityItem> loadTeamActivity(UUID currentUserId, ReadableScope readable) {
+        int candidateLimit = TEAM_ACTIVITY_LIMIT * CANDIDATE_MULTIPLIER;
+        List<ActivityRow> rows = jdbc.query(
+                """
                 SELECT ae.id, ae.event_type, ae.actor_user_id, ae.document_id, ae.created_at,
                        u.display_name AS actor_name, d.title AS document_title
                   FROM activity_events ae
                   JOIN users u ON u.id = ae.actor_user_id
                   JOIN documents d ON d.id = ae.document_id
                  WHERE d.deleted_at IS NULL
+                   AND %s
                  ORDER BY ae.created_at DESC
-                 LIMIT 80
-                """,
+                 LIMIT ?
+                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                ps -> {
+                    int idx = authorizationService.bindReadable(ps, 1, readable);
+                    ps.setInt(idx, candidateLimit);
+                },
                 (rs, i) -> new ActivityRow(
                         rs.getString("event_type"),
                         (UUID) rs.getObject("actor_user_id"),
@@ -276,9 +301,16 @@ public class HomeService {
                         rs.getString("document_title"),
                         rs.getTimestamp("created_at").toInstant()));
 
+        LinkedHashSet<UUID> candidateIds = new LinkedHashSet<>();
+        for (ActivityRow r : rows) {
+            candidateIds.add(r.documentId());
+        }
+        Set<UUID> allowed = new HashSet<>(authorizationService.filterByDocumentViewer(
+                currentUserId, candidateIds, "home-activity"));
+
         List<TeamActivityItem> out = new ArrayList<>();
         for (ActivityRow r : rows) {
-            if (!viewableSet.contains(r.documentId())) {
+            if (!allowed.contains(r.documentId())) {
                 continue;
             }
             boolean you = currentUserId.equals(r.actorUserId());
@@ -292,6 +324,35 @@ public class HomeService {
                     relativeLabel(r.createdAt()),
                     actionLabel(r.eventType(), you)));
             if (out.size() >= TEAM_ACTIVITY_LIMIT) {
+                break;
+            }
+        }
+        return out;
+    }
+
+    private <T> List<T> keepAllowedInOrder(
+            List<T> raw,
+            java.util.function.Function<T, UUID> idFn,
+            UUID userId,
+            String scopeLabel,
+            int limit
+    ) {
+        if (raw.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<UUID> candidateIds = new LinkedHashSet<>();
+        for (T item : raw) {
+            candidateIds.add(idFn.apply(item));
+        }
+        Set<UUID> allowed = new HashSet<>(authorizationService.filterByDocumentViewer(
+                userId, candidateIds, scopeLabel));
+        List<T> out = new ArrayList<>();
+        for (T item : raw) {
+            if (!allowed.contains(idFn.apply(item))) {
+                continue;
+            }
+            out.add(item);
+            if (out.size() >= limit) {
                 break;
             }
         }
