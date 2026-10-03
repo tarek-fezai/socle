@@ -9,6 +9,14 @@ import { PlaceholderBanner } from '../components/PlaceholderBanner'
 import type { ShellOutletContext } from '../components/shell/shellUtils'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
+import {
+  deleteDocumentDraft,
+  documentDraftKey,
+  getDocumentDraft,
+  isDraftStale,
+  putDocumentDraft,
+  type DocumentDraft,
+} from '../lib/documentDrafts'
 import { canCommentOnSpace, listComments, type CommentAnchorInput } from '../lib/comments'
 import {
   customFieldsKey,
@@ -85,6 +93,9 @@ function minutesSince(iso: string | null | undefined, nowMs = Date.now()): numbe
 
 export function DocumentEditPage() {
   const { id = '' } = useParams()
+  const qc = useQueryClient()
+  // Incrémenté après « Abandonner le brouillon » : l'écran repart du contenu publié.
+  const [epoch, setEpoch] = useState(0)
   const doc = useQuery({
     queryKey: ['document', id],
     queryFn: () => getDocument(api, id),
@@ -96,7 +107,34 @@ export function DocumentEditPage() {
     refetchOnReconnect: false,
   })
 
-  if (doc.isLoading) {
+  // Brouillon de l'appelant : restauré à l'ouverture (seulement s'il peut modifier le document).
+  const canEditDoc = documentPermissions(doc.data?.permissions).canEdit
+  const draftQuery = useQuery({
+    queryKey: documentDraftKey(id),
+    queryFn: async () => {
+      try {
+        return await getDocumentDraft(api, id)
+      } catch {
+        // Un brouillon illisible ne doit jamais empêcher d'ouvrir le document publié.
+        return null
+      }
+    },
+    enabled: Boolean(id) && Boolean(doc.data) && canEditDoc,
+    gcTime: 0,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+  })
+
+  const abandonDraft = useCallback(async () => {
+    await deleteDocumentDraft(api, id)
+    qc.setQueryData(documentDraftKey(id), null)
+    await qc.refetchQueries({ queryKey: ['document', id] })
+    setEpoch((n) => n + 1)
+  }, [id, qc])
+
+  if (doc.isLoading || (canEditDoc && draftQuery.isLoading)) {
     return (
       <div className="doc-page doc-page--state" data-testid="edit-loading">
         <p className="doc-state">Chargement…</p>
@@ -117,25 +155,55 @@ export function DocumentEditPage() {
     )
   }
 
-  return <EditSurface key={doc.data.id} doc={doc.data} />
+  return (
+    <EditSurface
+      key={`${doc.data.id}:${epoch}`}
+      doc={doc.data}
+      serverDraft={canEditDoc ? (draftQuery.data ?? null) : null}
+      onAbandonDraft={abandonDraft}
+    />
+  )
 }
 
 /* ------------------------------------------------------------------ */
 /* Écran Modifier                                                       */
 /* ------------------------------------------------------------------ */
 
-function EditSurface({ doc }: { doc: DocumentDetail }) {
+function EditSurface({
+  doc,
+  serverDraft,
+  onAbandonDraft,
+}: {
+  doc: DocumentDetail
+  /** Brouillon de l'appelant restauré à l'ouverture (null = repart du contenu publié). */
+  serverDraft: DocumentDraft | null
+  onAbandonDraft: () => Promise<void>
+}) {
   const id = doc.id
   const qc = useQueryClient()
   const shell = useOutletContext<ShellOutletContext | null | undefined>()
   const { me } = useAuth()
   const perms = documentPermissions(doc.permissions)
 
-  /* ---------- brouillon local ---------- */
+  /* ---------- brouillon (autosave) vs version publiée ---------- */
 
-  const initialBody = useMemo(() => (doc.body ?? emptyDocBody) as Record<string, unknown>, [doc.body])
-  const initial = useMemo<Draft>(() => ({ title: doc.title, body: initialBody }), [doc.title, initialBody])
-  const [title, setTitle] = useState(doc.title)
+  const publishedBody = useMemo(() => (doc.body ?? emptyDocBody) as Record<string, unknown>, [doc.body])
+  const initialBody = useMemo(
+    () => (serverDraft ? serverDraft.body : publishedBody),
+    [serverDraft, publishedBody],
+  )
+  const initialTitle = serverDraft ? serverDraft.title?.trim() || doc.title : doc.title
+  // Référence « déjà enregistré » de l'autosave = ce que le serveur détient (brouillon restauré ou publié).
+  const initial = useMemo<Draft>(() => ({ title: initialTitle, body: initialBody }), [initialTitle, initialBody])
+  // Référence « publié » : sert à détecter des changements non publiés (confirmation de sortie).
+  const publishedKeyRef = useRef(JSON.stringify({ title: doc.title, body: publishedBody }))
+  const hasServerDraftRef = useRef(Boolean(serverDraft))
+  const discardedRef = useRef(false)
+  const [draftStale, setDraftStale] = useState(isDraftStale(serverDraft, doc.currentVersionNo))
+  const [draftBusy, setDraftBusy] = useState(false)
+  const [draftError, setDraftError] = useState<string | null>(null)
+  const [versionMsg, setVersionMsg] = useState<string | null>(null)
+  const [title, setTitle] = useState(initialTitle)
   const [body, setBody] = useState<Record<string, unknown>>(initialBody)
   const [tags, setTags] = useState<TagRef[]>(doc.tags ?? [])
   const [previewing, setPreviewing] = useState(false)
@@ -151,7 +219,10 @@ function EditSurface({ doc }: { doc: DocumentDetail }) {
   previewingRef.current = previewing
   const contentRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLTextAreaElement>(null)
-  const versionRef = useRef<number | null>(doc.currentVersionNo ?? null)
+  // Version publiée sur laquelle repose le contenu édité : celle du brouillon restauré, sinon la courante.
+  // Sert de `baseVersionNo` (brouillon) et d'`expectedVersionNo` (version) — un brouillon périmé
+  // provoque donc un 409 explicite plutôt qu'un écrasement silencieux de la version plus récente.
+  const versionRef = useRef<number | null>(serverDraft?.baseVersionNo ?? doc.currentVersionNo ?? null)
 
   // Blocs / marques hors schéma : TipTap les supprimerait au premier enregistrement.
   const unsupported = useMemo(() => findUnsupportedContent(initialBody), [initialBody])
@@ -168,33 +239,86 @@ function EditSurface({ doc }: { doc: DocumentDetail }) {
   /* ---------- enregistrement automatique ---------- */
 
   const draft = useMemo<Draft>(() => ({ title, body }), [title, body])
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  const draftKey = useMemo(() => JSON.stringify(draft), [draft])
+  const draftKeyRef = useRef(draftKey)
+  draftKeyRef.current = draftKey
+
+  // L'autosave n'écrit QUE le brouillon (PUT …/draft) : ni version, ni audit, ni Git.
   const autosave = useAutosave<Draft>({
     value: draft,
     initial,
     enabled: canWrite,
-    initialSavedAt: doc.updatedAt ? new Date(doc.updatedAt) : null,
+    initialSavedAt: serverDraft
+      ? new Date(serverDraft.updatedAt)
+      : doc.updatedAt
+        ? new Date(doc.updatedAt)
+        : null,
     describeError: saveErrorMessage,
+    resolveSavedAt: (r) => {
+      const at = (r as { updatedAt?: string } | null)?.updatedAt
+      return at ? new Date(at) : null
+    },
     save: async (d) => {
+      // Brouillon abandonné : l'écran se recharge, ne pas le recréer au démontage.
+      if (discardedRef.current) return null
       if (!d.title.trim()) throw new Error('Le titre du document ne peut pas être vide.')
-      const updated = await updateDocument(
-        api,
-        id,
-        d.title.trim(),
-        d.body,
-        doc.docType?.trim() || null,
-        versionRef.current,
-      )
-      versionRef.current = updated.currentVersionNo ?? versionRef.current
-      qc.setQueryData(['document', id], (prev: DocumentDetail | undefined) =>
-        prev ? { ...prev, currentVersionNo: updated.currentVersionNo, updatedAt: updated.updatedAt } : prev,
-      )
-      void qc.invalidateQueries({ queryKey: ['documents'] })
-      void qc.invalidateQueries({ queryKey: ['document-resolved', id] })
-      void qc.invalidateQueries({ queryKey: ['applicable-workflow', id] })
-      void qc.invalidateQueries({ queryKey: writingHintsKey(id) })
-      return updated
+      const saved = await putDocumentDraft(api, id, {
+        title: d.title.trim(),
+        body: d.body,
+        baseVersionNo: versionRef.current ?? 0,
+      })
+      hasServerDraftRef.current = true
+      return saved
     },
   })
+
+  /**
+   * Version explicite : crée une version via `updateDocument` (le serveur supprime alors le brouillon).
+   * Sans effet si le contenu est identique à la version publiée. Résout `true` si une version a été créée.
+   */
+  const createVersion = useCallback(async (): Promise<boolean> => {
+    const d = draftRef.current
+    if (!d.title.trim()) throw new Error('Le titre du document ne peut pas être vide.')
+    if (draftKeyRef.current === publishedKeyRef.current) {
+      // Retour au contenu publié : un éventuel brouillon n'a plus de raison d'être.
+      if (hasServerDraftRef.current) {
+        await deleteDocumentDraft(api, id)
+        hasServerDraftRef.current = false
+      }
+      return false
+    }
+    const updated = await updateDocument(
+      api,
+      id,
+      d.title.trim(),
+      d.body,
+      doc.docType?.trim() || null,
+      versionRef.current,
+    )
+    versionRef.current = updated.currentVersionNo ?? versionRef.current
+    publishedKeyRef.current = JSON.stringify(d)
+    hasServerDraftRef.current = false
+    setDraftStale(false)
+    qc.setQueryData(documentDraftKey(id), null)
+    qc.setQueryData(['document', id], (prev: DocumentDetail | undefined) =>
+      prev ? { ...prev, currentVersionNo: updated.currentVersionNo, updatedAt: updated.updatedAt } : prev,
+    )
+    void qc.invalidateQueries({ queryKey: ['documents'] })
+    void qc.invalidateQueries({ queryKey: ['document-resolved', id] })
+    void qc.invalidateQueries({ queryKey: ['applicable-workflow', id] })
+    void qc.invalidateQueries({ queryKey: writingHintsKey(id) })
+    setVersionMsg(updated.currentVersionNo ? `Version ${updated.currentVersionNo} enregistrée.` : 'Version enregistrée.')
+    return true
+  }, [id, doc.docType, qc])
+
+  /** Brouillon vidé sur le serveur puis version : l'ordre garantit que la version reflète le dernier brouillon. */
+  const persistVersion = useCallback(async () => {
+    const saved = await autosave.flush()
+    if (!saved) throw new Error("L'enregistrement du brouillon a échoué : corrigez-le avant de créer une version.")
+    return createVersion()
+  }, [autosave, createVersion])
 
   /* ---------- données annexes ---------- */
 
@@ -280,8 +404,8 @@ function EditSurface({ doc }: { doc: DocumentDetail }) {
 
   const send = useMutation({
     mutationFn: async () => {
-      const saved = await autosave.flush()
-      if (!saved) throw new Error("L'enregistrement a échoué : corrigez-le avant d'envoyer en révision.")
+      // Brouillon vidé, puis version (si le contenu diffère du publié), puis demande d'approbation.
+      await persistVersion()
       const { data } = await api.post<{ approvalRequestId: string; temporalWorkflowId: string; status: string }>(
         `/api/v1/documents/${id}/approvals`,
       )
@@ -306,6 +430,78 @@ function EditSurface({ doc }: { doc: DocumentDetail }) {
       )
     },
   })
+
+  const saveVersion = useMutation({
+    mutationFn: () => persistVersion(),
+    onSuccess: () => setDraftError(null),
+    onError: (err) => {
+      setVersionMsg(null)
+      setDraftError(saveErrorMessage(err))
+    },
+  })
+  const saveVersionRef = useRef(saveVersion)
+  saveVersionRef.current = saveVersion
+
+  const abandonDraft = useCallback(async () => {
+    setDraftBusy(true)
+    setDraftError(null)
+    discardedRef.current = true
+    try {
+      await onAbandonDraft()
+    } catch (e) {
+      discardedRef.current = false
+      setDraftBusy(false)
+      setDraftError(apiErrorMessage(e, "Impossible d'abandonner le brouillon"))
+    }
+  }, [onAbandonDraft])
+
+  // Ctrl/Cmd+S : crée une version explicite (jamais l'autosave).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 's') return
+      e.preventDefault()
+      if (!canWrite || saveVersionRef.current.isPending) return
+      saveVersionRef.current.mutate()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [canWrite])
+
+  // Sortie de page : confirmation si des modifications ne sont pas enregistrées au brouillon, ou
+  // si le contenu diffère de la version publiée (le brouillon est conservé mais non publié).
+  const unpublished = draftKey !== publishedKeyRef.current
+  const needsLeaveConfirm = canWrite && (autosave.dirty || unpublished)
+  const leaveRef = useRef({ needs: false, dirty: false })
+  leaveRef.current = { needs: needsLeaveConfirm, dirty: autosave.dirty }
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!leaveRef.current.needs) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    // Navigation interne (BrowserRouter : pas de useBlocker) : liens du même site.
+    const onClick = (e: MouseEvent) => {
+      if (!leaveRef.current.needs || e.defaultPrevented || e.button !== 0) return
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null
+      if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return
+      const href = a.getAttribute('href') ?? ''
+      if (!href.startsWith('/') || href.startsWith('//') || href.includes('#')) return
+      const message = leaveRef.current.dirty
+        ? 'Des modifications ne sont pas encore enregistrées. Quitter cette page ?'
+        : 'Votre brouillon est enregistré mais pas encore publié en version (Ctrl/Cmd+S). Quitter cette page ?'
+      if (!window.confirm(message)) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    document.addEventListener('click', onClick, true)
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      document.removeEventListener('click', onClick, true)
+    }
+  }, [])
 
   const addTag = useMutation({
     mutationFn: (tag: { tagId: string } | { name: string }) => attachTag(api, id, tag),
@@ -389,6 +585,7 @@ function EditSurface({ doc }: { doc: DocumentDetail }) {
   // Les erreurs d'envoi se dissipent dès que le brouillon change.
   useEffect(() => {
     setApprovalMsg(null)
+    setVersionMsg(null)
   }, [draft])
 
   const toggleComments = useCallback(() => {
@@ -459,6 +656,24 @@ function EditSurface({ doc }: { doc: DocumentDetail }) {
           Vous n&apos;avez pas le droit de modifier ce document : il est affiché en lecture seule.
         </EditNotice>
       )}
+      {serverDraft && draftStale && !draftBusy && (
+        <EditNotice testId="edit-draft-stale-banner" tone="warn">
+          Le document a changé depuis votre brouillon (version {serverDraft.baseVersionNo} → {doc.currentVersionNo}).{' '}
+          <Link to={`/docs/${id}/history`} target="_blank" rel="noopener" className="doc-back" data-testid="edit-draft-compare">
+            Comparer
+          </Link>
+          {' · '}
+          <button
+            type="button"
+            className="edit-retry"
+            disabled={draftBusy}
+            onClick={() => void abandonDraft()}
+            data-testid="edit-draft-abandon"
+          >
+            Abandonner le brouillon
+          </button>
+        </EditNotice>
+      )}
       <DocumentTabs {...tabProps} />
 
       <div className="edit-body">
@@ -467,6 +682,19 @@ function EditSurface({ doc }: { doc: DocumentDetail }) {
             {saveErr && autosave.status.kind === 'error' && (
               <p className="edit-alert edit-alert--error" role="alert" data-testid="edit-save-error">
                 {saveErr}
+              </p>
+            )}
+            {draftError && (
+              <p className="edit-alert edit-alert--error" role="alert" data-testid="edit-draft-error">
+                {draftError}
+              </p>
+            )}
+            {versionMsg && !draftError && (
+              <p className="edit-alert" role="status" data-testid="edit-version-msg">
+                {versionMsg}{' '}
+                <Link to={`/docs/${id}/history`} className="doc-back">
+                  Historique
+                </Link>
               </p>
             )}
             {approvalError && (
@@ -548,6 +776,7 @@ function EditSurface({ doc }: { doc: DocumentDetail }) {
             reviewCadence={reviewCadenceLabel(doc.stalenessThresholdDays)}
             tags={tags}
             canEditMeta={canEditMeta}
+            canManageGoverned={perms.canManageAccess}
             tagError={tagError}
             onAddTag={(t) => addTag.mutate(t)}
             onRemoveTag={(t) => removeTag.mutate(t)}

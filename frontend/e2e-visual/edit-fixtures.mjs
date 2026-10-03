@@ -112,6 +112,9 @@ export function editDocument() {
     // 14:22 à Paris (UTC+2 le 12 septembre) — « Brouillon enregistré à 14:22 »
     updatedAt: '2026-09-12T12:22:00.000Z',
     reliabilityScore: 91,
+    // Étiquettes non gouvernées (`governed: false`) : pas de cadenas, pixel-diff inchangé.
+    // Le rendu du cadenas est couvert par DocumentEditPage.test.tsx.
+    tags: d.tags.map((t) => ({ ...t, governed: false })),
   }
 }
 

@@ -15,6 +15,8 @@ export type TagRef = {
   id: string
   name: string
   color?: string | null
+  /** Étiquette de gouvernance : rattachement / retrait réservés aux propriétaires. */
+  governed?: boolean
 }
 
 /** Personne résolue depuis `users` (auteur, propriétaire). */

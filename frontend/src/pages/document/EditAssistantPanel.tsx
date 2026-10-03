@@ -139,12 +139,37 @@ export function AssistantHints({
 /* Tags                                                                 */
 /* ------------------------------------------------------------------ */
 
+const GOVERNED_TAG_TITLE = 'Étiquette de gouvernance — réservée aux propriétaires'
+
+function LockIcon() {
+  return (
+    <svg
+      className="edit-tag-lock"
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      data-testid="tag-lock"
+    >
+      <rect x="3" y="7" width="10" height="7" rx="1.5" />
+      <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+    </svg>
+  )
+}
+
 function TagAdder({
   attached,
+  canManageGoverned,
   onAdd,
   onClose,
 }: {
   attached: TagRef[]
+  canManageGoverned: boolean
   onAdd: (tag: { tagId: string } | { name: string }) => void
   onClose: () => void
 }) {
@@ -166,8 +191,11 @@ function TagAdder({
   const exact = options.find((o) => o.name.toLowerCase() === typed.toLowerCase())
   const showCreate = typed.length > 0 && !exact && !attached.some((t) => t.name.toLowerCase() === typed.toLowerCase())
 
+  const blocked = (t: TagRef | undefined) => Boolean(t?.governed) && !canManageGoverned
+
   const choose = (i: number) => {
     const opt = options[i]
+    if (blocked(opt)) return
     if (opt) onAdd({ tagId: opt.id })
     else if (typed) onAdd({ name: typed })
     onClose()
@@ -205,6 +233,8 @@ function TagAdder({
           } else if (e.key === 'Enter') {
             e.preventDefault()
             if (!typed && options.length === 0) return onClose()
+            // Étiquette de gouvernance sans droit de propriétaire : rien à ajouter.
+            if (blocked(exact) || (!exact && !showCreate && blocked(options[active]))) return
             // Texte saisi identique à une suggestion → cette étiquette ; sinon celle surlignée / création.
             if (exact) onAdd({ tagId: exact.id })
             else if (options[active] && !showCreate) onAdd({ tagId: options[active]!.id })
@@ -222,12 +252,15 @@ function TagAdder({
               key={o.id}
               role="option"
               aria-selected={i === active}
-              className={i === active ? 'is-active' : undefined}
+              aria-disabled={blocked(o) || undefined}
+              title={blocked(o) ? GOVERNED_TAG_TITLE : undefined}
+              className={[i === active ? 'is-active' : '', blocked(o) ? 'is-disabled' : ''].filter(Boolean).join(' ') || undefined}
               onMouseDown={(e) => {
                 e.preventDefault()
                 choose(i)
               }}
             >
+              {o.governed && <LockIcon />}
               {o.name}
             </li>
           ))}
@@ -254,12 +287,15 @@ function TagAdder({
 function TagsBlock({
   tags,
   canEdit,
+  canManageGoverned,
   error,
   onAdd,
   onRemove,
 }: {
   tags: TagRef[]
   canEdit: boolean
+  /** Propriétaire : peut rattacher / retirer les étiquettes de gouvernance. */
+  canManageGoverned: boolean
   error: string | null
   onAdd: (tag: { tagId: string } | { name: string }) => void
   onRemove: (tag: TagRef) => void
@@ -281,6 +317,11 @@ function TagsBlock({
               data-mock-id={i === 0 ? 'edit-meta-tag' : undefined}
               data-testid="edit-tag"
             >
+              {t.governed && (
+                <span title={GOVERNED_TAG_TITLE} style={{ display: 'inline-flex' }}>
+                  <LockIcon />
+                </span>
+              )}
               {t.name}
               {canEdit && (
                 <button
@@ -288,6 +329,8 @@ function TagsBlock({
                   className="edit-tag-x"
                   style={{ color: tagCloseColor(c.fg) }}
                   aria-label={`Retirer le tag ${t.name}`}
+                  disabled={t.governed && !canManageGoverned ? true : undefined}
+                  title={t.governed && !canManageGoverned ? GOVERNED_TAG_TITLE : undefined}
                   onClick={() => onRemove(t)}
                 >
                   ×
@@ -298,7 +341,12 @@ function TagsBlock({
         })}
         {canEdit &&
           (adding ? (
-            <TagAdder attached={tags} onAdd={onAdd} onClose={() => setAdding(false)} />
+            <TagAdder
+              attached={tags}
+              canManageGoverned={canManageGoverned}
+              onAdd={onAdd}
+              onClose={() => setAdding(false)}
+            />
           ) : (
             <button
               type="button"
@@ -449,6 +497,8 @@ export type EditAssistantPanelProps = AssistantHintsProps & {
   tags: TagRef[]
   /** Droit d'édition ET verrou détenu : tags / champs modifiables. */
   canEditMeta: boolean
+  /** Propriétaire du document (canManageAccess) : gère les étiquettes de gouvernance. */
+  canManageGoverned?: boolean
   tagError: string | null
   onAddTag: (tag: { tagId: string } | { name: string }) => void
   onRemoveTag: (tag: TagRef) => void
@@ -497,6 +547,7 @@ export function EditAssistantPanel(p: EditAssistantPanelProps) {
         <TagsBlock
           tags={p.tags}
           canEdit={p.canEditMeta}
+          canManageGoverned={Boolean(p.canManageGoverned)}
           error={p.tagError}
           onAdd={p.onAddTag}
           onRemove={p.onRemoveTag}

@@ -138,8 +138,19 @@ async function injectOidcSession(page) {
  * @param {import('@playwright/test').Page} page
  * @param {{ lockHolder?: string|null, putCalls?: Array<Record<string, unknown>> }} [opts]
  */
-async function mockEditApis(page, { lockHolder = null, putCalls = [] } = {}) {
-  const doc = editDocument()
+async function mockEditApis(page, { lockHolder = null, putCalls = [], draftPutCalls = [], tags } = {}) {
+  const doc = tags ? { ...editDocument(), tags } : editDocument()
+  // Brouillon autosave : aucun brouillon à l'ouverture (404) ; PUT = écho + updatedAt.
+  await page.route(`**/api/v1/documents/${EDIT_DOC_ID}/draft`, (route) => {
+    const req = route.request()
+    if (req.method() === 'PUT') {
+      const payload = req.postDataJSON()
+      draftPutCalls.push(payload)
+      return json(route, { ...payload, updatedAt: new Date(VISUAL_NOW + 60_000).toISOString() })
+    }
+    if (req.method() === 'DELETE') return route.fulfill({ status: 204 })
+    return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+  })
   await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
   await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
   await page.route(`**/api/v1/documents/${EDIT_DOC_ID}`, (route) => {
@@ -346,9 +357,10 @@ test.describe('document edit structural', () => {
 })
 
 test.describe('document edit behaviour', () => {
-  test('autosave : une frappe déclenche un seul PUT après ~1 s et met à jour l’état', async ({ page }) => {
+  test('autosave : une frappe déclenche un seul PUT brouillon après ~1 s (aucune version)', async ({ page }) => {
     const putCalls = []
-    await prep(page, { putCalls })
+    const draftPutCalls = []
+    await prep(page, { putCalls, draftPutCalls })
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(`/docs/${EDIT_DOC_ID}/edit`)
     await page.waitForSelector('[data-mock-id="edit-title"]')
@@ -357,16 +369,26 @@ test.describe('document edit behaviour', () => {
     // L'ouverture seule (acquisition du verrou, normalisation TipTap) n'enregistre rien.
     await page.waitForTimeout(1500)
     expect(putCalls).toHaveLength(0)
+    expect(draftPutCalls).toHaveLength(0)
 
     await page.click('.ProseMirror p')
     await page.keyboard.press('Control+Home')
     await page.keyboard.type('ajout ')
     await expect(page.getByTestId('edit-save-status')).toHaveText('Enregistrement…')
-    await expect.poll(() => putCalls.length, { timeout: 5000 }).toBe(1)
+    await expect.poll(() => draftPutCalls.length, { timeout: 5000 }).toBe(1)
     await expect(page.getByTestId('edit-save-status')).toContainText('Brouillon enregistré à')
-    expect(JSON.stringify(putCalls[0].body)).toContain('ajout')
-    expect(putCalls[0].expectedVersionNo).toBe(12)
+    expect(JSON.stringify(draftPutCalls[0].body)).toContain('ajout')
+    expect(draftPutCalls[0].baseVersionNo).toBe(12)
+    // L'autosave n'appelle jamais updateDocument : aucune version créée.
+    expect(putCalls).toHaveLength(0)
     await expect(page.getByTestId('edit-word-count')).toContainText('1 241 mots')
+
+    // Ctrl+S : version explicite (un seul PUT du document).
+    await page.keyboard.press('Control+s')
+    await expect.poll(() => putCalls.length, { timeout: 5000 }).toBe(1)
+    expect(putCalls[0].expectedVersionNo).toBe(12)
+    expect(JSON.stringify(putCalls[0].body)).toContain('ajout')
+    await expect(page.getByTestId('edit-version-msg')).toBeVisible()
   })
 
   test('verrou détenu par un autre : bandeau, avatar du détenteur, lecture seule', async ({ page }) => {

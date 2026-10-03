@@ -898,6 +898,35 @@ a.edit-crumb:hover {
   filter: brightness(0.8);
 }
 
+/* Étiquette de gouvernance : cadenas (jamais rendu pour les tags non gouvernés) */
+.edit-tag-lock {
+  flex: none;
+  vertical-align: -1px;
+}
+
+.edit-tag-x:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.edit-tag-x:disabled:hover {
+  filter: none;
+}
+
+.edit-tag-list li .edit-tag-lock {
+  margin-right: 5px;
+  color: #9b9ba1;
+}
+
+.edit-tag-list li.is-disabled {
+  color: #9b9ba1;
+  cursor: not-allowed;
+}
+
+.edit-tag-list li.is-disabled:hover {
+  background: transparent;
+}
+
 .edit-add {
   font-family: inherit;
   font-size: 11.5px;

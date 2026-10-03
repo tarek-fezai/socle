@@ -75,6 +75,26 @@ describe('useAutosave', () => {
     expect(save).not.toHaveBeenCalled()
   })
 
+  it('affiche l’instant renvoyé par l’enregistrement (resolveSavedAt)', async () => {
+    const save = vi.fn().mockResolvedValue({ updatedAt: '2026-09-12T13:05:00Z' })
+    const { result, rerender } = renderHook(
+      ({ value }: { value: V }) =>
+        useAutosave<V>({
+          value,
+          initial: { title: 'A' },
+          enabled: true,
+          save,
+          resolveSavedAt: (r) => new Date((r as { updatedAt: string }).updatedAt),
+        }),
+      { initialProps: { value: { title: 'A' } } },
+    )
+    rerender({ value: { title: 'B' } })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1100)
+    })
+    expect(result.current.status).toEqual({ kind: 'saved', at: new Date('2026-09-12T13:05:00Z') })
+  })
+
   it('flush enregistre immédiatement', async () => {
     const save = vi.fn().mockResolvedValue({})
     const { result, rerender } = setup(save)

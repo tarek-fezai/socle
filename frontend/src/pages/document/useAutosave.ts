@@ -18,6 +18,8 @@ type Options<T> = {
   delayMs?: number
   /** Message d'erreur affichable à partir de l'exception. */
   describeError?: (e: unknown) => string
+  /** Instant affiché après un enregistrement réussi, tiré de sa réponse (défaut : l'horloge locale). */
+  resolveSavedAt?: (result: unknown) => Date | null | undefined
   now?: () => Date
 }
 
@@ -44,6 +46,7 @@ export function useAutosave<T>({
   initialSavedAt = null,
   delayMs = AUTOSAVE_DELAY_MS,
   describeError,
+  resolveSavedAt,
   now = () => new Date(),
 }: Options<T>): Autosave {
   const keyOf = (v: T) => JSON.stringify(v)
@@ -53,6 +56,8 @@ export function useAutosave<T>({
   saveRef.current = save
   const describeRef = useRef(describeError)
   describeRef.current = describeError
+  const resolveRef = useRef(resolveSavedAt)
+  resolveRef.current = resolveSavedAt
   const nowRef = useRef(now)
   nowRef.current = now
 
@@ -84,9 +89,12 @@ export function useAutosave<T>({
         const snapKey = keyOf(snapshot)
         if (mounted.current) setStatus({ kind: 'saving' })
         try {
-          await saveRef.current(snapshot)
+          const result = await saveRef.current(snapshot)
           savedKey.current = snapKey
-          if (mounted.current) setStatus({ kind: 'saved', at: nowRef.current() })
+          if (mounted.current) {
+            const at = resolveRef.current?.(result)
+            setStatus({ kind: 'saved', at: at && !Number.isNaN(at.getTime()) ? at : nowRef.current() })
+          }
         } catch (e) {
           ok = false
           if (mounted.current) {
