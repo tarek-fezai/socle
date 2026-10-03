@@ -104,6 +104,12 @@
       <version>7.1.0.202411261347-r</version>
     </dependency>
     <dependency>
+      <!-- Apache-2.0 : diff Myers ligne/mot pour la comparaison de versions (Historique). -->
+      <groupId>io.github.java-diff-utils</groupId>
+      <artifactId>java-diff-utils</artifactId>
+      <version>4.15</version>
+    </dependency>
+    <dependency>
       <groupId>com.github.librepdf</groupId>
       <artifactId>openpdf</artifactId>
       <version>2.0.3</version>

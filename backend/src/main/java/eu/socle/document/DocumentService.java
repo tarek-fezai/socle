@@ -15,6 +15,7 @@ import eu.socle.document.DocumentDtos.DocumentResponse;
 import eu.socle.document.DocumentDtos.DocumentSummary;
 import eu.socle.document.DocumentDtos.PersonRef;
 import eu.socle.document.DocumentDtos.UpdateDocumentRequest;
+import eu.socle.document.DocumentDtos.VersionCompareResponse;
 import eu.socle.document.DocumentDtos.VersionDetail;
 import eu.socle.document.DocumentDtos.VersionDiffResponse;
 import eu.socle.document.DocumentDtos.VersionPage;
@@ -63,6 +64,7 @@ public class DocumentService {
     private final DocumentLinkService documentLinkService;
     private final TemplateService templateService;
     private ActivityEventService activityEventService;
+    private DiffProperties diffProperties;
 
     /**
      * Constructeur tests unitaires — provider relational implicite ;
@@ -173,6 +175,11 @@ public class DocumentService {
     @Autowired(required = false)
     void setActivityEventService(ActivityEventService activityEventService) {
         this.activityEventService = activityEventService;
+    }
+
+    @Autowired(required = false)
+    void setDiffProperties(DiffProperties diffProperties) {
+        this.diffProperties = diffProperties;
     }
 
     private static final int DEFAULT_LIST_LIMIT = 20;
@@ -570,20 +577,128 @@ public class DocumentService {
     public VersionPage listVersions(Jwt jwt, UUID documentId, int offset, int limit) {
         var user = userSyncService.syncFromJwt(jwt);
         authorizationService.requireDocumentRelation(user.getId(), documentId, "viewer");
-        require(documentId);
+        DocumentEntity document = require(documentId);
         int safeLimit = Math.min(Math.max(limit, 1), MAX_VERSION_LIMIT);
         int safeOffset = Math.max(offset, 0);
         int page = safeOffset / safeLimit;
         Page<DocumentStore.StoredVersion> result = documentStore.listVersions(documentId, page, safeLimit);
-        List<VersionSummary> items = result.getContent().stream()
-                .map(v -> new VersionSummary(
-                        v.versionNo(),
-                        v.authorId(),
-                        v.archivedBy(),
-                        v.changeSummary(),
-                        v.createdAt()))
-                .toList();
-        return new VersionPage(items, safeOffset, safeLimit, result.getTotalElements());
+        List<DocumentStore.StoredVersion> content = result.getContent();
+
+        // Auteurs : une seule requête groupée ; auteur null → « Système (migration) ».
+        UUID[] authorIds = content.stream()
+                .map(DocumentStore.StoredVersion::authorId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toArray(UUID[]::new);
+        Map<UUID, PersonRef> people = resolvePeople(authorIds);
+
+        // Statistiques de lignes : calculées à la lecture pour cette page uniquement, aucune écriture.
+        int maxLines = diffMaxLines();
+        Map<Integer, List<String>> linesCache = new HashMap<>();
+        List<VersionSummary> items = new ArrayList<>(content.size());
+        for (DocumentStore.StoredVersion v : content) {
+            int[] stats = lineStats(documentId, v.versionNo(), linesCache, maxLines);
+            String name = VersionSummary.SYSTEM_AUTHOR_LABEL;
+            String initials = VersionSummary.SYSTEM_AUTHOR_INITIALS;
+            if (v.authorId() != null) {
+                PersonRef p = people.get(v.authorId());
+                if (p == null) {
+                    p = PersonRef.deleted(v.authorId());
+                }
+                name = p.displayName();
+                initials = p.initials();
+            }
+            items.add(new VersionSummary(
+                    v.versionNo(),
+                    v.authorId(),
+                    v.archivedBy(),
+                    v.changeSummary(),
+                    v.createdAt(),
+                    name,
+                    initials,
+                    stats[0],
+                    stats[1],
+                    v.versionNo() == document.getCurrentVersionNo()));
+        }
+        return new VersionPage(List.copyOf(items), safeOffset, safeLimit, result.getTotalElements());
+    }
+
+    /**
+     * {@code [added, removed]} de la version {@code versionNo} vs la précédente ({@code n-1}).
+     * Sans version précédente (v1, trou de numérotation) : tout le contenu est « ajouté ».
+     * Au-delà du plafond de lignes : approximation par différence de taille (pas de diff).
+     */
+    private int[] lineStats(UUID documentId, int versionNo, Map<Integer, List<String>> cache, int maxLines) {
+        List<String> current = archivedLines(documentId, versionNo, cache);
+        if (current == null) {
+            return new int[] {0, 0};
+        }
+        List<String> previous = versionNo > 1 ? archivedLines(documentId, versionNo - 1, cache) : null;
+        if (previous == null) {
+            return new int[] {MarkdownLineDiff.nonBlankCount(current), 0};
+        }
+        if (current.size() > maxLines || previous.size() > maxLines) {
+            int delta = MarkdownLineDiff.nonBlankCount(current) - MarkdownLineDiff.nonBlankCount(previous);
+            return new int[] {Math.max(delta, 0), Math.max(-delta, 0)};
+        }
+        return MarkdownLineDiff.stats(previous, current);
+    }
+
+    private List<String> archivedLines(UUID documentId, int versionNo, Map<Integer, List<String>> cache) {
+        if (cache.containsKey(versionNo)) {
+            return cache.get(versionNo);
+        }
+        List<String> lines = null;
+        if (documentStore.findVersion(documentId, versionNo).isPresent()) {
+            lines = MarkdownLineDiff.linesOf(documentStore.loadVersionBody(documentId, versionNo));
+        }
+        cache.put(versionNo, lines);
+        return lines;
+    }
+
+    private int diffMaxLines() {
+        return diffProperties == null ? DiffProperties.DEFAULT_MAX_LINES : diffProperties.getMaxLines();
+    }
+
+    /**
+     * Comparaison Markdown ligne à ligne de deux versions (archivées ou courante) du corps
+     * <strong>stocké</strong> — les transclusions ne sont jamais résolues. Viewer suffit.
+     */
+    @Transactional(readOnly = true)
+    public VersionCompareResponse compare(Jwt jwt, UUID documentId, int versionA, int versionB, String mode) {
+        if (mode != null && !mode.isBlank() && !"lines".equals(mode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mode non supporté : " + mode);
+        }
+        var user = userSyncService.syncFromJwt(jwt);
+        authorizationService.requireDocumentRelation(user.getId(), documentId, "viewer");
+        DocumentEntity document = require(documentId);
+        int maxLines = diffMaxLines();
+        List<String> before = compareLines(document, versionA, maxLines);
+        List<String> after = compareLines(document, versionB, maxLines);
+        MarkdownLineDiff.Result diff = MarkdownLineDiff.compare(before, after);
+        return new VersionCompareResponse(
+                documentId, versionA, versionB, diff.added(), diff.removed(), diff.hunks());
+    }
+
+    private List<String> compareLines(DocumentEntity document, int versionNo, int maxLines) {
+        Map<String, Object> body;
+        if (versionNo == document.getCurrentVersionNo()) {
+            body = documentStore.readCurrentContent(document.getId(), document.getBody());
+        } else {
+            documentStore.findVersion(document.getId(), versionNo)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Version " + versionNo + " introuvable pour ce document"));
+            body = documentStore.loadVersionBody(document.getId(), versionNo);
+        }
+        List<String> lines = MarkdownLineDiff.linesOf(body);
+        if (lines.size() > maxLines) {
+            throw new ResponseStatusException(
+                    HttpStatus.PAYLOAD_TOO_LARGE,
+                    "Version " + versionNo + " trop volumineuse pour la comparaison ("
+                            + lines.size() + " lignes, maximum " + maxLines + ")");
+        }
+        return lines;
     }
 
     @Transactional(readOnly = true)

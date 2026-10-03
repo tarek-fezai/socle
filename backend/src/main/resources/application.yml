@@ -104,6 +104,9 @@ socle:
   writing-assistant:
     # Seuil (mots) au-delà duquel un paragraphe est signalé « trop long » par l'assistant d'écriture.
     long-paragraph-words: ${SOCLE_WRITING_ASSISTANT_LONG_PARAGRAPH_WORDS:120}
+  diff:
+    # Plafond de lignes Markdown par version pour la comparaison (Historique) — 413 au-delà.
+    max-lines: ${SOCLE_DIFF_MAX_LINES:20000}
   edit-lock:
     heartbeat-seconds: ${SOCLE_EDIT_LOCK_HEARTBEAT_SECONDS:15}
     ttl-seconds: ${SOCLE_EDIT_LOCK_TTL_SECONDS:45}

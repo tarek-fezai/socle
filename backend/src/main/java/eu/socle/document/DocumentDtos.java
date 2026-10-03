@@ -294,13 +294,70 @@ public final class DocumentDtos {
         }
     }
 
+    /**
+     * Version archivée. Champs ajoutés (additifs, rétro-compatibles) pour l'écran Historique :
+     * {@code authorDisplayName} / {@code authorInitials} (auteur null → « Système (migration) »),
+     * {@code linesAdded} / {@code linesRemoved} (calculés à la lecture vs la version précédente),
+     * {@code current} (version courante du document).
+     */
     public record VersionSummary(
             int versionNo,
             UUID authorId,
             UUID archivedBy,
             String changeSummary,
-            Instant createdAt
+            Instant createdAt,
+            String authorDisplayName,
+            String authorInitials,
+            int linesAdded,
+            int linesRemoved,
+            boolean current
+    ) {
+        public static final String SYSTEM_AUTHOR_LABEL = "Système (migration)";
+        public static final String SYSTEM_AUTHOR_INITIALS = "\u2699";
+
+        /** Compat : sans enrichissement. */
+        public VersionSummary(
+                int versionNo,
+                UUID authorId,
+                UUID archivedBy,
+                String changeSummary,
+                Instant createdAt
+        ) {
+            this(versionNo, authorId, archivedBy, changeSummary, createdAt, null, null, 0, 0, false);
+        }
+    }
+
+    /** Réponse de {@code GET /documents/{id}/versions/{a}/compare/{b}?mode=lines}. */
+    public record VersionCompareResponse(
+            UUID documentId,
+            int fromVersion,
+            int toVersion,
+            int added,
+            int removed,
+            List<CompareHunk> hunks
     ) {}
+
+    /**
+     * @param header titre (Markdown ou TipTap) le plus proche au-dessus du hunk, sinon {@code ""}
+     * @param collapsedUnchanged lignes inchangées repliées (hunk sans {@code lines}) ; 0 si déplié
+     */
+    public record CompareHunk(String header, List<CompareLine> lines, int collapsedUnchanged) {}
+
+    /**
+     * @param kind {@code context | add | del}
+     * @param spans surlignage mot à mot (lignes modifiées appariées) ; absent sinon
+     */
+    public record CompareLine(
+            String kind,
+            Integer oldNo,
+            Integer newNo,
+            String text,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+            List<CompareSpan> spans
+    ) {}
+
+    /** @param kind {@code eq | add | del} */
+    public record CompareSpan(String kind, String text) {}
 
     public record VersionPage(
             List<VersionSummary> items,

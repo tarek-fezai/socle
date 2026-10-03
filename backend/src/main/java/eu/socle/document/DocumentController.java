@@ -157,6 +157,21 @@ public class DocumentController {
         return service.diff(jwt, id, versionA, versionB);
     }
 
+    /**
+     * Comparaison Markdown ligne à ligne (écran Historique). Corps stocké, transclusions non
+     * résolues. 413 si une version dépasse {@code socle.diff.max-lines}.
+     */
+    @GetMapping("/{id}/versions/{a}/compare/{b}")
+    public DocumentDtos.VersionCompareResponse compareVersions(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @PathVariable("a") int versionA,
+            @PathVariable("b") int versionB,
+            @RequestParam(defaultValue = "lines") String mode
+    ) {
+        return service.compare(jwt, id, versionA, versionB, mode);
+    }
+
     @PostMapping("/{id}/versions/{versionNo}/restore")
     public DocumentResponse restoreVersion(
             @AuthenticationPrincipal Jwt jwt,
