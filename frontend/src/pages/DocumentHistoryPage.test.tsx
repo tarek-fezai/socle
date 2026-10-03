@@ -87,6 +87,7 @@ const VERSIONS = {
       createdAt: local(2026, 9, 12, 14, 22),
       linesAdded: 18,
       linesRemoved: 4,
+      current: true,
     },
     {
       versionNo: 11,
@@ -97,6 +98,7 @@ const VERSIONS = {
       createdAt: local(2026, 9, 3, 9, 41),
       linesAdded: 32,
       linesRemoved: 0,
+      current: false,
     },
     {
       versionNo: 9,
@@ -107,6 +109,7 @@ const VERSIONS = {
       createdAt: local(2026, 7, 14, 11, 0),
       linesAdded: 210,
       linesRemoved: 0,
+      current: false,
     },
   ],
   offset: 0,
@@ -325,17 +328,36 @@ describe('DocumentHistoryPage', () => {
     expect(restoreVersion).not.toHaveBeenCalled()
   })
 
-  it('version courante absente de la réponse : reconstituée depuis le document', async () => {
-    listVersions.mockResolvedValue({ ...VERSIONS, items: VERSIONS.items.slice(1), total: 2 })
-    getDocument.mockResolvedValue(
-      docDetail({ updatedBy: { id: ME, displayName: 'Tarek Fezai', initials: 'TF' } }),
-    )
+  it('document de 45 versions : première ligne = courante avec badge, résumé et compteurs', async () => {
+    const items = Array.from({ length: 20 }, (_, i) => {
+      const versionNo = 45 - i
+      return {
+        versionNo,
+        authorId: ME,
+        authorDisplayName: 'Tarek Fezai',
+        authorInitials: 'TF',
+        changeSummary: versionNo === 45 ? 'Résumé de la version courante' : `Résumé v${versionNo}`,
+        createdAt: local(2026, 9, 12, 14, 22),
+        linesAdded: versionNo === 45 ? 18 : 2,
+        linesRemoved: versionNo === 45 ? 4 : 1,
+        current: versionNo === 45,
+      }
+    })
+    listVersions.mockResolvedValue({ items, offset: 0, limit: 50, total: 45 })
+    getDocument.mockResolvedValue(docDetail({ currentVersionNo: 45 }))
     render(wrap(<DocumentHistoryPage />))
-    const row12 = await screen.findByTestId('history-row-12')
-    expect(within(row12).getByTestId('history-current-badge')).toBeTruthy()
-    expect(within(row12).getByText('Aucun résumé')).toBeTruthy()
-    // 2 archivées + la courante
-    expect(screen.getByTestId('history-count').textContent).toMatch(/^3 versions/)
+
+    const first = await screen.findByTestId('history-row-45')
+    expect(within(first).getByTestId('history-current-badge')).toBeTruthy()
+    expect(within(first).getByText('Résumé de la version courante')).toBeTruthy()
+    expect(within(first).getByText('+18')).toBeTruthy()
+    expect(within(first).getByText('\u22124')).toBeTruthy()
+    expect(screen.getByTestId('history-count').textContent).toBe(
+      '45 versions publiées depuis la création du document',
+    )
+    // Ordre serveur : la courante est bien la première ligne de la liste.
+    const rows = screen.getAllByTestId(/history-row-/)
+    expect(rows[0]).toBe(first)
   })
 
   it('pagination : « Afficher les versions précédentes » charge la page suivante', async () => {

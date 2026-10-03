@@ -103,16 +103,14 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
 
   const loaded = useMemo(() => versions.data?.pages.flatMap((p) => p.items) ?? [], [versions.data])
   const total = versions.data?.pages[0]?.total ?? 0
-  // La version courante n'est reconstituée que si le serveur l'a omise et que tout est chargé.
-  const { rows, synthesizedCurrent } = useMemo(
+  const rows = useMemo(
     () =>
       buildVersionRows(loaded, doc, {
-        includeCurrent: versions.isSuccess && !versions.hasNextPage,
         hasMore: Boolean(versions.hasNextPage),
       }),
-    [loaded, doc, versions.isSuccess, versions.hasNextPage],
+    [loaded, doc, versions.hasNextPage],
   )
-  const count = total + (synthesizedCurrent ? 1 : 0)
+  const count = total
   const currentRow = rows.find((r) => r.isCurrent)
 
   const restore = useMutation({

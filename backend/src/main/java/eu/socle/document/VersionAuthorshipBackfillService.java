@@ -20,6 +20,11 @@ import java.util.UUID;
  * et {@code documents.updated_by} depuis l'ancienne sémantique
  * (author_id = qui a remplacé la version).
  * Journalisé dans {@code authz_migrations} sous {@value BACKFILL_NAME}.
+ *
+ * <p>Détection des soumissions via {@link #SUBMISSION_SUMMARY} sur
+ * {@code change_summary} : après {@code version-change-summary-v1}, ce libellé
+ * est sur la version créée par la soumission (et non plus sur l'archive N).
+ * La règle « auteur = auteur de N−1 » reste valide (contenu inchangé).
  */
 @Service
 public class VersionAuthorshipBackfillService {

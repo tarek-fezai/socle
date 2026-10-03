@@ -124,9 +124,9 @@ function CompareSurface({ doc }: { doc: DocumentDetail }) {
     queryKey: ['document-versions-all', id],
     queryFn: () => listAllVersions(api, id),
   })
-  const { rows } = useMemo(
-    () => buildVersionRows(all.data?.items ?? [], doc, { includeCurrent: all.isSuccess }),
-    [all.data, all.isSuccess, doc],
+  const rows = useMemo(
+    () => buildVersionRows(all.data?.items ?? [], doc),
+    [all.data, doc],
   )
   const numbers = rows.map((r) => r.versionNo)
 

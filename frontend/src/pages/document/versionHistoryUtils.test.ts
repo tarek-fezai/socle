@@ -86,37 +86,23 @@ describe('versionAuthor', () => {
 })
 
 describe('buildVersionRows', () => {
-  const doc = { currentVersionNo: 3, updatedAt: local(2026, 9, 12, 14, 22) }
+  const doc = { currentVersionNo: 3 }
 
   it('trie du plus récent au plus ancien et marque la version courante', () => {
-    const { rows, synthesizedCurrent } = buildVersionRows([v(1), v(3), v(2)], doc)
+    const rows = buildVersionRows([v(1), v(3, { current: true }), v(2)], doc)
     expect(rows.map((r) => r.versionNo)).toEqual([3, 2, 1])
     expect(rows.map((r) => r.isCurrent)).toEqual([true, false, false])
     expect(rows.map((r) => r.previousVersionNo)).toEqual([2, 1, null])
-    expect(synthesizedCurrent).toBe(false)
   })
 
-  it('reconstitue la version courante si le serveur l’omet', () => {
-    const { rows, synthesizedCurrent } = buildVersionRows([v(2), v(1)], {
-      ...doc,
-      updatedBy: { id: 'u9', displayName: 'Tarek Fezai', initials: 'TF' },
-    })
-    expect(synthesizedCurrent).toBe(true)
-    expect(rows[0]).toMatchObject({
-      versionNo: 3,
-      isCurrent: true,
-      authorId: 'u9',
-      authorDisplayName: 'Tarek Fezai',
-      previousVersionNo: 2,
-    })
-  })
-
-  it('ne reconstitue rien si includeCurrent est faux', () => {
-    expect(buildVersionRows([v(2)], doc, { includeCurrent: false }).rows.map((r) => r.versionNo)).toEqual([2])
+  it('ne reconstitue pas la version courante côté client', () => {
+    const rows = buildVersionRows([v(2), v(1)], doc)
+    expect(rows.map((r) => r.versionNo)).toEqual([2, 1])
+    expect(rows.every((r) => !r.isCurrent)).toBe(true)
   })
 
   it('d’autres pages existent : la dernière ligne chargée garde v-1 comme précédente', () => {
-    const { rows } = buildVersionRows([v(3), v(2)], doc, { hasMore: true })
+    const rows = buildVersionRows([v(3, { current: true }), v(2)], doc, { hasMore: true })
     expect(rows.at(-1)?.previousVersionNo).toBe(1)
   })
 })

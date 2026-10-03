@@ -108,9 +108,11 @@ class DocumentVersionListStatsTest {
 
         VersionPage page = service.listVersions(jwt(), DOC, 0, 20);
 
-        assertThat(page.total()).isEqualTo(2); // archivées : v1, v2
-        VersionSummary v2 = page.items().get(0);
-        VersionSummary v1 = page.items().get(1);
+        assertThat(page.total()).isEqualTo(3); // courante + 2 archivées
+        VersionSummary v3 = page.items().get(0);
+        VersionSummary v2 = page.items().get(1);
+        VersionSummary v1 = page.items().get(2);
+        assertThat(v3.versionNo()).isEqualTo(3);
         assertThat(v2.versionNo()).isEqualTo(2);
         assertThat(v1.versionNo()).isEqualTo(1);
 
@@ -118,8 +120,11 @@ class DocumentVersionListStatsTest {
         assertThat(v1.linesRemoved()).isZero();
         assertThat(v2.linesAdded()).isEqualTo(3);
         assertThat(v2.linesRemoved()).isEqualTo(3);
+        assertThat(v3.linesAdded()).isZero(); // courant = même corps que v2 archivée
+        assertThat(v3.linesRemoved()).isZero();
         assertThat(v1.current()).isFalse();
         assertThat(v2.current()).isFalse();
+        assertThat(v3.current()).isTrue();
     }
 
     @ParameterizedTest
@@ -128,9 +133,12 @@ class DocumentVersionListStatsTest {
         setUp(provider, List.of(bodyOfParagraphs(2, 99), bodyOfParagraphs(2, 1), bodyOfParagraphs(2, 1)));
 
         VersionPage page = service.listVersions(jwt(), DOC, 0, 20);
-        VersionSummary v2 = page.items().get(0);
-        VersionSummary v1 = page.items().get(1);
+        VersionSummary current = page.items().get(0);
+        VersionSummary v2 = page.items().get(1);
+        VersionSummary v1 = page.items().get(2);
 
+        assertThat(current.current()).isTrue();
+        assertThat(current.authorId()).isEqualTo(ALICE);
         assertThat(v2.authorId()).isEqualTo(ALICE);
         assertThat(v2.authorDisplayName()).isEqualTo("Alice Martin");
         assertThat(v2.authorInitials()).isEqualTo("AM");
@@ -157,16 +165,18 @@ class DocumentVersionListStatsTest {
         VersionPage page = service.listVersions(jwt(), DOC, 0, 20);
 
         assertThat(page.items()).hasSize(20);
-        assertThat(page.total()).isEqualTo(25);
-        assertThat(page.items().get(0).versionNo()).isEqualTo(25);
-        assertThat(page.items().get(19).versionNo()).isEqualTo(6);
+        assertThat(page.total()).isEqualTo(26); // 25 archivées + courante
+        assertThat(page.items().get(0).versionNo()).isEqualTo(26);
+        assertThat(page.items().get(0).current()).isTrue();
+        assertThat(page.items().get(1).versionNo()).isEqualTo(25);
+        assertThat(page.items().get(19).versionNo()).isEqualTo(7);
         // v2→v10 modifient 1 paragraphe de plus à chaque fois ; v>=10 identiques à leur précédente
-        VersionSummary v6 = page.items().get(19);
-        assertThat(v6.linesAdded()).isEqualTo(1);
-        assertThat(v6.linesRemoved()).isEqualTo(1);
-        VersionSummary v25 = page.items().get(0);
-        assertThat(v25.linesAdded()).isZero();
-        assertThat(v25.linesRemoved()).isZero();
+        VersionSummary v7 = page.items().get(19);
+        assertThat(v7.linesAdded()).isEqualTo(1);
+        assertThat(v7.linesRemoved()).isEqualTo(1);
+        VersionSummary current = page.items().get(0);
+        assertThat(current.linesAdded()).isZero();
+        assertThat(current.linesRemoved()).isZero();
 
         // Aucune écriture : ni version, ni document, ni SQL de mise à jour.
         assertThat(versions.rows).hasSize(savesBefore);
@@ -186,7 +196,8 @@ class DocumentVersionListStatsTest {
 
         VersionPage page = service.listVersions(jwt(), DOC, 0, 20);
 
-        VersionSummary v2 = page.items().get(0);
+        VersionSummary v2 = page.items().get(1); // [courante v3, v2, v1]
+        assertThat(v2.versionNo()).isEqualTo(2);
         assertThat(v2.linesAdded()).isEqualTo(3);   // 8 - 5 paragraphes non vides
         assertThat(v2.linesRemoved()).isZero();
     }

@@ -92,7 +92,8 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                 documentId, approvalRequestId, temporalWorkflowId, firstStepOrder);
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT current_version_no, body, git_head_sha, updated_by, created_by
+                SELECT current_version_no, body, git_head_sha, updated_by, created_by,
+                       current_change_summary
                   FROM documents
                  WHERE id = ? AND deleted_at IS NULL
                 """, documentId);
@@ -109,33 +110,38 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         if (contentAuthorId == null) {
             contentAuthorId = toUuid(docRow.get("created_by"));
         }
+        Object rawSummary = docRow.get("current_change_summary");
+        String archivedSummary = rawSummary == null ? null : String.valueOf(rawSummary);
+        String submissionSummary = "Soumission pour approbation";
 
         // Archive + bump via DocumentStore — contenu identique : author = auteur du contenu,
         // archived_by / committer = demandeur. updated_by inchangé (pas de mutation de contenu).
+        // Résumé archivé = résumé du contenu ; résumé courant = motif de soumission.
         documentStore.archiveVersion(
                 documentId,
                 submittedVersionNo,
                 body,
                 contentAuthorId,
                 requesterId,
-                "Soumission pour approbation");
+                archivedSummary);
         String newHead = documentStore.writeCurrentContent(
                 documentId,
                 body,
                 contentAuthorId,
                 requesterId,
-                "Soumission pour approbation",
+                submissionSummary,
                 expectedHead);
 
         jdbcTemplate.update("""
                 UPDATE documents
                    SET status = 'en_revue',
                        current_version_no = current_version_no + 1,
+                       current_change_summary = ?,
                        git_head_sha = COALESCE(?, git_head_sha),
                        updated_at = now()
                  WHERE id = ? AND deleted_at IS NULL
                 """,
-                newHead, documentId);
+                submissionSummary, newHead, documentId);
 
         jdbcTemplate.update("""
                 INSERT INTO approval_requests

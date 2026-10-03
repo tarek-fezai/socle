@@ -85,6 +85,8 @@ abstract class DocumentStoreContractTest {
             List<DocumentVersionEntity> slice = start >= all.size() ? List.of() : all.subList(start, end);
             return new PageImpl<>(new ArrayList<>(slice), p, all.size());
         });
+        when(versions.countByDocumentId(eq(DOC))).thenAnswer(inv ->
+                versionRows.values().stream().filter(v -> DOC.equals(v.getDocumentId())).count());
         store = createStore(versions, tempDir);
     }
 

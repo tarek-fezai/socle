@@ -241,22 +241,24 @@ public final class DocumentDtos {
             /** Surcharge du default_visibility de l'espace — réservé aux owners. */
             String visibility,
             UUID folderId,
-            UUID templateId
+            UUID templateId,
+            /** Résumé initial de la v1 (optionnel — absent à la création par défaut). */
+            String changeSummary
     ) {
         public CreateDocumentRequest(String title, Map<String, Object> body) {
-            this(title, body, null, null, null, null, null);
+            this(title, body, null, null, null, null, null, null);
         }
 
         public CreateDocumentRequest(String title, Map<String, Object> body, String docType) {
-            this(title, body, docType, null, null, null, null);
+            this(title, body, docType, null, null, null, null, null);
         }
 
         public CreateDocumentRequest(String title, Map<String, Object> body, String docType, UUID spaceId) {
-            this(title, body, docType, spaceId, null, null, null);
+            this(title, body, docType, spaceId, null, null, null, null);
         }
 
         public CreateDocumentRequest(String title, Map<String, Object> body, String docType, UUID spaceId, String visibility) {
-            this(title, body, docType, spaceId, visibility, null, null);
+            this(title, body, docType, spaceId, visibility, null, null, null);
         }
 
         public CreateDocumentRequest(
@@ -267,7 +269,19 @@ public final class DocumentDtos {
                 String visibility,
                 UUID folderId
         ) {
-            this(title, body, docType, spaceId, visibility, folderId, null);
+            this(title, body, docType, spaceId, visibility, folderId, null, null);
+        }
+
+        public CreateDocumentRequest(
+                String title,
+                Map<String, Object> body,
+                String docType,
+                UUID spaceId,
+                String visibility,
+                UUID folderId,
+                UUID templateId
+        ) {
+            this(title, body, docType, spaceId, visibility, folderId, templateId, null);
         }
     }
 

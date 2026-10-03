@@ -70,6 +70,10 @@ final class VersionTestSupport {
                 int to = Math.min(from + pageable.getPageSize(), all.size());
                 return (Page<DocumentVersionEntity>) new PageImpl<>(all.subList(from, to), pageable, all.size());
             });
+            when(repository.countByDocumentId(any())).thenAnswer(inv -> {
+                UUID doc = inv.getArgument(0);
+                return rows.stream().filter(r -> r.getDocumentId().equals(doc)).count();
+            });
         }
     }
 
@@ -81,13 +85,15 @@ final class VersionTestSupport {
 
     /**
      * Rejoue un historique : {@code bodies.get(0)} = v1, … ; le dernier est le contenu courant.
-     * Retourne l'entité document (currentVersionNo = bodies.size()).
+     * Sémantique correcte : archive(N) reçoit le résumé de N ; courant = résumé de N+1.
      */
     static DocumentEntity replay(DocumentStore store, List<Map<String, Object>> bodies, UUID author) {
         store.createContent(DOC, bodies.getFirst(), author);
+        String currentSummary = null;
         for (int v = 1; v < bodies.size(); v++) {
-            store.archiveVersion(DOC, v, bodies.get(v - 1), author, author, "v" + v);
-            store.writeCurrentContent(DOC, bodies.get(v), author, author, "v" + (v + 1), null);
+            store.archiveVersion(DOC, v, bodies.get(v - 1), author, author, currentSummary);
+            currentSummary = "v" + (v + 1);
+            store.writeCurrentContent(DOC, bodies.get(v), author, author, currentSummary, null);
         }
         DocumentEntity d = new DocumentEntity();
         d.setId(DOC);
@@ -96,6 +102,7 @@ final class VersionTestSupport {
         d.setBody(new HashMap<>(bodies.getLast()));
         d.setStatus("brouillon");
         d.setCurrentVersionNo(bodies.size());
+        d.setCurrentChangeSummary(currentSummary);
         d.setCreatedBy(author);
         d.setUpdatedBy(author);
         return d;

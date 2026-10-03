@@ -62,46 +62,23 @@ export type VersionRow = VersionSummary & {
 }
 
 /**
- * Lignes de la chronologie, de la plus récente à la plus ancienne.
- * Si le serveur ne renvoie pas la version courante (première page uniquement), elle est
- * reconstituée depuis le document : l'historique doit toujours commencer par « Actuelle ».
- * `synthesizedCurrent` permet de corriger le compteur affiché.
+ * Lignes de la chronologie à partir de la réponse serveur (version courante incluse).
+ * Pas de reconstitution client : « N versions publiées » = `total` serveur.
  */
 export function buildVersionRows(
   items: VersionSummary[],
-  doc: Pick<DocumentDetail, 'currentVersionNo' | 'updatedAt' | 'contentModifiedAt' | 'updatedBy'> | null | undefined,
-  { includeCurrent = true, hasMore = false }: { includeCurrent?: boolean; hasMore?: boolean } = {},
-): { rows: VersionRow[]; synthesizedCurrent: boolean } {
+  doc: Pick<DocumentDetail, 'currentVersionNo'> | null | undefined,
+  { hasMore = false }: { hasMore?: boolean } = {},
+): VersionRow[] {
   const currentNo = doc?.currentVersionNo
-  const list = [...items]
-  let synthesized = false
-  if (
-    includeCurrent &&
-    doc &&
-    currentNo != null &&
-    !list.some((v) => v.versionNo === currentNo)
-  ) {
-    synthesized = true
-    list.push({
-      versionNo: currentNo,
-      authorId: doc.updatedBy?.id ?? null,
-      authorDisplayName: doc.updatedBy?.displayName ?? null,
-      authorInitials: doc.updatedBy?.initials ?? null,
-      changeSummary: null,
-      createdAt: doc.contentModifiedAt || doc.updatedAt,
-      linesAdded: null,
-      linesRemoved: null,
-    })
-  }
-  list.sort((a, b) => b.versionNo - a.versionNo)
-  const rows = list.map<VersionRow>((v, i) => ({
+  const list = [...items].sort((a, b) => b.versionNo - a.versionNo)
+  return list.map<VersionRow>((v, i) => ({
     ...v,
-    isCurrent: currentNo != null && v.versionNo === currentNo,
-    // Dernière ligne chargée alors que d'autres pages existent : la précédente est v-1.
+    isCurrent: Boolean(v.current) || (currentNo != null && v.versionNo === currentNo),
+    // Dernière ligne chargée alors que d'autres pages existent : la précédente est v−1.
     previousVersionNo:
       list[i + 1]?.versionNo ?? (hasMore && v.versionNo > 1 ? v.versionNo - 1 : null),
   }))
-  return { rows, synthesizedCurrent: synthesized }
 }
 
 /** « +18 » / « −4 » (vrai signe moins U+2212, comme la maquette). */
