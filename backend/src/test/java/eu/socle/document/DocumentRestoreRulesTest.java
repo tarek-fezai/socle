@@ -193,6 +193,7 @@ class DocumentRestoreRulesTest {
         entity.setBody(docOf(List.of(p("version trois"))));
         entity.setStatus("brouillon");
         entity.setCurrentVersionNo(3);
+        entity.setCurrentChangeSummary("résumé v3");
         entity.setCreatedBy(ALICE);
         entity.setUpdatedBy(CAROL);
         when(documents.findActiveById(DOC)).thenReturn(Optional.of(entity));
@@ -366,13 +367,15 @@ class DocumentRestoreRulesTest {
 
         assertThat(response.currentVersionNo()).isEqualTo(4);
         assertThat(response.body()).isEqualTo(before.getFirst().getBodySnapshot());
-        // v1 et v2 inchangées ; v3 (ancien courant) archivée avec le résumé de restauration
+        // v1 et v2 inchangées ; v3 (ancien courant) archivée avec son résumé de contenu ;
+        // le résumé de restauration porte sur la nouvelle version courante.
         assertThat(versions.rows).hasSize(3);
         assertThat(versions.rows.subList(0, 2)).containsExactlyElementsOf(before);
         assertThat(versions.rows.get(0).getChangeSummary()).isEqualTo("v1");
         DocumentVersionEntity v3 = versions.rows.get(2);
         assertThat(v3.getVersionNo()).isEqualTo(3);
-        assertThat(v3.getChangeSummary()).isEqualTo("Restauration de la version 1");
+        assertThat(v3.getChangeSummary()).isEqualTo("résumé v3");
+        assertThat(entity.getCurrentChangeSummary()).isEqualTo("Restauration de la version 1");
         assertThat(v3.getBodySnapshot()).isEqualTo(docOf(List.of(p("version trois"))));
         verify(versions.repository, never()).delete(any());
         verify(versions.repository, never()).deleteAll();
