@@ -30,8 +30,21 @@ public class TagService {
     public static final int DEFAULT_SEARCH_LIMIT = 20;
     public static final int MAX_SEARCH_LIMIT = 50;
 
+    /**
+     * Étiquette gouvernée = référencée par ≥ 1 attribution de rôle d'approbation de portée
+     * {@code tag} ({@code scope_ref} = UUID de l'étiquette en texte, cf. V23).
+     */
+    private static final String GOVERNED_EXPR = """
+            EXISTS (SELECT 1 FROM approval_role_assignments ara
+                     WHERE ara.scope_type = 'tag' AND lower(ara.scope_ref) = t.id::text)
+            """;
+
+    private static final String SELECT_TAG = "SELECT t.id, t.name, t.color, " + GOVERNED_EXPR
+            + " AS governed FROM tags t ";
+
     private static final RowMapper<TagRef> TAG_MAPPER = (rs, i) -> new TagRef(
-            (UUID) rs.getObject("id"), rs.getString("name"), rs.getString("color"));
+            (UUID) rs.getObject("id"), rs.getString("name"), rs.getString("color"),
+            rs.getBoolean("governed"));
 
     private final JdbcTemplate jdbc;
     private final UserSyncService userSyncService;
@@ -60,11 +73,9 @@ public class TagService {
         int lim = limit == null ? DEFAULT_SEARCH_LIMIT : Math.min(Math.max(limit, 1), MAX_SEARCH_LIMIT);
         String term = q == null ? "" : q.trim();
         String escaped = escapeLike(term);
-        return jdbc.query("""
-                SELECT id, name, color
-                  FROM tags
-                 WHERE name ILIKE ? ESCAPE '\\'
-                 ORDER BY CASE WHEN name ILIKE ? ESCAPE '\\' THEN 0 ELSE 1 END, lower(name), id
+        return jdbc.query(SELECT_TAG + """
+                 WHERE t.name ILIKE ? ESCAPE '\\'
+                 ORDER BY CASE WHEN t.name ILIKE ? ESCAPE '\\' THEN 0 ELSE 1 END, lower(t.name), t.id
                  LIMIT ?
                 """,
                 TAG_MAPPER, "%" + escaped + "%", escaped + "%", lim);
@@ -105,6 +116,10 @@ public class TagService {
                 }
             }
         }
+        // Étiquette gouvernée : owner uniquement (403) et pas pendant une approbation (409).
+        // Une étiquette tout juste créée n'est jamais gouvernée ; en cas de rejet, la transaction
+        // est annulée (aucune étiquette orpheline).
+        requireGovernedTagChangeAllowed(user.getId(), documentId, tag);
 
         int inserted = jdbc.update("""
                 INSERT INTO document_tags (document_id, tag_id) VALUES (?, ?)
@@ -115,6 +130,9 @@ public class TagService {
             meta.put("tagId", tag.id().toString());
             meta.put("name", tag.name());
             meta.put("tagCreated", tagCreated);
+            if (tag.governed()) {
+                meta.put("governed", true);
+            }
             auditService.record(
                     user.getId(), false, AuditActions.DOCUMENT_TAG_ADDED,
                     "document", documentId, meta, null);
@@ -129,6 +147,9 @@ public class TagService {
         requireEditableDocument(user.getId(), documentId);
 
         TagRef tag = findById(tagId);
+        if (tag != null) {
+            requireGovernedTagChangeAllowed(user.getId(), documentId, tag);
+        }
         int deleted = jdbc.update(
                 "DELETE FROM document_tags WHERE document_id = ? AND tag_id = ?", documentId, tagId);
         if (tag == null || deleted == 0) {
@@ -137,6 +158,9 @@ public class TagService {
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("tagId", tag.id().toString());
         meta.put("name", tag.name());
+        if (tag.governed()) {
+            meta.put("governed", true);
+        }
         auditService.record(
                 user.getId(), false, AuditActions.DOCUMENT_TAG_REMOVED,
                 "document", documentId, meta, null);
@@ -153,14 +177,48 @@ public class TagService {
         authorizationService.requireDocumentRelation(userId, documentId, "editor");
     }
 
+    /**
+     * Étiquette gouvernée : rattachement / détachement réservés aux owners (document ou espace),
+     * 403 sinon ; puis 409 si une demande d'approbation est en cours sur le document (le périmètre
+     * des approbateurs dépend des étiquettes — on ne le change pas en cours de route).
+     * L'ordre 403 → 409 évite de révéler l'état d'approbation à un non-owner.
+     * Sans effet pour une étiquette libre (editor suffit).
+     */
+    private void requireGovernedTagChangeAllowed(UUID userId, UUID documentId, TagRef tag) {
+        if (!tag.governed()) {
+            return;
+        }
+        if (!isOwner(userId, documentId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Étiquette gouvernée : seul un owner peut la rattacher ou la détacher");
+        }
+        Integer pending = jdbc.queryForObject(
+                "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
+                Integer.class, documentId);
+        if (pending != null && pending > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
+        }
+    }
+
+    /** Owner du document, ou de l'espace qui le contient (cf. {@code canManageAccess}). */
+    private boolean isOwner(UUID userId, UUID documentId) {
+        if (authorizationService.hasRelation(userId, "document", documentId, "owner")) {
+            return true;
+        }
+        UUID spaceId = jdbc.query("SELECT space_id FROM documents WHERE id = ?",
+                        (rs, i) -> (UUID) rs.getObject("space_id"), documentId)
+                .stream().findFirst().orElse(null);
+        return spaceId != null && authorizationService.hasRelation(userId, "space", spaceId, "owner");
+    }
+
     private TagRef findById(UUID tagId) {
-        return jdbc.query("SELECT id, name, color FROM tags WHERE id = ?", TAG_MAPPER, tagId)
+        return jdbc.query(SELECT_TAG + "WHERE t.id = ?", TAG_MAPPER, tagId)
                 .stream().findFirst().orElse(null);
     }
 
     private TagRef findByName(String name) {
         return jdbc.query(
-                        "SELECT id, name, color FROM tags WHERE lower(name) = lower(?) ORDER BY name LIMIT 1",
+                        SELECT_TAG + "WHERE lower(t.name) = lower(?) ORDER BY t.name LIMIT 1",
                         TAG_MAPPER, name)
                 .stream().findFirst().orElse(null);
     }

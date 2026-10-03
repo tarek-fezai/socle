@@ -27,6 +27,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,6 +58,7 @@ class TagServiceTest {
 
     static final UUID USER = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     static final UUID DOC = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    static final UUID SPACE = UUID.fromString("22222222-2222-2222-2222-222222222222");
     static final UUID TRASHED = UUID.fromString("11111111-1111-1111-1111-111111111112");
     static final UUID UNKNOWN = UUID.fromString("99999999-9999-9999-9999-999999999999");
 
@@ -83,7 +85,20 @@ class TagServiceTest {
         jdbc.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
         jdbc.execute("""
                 CREATE TABLE documents (
-                  id UUID PRIMARY KEY, title TEXT NOT NULL, deleted_at TIMESTAMPTZ
+                  id UUID PRIMARY KEY, title TEXT NOT NULL, space_id UUID, deleted_at TIMESTAMPTZ
+                )
+                """);
+        jdbc.execute("""
+                CREATE TABLE approval_role_assignments (
+                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                  scope_type TEXT NOT NULL, scope_ref TEXT
+                )
+                """);
+        jdbc.execute("""
+                CREATE TABLE approval_requests (
+                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                  status TEXT NOT NULL DEFAULT 'en_cours'
                 )
                 """);
         jdbc.execute("""
@@ -98,12 +113,14 @@ class TagServiceTest {
                   PRIMARY KEY (document_id, tag_id)
                 )
                 """);
-        jdbc.update("INSERT INTO documents (id, title) VALUES (?, 'Doc')", DOC);
+        jdbc.update("INSERT INTO documents (id, title, space_id) VALUES (?, 'Doc', ?)", DOC, SPACE);
         jdbc.update("INSERT INTO documents (id, title, deleted_at) VALUES (?, 'Corbeille', now())", TRASHED);
     }
 
     @BeforeEach
     void setUp() {
+        jdbc.update("DELETE FROM approval_requests");
+        jdbc.update("DELETE FROM approval_role_assignments");
         jdbc.update("DELETE FROM document_tags");
         jdbc.update("DELETE FROM tags");
         service = new TagService(jdbc, userSyncService, authorizationService, auditService);
@@ -284,5 +301,159 @@ class TagServiceTest {
     void detach_unknownDocument_is404() {
         assertThatThrownBy(() -> service.detach(jwt, UNKNOWN, UUID.randomUUID()))
                 .satisfies(t -> assertStatus(t, HttpStatus.NOT_FOUND));
+    }
+
+    // ---------- étiquettes gouvernées ----------
+
+    /** Gouverne l'étiquette : une attribution de rôle d'approbation de portée tag la référence. */
+    private UUID insertGovernedTag(String name) {
+        UUID id = insertTag(name, null);
+        jdbc.update("INSERT INTO approval_role_assignments (scope_type, scope_ref) VALUES ('tag', ?)",
+                id.toString());
+        return id;
+    }
+
+    private void makeDocumentOwner() {
+        when(authorizationService.hasRelation(USER, "document", DOC, "owner")).thenReturn(true);
+    }
+
+    private void openApproval(String status) {
+        jdbc.update("INSERT INTO approval_requests (document_id, status) VALUES (?, ?)", DOC, status);
+    }
+
+    private static boolean governedMeta(Map<String, Object> meta) {
+        return Boolean.TRUE.equals(meta.get("governed"));
+    }
+
+    @Test
+    void search_exposesGovernedFlag_onlyForTagsReferencedByTagScopedAssignments() {
+        insertGovernedTag("Critique");
+        insertTag("Libre", null);
+        UUID scoped = insertTag("AutrePortee", null);
+        // portée d'un autre type ou référence à un autre tag : n'engendre pas de gouvernance
+        jdbc.update("INSERT INTO approval_role_assignments (scope_type, scope_ref) VALUES ('space', ?)",
+                scoped.toString());
+
+        List<TagRef> all = service.search(jwt, null, null);
+
+        assertThat(all).extracting(TagRef::name, TagRef::governed)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.api.Assertions.tuple("Critique", true),
+                        org.assertj.core.api.Assertions.tuple("Libre", false),
+                        org.assertj.core.api.Assertions.tuple("AutrePortee", false));
+    }
+
+    @Test
+    void attachGoverned_byEditorNonOwner_is403_andWritesNothing() {
+        UUID tag = insertGovernedTag("Critique");
+
+        assertThatThrownBy(() -> service.attach(jwt, DOC, tag, null))
+                .satisfies(t -> assertStatus(t, HttpStatus.FORBIDDEN));
+        // même par nom (insensible à la casse)
+        assertThatThrownBy(() -> service.attach(jwt, DOC, null, "critique"))
+                .satisfies(t -> assertStatus(t, HttpStatus.FORBIDDEN));
+
+        assertThat(docTagNames(DOC)).isEmpty();
+        verify(auditService, never()).record(any(), eq(false), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void attachFree_byEditorNonOwner_is201_andAuditHasNoGovernedFlag() {
+        UUID tag = insertTag("Libre", null);
+
+        TagService.Attachment a = service.attach(jwt, DOC, tag, null);
+
+        assertThat(a.created()).isTrue();
+        assertThat(a.tag().governed()).isFalse();
+        verify(auditService).record(
+                eq(USER), eq(false), eq(AuditActions.DOCUMENT_TAG_ADDED), eq("document"), eq(DOC),
+                org.mockito.ArgumentMatchers.argThat(m -> !m.containsKey("governed")), any());
+    }
+
+    @Test
+    void attachNewTagByName_byNonOwner_isFree() {
+        TagService.Attachment a = service.attach(jwt, DOC, null, "Nouvelle");
+        assertThat(a.created()).isTrue();
+        assertThat(a.tag().governed()).isFalse();
+    }
+
+    @Test
+    void detachGoverned_byEditorNonOwner_is403_andKeepsLink() {
+        UUID tag = insertGovernedTag("Critique");
+        jdbc.update("INSERT INTO document_tags (document_id, tag_id) VALUES (?, ?)", DOC, tag);
+
+        assertThatThrownBy(() -> service.detach(jwt, DOC, tag))
+                .satisfies(t -> assertStatus(t, HttpStatus.FORBIDDEN));
+
+        assertThat(docTagNames(DOC)).containsExactly("Critique");
+    }
+
+    @Test
+    void attachAndDetachGoverned_byDocumentOwner_ok_andAuditedWithGovernedTrue() {
+        makeDocumentOwner();
+        UUID tag = insertGovernedTag("Critique");
+
+        TagService.Attachment a = service.attach(jwt, DOC, tag, null);
+        assertThat(a.created()).isTrue();
+        assertThat(a.tag().governed()).isTrue();
+        assertThat(docTagNames(DOC)).containsExactly("Critique");
+        verify(auditService).record(
+                eq(USER), eq(false), eq(AuditActions.DOCUMENT_TAG_ADDED), eq("document"), eq(DOC),
+                org.mockito.ArgumentMatchers.argThat(TagServiceTest::governedMeta), any());
+
+        service.detach(jwt, DOC, tag);
+        assertThat(docTagNames(DOC)).isEmpty();
+        verify(auditService).record(
+                eq(USER), eq(false), eq(AuditActions.DOCUMENT_TAG_REMOVED), eq("document"), eq(DOC),
+                org.mockito.ArgumentMatchers.argThat(TagServiceTest::governedMeta), any());
+    }
+
+    @Test
+    void attachGoverned_bySpaceOwner_ok() {
+        when(authorizationService.hasRelation(USER, "space", SPACE, "owner")).thenReturn(true);
+        UUID tag = insertGovernedTag("Critique");
+
+        assertThat(service.attach(jwt, DOC, tag, null).created()).isTrue();
+    }
+
+    @Test
+    void governedTag_whileApprovalPending_is409_forOwner_onAttachAndDetach() {
+        makeDocumentOwner();
+        UUID tag = insertGovernedTag("Critique");
+        UUID attached = insertGovernedTag("Deja");
+        jdbc.update("INSERT INTO document_tags (document_id, tag_id) VALUES (?, ?)", DOC, attached);
+        openApproval("en_cours");
+
+        assertThatThrownBy(() -> service.attach(jwt, DOC, tag, null))
+                .satisfies(t -> {
+                    assertStatus(t, HttpStatus.CONFLICT);
+                    assertThat(((ResponseStatusException) t).getReason())
+                            .isEqualTo("Demande d'approbation en cours");
+                });
+        assertThatThrownBy(() -> service.detach(jwt, DOC, attached))
+                .satisfies(t -> assertStatus(t, HttpStatus.CONFLICT));
+
+        assertThat(docTagNames(DOC)).containsExactly("Deja");
+    }
+
+    @Test
+    void governedTag_pendingApproval_nonOwnerStillGets403_notAnApprovalStateLeak() {
+        UUID tag = insertGovernedTag("Critique");
+        openApproval("en_cours");
+
+        assertThatThrownBy(() -> service.attach(jwt, DOC, tag, null))
+                .satisfies(t -> assertStatus(t, HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void freeTag_whilePending_isStillAllowed_andResolvedApprovalDoesNotBlock() {
+        UUID free = insertTag("Libre", null);
+        openApproval("en_cours");
+        assertThat(service.attach(jwt, DOC, free, null).created()).isTrue();
+
+        makeDocumentOwner();
+        jdbc.update("UPDATE approval_requests SET status = 'approuve'");
+        UUID governed = insertGovernedTag("Critique");
+        assertThat(service.attach(jwt, DOC, governed, null).created()).isTrue();
     }
 }

@@ -36,7 +36,12 @@ public final class DocumentDtos {
             String warning
     ) {}
 
-    public record TagRef(UUID id, String name, String color) {}
+    /**
+     * @param governed vrai si l'étiquette est référencée par une attribution de rôle d'approbation
+     *                 ({@code approval_role_assignments.scope_type = 'tag'}) : seuls les owners
+     *                 peuvent la rattacher / détacher.
+     */
+    public record TagRef(UUID id, String name, String color, boolean governed) {}
 
     /**
      * Personne résolue pour l'affichage (auteur, propriétaire).

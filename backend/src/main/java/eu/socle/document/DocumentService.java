@@ -932,7 +932,10 @@ public class DocumentService {
             return List.of();
         }
         List<DocumentDtos.TagRef> tags = jdbc.query("""
-                SELECT t.id, t.name, t.color
+                SELECT t.id, t.name, t.color,
+                       EXISTS (SELECT 1 FROM approval_role_assignments ara
+                                WHERE ara.scope_type = 'tag'
+                                  AND lower(ara.scope_ref) = t.id::text) AS governed
                   FROM document_tags dt
                   JOIN tags t ON t.id = dt.tag_id
                  WHERE dt.document_id = ?
@@ -941,7 +944,8 @@ public class DocumentService {
                 (rs, i) -> new DocumentDtos.TagRef(
                         (UUID) rs.getObject("id"),
                         rs.getString("name"),
-                        rs.getString("color")),
+                        rs.getString("color"),
+                        rs.getBoolean("governed")),
                 documentId);
         return tags == null ? List.of() : tags;
     }

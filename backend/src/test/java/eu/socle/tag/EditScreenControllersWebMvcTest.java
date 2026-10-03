@@ -65,18 +65,19 @@ class EditScreenControllersWebMvcTest {
     @Test
     void searchTags_returnsIdNameColor() throws Exception {
         when(tagService.search(any(), eq("rg"), isNull()))
-                .thenReturn(List.of(new TagRef(TAG, "RGPD", "#f00")));
+                .thenReturn(List.of(new TagRef(TAG, "RGPD", "#f00", true)));
 
         mockMvc.perform(get("/api/v1/tags").param("q", "rg").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(TAG.toString()))
                 .andExpect(jsonPath("$[0].name").value("RGPD"))
-                .andExpect(jsonPath("$[0].color").value("#f00"));
+                .andExpect(jsonPath("$[0].color").value("#f00"))
+                .andExpect(jsonPath("$[0].governed").value(true));
     }
 
     @Test
     void addTag_returns201WhenCreated_and200WhenAlreadyAttached() throws Exception {
-        TagRef tag = new TagRef(TAG, "RGPD", null);
+        TagRef tag = new TagRef(TAG, "RGPD", null, false);
         when(tagService.attach(any(), eq(DOC), isNull(), eq("RGPD")))
                 .thenReturn(new TagService.Attachment(tag, true));
         when(tagService.attach(any(), eq(DOC), eq(TAG), isNull()))
