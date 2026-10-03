@@ -71,6 +71,11 @@ class WritingAssistantServiceTest {
     static final UUID MISSING = UUID.fromString("22222222-2222-2222-2222-2222222222a4");
     static final UUID UNKNOWN = UUID.fromString("99999999-9999-9999-9999-999999999999");
 
+    static final String ANCHOR_DENIED = "voir la procédure RH";
+    static final String ANCHOR_DELETED = "Procédure de provisioning v9";
+    static final String SECRET_DENIED_TITLE = "Titre ultra secret";
+    static final String SECRET_DELETED_TITLE = "Titre supprimé secret";
+
     @Mock AuthorizationService authorizationService;
     @Mock UserSyncService userSyncService;
     @Mock DocumentRepository documentRepository;
@@ -113,8 +118,8 @@ class WritingAssistantServiceTest {
         jdbc.update("INSERT INTO spaces (id, name) VALUES (?, 'S')", SPACE);
         insertDoc(DOC, "Courant", false);
         insertDoc(VISIBLE, "Cible visible", false);
-        insertDoc(DENIED, "Titre ultra secret", false);
-        insertDoc(DELETED, "Titre supprimé secret", true);
+        insertDoc(DENIED, SECRET_DENIED_TITLE, false);
+        insertDoc(DELETED, SECRET_DELETED_TITLE, true);
         link(DOC, VISIBLE);
         link(DOC, DENIED);
         link(DOC, DELETED);
@@ -143,13 +148,35 @@ class WritingAssistantServiceTest {
         jwt = Jwt.withTokenValue("t").header("alg", "none").subject("sub").build();
 
         entity = new DocumentEntity();
-        entity.setBody(paragraphs("Court."));
+        entity.setBody(bodyWithAnchors());
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
         when(documentRepository.findActiveById(UNKNOWN)).thenReturn(Optional.empty());
         when(documentStore.readCurrentContent(any(), any())).thenAnswer(inv -> inv.getArgument(1));
         when(authorizationService.filterByDocumentViewer(eq(USER), anyCollection(), any()))
                 .thenAnswer(inv -> ((Collection<UUID>) inv.getArgument(1)).stream()
                         .filter(id -> Set.of(VISIBLE).contains(id)).toList());
+    }
+
+    /** Corps source avec textes d'ancre vers les cibles indexées (pas les titres cibles). */
+    static Map<String, Object> bodyWithAnchors() {
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("type", "doc");
+        doc.put("content", List.of(
+                paragraphWithLink(ANCHOR_DENIED, DENIED),
+                paragraphWithLink(ANCHOR_DELETED, DELETED),
+                Map.of("type", "paragraph",
+                        "content", List.of(Map.of("type", "text", "text", "Court.")))));
+        return doc;
+    }
+
+    static Map<String, Object> paragraphWithLink(String anchor, UUID targetId) {
+        Map<String, Object> text = new HashMap<>();
+        text.put("type", "text");
+        text.put("text", anchor);
+        text.put("marks", List.of(Map.of(
+                "type", "link",
+                "attrs", Map.of("href", "/docs/" + targetId))));
+        return Map.of("type", "paragraph", "content", List.of(text));
     }
 
     static Map<String, Object> paragraphs(String... texts) {
@@ -182,18 +209,48 @@ class WritingAssistantServiceTest {
     // ---------- liens cassés ----------
 
     @Test
-    void inaccessibleTargets_areListed_withFixedLabel_andNeverLeakTitles() throws Exception {
+    void inaccessibleTarget_usesSourceAnchor_andNeverLeaksTitle() throws Exception {
         Hints hints = service.hints(jwt, DOC);
 
         assertThat(hints.brokenLinks()).extracting(WritingAssistantService.BrokenLink::targetId)
                 .containsExactlyInAnyOrder(DENIED, DELETED, MISSING)
                 .doesNotContain(VISIBLE, DOC);
+
+        var denied = hints.brokenLinks().stream()
+                .filter(l -> DENIED.equals(l.targetId())).findFirst().orElseThrow();
+        assertThat(denied.label()).isEqualTo(ANCHOR_DENIED);
+        assertThat(denied.reason()).isEqualTo(WritingAssistantService.REASON_INACCESSIBLE);
+        assertThat(denied.accessible()).isFalse();
+
+        var deleted = hints.brokenLinks().stream()
+                .filter(l -> DELETED.equals(l.targetId())).findFirst().orElseThrow();
+        assertThat(deleted.label()).isEqualTo(ANCHOR_DELETED);
+        assertThat(deleted.reason()).isEqualTo(WritingAssistantService.REASON_DELETED);
+        assertThat(deleted.accessible()).isFalse();
+
+        var missing = hints.brokenLinks().stream()
+                .filter(l -> MISSING.equals(l.targetId())).findFirst().orElseThrow();
+        assertThat(missing.label()).isEqualTo(WritingAssistantService.INACCESSIBLE_LABEL);
+        assertThat(missing.reason()).isEqualTo(WritingAssistantService.REASON_DELETED);
+
+        String json = MAPPER.writeValueAsString(hints);
+        assertThat(json)
+                .doesNotContain("secret")
+                .doesNotContain(SECRET_DENIED_TITLE)
+                .doesNotContain(SECRET_DELETED_TITLE)
+                .doesNotContain("Cible visible")
+                .contains(ANCHOR_DENIED)
+                .contains(ANCHOR_DELETED);
+    }
+
+    @Test
+    void withoutAnchorText_fallsBackToFixedLabel() {
+        entity.setBody(paragraphs("Aucun lien inline."));
+        Hints hints = service.hints(jwt, DOC);
         assertThat(hints.brokenLinks()).allSatisfy(l -> {
-            assertThat(l.label()).isEqualTo("Document inaccessible");
+            assertThat(l.label()).isEqualTo(WritingAssistantService.INACCESSIBLE_LABEL);
             assertThat(l.accessible()).isFalse();
         });
-        String json = MAPPER.writeValueAsString(hints);
-        assertThat(json).doesNotContain("secret").doesNotContain("Cible visible").doesNotContain("Courant");
     }
 
     @Test

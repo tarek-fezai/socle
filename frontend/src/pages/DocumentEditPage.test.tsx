@@ -455,20 +455,32 @@ describe('DocumentEditPage — verrou exclusif', () => {
 })
 
 describe('DocumentEditPage — assistant et métadonnées', () => {
-  it('liste les liens cassés, « Document inaccessible » pour une cible illisible', async () => {
+  it('liste les liens cassés : ancre + reason (jamais un titre cible secret)', async () => {
     scenario.hints = {
       longParagraphThresholdWords: 120,
       brokenLinks: [
-        { targetId: 'x1', label: 'Ancienne procédure', accessible: true },
-        { targetId: 'x2', label: 'Secret RH', accessible: false },
+        {
+          targetId: 'x1',
+          label: 'Procédure de provisioning v9',
+          accessible: false,
+          reason: 'deleted',
+        },
+        {
+          targetId: 'x2',
+          label: 'voir la procédure RH',
+          accessible: false,
+          reason: 'inaccessible',
+        },
       ],
       longParagraphs: [],
     }
     render(wrap(<DocumentEditPage />))
     const panel = await screen.findByTestId('edit-assistant')
-    await waitFor(() => expect(panel.textContent).toContain('Ancienne procédure'))
-    expect(panel.textContent).toContain('Document inaccessible')
-    expect(panel.textContent).not.toContain('Secret RH')
+    await waitFor(() => expect(panel.textContent).toContain('Procédure de provisioning v9'))
+    expect(panel.textContent).toContain("n'existe plus")
+    expect(panel.textContent).toContain('voir la procédure RH')
+    expect(panel.textContent).toContain("n'est pas accessible")
+    expect(panel.textContent).not.toContain('Titre ultra secret')
   })
 
   it('signale un paragraphe trop long selon le seuil du serveur', async () => {

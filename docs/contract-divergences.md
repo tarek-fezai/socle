@@ -30,7 +30,7 @@ sont désormais dérivés des schémas générés ; les fixtures e2e-visual sont
 | `moveDocument` typé `DocumentDetail` | L’API move renvoie un payload partiel `{ id, folderId, position, spaceId }`, pas un `DocumentResponse`. |
 | `updateDocument` / `createDocument` | BE accepte `changeSummary` ; FE ne l’envoie pas. |
 | Draft `title` | Type FE non-null ; Java `String` nullable. |
-| Writing-assistant `brokenLinks` | FE/fixture `accessible: true` + label métier ; BE ne liste que `accessible: false` + « Document inaccessible ». |
+| Writing-assistant `brokenLinks` | **Corrigé** : `label` = texte d'ancre source TipTap ; `reason` = `deleted` \| `inaccessible` ; `accessible` toujours `false` ; jamais le titre cible. |
 | Extraits paragraphes longs | Client 80 caractères vs serveur 100. |
 
 ## Historique / comparaison (`DocumentHistoryPage`, `DocumentComparePage`)

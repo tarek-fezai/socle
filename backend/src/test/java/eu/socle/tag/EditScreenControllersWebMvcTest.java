@@ -139,7 +139,8 @@ class EditScreenControllersWebMvcTest {
         UUID target = UUID.randomUUID();
         when(writingAssistantService.hints(any(), eq(DOC))).thenReturn(new WritingAssistantService.Hints(
                 120,
-                List.of(new WritingAssistantService.BrokenLink(target, "Document inaccessible", false)),
+                List.of(new WritingAssistantService.BrokenLink(
+                        target, "Procédure de provisioning v9", false, WritingAssistantService.REASON_DELETED)),
                 List.of()));
 
         mockMvc.perform(get("/api/v1/documents/{id}/writing-assistant", DOC).with(jwt()))
@@ -148,8 +149,9 @@ class EditScreenControllersWebMvcTest {
                         .header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")))
                 .andExpect(jsonPath("$.longParagraphThresholdWords").value(120))
                 .andExpect(jsonPath("$.brokenLinks[0].targetId").value(target.toString()))
-                .andExpect(jsonPath("$.brokenLinks[0].label").value("Document inaccessible"))
+                .andExpect(jsonPath("$.brokenLinks[0].label").value("Procédure de provisioning v9"))
                 .andExpect(jsonPath("$.brokenLinks[0].accessible").value(false))
+                .andExpect(jsonPath("$.brokenLinks[0].reason").value("deleted"))
                 .andExpect(jsonPath("$.longParagraphs").isEmpty());
     }
 }

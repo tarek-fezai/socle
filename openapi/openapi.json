@@ -7504,6 +7504,9 @@
           },
           "accessible" : {
             "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
           }
         }
       },

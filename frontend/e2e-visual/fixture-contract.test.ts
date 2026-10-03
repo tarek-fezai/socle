@@ -103,6 +103,16 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
     validate('Hints', EDIT_WRITING_HINTS)
   })
 
+  it('aucune fixture brokenLinks ne peut contenir accessible: true', () => {
+    const fixtures: unknown[] = [EDIT_WRITING_HINTS]
+    for (const fixture of fixtures) {
+      const links = (fixture as { brokenLinks?: Array<{ accessible?: boolean }> }).brokenLinks ?? []
+      for (const link of links) {
+        expect(link.accessible, 'brokenLinks.accessible must not be true').not.toBe(true)
+      }
+    }
+  })
+
   it('EDIT_CUSTOM_FIELDS items match CustomFieldView', () => {
     for (const f of EDIT_CUSTOM_FIELDS) validate('CustomFieldView', f)
   })

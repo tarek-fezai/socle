@@ -11,6 +11,7 @@ import { attachTag, detachTag, filterTagSuggestions, searchTags, sortTags } from
 import {
   INACCESSIBLE_LABEL,
   brokenLinkLabel,
+  brokenLinkMessage,
   findLongParagraphs,
   getWritingHints,
   longParagraphMessage,
@@ -72,9 +73,25 @@ describe('assistant de rédaction', () => {
     expect(get).toHaveBeenCalledWith('/api/v1/documents/d1/writing-assistant')
   })
 
-  it('« Document inaccessible » pour toute cible illisible', () => {
-    expect(brokenLinkLabel({ label: 'Secret RH', accessible: false })).toBe(INACCESSIBLE_LABEL)
-    expect(brokenLinkLabel({ label: 'Politique X', accessible: true })).toBe('Politique X')
+  it('affiche le texte d’ancre source ; fallback « Document inaccessible »', () => {
+    expect(brokenLinkLabel({ label: 'voir la procédure RH' })).toBe('voir la procédure RH')
+    expect(brokenLinkLabel({ label: '  ' })).toBe(INACCESSIBLE_LABEL)
+    expect(brokenLinkLabel({ label: undefined })).toBe(INACCESSIBLE_LABEL)
+  })
+
+  it('« n’existe plus » si reason=deleted, sinon inaccessible', () => {
+    expect(brokenLinkMessage({
+      targetId: 'x',
+      label: 'Procédure de provisioning v9',
+      accessible: false,
+      reason: 'deleted',
+    })).toContain("n'existe plus")
+    expect(brokenLinkMessage({
+      targetId: 'y',
+      label: 'voir la procédure RH',
+      accessible: false,
+      reason: 'inaccessible',
+    })).toContain("n'est pas accessible")
   })
 
   it('repère les paragraphes au-delà du seuil avec leur rang', () => {

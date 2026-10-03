@@ -134,13 +134,13 @@ export function editLockMine() {
 
 export const EDIT_WRITING_HINTS = {
   longParagraphThresholdWords: EDIT_LONG_THRESHOLD,
-  // Maquette Edit.dc.html : « n'existe plus » + titre (accessible: true).
-  // Le wire live ne renvoie aujourd'hui que accessible: false — écart documenté.
+  // Valeur serveur réelle : texte d'ancre source + reason=deleted (jamais accessible: true).
   brokenLinks: [
     {
       targetId: 'd0000001-0000-4000-8000-0000000000b9',
       label: 'Procédure de provisioning v9',
-      accessible: true,
+      accessible: false,
+      reason: 'deleted',
     },
   ],
   longParagraphs: [],

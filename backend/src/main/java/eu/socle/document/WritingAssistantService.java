@@ -14,9 +14,12 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -24,19 +27,28 @@ import java.util.stream.Collectors;
  *
  * <p>Un lien est « cassé » pour l'appelant si sa cible est supprimée / absente <em>ou</em> si
  * OpenFGA {@code viewer} la refuse (BatchCheck borné). Le titre d'une cible non lisible n'est
- * jamais renvoyé : libellé fixe {@link #INACCESSIBLE_LABEL}. Les cibles lisibles ne sont pas
- * listées (elles ne sont pas cassées).
+ * jamais renvoyé : le {@code label} est le texte d'ancre du lien dans le document source
+ * (déjà lisible), ou {@link #INACCESSIBLE_LABEL} s'il n'y en a pas. {@code reason} distingue
+ * cible absente/supprimée ({@code deleted}) et cible non visible ({@code inaccessible}).
+ * {@code accessible} est toujours {@code false} pour les entrées listées.
  */
 @Service
 public class WritingAssistantService {
 
     public static final String INACCESSIBLE_LABEL = "Document inaccessible";
 
+    public static final String REASON_DELETED = "deleted";
+    public static final String REASON_INACCESSIBLE = "inaccessible";
+
     /** Plafond de cibles distinctes examinées (avant BatchCheck). */
     public static final int MAX_TARGETS = DocumentRelatedLinksService.MAX_CANDIDATES_PER_DIRECTION;
 
     private static final String SCOPE_LABEL = "writing-assistant";
     private static final int EXCERPT_CHARS = 100;
+
+    /** UUID dans un href (ex. {@code /docs/<uuid>}, URL absolue, uuid nu). */
+    private static final Pattern UUID_IN_HREF = Pattern.compile(
+            "(?i)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})");
 
     private final JdbcTemplate jdbc;
     private final UserSyncService userSyncService;
@@ -61,7 +73,11 @@ public class WritingAssistantService {
         this.properties = properties;
     }
 
-    public record BrokenLink(UUID targetId, String label, boolean accessible) {}
+    /**
+     * @param accessible toujours {@code false} (entrée présente = lien cassé pour l'appelant)
+     * @param reason     {@link #REASON_DELETED} ou {@link #REASON_INACCESSIBLE}
+     */
+    public record BrokenLink(UUID targetId, String label, boolean accessible, String reason) {}
 
     /**
      * @param index    rang du paragraphe (0-based, ordre du document, tous paragraphes confondus)
@@ -86,11 +102,11 @@ public class WritingAssistantService {
         Map<String, Object> body = documentStore.readCurrentContent(doc.getId(), doc.getBody());
         return new Hints(
                 threshold,
-                brokenLinks(user.getId(), documentId),
+                brokenLinks(user.getId(), documentId, body),
                 longParagraphs(body, threshold));
     }
 
-    private List<BrokenLink> brokenLinks(UUID userId, UUID documentId) {
+    private List<BrokenLink> brokenLinks(UUID userId, UUID documentId, Map<String, Object> body) {
         // Cible → vivante (existe et non supprimée). LEFT JOIN : document_links.target_id sans FK.
         Map<UUID, Boolean> targets = new LinkedHashMap<>();
         jdbc.query("""
@@ -116,13 +132,135 @@ public class WritingAssistantService {
                 ? List.<UUID>of()
                 : authorizationService.filterByDocumentViewer(userId, live, SCOPE_LABEL));
 
+        Map<UUID, String> anchors = extractAnchorLabels(body);
+
         List<BrokenLink> broken = new ArrayList<>();
-        for (UUID targetId : targets.keySet()) {
-            if (!viewable.contains(targetId)) {
-                broken.add(new BrokenLink(targetId, INACCESSIBLE_LABEL, false));
+        for (Map.Entry<UUID, Boolean> e : targets.entrySet()) {
+            UUID targetId = e.getKey();
+            if (viewable.contains(targetId)) {
+                continue;
             }
+            boolean isLive = Boolean.TRUE.equals(e.getValue());
+            String reason = isLive ? REASON_INACCESSIBLE : REASON_DELETED;
+            String anchor = anchors.getOrDefault(targetId, "").trim();
+            String label = anchor.isEmpty() ? INACCESSIBLE_LABEL : anchor;
+            broken.add(new BrokenLink(targetId, label, false, reason));
         }
         return List.copyOf(broken);
+    }
+
+    /**
+     * Texte d'ancre du premier lien TipTap (marque {@code link} ou nœud interne) vers chaque
+     * {@code targetId}. Jamais le titre de la cible. Transclusions sans texte → absentes.
+     */
+    static Map<UUID, String> extractAnchorLabels(Map<String, Object> body) {
+        Map<UUID, String> out = new LinkedHashMap<>();
+        if (body != null) {
+            collectAnchors(body, out);
+        }
+        return out;
+    }
+
+    private static void collectAnchors(Object node, Map<UUID, String> out) {
+        if (!(node instanceof Map<?, ?> map)) {
+            return;
+        }
+        Object typeRaw = map.get("type");
+        String type = typeRaw == null ? "" : String.valueOf(typeRaw);
+
+        // Marque link sur un nœud texte (ou autre inline avec marks).
+        UUID fromMark = targetFromLinkMarks(map.get("marks"));
+        if (fromMark != null && !out.containsKey(fromMark)) {
+            StringBuilder sb = new StringBuilder();
+            collectText(map, sb);
+            String anchor = sb.toString().trim();
+            if (!anchor.isEmpty()) {
+                out.put(fromMark, anchor);
+            }
+        }
+
+        // Nœud de lien interne (hors transclusion) : attrs.documentId + contenu texte.
+        if (!"transclusion".equals(type)) {
+            UUID fromAttrs = targetFromAttrs(map.get("attrs"));
+            if (fromAttrs != null && !out.containsKey(fromAttrs)
+                    && ("link".equals(type) || "internalLink".equals(type) || "docLink".equals(type))) {
+                StringBuilder sb = new StringBuilder();
+                collectText(map, sb);
+                String anchor = sb.toString().trim();
+                if (!anchor.isEmpty()) {
+                    out.put(fromAttrs, anchor);
+                }
+            }
+        }
+
+        Object content = map.get("content");
+        if (content instanceof List<?> children) {
+            for (Object child : children) {
+                collectAnchors(child, out);
+            }
+        }
+    }
+
+    private static UUID targetFromLinkMarks(Object marks) {
+        if (!(marks instanceof List<?> list)) {
+            return null;
+        }
+        for (Object mark : list) {
+            if (!(mark instanceof Map<?, ?> mm)) {
+                continue;
+            }
+            if (!"link".equals(String.valueOf(mm.get("type")))) {
+                continue;
+            }
+            Object attrs = mm.get("attrs");
+            if (attrs instanceof Map<?, ?> am) {
+                UUID id = parseUuidFromHref(am.get("href"));
+                if (id == null) {
+                    id = parseUuid(am.get("documentId"));
+                }
+                if (id != null) {
+                    return id;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static UUID targetFromAttrs(Object attrs) {
+        if (!(attrs instanceof Map<?, ?> am)) {
+            return null;
+        }
+        UUID id = parseUuid(am.get("documentId"));
+        if (id == null) {
+            id = parseUuidFromHref(am.get("href"));
+        }
+        return id;
+    }
+
+    private static UUID parseUuidFromHref(Object href) {
+        if (href == null) {
+            return null;
+        }
+        String s = String.valueOf(href).trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        Matcher m = UUID_IN_HREF.matcher(s);
+        if (!m.find()) {
+            return null;
+        }
+        return parseUuid(m.group(1));
+    }
+
+    private static UUID parseUuid(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return UUID.fromString(String.valueOf(raw).trim().toLowerCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     /**

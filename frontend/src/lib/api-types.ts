@@ -2919,6 +2919,7 @@ export interface components {
             targetId?: string;
             label?: string;
             accessible?: boolean;
+            reason?: string;
         };
         Hints: {
             /** Format: int32 */
