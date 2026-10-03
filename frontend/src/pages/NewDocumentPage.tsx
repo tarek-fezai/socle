@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
 import { createDocument, emptyDocBody } from '../lib/documents'
 import {
-  documentHref,
+  documentEditHref,
   flattenFolderOptions,
   getSpaceTree,
   spaceBrowseHref,
@@ -97,7 +97,7 @@ export function NewDocumentPage() {
     onSuccess: (doc) => {
       void qc.invalidateQueries({ queryKey: spaceTreeKey(activeSpaceId) })
       void qc.invalidateQueries({ queryKey: ['documents'] })
-      navigate(documentHref(doc.id))
+      navigate(documentEditHref(doc.id))
     },
   })
 

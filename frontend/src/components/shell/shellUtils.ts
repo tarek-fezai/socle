@@ -8,6 +8,22 @@ export function isApplePlatform(): boolean {
   return /Mac|iPhone|iPad|iPod/i.test(p) || /Mac OS X|iPhone|iPad|iPod/i.test(ua)
 }
 
+/**
+ * `/docs/:id` (page de lecture) — porte sa propre barre haute (breadcrumb + actions) et ses
+ * onglets mobiles : le shell masque alors `ShellHeader`, `MobileTopBar` et `MobileTabBar`.
+ * `/docs`, `/docs/new`, `/docs/:id/edit|history|export|view` ne sont pas concernés.
+ */
+export function isDocumentReadPath(pathname: string): boolean {
+  const m = /^\/docs\/([^/]+)\/?$/.exec(pathname)
+  return Boolean(m) && m![1] !== 'new'
+}
+
+/** Actions du shell exposées aux pages qui remplacent la barre mobile (via `<Outlet context>`). */
+export type ShellOutletContext = {
+  openMenu: () => void
+  openSearch: () => void
+}
+
 export function searchShortcutLabel(): string {
   return isApplePlatform() ? '⌘K' : 'Ctrl+K'
 }

@@ -81,7 +81,7 @@ export function HomeDashboardPage() {
           {d.resume.map((item, i) => (
             <Link
               key={item.documentId}
-              to={`/docs/${item.documentId}`}
+              to={`/docs/${item.documentId}/edit`}
               className="home-card"
               data-mock-id={i === 0 ? 'home-resume-card' : undefined}
             >
@@ -105,7 +105,7 @@ export function HomeDashboardPage() {
             {d.recentlyPublished.map((item, i) => (
               <Link
                 key={item.documentId}
-                to={`/docs/${item.documentId}/view`}
+                to={`/docs/${item.documentId}`}
                 className="home-card"
                 data-mock-id={i === 0 ? 'home-published-card' : undefined}
               >

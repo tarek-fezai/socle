@@ -156,8 +156,14 @@ export function folderHref(id: string) {
   return `/folders/${id}`
 }
 
+/** Page de lecture du document (vue par défaut). */
 export function documentHref(id: string) {
   return `/docs/${id}`
+}
+
+/** Éditeur du document. */
+export function documentEditHref(id: string) {
+  return `/docs/${id}/edit`
 }
 
 export function spaceBrowseHref(spaceId: string) {

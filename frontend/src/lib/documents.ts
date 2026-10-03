@@ -10,6 +10,37 @@ export type DocumentSummary = {
   contentModifiedAt?: string | null
 }
 
+/** Étiquette rattachée à un document (triée par nom côté serveur). */
+export type TagRef = {
+  id: string
+  name: string
+  color?: string | null
+}
+
+/** Personne résolue depuis `users` (auteur, propriétaire). */
+export type PersonRef = {
+  id: string
+  displayName: string
+  initials: string
+}
+
+/** Droits calculés serveur (OpenFGA BatchCheck + statut). */
+export type DocumentPermissions = {
+  canEdit: boolean
+  canPublish: boolean
+  canManageAccess: boolean
+  canComment: boolean
+  canManageAttestations: boolean
+}
+
+export const emptyPermissions: DocumentPermissions = {
+  canEdit: false,
+  canPublish: false,
+  canManageAccess: false,
+  canComment: false,
+  canManageAttestations: false,
+}
+
 export type DocumentDetail = {
   id: string
   spaceId: string
@@ -31,6 +62,15 @@ export type DocumentDetail = {
   stalenessThresholdDays?: number
   /** organisation | space | restricted */
   visibility?: 'organisation' | 'space' | 'restricted' | string
+  /** Créateur — null = « Système (migration) » */
+  createdBy?: PersonRef | null
+  /** Auteur du contenu courant — null = « Système (migration) » */
+  updatedBy?: PersonRef | null
+  /** Propriétaire d'espace (utilisateur), si résolu */
+  owner?: PersonRef | null
+  /** Étiquettes, triées par nom */
+  tags?: TagRef[]
+  permissions?: DocumentPermissions
 }
 
 export type DocumentVisibility = 'organisation' | 'space' | 'restricted'

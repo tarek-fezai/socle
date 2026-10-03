@@ -120,7 +120,7 @@ export function GraphPage() {
 
     cy.on('tap', 'node', (evt) => {
       const id = evt.target.id()
-      void navigate(`/docs/${id}/view`)
+      void navigate(`/docs/${id}`)
     })
 
     cyRef.current = cy

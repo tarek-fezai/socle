@@ -14,7 +14,7 @@ import {
   buildBreadcrumb,
   childrenOf,
   deleteFolder,
-  documentHref,
+  documentEditHref,
   folderHref,
   getFolder,
   getSpaceTree,
@@ -65,7 +65,7 @@ export function FolderPage() {
     onSuccess: (doc) => {
       void qc.invalidateQueries({ queryKey: spaceTreeKey(spaceId) })
       void qc.invalidateQueries({ queryKey: ['documents'] })
-      navigate(documentHref(doc.id))
+      navigate(documentEditHref(doc.id))
     },
     onError: (e) =>
       setError(apiErrorMessage(e, 'Création refusée — accès editor requis sur l’espace')),

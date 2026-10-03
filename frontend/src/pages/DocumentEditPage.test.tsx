@@ -33,9 +33,9 @@ function wrap(ui: ReactNode) {
   })
   return (
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/docs/${DOC_ID}`]}>
+      <MemoryRouter initialEntries={[`/docs/${DOC_ID}/edit`]}>
         <Routes>
-          <Route path="/docs/:id" element={ui} />
+          <Route path="/docs/:id/edit" element={ui} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>

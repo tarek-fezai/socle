@@ -56,11 +56,12 @@ Comptage sur `document_comments` du document.
 ### 3. Conformité d’attestation (poids 0.3)
 
 - `is_mandatory_ack = false` → `attestation = 100`
-- sinon, campagne active = la plus récente (`created_at DESC`) dans
+- sinon, campagne active = la campagne ouverte (`closed_at IS NULL`, au plus une par document) dans
   `attestation_campaigns` pour ce document :
-  - pas de campagne, ou `audience_cible = 0` (membres de `group_members` pour
-    `target_group_id`) → `attestation = 100` (non applicable, pas de division par zéro)
-  - sinon `attestation = acknowledgments_count / audience_cible × 100`
+  - pas de campagne, ou `audience_size = 0` (taille d'audience figée à la création,
+    voir V33) → `attestation = 100` (non applicable, pas de division par zéro)
+  - sinon `attestation = acknowledgments_count / audience_size × 100`
+    (accusés de `attestation_acknowledgments` pour `campaign_id`)
   - si `due_date` de la campagne est dépassée **et** `attestation < 100` →
     `attestation × 0.5`
 

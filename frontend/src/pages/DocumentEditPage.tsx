@@ -238,10 +238,11 @@ export function DocumentEditPage() {
               Voir l&apos;historique
             </Link>
             <Link
-              to={`/docs/${id}/view`}
+              to={`/docs/${id}`}
               className="text-sm font-semibold text-socle-accent underline-offset-4 hover:underline"
+              data-testid="edit-to-read"
             >
-              Vue composite
+              Lire
             </Link>
             <Link
               to={`/docs/${id}/export`}

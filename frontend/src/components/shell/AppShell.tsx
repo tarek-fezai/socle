@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useCallback, useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import { CommandPalette } from './CommandPalette'
 import { MobileMenu } from './MobileMenu'
 import { MobileTabBar } from './MobileTabBar'
 import { MobileTopBar } from './MobileTopBar'
 import { ShellHeader } from './ShellHeader'
 import { ShellSidebar } from './ShellSidebar'
-import { isApplePlatform } from './shellUtils'
+import { isApplePlatform, isDocumentReadPath, type ShellOutletContext } from './shellUtils'
 import './appshell.css'
 
 /** Shell authentifié : sidebar + header (desktop), top bar + drawer + tabs (mobile). */
 export function AppShellLayout() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
+  // Page de lecture : barre haute + onglets fournis par la page (Main.dc.html / MobilePage.dc.html).
+  const ownChrome = isDocumentReadPath(pathname)
 
   const openSearch = useCallback(() => {
     setMenuOpen(false)
@@ -21,6 +24,11 @@ export function AppShellLayout() {
   }, [])
 
   const closeSearch = useCallback(() => setPaletteOpen(false), [])
+
+  const outletContext = useMemo<ShellOutletContext>(
+    () => ({ openMenu: () => setMenuOpen(true), openSearch }),
+    [openSearch],
+  )
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -40,12 +48,12 @@ export function AppShellLayout() {
       <div className="shell-desktop" data-mock-id="shell-frame">
         <ShellSidebar onOpenSearch={openSearch} />
         <div className="shell-main-col">
-          <MobileTopBar onOpenMenu={() => setMenuOpen(true)} />
-          <ShellHeader />
+          {!ownChrome && <MobileTopBar onOpenMenu={() => setMenuOpen(true)} />}
+          {!ownChrome && <ShellHeader />}
           <div className="shell-outlet" data-mock-id="shell-outlet">
-            <Outlet />
+            <Outlet context={outletContext} />
           </div>
-          <MobileTabBar />
+          {!ownChrome && <MobileTabBar />}
         </div>
       </div>
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onOpenSearch={openSearch} />

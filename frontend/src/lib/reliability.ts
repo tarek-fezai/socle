@@ -30,6 +30,20 @@ export function reliabilityStatusLabel(score: number | null | undefined): string
   return `Fiabilité ${pct}`
 }
 
+/** « Fiabilité élevée / moyenne / faible » (ligne de statut de la page de lecture). */
+export function reliabilityLevelLabel(score: number | null | undefined): string {
+  switch (reliabilityTone(score)) {
+    case 'success':
+      return 'Fiabilité élevée'
+    case 'warn':
+      return 'Fiabilité moyenne'
+    case 'danger':
+      return 'Fiabilité faible'
+    default:
+      return 'Non évalué'
+  }
+}
+
 export function formatReliabilityPercent(score: number): string {
   const rounded = Math.round(score * 100) / 100
   const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/\.?0+$/, '')

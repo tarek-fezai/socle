@@ -104,6 +104,57 @@ export const DASHBOARD_MOBILE_IDS = [
   'home-section-approvals',
 ]
 
+/** Document READ page — Main.dc.html (colonne principale + rail ; le shell est hors périmètre). */
+export const PAGE_DESKTOP_IDS = [
+  'doc-topbar',
+  'doc-breadcrumb',
+  'doc-breadcrumb-current',
+  'doc-switch-page',
+  'doc-switch-graph',
+  'doc-switch-index',
+  'doc-tabs',
+  'doc-tab-read',
+  'doc-status-badge',
+  'doc-status-reliability',
+  'doc-status-revised',
+  'doc-attestation',
+  'doc-attestation-title',
+  'doc-attestation-text',
+  'doc-attestation-cta',
+  'doc-title',
+  'doc-lead',
+  'doc-section-first',
+  'rail-toc-label',
+  'rail-toc-link',
+  'rail-owner-label',
+  'rail-owner-name',
+  'rail-author-label',
+  'rail-author-name',
+  'rail-author-date',
+  'rail-modified-label',
+  'rail-modified-name',
+  'rail-modified-date',
+  'rail-tags-label',
+  'rail-tags-manage',
+  'rail-reliability-label',
+  'rail-reliability-value',
+]
+
+/** Sous la ligne de flottaison — comparés après défilement. */
+export const PAGE_BELOW_FOLD_IDS = ['doc-related-title', 'doc-related-link', 'doc-feedback-label']
+
+/** Document READ page — MobilePage.dc.html. */
+export const PAGE_MOBILE_IDS = [
+  'doc-mobile-title',
+  'doc-mobile-space',
+  'doc-status-badge',
+  'doc-status-revised-mobile',
+  'doc-title',
+  'doc-lead',
+  'doc-section-first',
+  'doc-mobile-tab-read',
+]
+
 export const MOBILE_MENU_IDS = [
   'mobile-menu',
   'mobile-menu-space',
@@ -261,6 +312,115 @@ export async function annotateMobileMenuMockup(page) {
       )
       if (user) user.setAttribute('data-mock-id', 'mobile-menu-user')
     }
+  })
+}
+
+/** Annotate Main.dc.html (document READ page, desktop) with data-mock-id. */
+export async function annotatePageMockup(page) {
+  await page.evaluate(() => {
+    const leaf = (scope, txt) =>
+      Array.from(scope.querySelectorAll('*')).find(
+        (e) => e.children.length === 0 && (e.textContent || '').trim() === txt,
+      )
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    const main = root?.children[1]
+    if (!main) return
+    const [topbar, tabs, content] = [...main.children]
+
+    if (topbar) {
+      topbar.setAttribute('data-mock-id', 'doc-topbar')
+      const crumbs = topbar.children[0]
+      crumbs?.setAttribute('data-mock-id', 'doc-breadcrumb')
+      crumbs?.lastElementChild?.setAttribute('data-mock-id', 'doc-breadcrumb-current')
+      const sw = (label, id) => {
+        const el = Array.from(topbar.querySelectorAll('a')).find((a) => (a.textContent || '').trim() === label)
+        el?.setAttribute('data-mock-id', id)
+      }
+      sw('Page', 'doc-switch-page')
+      sw('Graphe', 'doc-switch-graph')
+      sw('Index', 'doc-switch-index')
+    }
+    if (tabs) {
+      tabs.setAttribute('data-mock-id', 'doc-tabs')
+      const read = Array.from(tabs.querySelectorAll('a')).find((a) => (a.textContent || '').trim() === 'Lire')
+      read?.setAttribute('data-mock-id', 'doc-tab-read')
+    }
+    const article = content?.children[0]
+    const rail = content?.children[1]
+    if (article) {
+      const status = article.children[0]
+      if (status) {
+        status.children[0]?.setAttribute('data-mock-id', 'doc-status-badge')
+        status.children[2]?.setAttribute('data-mock-id', 'doc-status-reliability')
+        status.children[4]?.setAttribute('data-mock-id', 'doc-status-revised')
+      }
+      const banner = article.children[1]
+      if (banner) {
+        banner.setAttribute('data-mock-id', 'doc-attestation')
+        const textBox = banner.children[1]
+        textBox?.children[0]?.setAttribute('data-mock-id', 'doc-attestation-title')
+        textBox?.children[1]?.setAttribute('data-mock-id', 'doc-attestation-text')
+        banner.querySelector('button')?.setAttribute('data-mock-id', 'doc-attestation-cta')
+      }
+      article.querySelector('h1')?.setAttribute('data-mock-id', 'doc-title')
+      article.querySelector('p')?.setAttribute('data-mock-id', 'doc-lead')
+      article.querySelector('h2')?.setAttribute('data-mock-id', 'doc-section-first')
+      article.querySelector('h2#documents-lies')?.setAttribute('data-mock-id', 'doc-related-title')
+      const related = Array.from(article.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes('Procédure de provisioning'),
+      )
+      related?.setAttribute('data-mock-id', 'doc-related-link')
+      leaf(article, 'Cette page vous a-t-elle été utile ?')?.setAttribute('data-mock-id', 'doc-feedback-label')
+    }
+    if (rail) {
+      rail.setAttribute('data-mock-id', 'doc-rail')
+      const stick = rail.firstElementChild // conteneur sticky
+      leaf(rail, 'Sur cette page')?.setAttribute('data-mock-id', 'rail-toc-label')
+      rail.querySelector('a.rail-link')?.setAttribute('data-mock-id', 'rail-toc-link')
+      const labelIds = {
+        Propriétaire: 'rail-owner-label',
+        Auteur: 'rail-author-label',
+        'Dernière modification': 'rail-modified-label',
+        Tags: 'rail-tags-label',
+        Fiabilité: 'rail-reliability-label',
+      }
+      for (const [txt, id] of Object.entries(labelIds)) leaf(rail, txt)?.setAttribute('data-mock-id', id)
+      const blockOf = (txt) =>
+        stick && Array.from(stick.children).find((c) => (leaf(c, txt) ? true : false))
+      leaf(blockOf('Propriétaire') ?? rail, 'Équipe Identité')?.setAttribute('data-mock-id', 'rail-owner-name')
+      leaf(rail, 'Système (migration)')?.setAttribute('data-mock-id', 'rail-author-name')
+      leaf(rail, 'Créé le 14 juillet 2026')?.setAttribute('data-mock-id', 'rail-author-date')
+      leaf(rail, 'Tarek Fezai')?.setAttribute('data-mock-id', 'rail-modified-name')
+      leaf(rail, '12 septembre 2026 à 14:22 · v12')?.setAttribute('data-mock-id', 'rail-modified-date')
+      blockOf('Tags')?.querySelector('a[href="TagsAdmin.dc.html"]')?.setAttribute('data-mock-id', 'rail-tags-manage')
+      leaf(rail, '91% · revue à jour')?.setAttribute('data-mock-id', 'rail-reliability-value')
+    }
+  })
+}
+
+/** Annotate MobilePage.dc.html with data-mock-id. */
+export async function annotateMobilePageMockup(page) {
+  await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('div')).find((d) =>
+      (d.getAttribute('style') || '').includes('390px'),
+    )
+    if (!root) return
+    const top = root.children[0]
+    const heading = top?.children[1]
+    heading?.children[0]?.setAttribute('data-mock-id', 'doc-mobile-title')
+    heading?.children[1]?.setAttribute('data-mock-id', 'doc-mobile-space')
+    const content = root.children[1]
+    if (content) {
+      const status = content.children[0]
+      status?.children[0]?.setAttribute('data-mock-id', 'doc-status-badge')
+      status?.children[2]?.setAttribute('data-mock-id', 'doc-status-revised-mobile')
+      content.querySelector('h1')?.setAttribute('data-mock-id', 'doc-title')
+      content.querySelector('p')?.setAttribute('data-mock-id', 'doc-lead')
+      content.querySelector('h2')?.setAttribute('data-mock-id', 'doc-section-first')
+    }
+    const bar = root.children[root.children.length - 1]
+    const read = Array.from(bar?.querySelectorAll('span') ?? []).find((s) => (s.textContent || '').trim() === 'Lire')
+    read?.setAttribute('data-mock-id', 'doc-mobile-tab-read')
   })
 }
 

@@ -67,7 +67,7 @@ function renderPage(url = '/docs/new') {
       <MemoryRouter initialEntries={[url]}>
         <Routes>
           <Route path="/docs/new" element={<NewDocumentPage />} />
-          <Route path="/docs/:id" element={<div>Page document</div>} />
+          <Route path="/docs/:id/edit" element={<div>Page document</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,

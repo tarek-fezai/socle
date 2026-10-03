@@ -23,7 +23,8 @@ import { SpaceBrowsePage } from './pages/SpaceBrowsePage'
 import { FolderPage } from './pages/FolderPage'
 import { TeamPage } from './pages/TeamPage'
 import { SearchPage } from './pages/SearchPage'
-import { CompositePage } from './pages/CompositePage'
+import { DocumentReadPage } from './pages/document/DocumentReadPage'
+import { DocumentViewRedirect } from './pages/document/DocumentViewRedirect'
 import { GraphPage } from './pages/GraphPage'
 import { ContentHealthPage } from './pages/ContentHealthPage'
 import { DocumentExportPage, FolderExportPage, TagExportPage } from './pages/ExportPage'
@@ -56,8 +57,9 @@ export default function App() {
           <Route path="/docs" element={<DocumentsPage />} />
           <Route path="/docs/new" element={<NewDocumentPage />} />
           <Route path="/admin/templates" element={<TemplatesAdminPage />} />
-          <Route path="/docs/:id" element={<DocumentEditPage />} />
-          <Route path="/docs/:id/view" element={<CompositePage />} />
+          <Route path="/docs/:id" element={<DocumentReadPage />} />
+          <Route path="/docs/:id/edit" element={<DocumentEditPage />} />
+          <Route path="/docs/:id/view" element={<DocumentViewRedirect />} />
           <Route path="/docs/:id/history" element={<DocumentHistoryPage />} />
           <Route path="/docs/:id/export" element={<DocumentExportPage />} />
           <Route path="/folders/:id/export" element={<FolderExportPage />} />

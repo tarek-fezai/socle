@@ -95,5 +95,10 @@ public final class AuditActions {
     public static final String TEMPLATE_USED = "template.used";
     public static final String TEMPLATE_CREATED_FROM_DOCUMENT = "template.created_from_document";
 
+    /** Campagnes d'attestation de lecture (resource = document, metadata.campaignId). */
+    public static final String ATTESTATION_CAMPAIGN_CREATED = "attestation.campaign_created";
+    public static final String ATTESTATION_CAMPAIGN_CLOSED = "attestation.campaign_closed";
+    public static final String ATTESTATION_ACKNOWLEDGED = "attestation.acknowledged";
+
     private AuditActions() {}
 }
