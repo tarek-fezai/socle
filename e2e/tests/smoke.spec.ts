@@ -163,7 +163,8 @@ test.describe.serial('Socle demo stack smoke', () => {
     await page.goto('/search')
     await expect(page.getByRole('heading', { name: 'Recherche' })).toBeVisible()
     await page.getByRole('textbox', { name: /requête de recherche/i }).fill(documentTitle)
-    await page.getByRole('button', { name: 'Rechercher' }).click()
+    // Évite le chip sidebar « Rechercher » (shell) vs le submit de /search.
+    await page.locator('main').getByRole('button', { name: 'Rechercher' }).click()
     await expect(page.getByText(documentTitle).first()).toBeVisible({ timeout: 30_000 })
   })
 
