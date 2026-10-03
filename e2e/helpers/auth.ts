@@ -52,9 +52,10 @@ export async function loginViaUi(
   }
 
   if (!onIdp.test(page.url())) {
-    const loginBtn = page.getByRole('button', { name: /se connecter/i })
-    await loginBtn.waitFor({ state: 'visible', timeout: 15_000 })
-    await loginBtn.click()
+    // LoginPage : CTA e-mail = « Continuer », SSO IdP = « Continuer avec le SSO… »
+    const ssoBtn = page.getByRole('button', { name: /continuer avec le sso/i })
+    await ssoBtn.waitFor({ state: 'visible', timeout: 30_000 })
+    await ssoBtn.click()
     try {
       await page.waitForURL(onIdp, { timeout: 60_000 })
     } catch (err) {

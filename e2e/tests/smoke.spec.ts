@@ -35,12 +35,16 @@ test.describe.serial('Socle demo stack smoke', () => {
     expect(tokenB).toBeTruthy()
 
     await loginViaUi(page, USER_A, PASS_A)
-    await expect(page.getByRole('link', { name: /espaces/i })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: /tous les espaces|espaces/i }).first(),
+    ).toBeVisible()
 
     const ctxB = await browser.newContext()
     const pageB = await ctxB.newPage()
     await loginViaUi(pageB, USER_B, PASS_B)
-    await expect(pageB.getByRole('link', { name: /espaces/i })).toBeVisible()
+    await expect(
+      pageB.getByRole('link', { name: /tous les espaces|espaces/i }).first(),
+    ).toBeVisible()
     await ctxB.close()
   })
 
