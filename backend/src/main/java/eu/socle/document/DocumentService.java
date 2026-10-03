@@ -508,6 +508,7 @@ public class DocumentService {
         }
 
         syncDocumentLinks(saved, newBody);
+        discardDraft(saved.getId(), user.getId());
 
         auditService.record(
                 user.getId(),
@@ -695,6 +696,17 @@ public class DocumentService {
                 null
         );
         return toResponse(saved, user.getId());
+    }
+
+    /**
+     * Sauvegarde explicite réussie : le brouillon autosave de l'auteur est consommé (même
+     * transaction — rollback de la version = brouillon conservé).
+     */
+    private void discardDraft(UUID documentId, UUID userId) {
+        if (jdbc == null) {
+            return;
+        }
+        jdbc.update("DELETE FROM document_drafts WHERE document_id = ? AND user_id = ?", documentId, userId);
     }
 
     private void syncDocumentLinks(DocumentEntity doc, Map<String, Object> tipTapBody) {
@@ -920,7 +932,10 @@ public class DocumentService {
             return List.of();
         }
         List<DocumentDtos.TagRef> tags = jdbc.query("""
-                SELECT t.id, t.name, t.color
+                SELECT t.id, t.name, t.color,
+                       EXISTS (SELECT 1 FROM approval_role_assignments ara
+                                WHERE ara.scope_type = 'tag'
+                                  AND lower(ara.scope_ref) = t.id::text) AS governed
                   FROM document_tags dt
                   JOIN tags t ON t.id = dt.tag_id
                  WHERE dt.document_id = ?
@@ -929,7 +944,8 @@ public class DocumentService {
                 (rs, i) -> new DocumentDtos.TagRef(
                         (UUID) rs.getObject("id"),
                         rs.getString("name"),
-                        rs.getString("color")),
+                        rs.getString("color"),
+                        rs.getBoolean("governed")),
                 documentId);
         return tags == null ? List.of() : tags;
     }

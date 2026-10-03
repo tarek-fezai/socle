@@ -101,6 +101,9 @@ socle:
     # Seuil instance (jours) — badge « stale » si dernière écriture de contenu plus ancienne.
     # Fail-fast si ≤ 0 ou > 3650. Pas de seuil par espace dans cette itération.
     threshold-days: ${SOCLE_STALENESS_THRESHOLD_DAYS:90}
+  writing-assistant:
+    # Seuil (mots) au-delà duquel un paragraphe est signalé « trop long » par l'assistant d'écriture.
+    long-paragraph-words: ${SOCLE_WRITING_ASSISTANT_LONG_PARAGRAPH_WORDS:120}
   edit-lock:
     heartbeat-seconds: ${SOCLE_EDIT_LOCK_HEARTBEAT_SECONDS:15}
     ttl-seconds: ${SOCLE_EDIT_LOCK_TTL_SECONDS:45}

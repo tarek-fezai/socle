@@ -48,16 +48,31 @@ spec:
               PORT={{ .Values.postgres.port }}
               USER={{ .Values.postgres.username }}
               for i in $(seq 1 60); do
-                pg_isready -h "$EP" -p "$PORT" -U "$USER" && break
+                if pg_isready -h "$EP" -p "$PORT" -U "$USER" -d temporal_visibility >/dev/null 2>&1; then
+                  break
+                fi
+                if [ "$i" -ge 60 ]; then
+                  echo "postgres temporal_visibility not ready" >&2
+                  exit 1
+                fi
                 sleep 2
               done
-              temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
-                -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal setup-schema -v 0.0 || true
+              # setup-schema uniquement si schema_version absent (ne pas masquer les erreurs).
+              if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$EP" -p "$PORT" -U "$USER" -d temporal -tAc \
+                  "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='schema_version'" \
+                  | grep -q 1; then
+                temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
+                  -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal setup-schema -v 0.0
+              fi
               temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
                 -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal \
                 update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
-              temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
-                -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal_visibility setup-schema -v 0.0 || true
+              if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$EP" -p "$PORT" -U "$USER" -d temporal_visibility -tAc \
+                  "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='schema_version'" \
+                  | grep -q 1; then
+                temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
+                  -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal_visibility setup-schema -v 0.0
+              fi
               temporal-sql-tool --plugin postgres12 --ep "$EP" -p "$PORT" \
                 -u "$USER" --pw "$POSTGRES_PASSWORD" --db temporal_visibility \
                 update-schema -d /etc/temporal/schema/postgresql/v12/visibility/versioned
@@ -67,6 +82,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "socle.secretName" . }}
                   key: SPRING_DATASOURCE_PASSWORD
+            - name: PGUSER
+              value: {{ .Values.postgres.username | quote }}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

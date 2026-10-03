@@ -155,6 +155,39 @@ export const PAGE_MOBILE_IDS = [
   'doc-mobile-tab-read',
 ]
 
+/** Document EDIT screen — Edit.dc.html (colonne principale ; le shell est hors périmètre). */
+export const EDIT_DESKTOP_IDS = [
+  'edit-topbar',
+  'edit-breadcrumb-current',
+  'edit-save-status',
+  'edit-word-count',
+  'edit-presence',
+  'edit-preview',
+  'edit-send-review',
+  'edit-tabs',
+  'edit-toolbar',
+  'edit-title',
+  'edit-assistant',
+  'edit-assistant-label',
+  'edit-card-long',
+  'edit-card-long-text',
+  'edit-card-link',
+  'edit-card-link-text',
+  'edit-meta',
+  'edit-meta-label',
+  'edit-meta-owner',
+  'edit-meta-reliability',
+  'edit-meta-review',
+  'edit-meta-tags-label',
+  'edit-meta-tag',
+  'edit-meta-add-tag',
+  'edit-meta-custom-label',
+  'edit-meta-custom-manage',
+  'edit-meta-custom-field-1',
+  'edit-meta-custom-field-2',
+  'edit-meta-add-field',
+]
+
 export const MOBILE_MENU_IDS = [
   'mobile-menu',
   'mobile-menu-space',
@@ -424,6 +457,60 @@ export async function annotateMobilePageMockup(page) {
   })
 }
 
+/**
+ * Annotate Edit.dc.html (document EDIT screen, desktop) with data-mock-id.
+ * À appeler AVANT la normalisation de la maquette (structure d'origine, accès par index).
+ */
+export async function annotateEditMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    const main = root?.children[1]
+    if (!main) return
+    const [topbar, , tabs, row] = [...main.children]
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+
+    set(topbar, 'edit-topbar')
+    const meta = topbar?.children[0]
+    set(meta?.children[2], 'edit-breadcrumb-current')
+    set(meta?.children[4], 'edit-save-status')
+    set(meta?.children[6], 'edit-word-count')
+    const actions = topbar?.children[1]
+    set(actions?.children[0], 'edit-presence')
+    set(actions?.children[1], 'edit-preview')
+    set(actions?.children[2], 'edit-send-review')
+    set(tabs, 'edit-tabs')
+
+    const col = row?.children[0]?.children[0]
+    set(col?.children[0], 'edit-toolbar')
+    set(col?.querySelector('h1'), 'edit-title')
+
+    const panel = row?.children[1]
+    set(panel, 'edit-assistant')
+    set(panel?.children[0], 'edit-assistant-label')
+    set(panel?.children[1], 'edit-card-long')
+    set(panel?.children[1]?.querySelector('p'), 'edit-card-long-text')
+    set(panel?.children[2], 'edit-card-link')
+    set(panel?.children[2]?.querySelector('p'), 'edit-card-link-text')
+    const metaBlock = panel?.children[4]
+    set(metaBlock, 'edit-meta')
+    set(metaBlock?.children[0], 'edit-meta-label')
+    set(metaBlock?.children[1], 'edit-meta-owner')
+    set(metaBlock?.children[2], 'edit-meta-reliability')
+    set(metaBlock?.children[3], 'edit-meta-review')
+    set(metaBlock?.children[4], 'edit-meta-tags-label')
+    const tags = metaBlock?.children[5]
+    set(tags?.children[0], 'edit-meta-tag')
+    set(tags?.lastElementChild, 'edit-meta-add-tag')
+    const customHead = metaBlock?.children[6]
+    set(customHead?.children[0], 'edit-meta-custom-label')
+    set(customHead?.children[1], 'edit-meta-custom-manage')
+    const fields = metaBlock?.children[7]
+    set(fields?.children[0]?.querySelector('input'), 'edit-meta-custom-field-1')
+    set(fields?.children[1]?.querySelector('input'), 'edit-meta-custom-field-2')
+    set(fields?.children[2], 'edit-meta-add-field')
+  })
+}
+
 /** Annotate Login.dc.html elements with data-mock-id. */
 export async function annotateLoginMockup(page) {
   await page.evaluate(() => {
@@ -552,6 +639,7 @@ export async function collectMetrics(page, ids) {
         el.matches('button, a.cta, a.ghost, .login-cta, .login-cta--error') ||
         id.startsWith('cta-') ||
         id.startsWith('sso-') ||
+        id.startsWith('edit-meta-add-') ||
         id === 'mobile-sso'
       el.style.lineHeight = isAction ? '1' : '1.2'
     }

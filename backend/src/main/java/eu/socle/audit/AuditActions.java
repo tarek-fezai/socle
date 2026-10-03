@@ -36,6 +36,11 @@ public final class AuditActions {
     public static final String FOLDER_RESTORED = "folder.restored";
     public static final String DOCUMENT_MOVED = "document.moved";
 
+    /** Étiquettes et champs personnalisés d'un document (écran d'édition). */
+    public static final String DOCUMENT_TAG_ADDED = "document.tag_added";
+    public static final String DOCUMENT_TAG_REMOVED = "document.tag_removed";
+    public static final String DOCUMENT_CUSTOM_FIELD_UPDATED = "document.custom_field_updated";
+
     public static final String SPACE_CREATED = "space.created";
     public static final String SPACE_UPDATED = "space.updated";
     public static final String SPACE_OWNER_ADDED = "space.owner_added";

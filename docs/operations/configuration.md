@@ -68,6 +68,7 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SOCLE_STALENESS_THRESHOLD_DAYS` | `90` | no | no | Stale badge threshold (1–3650) |
 | `SOCLE_EDIT_LOCK_HEARTBEAT_SECONDS` | `15` | no | no | Edit lock heartbeat interval |
 | `SOCLE_EDIT_LOCK_TTL_SECONDS` | `45` | no | no | Edit lock expiry |
+| `SOCLE_WRITING_ASSISTANT_LONG_PARAGRAPH_WORDS` | `120` | no | no | Writing assistant: flag paragraphs longer than N words (`socle.writing-assistant.long-paragraph-words`) |
 
 ## Identity (`socle.identity` / `IdentityProperties`)
 

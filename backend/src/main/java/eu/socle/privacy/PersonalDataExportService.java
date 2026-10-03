@@ -3,6 +3,8 @@ package eu.socle.privacy;
 
 import eu.socle.comment.CommentDtos.PersonalCommentExport;
 import eu.socle.comment.CommentService;
+import eu.socle.document.DocumentDraftService;
+import eu.socle.document.DocumentDraftService.PersonalDraftExport;
 import eu.socle.user.UserSyncService;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -14,17 +16,28 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Export des données personnelles (ExportPersonalData.dc.html) — commentaires
- * de cette itération. Étendable ultérieurement.
+ * Export des données personnelles (ExportPersonalData.dc.html) — commentaires et brouillons
+ * d'édition en cours ({@code document_drafts}). Étendable ultérieurement.
+ *
+ * <p>TODO(RGPD) : il n'existe pas encore de flux de suppression / purge de compte. Quand il sera
+ * créé, il doit appeler {@link #anonymizeUserComments} et {@link #erasePersonalDrafts} (les
+ * brouillons sont supprimés en cascade seulement si la ligne {@code users} est physiquement
+ * supprimée ; une simple anonymisation du compte les conserverait).
  */
 @Service
 public class PersonalDataExportService {
 
     private final CommentService commentService;
+    private final DocumentDraftService draftService;
     private final UserSyncService userSyncService;
 
-    public PersonalDataExportService(CommentService commentService, UserSyncService userSyncService) {
+    public PersonalDataExportService(
+            CommentService commentService,
+            DocumentDraftService draftService,
+            UserSyncService userSyncService
+    ) {
         this.commentService = commentService;
+        this.draftService = draftService;
         this.userSyncService = userSyncService;
     }
 
@@ -32,11 +45,13 @@ public class PersonalDataExportService {
     public Map<String, Object> exportFor(Jwt jwt) {
         var user = userSyncService.syncFromJwt(jwt);
         List<PersonalCommentExport> comments = commentService.exportPersonalComments(user.getId());
+        List<PersonalDraftExport> drafts = draftService.exportFor(user.getId());
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("userId", user.getId().toString());
         out.put("email", user.getEmail());
         out.put("displayName", user.getDisplayName());
         out.put("comments", comments);
+        out.put("documentDrafts", drafts);
         return out;
     }
 
@@ -44,5 +59,11 @@ public class PersonalDataExportService {
     @Transactional
     public int anonymizeUserComments(UUID userId) {
         return commentService.anonymizeAuthor(userId);
+    }
+
+    /** Point d'entrée pour la suppression de compte future : efface les brouillons non versionnés. */
+    @Transactional
+    public int erasePersonalDrafts(UUID userId) {
+        return draftService.deleteAllForUser(userId);
     }
 }
