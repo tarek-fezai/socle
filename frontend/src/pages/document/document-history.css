@@ -602,8 +602,7 @@
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1;
-  height: 13px;
+  line-height: normal;
   color: #0e0e10;
   cursor: pointer;
 }
