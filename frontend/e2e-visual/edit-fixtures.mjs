@@ -134,12 +134,13 @@ export function editLockMine() {
 
 export const EDIT_WRITING_HINTS = {
   longParagraphThresholdWords: EDIT_LONG_THRESHOLD,
-  // Backend WritingAssistant ne liste que des cibles inaccessibles (accessible: false).
+  // Maquette Edit.dc.html : « n'existe plus » + titre (accessible: true).
+  // Le wire live ne renvoie aujourd'hui que accessible: false — écart documenté.
   brokenLinks: [
     {
       targetId: 'd0000001-0000-4000-8000-0000000000b9',
-      label: 'Document inaccessible',
-      accessible: false,
+      label: 'Procédure de provisioning v9',
+      accessible: true,
     },
   ],
   longParagraphs: [],
