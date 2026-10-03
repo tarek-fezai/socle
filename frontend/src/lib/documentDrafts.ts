@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { AxiosInstance } from 'axios'
+import type { components } from './api-types'
 
 type Api = Pick<AxiosInstance, 'get' | 'put' | 'delete'>
 
 /** Brouillon d'édition de l'appelant (autosave) — jamais une version publiée. */
-export type DocumentDraft = {
+export type DocumentDraft = components['schemas']['DraftView'] & {
   title: string
-  body: Record<string, unknown>
-  /** Version publiée sur laquelle le brouillon a été commencé. */
+  body: { [key: string]: unknown }
   baseVersionNo: number
   updatedAt: string
 }
-
-export type DocumentDraftInput = Pick<DocumentDraft, 'title' | 'body' | 'baseVersionNo'>
+export type DocumentDraftInput = Pick<NonNullable<DocumentDraft>, 'title' | 'body' | 'baseVersionNo'>
 
 export const documentDraftKey = (documentId: string) => ['document-draft', documentId] as const
 
@@ -64,5 +63,5 @@ export async function deleteDocumentDraft(api: Pick<Api, 'delete'>, documentId: 
 
 /** Le brouillon repose sur une version plus ancienne que la version publiée courante. */
 export function isDraftStale(draft: Pick<DocumentDraft, 'baseVersionNo'> | null, currentVersionNo?: number | null) {
-  return Boolean(draft && currentVersionNo != null && draft.baseVersionNo < currentVersionNo)
+  return Boolean(draft && currentVersionNo != null && (draft.baseVersionNo ?? 0) < currentVersionNo)
 }

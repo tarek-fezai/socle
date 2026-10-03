@@ -125,7 +125,11 @@ export type SideRow =
   | { kind: 'context'; old: SideCell; new: SideCell }
   | { kind: 'change'; old: SideCell | null; new: SideCell | null }
 
-const cell = (l: CompareLine, no: number | null): SideCell => ({ no, text: l.text, spans: l.spans })
+const cell = (l: CompareLine, no: number | null | undefined): SideCell => ({
+  no: no ?? null,
+  text: l.text,
+  spans: l.spans,
+})
 
 /** Appaire les suppressions et les ajouts consécutifs (ligne par ligne, reste vide de l'autre côté). */
 export function pairSideBySide(lines: CompareLine[]): SideRow[] {

@@ -39,6 +39,7 @@ export const HIST_VERSIONS_DESKTOP = [
     createdAt: '2026-09-12T12:22:00.000Z',
     linesAdded: 18,
     linesRemoved: 4,
+    current: true,
   },
   {
     versionNo: 11,
@@ -48,6 +49,7 @@ export const HIST_VERSIONS_DESKTOP = [
     createdAt: '2026-09-03T07:41:00.000Z',
     linesAdded: 32,
     linesRemoved: 0,
+    current: false,
   },
   {
     versionNo: 10,
@@ -57,6 +59,7 @@ export const HIST_VERSIONS_DESKTOP = [
     createdAt: '2026-08-28T14:05:00.000Z',
     linesAdded: 6,
     linesRemoved: 11,
+    current: false,
   },
   {
     versionNo: 9,
@@ -66,6 +69,7 @@ export const HIST_VERSIONS_DESKTOP = [
     createdAt: '2026-07-14T09:00:00.000Z',
     linesAdded: 210,
     linesRemoved: 0,
+    current: false,
   },
 ]
 export const HIST_TOTAL_DESKTOP = 12
@@ -90,6 +94,7 @@ export const HIST_VERSIONS_MOBILE = [
     createdAt: '2026-07-14T09:00:00.000Z',
     linesAdded: 210,
     linesRemoved: 0,
+    current: false,
   },
 ]
 

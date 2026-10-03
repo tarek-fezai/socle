@@ -18,6 +18,8 @@ By signing off, you certify the [Developer Certificate of Origin](https://develo
 2. Open a pull request targeting **`main`**.
 3. CI must be green before merge (`backend`, `frontend`, `worker`).
 4. Do not push directly to `main`.
+5. **No out-of-scope commits in a PR.** Keep the branch limited to the stated change set.
+6. **After a review report**, any new commit must be called out explicitly in the PR (or review thread) before merge — do not land silent follow-ups.
 
 ## Tests
 

@@ -95,6 +95,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/folders/*/export").access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/*/export").access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(
+                                "/api-docs",
+                                "/api-docs/**",
+                                "/ApiDocs.dc.html",
+                                "/ApiDocs.dc.html/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).hasRole(SocleRole.ADMINISTRATEUR_SYSTEME.springRole())
+                        .requestMatchers(
                                 "/api/documents/**",
                                 "/api/v1/documents/**",
                                 "/api/v1/approvals",

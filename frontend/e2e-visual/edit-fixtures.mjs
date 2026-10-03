@@ -134,7 +134,14 @@ export function editLockMine() {
 
 export const EDIT_WRITING_HINTS = {
   longParagraphThresholdWords: EDIT_LONG_THRESHOLD,
-  brokenLinks: [{ targetId: 'd0000001-0000-4000-8000-0000000000b9', label: 'Procédure de provisioning v9', accessible: true }],
+  // Backend WritingAssistant ne liste que des cibles inaccessibles (accessible: false).
+  brokenLinks: [
+    {
+      targetId: 'd0000001-0000-4000-8000-0000000000b9',
+      label: 'Document inaccessible',
+      accessible: false,
+    },
+  ],
   longParagraphs: [],
 }
 

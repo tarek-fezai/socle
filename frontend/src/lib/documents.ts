@@ -1,38 +1,111 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-export type DocumentSummary = {
-  id: string
-  title: string
-  status: string
-  updatedAt: string
-  /** null hors `valide` — jamais traiter comme 0 */
-  reliabilityScore?: number | null
-  stale?: boolean
-  contentModifiedAt?: string | null
-}
+import type { components } from './api-types'
 
-/** Étiquette rattachée à un document (triée par nom côté serveur). */
-export type TagRef = {
+/** Types générés depuis `openapi/openapi.json`, recoupés avec les champs requis côté fil. */
+export type TagRef = components['schemas']['TagRef'] & {
   id: string
   name: string
-  color?: string | null
-  /** Étiquette de gouvernance : rattachement / retrait réservés aux propriétaires. */
-  governed?: boolean
 }
 
-/** Personne résolue depuis `users` (auteur, propriétaire). */
-export type PersonRef = {
+export type PersonRef = components['schemas']['PersonRef'] & {
   id: string
   displayName: string
-  initials: string
 }
 
-/** Droits calculés serveur (OpenFGA BatchCheck + statut). */
-export type DocumentPermissions = {
+export type DocumentPermissions = components['schemas']['DocumentPermissions'] & {
   canEdit: boolean
   canPublish: boolean
   canManageAccess: boolean
   canComment: boolean
   canManageAttestations: boolean
+}
+
+export type DocumentSummary = components['schemas']['DocumentSummary'] & {
+  id: string
+  title: string
+  status: string
+  updatedAt: string
+}
+
+export type DocumentDetail = Omit<
+  components['schemas']['DocumentResponse'],
+  'tags' | 'permissions' | 'createdBy' | 'updatedBy' | 'owner' | 'body'
+> & {
+  id: string
+  spaceId: string
+  title: string
+  body: { [key: string]: unknown }
+  status: string
+  currentVersionNo: number
+  createdAt: string
+  updatedAt: string
+  stale: boolean
+  stalenessThresholdDays: number
+  visibility: string
+  position: number
+  tags: TagRef[]
+  permissions: DocumentPermissions
+  createdBy?: PersonRef
+  updatedBy?: PersonRef
+  owner?: PersonRef
+}
+
+export type VersionSummary = components['schemas']['VersionSummary'] & {
+  versionNo: number
+  createdAt: string
+}
+
+export type VersionPage = components['schemas']['VersionPage'] & {
+  items: VersionSummary[]
+  offset: number
+  limit: number
+  total: number
+}
+
+export type DiffChange = components['schemas']['DiffChange'] & {
+  path: string
+  op: string
+  before: unknown
+  after: unknown
+}
+
+export type VersionDiff = components['schemas']['VersionDiffResponse'] & {
+  documentId: string
+  fromVersion: number
+  toVersion: number
+  changes: DiffChange[]
+}
+
+export type CompareSpan = components['schemas']['CompareSpan'] & {
+  kind: string
+  text: string
+}
+
+export type CompareLine = Omit<components['schemas']['CompareLine'], 'spans' | 'oldNo' | 'newNo'> & {
+  kind: string
+  text: string
+  oldNo?: number | null
+  newNo?: number | null
+  spans?: CompareSpan[]
+}
+
+export type CompareHunk = Omit<components['schemas']['CompareHunk'], 'lines'> & {
+  lines: CompareLine[]
+  collapsedUnchanged: number
+}
+
+export type VersionCompare = Omit<components['schemas']['VersionCompareResponse'], 'hunks'> & {
+  documentId: string
+  fromVersion: number
+  toVersion: number
+  added: number
+  removed: number
+  hunks: CompareHunk[]
+}
+
+export type DocumentListPage = components['schemas']['DocumentListPage'] & {
+  results: DocumentSummary[]
+  total: number
 }
 
 export const emptyPermissions: DocumentPermissions = {
@@ -41,38 +114,6 @@ export const emptyPermissions: DocumentPermissions = {
   canManageAccess: false,
   canComment: false,
   canManageAttestations: false,
-}
-
-export type DocumentDetail = {
-  id: string
-  spaceId: string
-  /** null / absent = racine de l'espace */
-  folderId?: string | null
-  position?: number
-  title: string
-  docType?: string | null
-  body: Record<string, unknown>
-  status: string
-  currentVersionNo?: number
-  createdAt: string
-  updatedAt: string
-  /** null hors statut `valide` — afficher « Non évalué », jamais 0% fictif */
-  reliabilityScore?: number | null
-  reliabilityComputedAt?: string | null
-  stale?: boolean
-  contentModifiedAt?: string | null
-  stalenessThresholdDays?: number
-  /** organisation | space | restricted */
-  visibility?: 'organisation' | 'space' | 'restricted' | string
-  /** Créateur — null = « Système (migration) » */
-  createdBy?: PersonRef | null
-  /** Auteur du contenu courant — null = « Système (migration) » */
-  updatedBy?: PersonRef | null
-  /** Propriétaire d'espace (utilisateur), si résolu */
-  owner?: PersonRef | null
-  /** Étiquettes, triées par nom */
-  tags?: TagRef[]
-  permissions?: DocumentPermissions
 }
 
 export type DocumentVisibility = 'organisation' | 'space' | 'restricted'
@@ -86,84 +127,9 @@ export type TipTapNode = {
   [key: string]: unknown
 }
 
-export type VersionSummary = {
-  versionNo: number
-  authorId: string | null
-  archivedBy?: string | null
-  changeSummary: string | null
-  createdAt: string
-  /** Nom affiché de l'auteur (null / absent si auteur système ou non résolu). */
-  authorDisplayName?: string | null
-  authorInitials?: string | null
-  /** Lignes ajoutées / retirées par rapport à la version précédente (absent = inconnu). */
-  linesAdded?: number | null
-  linesRemoved?: number | null
-  /** Renseigné par le serveur : c'est la version courante du document. */
-  current?: boolean
-}
-
-export type VersionPage = {
-  items: VersionSummary[]
-  offset: number
-  limit: number
-  total: number
-}
-
-export type VersionDiff = {
-  documentId: string
-  fromVersion: number
-  toVersion: number
-  changes: Array<{
-    path: string
-    op: string
-    before: unknown
-    after: unknown
-  }>
-}
-
-/** Fragment intra-ligne (mots) : `eq` inchangé, `add` / `del` mis en évidence. */
-export type CompareSpan = { kind: 'eq' | 'add' | 'del'; text: string }
-
-export type CompareLine = {
-  kind: 'context' | 'add' | 'del'
-  oldNo: number | null
-  newNo: number | null
-  text: string
-  spans?: CompareSpan[] | null
-}
-
-export type CompareHunk = {
-  /** Titre le plus proche au-dessus du bloc (peut être vide). */
-  header: string
-  /**
-   * Bloc modifié : lignes (contexte compris). Bloc replié par le serveur : liste vide et
-   * `collapsedUnchanged` = nombre de lignes inchangées omises.
-   */
-  lines: CompareLine[]
-  /** > 0 : lignes inchangées repliées (bloc sans `lines`, ou contexte à replier dans le bloc). */
-  collapsedUnchanged: number
-}
-
-/** Comparaison ligne à ligne de deux versions (`…/compare/{b}?mode=lines`). */
-export type VersionCompare = {
-  documentId: string
-  fromVersion: number
-  toVersion: number
-  added: number
-  removed: number
-  hunks: CompareHunk[]
-}
-
 export const emptyDocBody: Record<string, unknown> = {
   type: 'doc',
   content: [{ type: 'paragraph' }],
-}
-
-export type DocumentListPage = {
-  results: DocumentSummary[]
-  total: number
-  totalIsEstimate: boolean
-  warning?: string | null
 }
 
 export async function listDocuments(
@@ -289,10 +255,11 @@ export async function listAllVersions(
   // Garde-fou : un total incohérent ne doit pas boucler indéfiniment.
   for (let guard = 0; guard < 100; guard += 1) {
     const page = await listVersions(api, documentId, { offset, limit: pageSize })
-    items.push(...page.items)
-    total = page.total
-    offset += page.items.length
-    if (page.items.length === 0 || offset >= total) break
+    const batch = page.items ?? []
+    items.push(...batch)
+    total = page.total ?? 0
+    offset += batch.length
+    if (batch.length === 0 || offset >= total) break
   }
   return { items, offset: 0, limit: pageSize, total }
 }

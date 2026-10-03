@@ -53,11 +53,15 @@ management:
       probes:
         enabled: true
 
+# OpenAPI / Swagger UI : en prod, désactiver via SOCLE_OPENAPI_ENABLED=false
+# ou s'appuyer sur le garde ROLE_administrateur-systeme (SecurityConfig).
 springdoc:
   api-docs:
     path: /api-docs
+    enabled: ${SOCLE_OPENAPI_ENABLED:true}
   swagger-ui:
     path: /ApiDocs.dc.html
+    enabled: ${SOCLE_OPENAPI_ENABLED:true}
 
 socle:
   instance:

@@ -103,10 +103,15 @@ export function pageDocument(variant = 'desktop') {
     createdBy: null, // « Système (migration) »
     updatedBy: { id: ME_TAREK.id, displayName: ME_TAREK.displayName, initials: 'TF' },
     owner: { id: ME_TAREK.id, displayName: ME_TAREK.displayName, initials: 'TF' },
+    visibility: 'organisation',
+    position: 0,
+    templateId: null,
+    templateVersion: null,
+    reliabilityComputedAt: '2026-09-12T12:22:00.000Z',
     tags: [
-      { id: 'tag-iam', name: 'IAM', color: '#3730E0' },
-      { id: 'tag-rgpd', name: 'RGPD', color: '#B7791F' },
-      { id: 'tag-critique', name: 'Critique', color: '#B54708' },
+      { id: 'a0000001-0000-4000-8000-0000000000a1', name: 'IAM', color: '#3730E0', governed: false },
+      { id: 'a0000001-0000-4000-8000-0000000000a2', name: 'RGPD', color: '#B7791F', governed: false },
+      { id: 'a0000001-0000-4000-8000-0000000000a3', name: 'Critique', color: '#B54708', governed: true },
     ],
     permissions: {
       canEdit: true,

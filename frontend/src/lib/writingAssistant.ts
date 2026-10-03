@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { AxiosInstance } from 'axios'
+import type { components } from './api-types'
 import type { TipTapNode } from './documents'
 
 /** Seuil client par défaut (aligné sur socle.writing-assistant.long-paragraph-words). */
@@ -8,10 +9,18 @@ export const DEFAULT_LONG_PARAGRAPH_WORDS = 120
 /** Libellé fixe renvoyé par le serveur pour toute cible illisible (jamais de titre divulgué). */
 export const INACCESSIBLE_LABEL = 'Document inaccessible'
 
-export type BrokenLink = { targetId: string; label: string; accessible: boolean }
-export type LongParagraph = { index: number; wordCount: number; excerpt: string }
+export type BrokenLink = components['schemas']['BrokenLink'] & {
+  targetId: string
+  accessible: boolean
+}
 
-export type WritingHints = {
+export type LongParagraph = components['schemas']['LongParagraph'] & {
+  index: number
+  wordCount: number
+  excerpt: string
+}
+
+export type WritingHints = components['schemas']['Hints'] & {
   longParagraphThresholdWords: number
   brokenLinks: BrokenLink[]
   longParagraphs: LongParagraph[]
@@ -30,7 +39,7 @@ export function writingHintsKey(documentId: string) {
 /** Libellé d'un lien cassé : « Document inaccessible » dès que la cible n'est pas lisible. */
 export function brokenLinkLabel(link: Pick<BrokenLink, 'label' | 'accessible'>): string {
   if (!link.accessible) return INACCESSIBLE_LABEL
-  return link.label.trim() || 'Document supprimé'
+  return (link.label ?? '').trim() || 'Document supprimé'
 }
 
 function collectText(node: TipTapNode | undefined, out: string[]) {
@@ -79,5 +88,5 @@ export function findLongParagraphs(
 
 /** Texte de la carte « Paragraphe long ». */
 export function longParagraphMessage(p: LongParagraph, threshold: number): string {
-  return `Ce paragraphe dépasse ${threshold} mots (${p.wordCount}) — envisagez de le diviser en deux idées.`
+  return `Ce paragraphe dépasse ${threshold} mots (${p.wordCount ?? 0}) — envisagez de le diviser en deux idées.`
 }

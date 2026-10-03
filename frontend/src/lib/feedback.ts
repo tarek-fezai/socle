@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { AxiosInstance } from 'axios'
+import type { components } from './api-types'
 
-export type FeedbackTotals = { yes: number; no: number }
+export type FeedbackTotals = components['schemas']['FeedbackTotals'] & {
+  yes: number
+  no: number
+}
 
-export type DocumentFeedback = {
-  /** null = pas de vote */
-  myVote: boolean | null
-  /** Présent uniquement pour les éditeurs du document (champ omis sinon). */
-  totals?: FeedbackTotals | null
+export type DocumentFeedback = components['schemas']['FeedbackView'] & {
+  totals: FeedbackTotals
 }
 
 type Client = Pick<AxiosInstance, 'get' | 'put'>
