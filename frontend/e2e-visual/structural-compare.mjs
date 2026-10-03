@@ -188,6 +188,74 @@ export const EDIT_DESKTOP_IDS = [
   'edit-meta-add-field',
 ]
 
+/** Historique — History.dc.html (colonne principale ; v12 courante, v11 / v10 / v9 restaurables). */
+export const HISTORY_DESKTOP_IDS = [
+  'hist-topbar',
+  'hist-breadcrumb-current',
+  'hist-back',
+  'hist-tabs',
+  'hist-tab-history',
+  'hist-title',
+  'hist-subtitle',
+  ...[0, 1, 2, 3].flatMap((i) => [
+    `hist-r${i}-dot`,
+    `hist-r${i}-version`,
+    `hist-r${i}-date`,
+    ...(i === 0 ? ['hist-r0-badge'] : []),
+    `hist-r${i}-summary`,
+    `hist-r${i}-avatar`,
+    `hist-r${i}-author`,
+    `hist-r${i}-added`,
+    `hist-r${i}-removed`,
+    ...(i > 0 ? [`hist-r${i}-restore`] : []),
+  ]),
+  'hist-r1-compare',
+]
+
+/** Comparaison — Diff.dc.html (v11 → v12, côte à côte). */
+export const DIFF_DESKTOP_IDS = [
+  'diff-topbar',
+  'diff-breadcrumb-current',
+  'diff-back',
+  'diff-restore',
+  'diff-controls',
+  'diff-sel-from',
+  'diff-sel-to',
+  'diff-added',
+  'diff-removed',
+  'diff-toggle',
+  'diff-seg-side',
+  'diff-seg-unified',
+  'diff-box',
+  'diff-hunk-0',
+  'diff-hunk-1',
+  'diff-hunk-2',
+]
+
+/** Modale « Restaurer la v11 ? » — RestoreVersion.dc.html. */
+export const RESTORE_IDS = [
+  'restore-modal',
+  'restore-title',
+  'restore-text-1',
+  'restore-text-2',
+  'restore-warning',
+  'restore-cancel',
+  'restore-confirm',
+]
+
+/** Historique mobile — MobileHistory.dc.html (v12 actuelle, v11 comparable, v1 système). */
+export const HISTORY_MOBILE_IDS = [
+  'hist-mobile-title',
+  ...[0, 1, 2].flatMap((i) => [`hist-m-avatar-${i}`, `hist-m-name-${i}`, `hist-m-date-${i}`]),
+  'hist-m-compare-1',
+  'hist-m-restore-2',
+  'doc-mobile-tab-history',
+]
+
+/** Actions pinned à line-height 1 des deux côtés (maquette : <a>/<span> ; app : <a>/<button>). */
+const ACTION_ID_RE =
+  /^(hist-back|hist-r\d+-(compare|restore)|hist-m-(compare|restore)-\d+|diff-(back|restore|seg-\w+)|restore-(cancel|confirm))$/
+
 export const MOBILE_MENU_IDS = [
   'mobile-menu',
   'mobile-menu-space',
@@ -628,22 +696,149 @@ export async function annotateMobileMockup(page) {
   })
 }
 
+/**
+ * Annotate History.dc.html (desktop) with data-mock-id. Structure d'origine, accès par index :
+ * root > [sidebar, main > [topbar, tabs, content > column > [h1, p, timeline > (ligne, item…)]]].
+ */
+export async function annotateHistoryMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    const main = root?.children[1]
+    if (!main) return
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const [topbar, tabs, content] = [...main.children]
+    set(topbar, 'hist-topbar')
+    set(topbar?.children[0]?.lastElementChild, 'hist-breadcrumb-current')
+    set(topbar?.children[1], 'hist-back')
+    set(tabs, 'hist-tabs')
+    set(
+      Array.from(tabs?.querySelectorAll('a') ?? []).find((a) => (a.textContent || '').trim() === 'Historique'),
+      'hist-tab-history',
+    )
+    const col = content?.children[0]
+    set(col?.querySelector('h1'), 'hist-title')
+    set(col?.querySelector('p'), 'hist-subtitle')
+    const timeline = col?.children[2]
+    const items = [...(timeline?.children ?? [])].slice(1) // [0] = filet vertical
+    items.forEach((item, i) => {
+      const p = `hist-r${i}-`
+      set(item.children[0], `${p}dot`)
+      const head = item.children[1]
+      set(head?.children[0], `${p}version`)
+      set(head?.children[1], `${p}date`)
+      if (i === 0) set(head?.children[2], `${p}badge`)
+      set(item.children[2], `${p}summary`)
+      const foot = item.children[3]
+      // v12 : [auteur, +n, −n] ; autres : [[auteur, +n, −n], (Comparer), Restaurer]
+      const meta = i === 0 ? foot : foot?.children[0]
+      const author = meta?.children[0]
+      set(author?.children[0], `${p}avatar`)
+      set(author?.children[1], `${p}author`)
+      set(meta?.children[1], `${p}added`)
+      set(meta?.children[2], `${p}removed`)
+      if (i > 0) {
+        const links = [...(foot?.children ?? [])].slice(1)
+        const byLabel = (label) => links.find((a) => (a.textContent || '').trim() === label)
+        set(byLabel('Comparer'), `${p}compare`)
+        set(byLabel('Restaurer'), `${p}restore`)
+      }
+    })
+  })
+}
+
+/** Annotate Diff.dc.html : root > [topbar, controls, body > box > (.hunk, .diffline…)]. */
+export async function annotateDiffMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const [topbar, controls, body] = [...root.children]
+    set(topbar, 'diff-topbar')
+    set(topbar?.children[0]?.lastElementChild, 'diff-breadcrumb-current')
+    set(topbar?.children[1]?.children[0], 'diff-back')
+    set(topbar?.children[1]?.children[1], 'diff-restore')
+    set(controls, 'diff-controls')
+    set(controls?.children[0], 'diff-sel-from')
+    set(controls?.children[2], 'diff-sel-to')
+    set(controls?.children[3], 'diff-added')
+    set(controls?.children[4], 'diff-removed')
+    const toggle = controls?.children[5]
+    set(toggle, 'diff-toggle')
+    set(toggle?.children[0], 'diff-seg-side')
+    set(toggle?.children[1], 'diff-seg-unified')
+    const box = body?.children[0]
+    set(box, 'diff-box')
+    box?.querySelectorAll('.hunk > .cell').forEach((cell, i) => set(cell, `diff-hunk-${i}`))
+  })
+}
+
+/** Annotate RestoreVersion.dc.html : la carte (480 px) > [en-tête, p, p, avertissement, actions]. */
+export async function annotateRestoreMockup(page) {
+  await page.evaluate(() => {
+    const card = Array.from(document.querySelectorAll('div')).find((d) =>
+      (d.getAttribute('style') || '').includes('width: 480px'),
+    )
+    if (!card) return
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    set(card, 'restore-modal')
+    const [head, p1, p2, warning, actions] = [...card.children]
+    set(head?.querySelector('h1'), 'restore-title')
+    set(p1, 'restore-text-1')
+    set(p2, 'restore-text-2')
+    set(warning, 'restore-warning')
+    set(actions?.children[0], 'restore-cancel')
+    set(actions?.children[1], 'restore-confirm')
+  })
+}
+
+/** Annotate MobileHistory.dc.html : root > [topbar, liste > lignes, onglets]. */
+export async function annotateMobileHistoryMockup(page) {
+  await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('div')).find((d) =>
+      (d.getAttribute('style') || '').includes('390px'),
+    )
+    if (!root) return
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    set(root.children[0]?.children[1], 'hist-mobile-title')
+    const list = root.children[1]
+    ;[...(list?.children ?? [])].forEach((row, i) => {
+      set(row.children[0], `hist-m-avatar-${i}`)
+      const body = row.children[1]
+      set(body?.children[0], `hist-m-name-${i}`)
+      set(body?.children[1], `hist-m-date-${i}`)
+      const link = body?.children[2]
+      if (link && i === 1) set(link, 'hist-m-compare-1')
+      if (link && i === 2) set(link, 'hist-m-restore-2')
+    })
+    const bar = root.children[root.children.length - 1]
+    set(
+      Array.from(bar?.querySelectorAll('span') ?? []).find((s) => (s.textContent || '').trim() === 'Historique'),
+      'doc-mobile-tab-history',
+    )
+  })
+}
+
 export async function collectMetrics(page, ids) {
   // Pin line-height so glyph box heights are comparable across UA defaults
-  await page.evaluate((idList) => {
-    for (const id of idList) {
-      const el = document.querySelector(`[data-mock-id="${id}"]`)
-      if (!el) continue
-      if (el.tagName.toLowerCase() === 'text') continue
-      const isAction =
-        el.matches('button, a.cta, a.ghost, .login-cta, .login-cta--error') ||
-        id.startsWith('cta-') ||
-        id.startsWith('sso-') ||
-        id.startsWith('edit-meta-add-') ||
-        id === 'mobile-sso'
-      el.style.lineHeight = isAction ? '1' : '1.2'
-    }
-  }, ids)
+  await page.evaluate(
+    ({ idList, actionRe }) => {
+      const re = new RegExp(actionRe)
+      for (const id of idList) {
+        const el = document.querySelector(`[data-mock-id="${id}"]`)
+        if (!el) continue
+        if (el.tagName.toLowerCase() === 'text') continue
+        const isAction =
+          el.matches('button, a.cta, a.ghost, .login-cta, .login-cta--error') ||
+          id.startsWith('cta-') ||
+          id.startsWith('sso-') ||
+          id.startsWith('edit-meta-add-') ||
+          id === 'mobile-sso' ||
+          re.test(id)
+        el.style.lineHeight = isAction ? '1' : '1.2'
+      }
+    },
+    { idList: ids, actionRe: ACTION_ID_RE.source },
+  )
   return page.evaluate((idList) => {
     function firstFamily(ff) {
       return (ff || '')

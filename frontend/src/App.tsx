@@ -6,6 +6,7 @@ import { AppShellLayout } from './components/shell/AppShell'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { DocumentEditPage } from './pages/DocumentEditPage'
 import { DocumentHistoryPage } from './pages/DocumentHistoryPage'
+import { DocumentComparePage } from './pages/DocumentComparePage'
 import { NewDocumentPage } from './pages/NewDocumentPage'
 import { TemplatesAdminPage } from './pages/TemplatesAdminPage'
 import { AccessPage } from './pages/AccessPage'
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/docs/:id/edit" element={<DocumentEditPage />} />
           <Route path="/docs/:id/view" element={<DocumentViewRedirect />} />
           <Route path="/docs/:id/history" element={<DocumentHistoryPage />} />
+          <Route path="/docs/:id/history/compare" element={<DocumentComparePage />} />
           <Route path="/docs/:id/export" element={<DocumentExportPage />} />
           <Route path="/folders/:id/export" element={<FolderExportPage />} />
           <Route path="/tags/:id/export" element={<TagExportPage />} />

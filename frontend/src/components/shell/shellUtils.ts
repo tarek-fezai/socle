@@ -27,9 +27,18 @@ export function isDocumentEditPath(pathname: string): boolean {
   return Boolean(m) && m![1] !== 'new'
 }
 
-/** Pages documentaires qui portent leur propre chrome (lecture, modification). */
+/**
+ * `/docs/:id/history` (Historique, History.dc.html / MobileHistory.dc.html) et
+ * `/docs/:id/history/compare` (Comparer, Diff.dc.html) — barre haute, onglets et barre mobile
+ * fournis par la page. L'ancien alias `/documents/:id/history` est conservé.
+ */
+export function isDocumentHistoryPath(pathname: string): boolean {
+  return /^\/(?:docs|documents)\/(?!new\/?$)[^/]+\/history(?:\/compare)?\/?$/.test(pathname)
+}
+
+/** Pages documentaires qui portent leur propre chrome (lecture, modification, historique). */
 export function hasOwnDocumentChrome(pathname: string): boolean {
-  return isDocumentReadPath(pathname) || isDocumentEditPath(pathname)
+  return isDocumentReadPath(pathname) || isDocumentEditPath(pathname) || isDocumentHistoryPath(pathname)
 }
 
 /** Actions du shell exposées aux pages qui remplacent la barre mobile (via `<Outlet context>`). */

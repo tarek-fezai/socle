@@ -19,7 +19,6 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -90,7 +89,15 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
 
     @Override
     public String createContent(UUID documentId, Map<String, Object> body, UUID authorId) {
-        commitFile(documentId, body, authorId, authorId, "create " + documentId, null);
+        return createContent(documentId, body, authorId, null);
+    }
+
+    @Override
+    public String createContent(UUID documentId, Map<String, Object> body, UUID authorId, String changeSummary) {
+        String msg = changeSummary == null || changeSummary.isBlank()
+                ? "create " + documentId
+                : changeSummary;
+        commitFile(documentId, body, authorId, authorId, msg, null);
         return resolveHeadSha();
     }
 
@@ -158,13 +165,23 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
 
     @Override
     public Page<StoredVersion> listVersions(UUID documentId, int page, int size) {
-        PageRequest pageable = PageRequest.of(page, size);
+        return listVersionsFromOffset(documentId, Math.multiplyExact(page, size), size);
+    }
+
+    @Override
+    public Page<StoredVersion> listVersionsFromOffset(UUID documentId, int offset, int size) {
+        OffsetPageRequest pageable = new OffsetPageRequest(Math.max(offset, 0), Math.max(size, 1));
         Page<DocumentVersionEntity> result =
                 versionRepository.findByDocumentIdOrderByVersionNoDesc(documentId, pageable);
         if (result == null) {
             return Page.empty(pageable);
         }
         return result.map(this::toStored);
+    }
+
+    @Override
+    public long countVersions(UUID documentId) {
+        return versionRepository.countByDocumentId(documentId);
     }
 
     @Override

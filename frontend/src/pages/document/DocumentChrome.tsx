@@ -135,6 +135,35 @@ export function ExportMenu({
 /* Barre haute desktop (60 px)                                         */
 /* ------------------------------------------------------------------ */
 
+/** Fil d'Ariane de la barre haute (partagé Lire / Historique / Comparer). */
+export function DocumentCrumbs({ crumbs, mockPrefix = 'doc' }: { crumbs: Crumb[]; mockPrefix?: string }) {
+  return (
+    <nav className="doc-crumbs" aria-label="Fil d'Ariane" data-mock-id={`${mockPrefix}-breadcrumb`}>
+      {crumbs.map((c, i) => {
+        const last = i === crumbs.length - 1
+        return (
+          <span key={`${c.label}-${i}`} className="doc-crumb-wrap">
+            {i > 0 && <span className="doc-crumb-sep">→</span>}
+            {last || !c.to ? (
+              <span
+                className={last ? 'doc-crumb is-current' : 'doc-crumb'}
+                aria-current={last ? 'page' : undefined}
+                data-mock-id={last ? `${mockPrefix}-breadcrumb-current` : undefined}
+              >
+                {c.label}
+              </span>
+            ) : (
+              <Link to={c.to} className="doc-crumb">
+                {c.label}
+              </Link>
+            )}
+          </span>
+        )
+      })}
+    </nav>
+  )
+}
+
 export function DocumentTopBar({
   documentId,
   spaceId,
@@ -161,29 +190,8 @@ export function DocumentTopBar({
   const support = getCachedAuthConfig()?.supportContact?.trim() || ''
   return (
     <div className="doc-topbar" data-mock-id="doc-topbar">
-      <nav className="doc-crumbs" aria-label="Fil d'Ariane" data-mock-id="doc-breadcrumb">
-        {crumbs.map((c, i) => {
-          const last = i === crumbs.length - 1
-          return (
-            <span key={`${c.label}-${i}`} className="doc-crumb-wrap">
-              {i > 0 && <span className="doc-crumb-sep">→</span>}
-              {last || !c.to ? (
-                <span
-                  className={last ? 'doc-crumb is-current' : 'doc-crumb'}
-                  aria-current={last ? 'page' : undefined}
-                  data-mock-id={last ? 'doc-breadcrumb-current' : undefined}
-                >
-                  {c.label}
-                </span>
-              ) : (
-                <Link to={c.to} className="doc-crumb">
-                  {c.label}
-                </Link>
-              )}
-            </span>
-          )
-        })}
-      </nav>
+      <DocumentCrumbs crumbs={crumbs} />
+
 
       <div className="doc-actions">
         <a
@@ -249,9 +257,9 @@ export function DocumentTopBar({
 export type DocTabsProps = {
   documentId: string
   /** Onglet courant (défaut : Lire). */
-  current?: 'read' | 'edit'
+  current?: 'read' | 'edit' | 'history'
   /** Préfixe des `data-mock-id` (défaut : `doc`). */
-  mockPrefix?: 'doc' | 'edit'
+  mockPrefix?: 'doc' | 'edit' | 'hist'
   showEdit: boolean
   showAccess: boolean
   openComments: number
@@ -292,7 +300,13 @@ export function DocumentTabs({
           Modifier
         </Link>
       )}
-      <Link to={`/docs/${documentId}/history`} role="tab" aria-selected={false} className="doc-tab">
+      <Link
+        to={`/docs/${documentId}/history`}
+        role="tab"
+        aria-selected={current === 'history'}
+        className={`doc-tab${current === 'history' ? ' is-active' : ''}`}
+        data-mock-id={current === 'history' ? `${mockPrefix}-tab-history` : undefined}
+      >
         Historique
       </Link>
       <button
@@ -473,6 +487,8 @@ export function DocumentMobileTabs({
       <MobileTab
         to={`/docs/${documentId}/history`}
         label="Historique"
+        active={current === 'history' && !commentsOpen}
+        id="doc-mobile-tab-history"
         icon={
           <svg {...svgProps}>
             <circle cx="12" cy="12" r="9" />

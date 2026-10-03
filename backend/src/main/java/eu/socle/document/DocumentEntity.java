@@ -48,6 +48,10 @@ public class DocumentEntity {
     @Column(name = "current_version_no", nullable = false)
     private int currentVersionNo = 1;
 
+    /** Résumé de la version courante (non archivée). */
+    @Column(name = "current_change_summary")
+    private String currentChangeSummary;
+
     @Column(name = "reliability_score", precision = 5, scale = 2)
     private BigDecimal reliabilityScore;
 
@@ -190,6 +194,14 @@ public class DocumentEntity {
 
     public void setCurrentVersionNo(int currentVersionNo) {
         this.currentVersionNo = currentVersionNo;
+    }
+
+    public String getCurrentChangeSummary() {
+        return currentChangeSummary;
+    }
+
+    public void setCurrentChangeSummary(String currentChangeSummary) {
+        this.currentChangeSummary = currentChangeSummary;
     }
 
     public BigDecimal getReliabilityScore() {

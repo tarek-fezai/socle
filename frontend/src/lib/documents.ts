@@ -92,6 +92,14 @@ export type VersionSummary = {
   archivedBy?: string | null
   changeSummary: string | null
   createdAt: string
+  /** Nom affiché de l'auteur (null / absent si auteur système ou non résolu). */
+  authorDisplayName?: string | null
+  authorInitials?: string | null
+  /** Lignes ajoutées / retirées par rapport à la version précédente (absent = inconnu). */
+  linesAdded?: number | null
+  linesRemoved?: number | null
+  /** Renseigné par le serveur : c'est la version courante du document. */
+  current?: boolean
 }
 
 export type VersionPage = {
@@ -111,6 +119,39 @@ export type VersionDiff = {
     before: unknown
     after: unknown
   }>
+}
+
+/** Fragment intra-ligne (mots) : `eq` inchangé, `add` / `del` mis en évidence. */
+export type CompareSpan = { kind: 'eq' | 'add' | 'del'; text: string }
+
+export type CompareLine = {
+  kind: 'context' | 'add' | 'del'
+  oldNo: number | null
+  newNo: number | null
+  text: string
+  spans?: CompareSpan[] | null
+}
+
+export type CompareHunk = {
+  /** Titre le plus proche au-dessus du bloc (peut être vide). */
+  header: string
+  /**
+   * Bloc modifié : lignes (contexte compris). Bloc replié par le serveur : liste vide et
+   * `collapsedUnchanged` = nombre de lignes inchangées omises.
+   */
+  lines: CompareLine[]
+  /** > 0 : lignes inchangées repliées (bloc sans `lines`, ou contexte à replier dans le bloc). */
+  collapsedUnchanged: number
+}
+
+/** Comparaison ligne à ligne de deux versions (`…/compare/{b}?mode=lines`). */
+export type VersionCompare = {
+  documentId: string
+  fromVersion: number
+  toVersion: number
+  added: number
+  removed: number
+  hunks: CompareHunk[]
 }
 
 export const emptyDocBody: Record<string, unknown> = {
@@ -221,11 +262,54 @@ export async function updateDocumentVisibility(
   return data
 }
 
+export const VERSION_PAGE_SIZE = 50
+
 export async function listVersions(
   api: { get: <T>(url: string) => Promise<{ data: T }> },
   documentId: string,
+  page: { offset?: number; limit?: number } = {},
 ) {
-  const { data } = await api.get<VersionPage>(`/api/v1/documents/${documentId}/versions`)
+  const offset = page.offset ?? 0
+  const limit = page.limit ?? VERSION_PAGE_SIZE
+  const { data } = await api.get<VersionPage>(
+    `/api/v1/documents/${documentId}/versions?offset=${offset}&limit=${limit}`,
+  )
+  return data
+}
+
+/** Charge toutes les pages (sélecteurs de comparaison). */
+export async function listAllVersions(
+  api: { get: <T>(url: string) => Promise<{ data: T }> },
+  documentId: string,
+  pageSize = 100,
+): Promise<VersionPage> {
+  const items: VersionSummary[] = []
+  let offset = 0
+  let total = 0
+  // Garde-fou : un total incohérent ne doit pas boucler indéfiniment.
+  for (let guard = 0; guard < 100; guard += 1) {
+    const page = await listVersions(api, documentId, { offset, limit: pageSize })
+    items.push(...page.items)
+    total = page.total
+    offset += page.items.length
+    if (page.items.length === 0 || offset >= total) break
+  }
+  return { items, offset: 0, limit: pageSize, total }
+}
+
+/** Comparaison ligne à ligne (`from` → `to`). Le diff structurel `fetchVersionDiff` reste utilisé par les approbations. */
+export async function fetchVersionCompare(
+  api: { get: <T>(url: string) => Promise<{ data: T }> },
+  documentId: string,
+  fromVersion: number,
+  toVersion: number,
+  options: { fullContext?: boolean } = {},
+) {
+  // `context=all` : demande les lignes inchangées des blocs repliés (dépliage « N lignes inchangées »).
+  const ctx = options.fullContext ? '&context=all' : ''
+  const { data } = await api.get<VersionCompare>(
+    `/api/v1/documents/${documentId}/versions/${fromVersion}/compare/${toVersion}?mode=lines${ctx}`,
+  )
   return data
 }
 

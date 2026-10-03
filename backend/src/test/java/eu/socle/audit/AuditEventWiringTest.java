@@ -182,7 +182,10 @@ class AuditEventWiringTest {
         UUID requestId = UUID.randomUUID();
 
         activities.recordSubmission(DOC, USER, requestId, UUID.randomUUID(), "wf-1", 1, 24);
-        verify(documentStore).archiveVersion(eq(DOC), eq(1), any(), eq(USER), eq(USER), anyString());
+        // Archive : résumé du contenu courant (null ici) ; write : motif de soumission.
+        verify(documentStore).archiveVersion(eq(DOC), eq(1), any(), eq(USER), eq(USER), isNull());
+        verify(documentStore).writeCurrentContent(
+                eq(DOC), any(), eq(USER), eq(USER), eq("Soumission pour approbation"), any());
         verify(auditService).recordSync(
                 eq(USER), eq(false), eq(AuditActions.DOCUMENT_SUBMITTED),
                 eq("document"), eq(DOC), anyMap(), isNull());

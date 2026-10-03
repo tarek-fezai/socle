@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, fireEvent, within, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 vi.mock('../lib/api', () => ({ api: {} }))
+vi.mock('../auth/AuthProvider', () => ({
+  useAuth: () => ({
+    authenticated: true,
+    me: { id: 'u-me', email: 'tarek@example.com', displayName: 'Tarek Fezai', avatarInitials: 'TF' },
+  }),
+}))
 
 const getDocument = vi.fn()
 const listVersions = vi.fn()
-const fetchVersionDiff = vi.fn()
 const restoreVersion = vi.fn()
 
 vi.mock('../lib/documents', async () => {
@@ -18,33 +23,98 @@ vi.mock('../lib/documents', async () => {
     ...actual,
     getDocument: (...args: unknown[]) => getDocument(...args),
     listVersions: (...args: unknown[]) => listVersions(...args),
-    fetchVersionDiff: (...args: unknown[]) => fetchVersionDiff(...args),
     restoreVersion: (...args: unknown[]) => restoreVersion(...args),
+  }
+})
+vi.mock('../lib/comments', async () => {
+  const actual = await vi.importActual<typeof import('../lib/comments')>('../lib/comments')
+  return { ...actual, listComments: vi.fn().mockResolvedValue({ openThreadCount: 3, threads: [] }) }
+})
+vi.mock('../lib/spaces', async () => {
+  const actual = await vi.importActual<typeof import('../lib/spaces')>('../lib/spaces')
+  return { ...actual, getSpace: vi.fn().mockResolvedValue({ id: 's1', name: 'Identité & accès' }) }
+})
+vi.mock('../lib/folders', async () => {
+  const actual = await vi.importActual<typeof import('../lib/folders')>('../lib/folders')
+  return {
+    ...actual,
+    getSpaceTree: vi.fn().mockResolvedValue({ spaceId: 's1', spaceName: 'Identité & accès', folders: [], documents: [] }),
   }
 })
 
 import { DocumentHistoryPage } from './DocumentHistoryPage'
 
 const DOC = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+const ME = 'u-me'
+const CLAIRE = 'u-claire'
 
-const versions = {
+/** Instant exprimé en heure locale : le rendu (fuseau du navigateur) reste déterministe. */
+const local = (y: number, m: number, d: number, h: number, min: number) =>
+  new Date(y, m - 1, d, h, min).toISOString()
+
+const editorPerms = {
+  canEdit: true,
+  canPublish: true,
+  canManageAccess: false,
+  canComment: true,
+  canManageAttestations: false,
+}
+const viewerPerms = { ...editorPerms, canEdit: false, canPublish: false, canComment: false }
+
+function docDetail(over: Record<string, unknown> = {}) {
+  return {
+    id: DOC,
+    spaceId: 's1',
+    title: 'Politique de gestion des accès',
+    body: {},
+    status: 'valide',
+    currentVersionNo: 12,
+    createdAt: local(2026, 7, 14, 11, 0),
+    updatedAt: local(2026, 9, 12, 14, 22),
+    permissions: editorPerms,
+    ...over,
+  }
+}
+
+const VERSIONS = {
   items: [
     {
-      versionNo: 2,
-      authorId: '11111111-1111-1111-1111-111111111111',
-      changeSummary: 'Ajout section',
-      createdAt: '2026-09-28T10:00:00Z',
+      versionNo: 12,
+      authorId: ME,
+      authorDisplayName: 'Tarek Fezai',
+      authorInitials: 'TF',
+      changeSummary: "Clarification du circuit d'approbation N2 et ajout du schéma de refus",
+      createdAt: local(2026, 9, 12, 14, 22),
+      linesAdded: 18,
+      linesRemoved: 4,
+      current: true,
     },
     {
-      versionNo: 1,
-      authorId: '11111111-1111-1111-1111-111111111111',
-      changeSummary: null,
-      createdAt: '2026-09-27T09:00:00Z',
+      versionNo: 11,
+      authorId: CLAIRE,
+      authorDisplayName: 'Claire Dubois',
+      authorInitials: 'CD',
+      changeSummary: "Ajout du tableau des rôles et des périmètres d'accès",
+      createdAt: local(2026, 9, 3, 9, 41),
+      linesAdded: 32,
+      linesRemoved: 0,
+      current: false,
+    },
+    {
+      versionNo: 9,
+      authorId: null,
+      authorDisplayName: 'Système (migration)',
+      authorInitials: null,
+      changeSummary: "Import initial depuis l'ancien wiki IAM",
+      createdAt: local(2026, 7, 14, 11, 0),
+      linesAdded: 210,
+      linesRemoved: 0,
+      current: false,
     },
   ],
   offset: 0,
   limit: 50,
-  total: 2,
+  total: 12,
 }
 
 function wrap(ui: ReactNode, path = `/docs/${DOC}/history`) {
@@ -56,198 +126,268 @@ function wrap(ui: ReactNode, path = `/docs/${DOC}/history`) {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/docs/:id/history" element={ui} />
+          <Route path="/docs/:id" element={<div>page de lecture</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   )
 }
 
+function mockMobile(matches: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: matches && query.includes('max-width: 767px'),
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  })) as unknown as typeof window.matchMedia
+}
+
 describe('DocumentHistoryPage', () => {
   beforeEach(() => {
     getDocument.mockReset()
     listVersions.mockReset()
-    fetchVersionDiff.mockReset()
     restoreVersion.mockReset()
+    getDocument.mockResolvedValue(docDetail())
+    listVersions.mockResolvedValue(VERSIONS)
   })
 
-  it('affiche archivé par seulement s\'il diffère de l\'auteur', async () => {
-    getDocument.mockResolvedValue({
-      id: DOC,
-      spaceId: '00000000-0000-0000-0000-000000000001',
-      title: 'Politique',
-      body: {},
-      status: 'brouillon',
-      currentVersionNo: 2,
-      createdAt: '2026-09-01T00:00:00Z',
-      updatedAt: '2026-09-28T10:00:00Z',
-    })
+  afterEach(() => {
+    cleanup()
+    // @ts-expect-error — retour à l'absence de matchMedia (jsdom)
+    delete window.matchMedia
+  })
+
+  it('affiche la timeline : version, date FR, résumé, auteur, +N/−N, compteur', async () => {
+    render(wrap(<DocumentHistoryPage />))
+
+    await waitFor(() => expect(screen.getByText('v12')).toBeTruthy())
+    expect(screen.getByRole('heading', { name: 'Historique des versions' })).toBeTruthy()
+    expect(screen.getByTestId('history-count').textContent).toBe(
+      '12 versions publiées depuis la création du document',
+    )
+    expect(screen.getByText('12 septembre 2026 · 14:22')).toBeTruthy()
+    expect(screen.getByText('3 septembre 2026 · 09:41')).toBeTruthy()
+    expect(screen.getByText("Ajout du tableau des rôles et des périmètres d'accès")).toBeTruthy()
+    expect(screen.getByText('Claire Dubois')).toBeTruthy()
+    expect(screen.getByText('+32')).toBeTruthy()
+    expect(screen.getAllByText('\u22120')).toHaveLength(2)
+    expect(screen.getByText('+210')).toBeTruthy()
+    // v12 est l'utilisateur courant : avatar sombre ; CD teinté
+    const row12 = screen.getByTestId('history-row-12')
+    expect(within(row12).getByText('TF').className).toContain('hist-avatar--self')
+    expect(within(screen.getByTestId('history-row-11')).getByText('CD').className).toContain('hist-avatar--other')
+  })
+
+  it('auteur null → « Système (migration) » avec l’engrenage ⚙', async () => {
+    render(wrap(<DocumentHistoryPage />))
+    const row9 = await screen.findByTestId('history-row-9')
+    expect(within(row9).getByText('Système (migration)')).toBeTruthy()
+    const gear = within(row9).getByTestId('hist-avatar-system')
+    expect(gear.textContent).toBe('⚙')
+  })
+
+  it('badge « Actuelle » uniquement sur la version courante', async () => {
+    render(wrap(<DocumentHistoryPage />))
+    await screen.findByTestId('history-row-12')
+    const badges = screen.getAllByTestId('history-current-badge')
+    expect(badges).toHaveLength(1)
+    expect(badges[0]!.textContent).toBe('Actuelle')
+    expect(within(screen.getByTestId('history-row-12')).getByTestId('history-current-badge')).toBeTruthy()
+  })
+
+  it('canEdit : Comparer / Restaurer jamais sur la version courante', async () => {
+    render(wrap(<DocumentHistoryPage />))
+    const row12 = await screen.findByTestId('history-row-12')
+    expect(within(row12).queryByText('Comparer')).toBeNull()
+    expect(within(row12).queryByRole('button', { name: 'Restaurer' })).toBeNull()
+    const row11 = screen.getByTestId('history-row-11')
+    expect(within(row11).getByText('Comparer')).toBeTruthy()
+    expect(within(row11).getByRole('button', { name: 'Restaurer' })).toBeTruthy()
+  })
+
+  it('canEdit : la plus ancienne version n’a pas de « Comparer » (rien à comparer) mais « Restaurer »', async () => {
+    // Historique complet (total = éléments chargés) : v9 est la première version.
+    listVersions.mockResolvedValue({ ...VERSIONS, total: 3 })
+    render(wrap(<DocumentHistoryPage />))
+    const row9 = await screen.findByTestId('history-row-9')
+    expect(within(row9).queryByText('Comparer')).toBeNull()
+    expect(within(row9).getByRole('button', { name: 'Restaurer' })).toBeTruthy()
+  })
+
+  it('d’autres pages existent : la dernière ligne chargée peut encore être comparée à v-1', async () => {
+    render(wrap(<DocumentHistoryPage />))
+    const row9 = await screen.findByTestId('history-row-9')
+    expect(within(row9).getByText('Comparer').closest('a')!.getAttribute('href')).toBe(
+      `/docs/${DOC}/history/compare?from=8&to=9`,
+    )
+  })
+
+  it('sans canEdit : aucune action Comparer / Restaurer', async () => {
+    getDocument.mockResolvedValue(docDetail({ permissions: viewerPerms }))
+    render(wrap(<DocumentHistoryPage />))
+    await screen.findByTestId('history-row-11')
+    expect(screen.queryByText('Comparer')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Restaurer' })).toBeNull()
+    // l'onglet Modifier est aussi masqué
+    expect(screen.queryByTestId('tab-edit')).toBeNull()
+  })
+
+  it('Comparer ouvre la comparaison contre la version précédente', async () => {
+    render(wrap(<DocumentHistoryPage />))
+    const row11 = await screen.findByTestId('history-row-11')
+    const link = within(row11).getByText('Comparer').closest('a')!
+    // v11 est suivie de v9 dans la liste (v10 absente) : comparaison v9 → v11
+    expect(link.getAttribute('href')).toBe(`/docs/${DOC}/history/compare?from=9&to=11`)
+  })
+
+  it('onglets : Historique actif, pas de duplication de la barre d’onglets', async () => {
+    render(wrap(<DocumentHistoryPage />))
+    await screen.findByTestId('history-row-12')
+    const tabs = screen.getAllByRole('tablist', { name: 'Sections du document' })
+    // desktop + barre mobile (masquée en CSS)
+    expect(tabs.length).toBeLessThanOrEqual(1)
+    const active = screen.getAllByRole('tab', { selected: true })
+    expect(active.map((t) => t.textContent)).toEqual(['Historique'])
+    await waitFor(() => expect(screen.getByTestId('toggle-comments').textContent).toContain('3'))
+  })
+
+  it('Restaurer → modale avec le texte exact de la maquette et les vraies valeurs', async () => {
+    render(wrap(<DocumentHistoryPage />))
+    const row11 = await screen.findByTestId('history-row-11')
+    fireEvent.click(within(row11).getByRole('button', { name: 'Restaurer' }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: 'Restaurer la v11 ?' })).toBeTruthy()
+    const text = dialog.textContent ?? ''
+    expect(text).toContain(
+      'Le contenu de la v11 (3 septembre 2026 · 09:41, Claire Dubois) deviendra la nouvelle version courante du document, publiée sous le numéro v13.',
+    )
+    expect(text).toContain(
+      "La version actuelle (v12) n'est pas perdue : elle reste consultable et comparable dans l'historique.",
+    )
+    expect(text).toContain(
+      "Les modifications propres à la v12 (clarification du circuit d'approbation N2 et ajout du schéma de refus) ne seront plus reflétées dans le contenu affiché.",
+    )
+    expect(within(dialog).getByRole('button', { name: 'Annuler' })).toBeTruthy()
+    expect(within(dialog).getByRole('button', { name: 'Restaurer cette version' })).toBeTruthy()
+    // statut valide : avertissement de repassage en revue
+    expect(within(dialog).getByTestId('restore-status-note').textContent).toMatch(/en_revue/)
+  })
+
+  it('modale : résumé absent → « sans résumé »', async () => {
     listVersions.mockResolvedValue({
-      items: [
-        {
-          versionNo: 2,
-          authorId: '11111111-1111-1111-1111-111111111111',
-          archivedBy: '22222222-2222-2222-2222-222222222222',
-          changeSummary: 'Soumission pour approbation',
-          createdAt: '2026-09-28T10:00:00Z',
-        },
-        {
-          versionNo: 1,
-          authorId: '11111111-1111-1111-1111-111111111111',
-          archivedBy: '11111111-1111-1111-1111-111111111111',
-          changeSummary: 'edit',
-          createdAt: '2026-09-27T09:00:00Z',
-        },
-      ],
-      offset: 0,
-      limit: 50,
-      total: 2,
+      ...VERSIONS,
+      items: VERSIONS.items.map((v) => (v.versionNo === 12 ? { ...v, changeSummary: null } : v)),
     })
-
     render(wrap(<DocumentHistoryPage />))
-
-    await waitFor(() => expect(screen.getByText('Soumission pour approbation')).toBeTruthy())
-    expect(screen.getByText(/archivé par 22222222/i)).toBeTruthy()
-    // Même auteur / archiveur → pas de second libellé
-    expect(screen.getAllByText(/archivé par/i)).toHaveLength(1)
+    fireEvent.click(within(await screen.findByTestId('history-row-11')).getByRole('button', { name: 'Restaurer' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.textContent).toContain('Les modifications propres à la v12 (sans résumé) ne seront plus reflétées')
   })
 
-  it('affiche la liste et identifie la version courante', async () => {
-    getDocument.mockResolvedValue({
-      id: DOC,
-      spaceId: '00000000-0000-0000-0000-000000000001',
-      title: 'Politique',
-      body: {},
-      status: 'en_revue',
-      currentVersionNo: 2,
-      createdAt: '2026-09-01T00:00:00Z',
-      updatedAt: '2026-09-28T10:00:00Z',
-    })
-    listVersions.mockResolvedValue(versions)
-
+  it('Annuler ferme la modale sans appel API', async () => {
     render(wrap(<DocumentHistoryPage />))
-
-    await waitFor(() => expect(screen.getByText('Ajout section')).toBeTruthy())
-    expect(screen.getByText('Aucun résumé')).toBeTruthy()
-    expect(screen.getAllByText(/version courante/i).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText((content, el) => el?.tagName === 'SPAN' && content === 'version courante')).toBeTruthy()
-  })
-
-  it('sélection de deux versions → diff via composant partagé', async () => {
-    getDocument.mockResolvedValue({
-      id: DOC,
-      spaceId: '00000000-0000-0000-0000-000000000001',
-      title: 'Politique',
-      body: {},
-      status: 'brouillon',
-      currentVersionNo: 3,
-      createdAt: '2026-09-01T00:00:00Z',
-      updatedAt: '2026-09-28T10:00:00Z',
-    })
-    listVersions.mockResolvedValue(versions)
-    fetchVersionDiff.mockResolvedValue({
-      documentId: DOC,
-      fromVersion: 1,
-      toVersion: 2,
-      changes: [
-        { path: 'content[1]', op: 'added', before: null, after: { type: 'paragraph' } },
-        { path: 'content[0].text', op: 'modified', before: 'a', after: 'b' },
-      ],
-    })
-
-    render(wrap(<DocumentHistoryPage />))
-    await waitFor(() => expect(screen.getAllByText('Comparer').length).toBeGreaterThan(0))
-
-    const compareButtons = screen.getAllByRole('button', { name: 'Comparer' })
-    fireEvent.click(compareButtons[0])
-    fireEvent.click(compareButtons[1])
-
-    await waitFor(() => {
-      expect(fetchVersionDiff).toHaveBeenCalledWith(expect.anything(), DOC, 1, 2)
-      expect(screen.getByText('[added]')).toBeTruthy()
-      expect(screen.getByText('[modified]')).toBeTruthy()
-    })
-  })
-
-  it('restore sur document valide → avertissement puis statut en_revue', async () => {
-    getDocument.mockResolvedValue({
-      id: DOC,
-      spaceId: '00000000-0000-0000-0000-000000000001',
-      title: 'Politique',
-      body: {},
-      status: 'valide',
-      currentVersionNo: 3,
-      createdAt: '2026-09-01T00:00:00Z',
-      updatedAt: '2026-09-28T10:00:00Z',
-    })
-    listVersions
-      .mockResolvedValueOnce(versions)
-      .mockResolvedValueOnce({
-        ...versions,
-        items: [
-          {
-            versionNo: 3,
-            authorId: '11111111-1111-1111-1111-111111111111',
-            changeSummary: 'Avant restore',
-            createdAt: '2026-09-28T11:00:00Z',
-          },
-          ...versions.items,
-        ],
-        total: 3,
-      })
-    restoreVersion.mockResolvedValue({
-      id: DOC,
-      spaceId: '00000000-0000-0000-0000-000000000001',
-      title: 'Politique',
-      body: {},
-      status: 'en_revue',
-      currentVersionNo: 4,
-      createdAt: '2026-09-01T00:00:00Z',
-      updatedAt: '2026-09-28T12:00:00Z',
-    })
-
-    render(wrap(<DocumentHistoryPage />))
-    await waitFor(() => expect(screen.getAllByText('Restaurer').length).toBeGreaterThan(0))
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Restaurer' })[0])
-
-    await waitFor(() => {
-      expect(screen.getByText(/repasser en/i)).toBeTruthy()
-      expect(screen.getByText(/nouvelle approbation/i)).toBeTruthy()
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmer la restauration' }))
-
-    await waitFor(() => {
-      expect(restoreVersion).toHaveBeenCalledWith(expect.anything(), DOC, 2, 3)
-    })
-    await waitFor(() => {
-      expect(screen.getByText(/statut en_revue/i)).toBeTruthy()
-    })
-  })
-
-  it('restore sur archive → bouton désactivé, pas d’appel API', async () => {
-    getDocument.mockResolvedValue({
-      id: DOC,
-      spaceId: '00000000-0000-0000-0000-000000000001',
-      title: 'Archivé',
-      body: {},
-      status: 'archive',
-      currentVersionNo: 2,
-      createdAt: '2026-09-01T00:00:00Z',
-      updatedAt: '2026-09-28T10:00:00Z',
-    })
-    listVersions.mockResolvedValue(versions)
-
-    render(wrap(<DocumentHistoryPage />))
-    await waitFor(() => expect(screen.getByText(/Document archivé/i)).toBeTruthy())
-    await waitFor(() => expect(screen.getByText('Ajout section')).toBeTruthy())
-
-    const restoreButtons = screen.getAllByRole('button', { name: 'Restaurer' })
-    expect(restoreButtons.length).toBeGreaterThan(0)
-    for (const btn of restoreButtons) {
-      expect((btn as HTMLButtonElement).disabled).toBe(true)
-    }
+    fireEvent.click(within(await screen.findByTestId('history-row-11')).getByRole('button', { name: 'Restaurer' }))
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Annuler' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(restoreVersion).not.toHaveBeenCalled()
+  })
+
+  it('confirmer la restauration appelle l’API avec expectedVersionNo puis affiche le statut', async () => {
+    restoreVersion.mockResolvedValue(docDetail({ status: 'en_revue', currentVersionNo: 13 }))
+    render(wrap(<DocumentHistoryPage />))
+    fireEvent.click(within(await screen.findByTestId('history-row-11')).getByRole('button', { name: 'Restaurer' }))
+    fireEvent.click(within(await screen.findByRole('dialog')).getByTestId('restore-confirm'))
+
+    await waitFor(() => expect(restoreVersion).toHaveBeenCalledWith(expect.anything(), DOC, 11, 12))
+    await waitFor(() => expect(screen.getByTestId('history-status-note').textContent).toMatch(/statut en_revue/))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('échec de la restauration : message dans la modale (409 explicite)', async () => {
+    restoreVersion.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { message: 'Le document a changé' } },
+    })
+    render(wrap(<DocumentHistoryPage />))
+    fireEvent.click(within(await screen.findByTestId('history-row-11')).getByRole('button', { name: 'Restaurer' }))
+    fireEvent.click(within(await screen.findByRole('dialog')).getByTestId('restore-confirm'))
+    await waitFor(() => expect(screen.getByTestId('restore-error')).toBeTruthy())
+    expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+
+  it('document archivé → Restaurer désactivé, aucun appel API', async () => {
+    getDocument.mockResolvedValue(docDetail({ status: 'archive' }))
+    render(wrap(<DocumentHistoryPage />))
+    await screen.findByTestId('history-archived')
+    const buttons = await screen.findAllByRole('button', { name: 'Restaurer' })
+    expect(buttons.length).toBeGreaterThan(0)
+    for (const b of buttons) expect((b as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(buttons[0]!)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(restoreVersion).not.toHaveBeenCalled()
+  })
+
+  it('document de 45 versions : première ligne = courante avec badge, résumé et compteurs', async () => {
+    const items = Array.from({ length: 20 }, (_, i) => {
+      const versionNo = 45 - i
+      return {
+        versionNo,
+        authorId: ME,
+        authorDisplayName: 'Tarek Fezai',
+        authorInitials: 'TF',
+        changeSummary: versionNo === 45 ? 'Résumé de la version courante' : `Résumé v${versionNo}`,
+        createdAt: local(2026, 9, 12, 14, 22),
+        linesAdded: versionNo === 45 ? 18 : 2,
+        linesRemoved: versionNo === 45 ? 4 : 1,
+        current: versionNo === 45,
+      }
+    })
+    listVersions.mockResolvedValue({ items, offset: 0, limit: 50, total: 45 })
+    getDocument.mockResolvedValue(docDetail({ currentVersionNo: 45 }))
+    render(wrap(<DocumentHistoryPage />))
+
+    const first = await screen.findByTestId('history-row-45')
+    expect(within(first).getByTestId('history-current-badge')).toBeTruthy()
+    expect(within(first).getByText('Résumé de la version courante')).toBeTruthy()
+    expect(within(first).getByText('+18')).toBeTruthy()
+    expect(within(first).getByText('\u22124')).toBeTruthy()
+    expect(screen.getByTestId('history-count').textContent).toBe(
+      '45 versions publiées depuis la création du document',
+    )
+    // Ordre serveur : la courante est bien la première ligne de la liste.
+    const rows = screen.getAllByTestId(/history-row-/)
+    expect(rows[0]).toBe(first)
+  })
+
+  it('pagination : « Afficher les versions précédentes » charge la page suivante', async () => {
+    listVersions
+      .mockResolvedValueOnce({ ...VERSIONS, items: VERSIONS.items.slice(0, 2), total: 3 })
+      .mockResolvedValueOnce({ ...VERSIONS, items: VERSIONS.items.slice(2), offset: 2, total: 3 })
+    render(wrap(<DocumentHistoryPage />))
+    fireEvent.click(await screen.findByTestId('history-more'))
+    await screen.findByTestId('history-row-9')
+    expect(listVersions).toHaveBeenLastCalledWith(expect.anything(), DOC, { offset: 2, limit: 50 })
+    expect(screen.queryByTestId('history-more')).toBeNull()
+  })
+
+  it('mobile : liste compacte, « Voir les changements → », « Restaurer cette version »', async () => {
+    mockMobile(true)
+    render(wrap(<DocumentHistoryPage />))
+    const row11 = await screen.findByTestId('history-row-11')
+    expect(within(row11).getByText('Claire Dubois')).toBeTruthy()
+    expect(within(row11).getByText('· v11')).toBeTruthy()
+    expect(within(row11).getByText('3 septembre 2026 à 09:41')).toBeTruthy()
+    expect(within(row11).getByText('Voir les changements →').closest('a')!.getAttribute('href')).toBe(
+      `/docs/${DOC}/history/compare?from=9&to=11`,
+    )
+    expect(within(row11).getByRole('button', { name: 'Restaurer cette version' })).toBeTruthy()
+    // version courante : « (actuelle) », aucune action
+    const row12 = screen.getByTestId('history-row-12')
+    expect(within(row12).getByText('· v12 (actuelle)')).toBeTruthy()
+    expect(within(row12).queryByText('Voir les changements →')).toBeNull()
+    // barre d’onglets du bas partagée, Historique actif
+    expect(screen.getByRole('navigation', { name: 'Sections du document' })).toBeTruthy()
   })
 
   it('403 → message clair, pas de fuite de l’historique', async () => {
@@ -259,7 +399,7 @@ describe('DocumentHistoryPage', () => {
       expect(screen.getByText(/Accès refusé|n'est pas accessible/i)).toBeTruthy()
     })
     expect(listVersions).not.toHaveBeenCalled()
-    expect(screen.queryByText('Ajout section')).toBeNull()
-    expect(screen.queryByText('v1')).toBeNull()
+    expect(screen.queryByText('Ajout du tableau des rôles et des périmètres d\'accès')).toBeNull()
+    expect(screen.queryByText('v11')).toBeNull()
   })
 })

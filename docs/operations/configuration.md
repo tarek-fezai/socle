@@ -70,6 +70,12 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SOCLE_EDIT_LOCK_TTL_SECONDS` | `45` | no | no | Edit lock expiry |
 | `SOCLE_WRITING_ASSISTANT_LONG_PARAGRAPH_WORDS` | `120` | no | no | Writing assistant: flag paragraphs longer than N words (`socle.writing-assistant.long-paragraph-words`) |
 
+## Version comparison (`socle.diff` / `DiffProperties`)
+
+| Name | Default | Required | Secret | Description |
+|------|---------|----------|--------|-------------|
+| `SOCLE_DIFF_MAX_LINES` | `20000` | no | no | History screen: max Markdown lines per side for `GET /api/v1/documents/{id}/versions/{a}/compare/{b}`; larger versions are rejected with HTTP 413 (`socle.diff.max-lines`, must be > 0) |
+
 ## Identity (`socle.identity` / `IdentityProperties`)
 
 YAML-only defaults below can be overridden via env (Spring relaxed binding).

@@ -5,7 +5,6 @@ import eu.socle.document.BodyDiff;
 import eu.socle.document.DocumentVersionEntity;
 import eu.socle.document.DocumentVersionRepository;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -81,7 +80,12 @@ public class RelationalDocumentStore implements DocumentStore {
 
     @Override
     public Page<StoredVersion> listVersions(UUID documentId, int page, int size) {
-        PageRequest pageable = PageRequest.of(page, size);
+        return listVersionsFromOffset(documentId, Math.multiplyExact(page, size), size);
+    }
+
+    @Override
+    public Page<StoredVersion> listVersionsFromOffset(UUID documentId, int offset, int size) {
+        OffsetPageRequest pageable = new OffsetPageRequest(Math.max(offset, 0), Math.max(size, 1));
         Page<DocumentVersionEntity> result =
                 versionRepository.findByDocumentIdOrderByVersionNoDesc(documentId, pageable);
         if (result == null) {
@@ -91,12 +95,15 @@ public class RelationalDocumentStore implements DocumentStore {
     }
 
     @Override
+    public long countVersions(UUID documentId) {
+        return versionRepository.countByDocumentId(documentId);
+    }
+
+    @Override
     public java.time.Instant lastContentModifiedAt(UUID documentId, java.time.Instant documentCreatedAt) {
-        PageRequest pageable = PageRequest.of(0, 1);
-        Page<DocumentVersionEntity> latest =
-                versionRepository.findByDocumentIdOrderByVersionNoDesc(documentId, pageable);
-        if (latest != null && !latest.isEmpty()) {
-            java.time.Instant at = latest.getContent().getFirst().getCreatedAt();
+        Page<StoredVersion> latest = listVersionsFromOffset(documentId, 0, 1);
+        if (!latest.isEmpty()) {
+            java.time.Instant at = latest.getContent().getFirst().createdAt();
             if (at != null) {
                 return at;
             }

@@ -87,7 +87,9 @@ class DocumentVersioningTest {
         DocumentVersionEntity archived = versionCap.getValue();
         assertThat(archived.getVersionNo()).isEqualTo(1);
         assertThat(archived.getBodySnapshot()).isEqualTo(Map.of("blocks", List.of("old")));
-        assertThat(archived.getChangeSummary()).isEqualTo("fix");
+        // Résumé de la version archivée (v1 n'en avait pas) — pas celui de la nouvelle version.
+        assertThat(archived.getChangeSummary()).isNull();
+        assertThat(entity.getCurrentChangeSummary()).isEqualTo("fix");
         assertThat(archived.getAuthorId()).isEqualTo(USER);
         assertThat(archived.getArchivedBy()).isEqualTo(USER);
         assertThat(response.currentVersionNo()).isEqualTo(2);
@@ -167,6 +169,7 @@ class DocumentVersioningTest {
     @Test
     void restore_createsNewVersionWithoutRewritingHistory() {
         DocumentEntity entity = document(DOC, Map.of("blocks", List.of("current")), 3);
+        entity.setCurrentChangeSummary("résumé v3");
         DocumentVersionEntity target = version(1, Map.of("blocks", List.of("old")));
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
         doNothing().when(authorizationService).requireDocumentRelation(USER, DOC, "editor");
@@ -179,7 +182,8 @@ class DocumentVersioningTest {
         DocumentVersionEntity archived = versionCap.getValue();
         assertThat(archived.getVersionNo()).isEqualTo(3);
         assertThat(archived.getBodySnapshot()).isEqualTo(Map.of("blocks", List.of("current")));
-        assertThat(archived.getChangeSummary()).isEqualTo("Restauration de la version 1");
+        assertThat(archived.getChangeSummary()).isEqualTo("résumé v3");
+        assertThat(entity.getCurrentChangeSummary()).isEqualTo("Restauration de la version 1");
         assertThat(archived.getAuthorId()).isEqualTo(USER);
         assertThat(archived.getArchivedBy()).isEqualTo(USER);
 

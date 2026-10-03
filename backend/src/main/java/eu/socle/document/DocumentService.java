@@ -15,6 +15,7 @@ import eu.socle.document.DocumentDtos.DocumentResponse;
 import eu.socle.document.DocumentDtos.DocumentSummary;
 import eu.socle.document.DocumentDtos.PersonRef;
 import eu.socle.document.DocumentDtos.UpdateDocumentRequest;
+import eu.socle.document.DocumentDtos.VersionCompareResponse;
 import eu.socle.document.DocumentDtos.VersionDetail;
 import eu.socle.document.DocumentDtos.VersionDiffResponse;
 import eu.socle.document.DocumentDtos.VersionPage;
@@ -27,7 +28,6 @@ import eu.socle.space.ExternalReferencePolicy;
 import eu.socle.trash.TrashService;
 import eu.socle.user.UserSyncService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -63,6 +63,8 @@ public class DocumentService {
     private final DocumentLinkService documentLinkService;
     private final TemplateService templateService;
     private ActivityEventService activityEventService;
+    private EditLockService editLockService;
+    private DiffProperties diffProperties;
 
     /**
      * Constructeur tests unitaires — provider relational implicite ;
@@ -173,6 +175,17 @@ public class DocumentService {
     @Autowired(required = false)
     void setActivityEventService(ActivityEventService activityEventService) {
         this.activityEventService = activityEventService;
+    }
+
+    /** Verrou d'édition : une restauration ne doit pas écraser le travail d'un autre éditeur actif. */
+    @Autowired(required = false)
+    void setEditLockService(EditLockService editLockService) {
+        this.editLockService = editLockService;
+    }
+
+    @Autowired(required = false)
+    void setDiffProperties(DiffProperties diffProperties) {
+        this.diffProperties = diffProperties;
     }
 
     private static final int DEFAULT_LIST_LIMIT = 20;
@@ -328,6 +341,7 @@ public class DocumentService {
         }
         entity.setStatus("brouillon");
         entity.setCurrentVersionNo(1);
+        entity.setCurrentChangeSummary(blankToNull(request.changeSummary()));
         entity.setVisibility(visibility);
         entity.setCreatedBy(user.getId());
         entity.setUpdatedBy(user.getId());
@@ -341,7 +355,8 @@ public class DocumentService {
                 authorizationService.provisionDocumentAccess(
                         saved.getId(), spaceId, folderId, user.getId(), visibility);
         try {
-            String headSha = documentStore.createContent(saved.getId(), body, user.getId());
+            String headSha = documentStore.createContent(
+                    saved.getId(), body, user.getId(), saved.getCurrentChangeSummary());
             if (headSha != null) {
                 saved.setGitHeadSha(headSha);
                 saved = repository.save(saved);
@@ -476,13 +491,15 @@ public class DocumentService {
         StatusTransition statusTransition = applyBodyMutationStatusRules(entity);
 
         UUID contentAuthorId = contentAuthorOf(entity);
+        String archivedSummary = entity.getCurrentChangeSummary();
+        String newSummary = blankToNull(request.changeSummary());
         documentStore.archiveVersion(
                 entity.getId(),
                 archivedVersionNo,
                 previousBody,
                 contentAuthorId,
                 user.getId(),
-                blankToNull(request.changeSummary())
+                archivedSummary
         );
 
         Map<String, Object> newBody = transclusionResolver.normalizeForStorage(copyBody(request.body()));
@@ -492,6 +509,7 @@ public class DocumentService {
         }
         entity.setBody(newBody);
         entity.setCurrentVersionNo(archivedVersionNo + 1);
+        entity.setCurrentChangeSummary(newSummary);
         entity.setUpdatedBy(user.getId());
         entity.touch();
         DocumentEntity saved = repository.save(entity);
@@ -500,7 +518,7 @@ public class DocumentService {
                 newBody,
                 user.getId(),
                 user.getId(),
-                blankToNull(request.changeSummary()),
+                newSummary,
                 expectedGitHead);
         if (newHeadSha != null) {
             saved.setGitHeadSha(newHeadSha);
@@ -570,20 +588,201 @@ public class DocumentService {
     public VersionPage listVersions(Jwt jwt, UUID documentId, int offset, int limit) {
         var user = userSyncService.syncFromJwt(jwt);
         authorizationService.requireDocumentRelation(user.getId(), documentId, "viewer");
-        require(documentId);
+        DocumentEntity document = require(documentId);
         int safeLimit = Math.min(Math.max(limit, 1), MAX_VERSION_LIMIT);
         int safeOffset = Math.max(offset, 0);
-        int page = safeOffset / safeLimit;
-        Page<DocumentStore.StoredVersion> result = documentStore.listVersions(documentId, page, safeLimit);
-        List<VersionSummary> items = result.getContent().stream()
-                .map(v -> new VersionSummary(
-                        v.versionNo(),
-                        v.authorId(),
-                        v.archivedBy(),
-                        v.changeSummary(),
-                        v.createdAt()))
-                .toList();
-        return new VersionPage(items, safeOffset, safeLimit, result.getTotalElements());
+        long archivedTotal = documentStore.countVersions(documentId);
+        long total = archivedTotal + 1;
+
+        // Page 0 : version courante en tête ; pages suivantes : offset archivé = offset API − 1.
+        List<DocumentStore.StoredVersion> archivedSlice;
+        boolean includeCurrent = safeOffset == 0;
+        if (includeCurrent) {
+            int archivedLimit = Math.max(safeLimit - 1, 0);
+            archivedSlice = archivedLimit == 0
+                    ? List.of()
+                    : documentStore.listVersionsFromOffset(documentId, 0, archivedLimit).getContent();
+        } else {
+            archivedSlice = documentStore
+                    .listVersionsFromOffset(documentId, safeOffset - 1, safeLimit)
+                    .getContent();
+        }
+
+        List<UUID> authorIds = new ArrayList<>();
+        UUID currentAuthorId = contentAuthorOf(document);
+        if (includeCurrent && currentAuthorId != null) {
+            authorIds.add(currentAuthorId);
+        }
+        for (DocumentStore.StoredVersion v : archivedSlice) {
+            if (v.authorId() != null) {
+                authorIds.add(v.authorId());
+            }
+        }
+        Map<UUID, PersonRef> people = resolvePeople(authorIds.stream().distinct().toArray(UUID[]::new));
+
+        int maxLines = diffMaxLines();
+        Map<Integer, List<String>> linesCache = new HashMap<>();
+        List<VersionSummary> items = new ArrayList<>(safeLimit);
+        if (includeCurrent) {
+            items.add(toVersionSummary(
+                    document,
+                    document.getCurrentVersionNo(),
+                    currentAuthorId,
+                    null,
+                    resolveCurrentChangeSummary(document),
+                    document.getUpdatedAt() != null
+                            ? document.getUpdatedAt()
+                            : documentStore.lastContentModifiedAt(documentId, document.getCreatedAt()),
+                    true,
+                    people,
+                    linesCache,
+                    maxLines));
+        }
+        for (DocumentStore.StoredVersion v : archivedSlice) {
+            items.add(toVersionSummary(
+                    document,
+                    v.versionNo(),
+                    v.authorId(),
+                    v.archivedBy(),
+                    v.changeSummary(),
+                    v.createdAt(),
+                    false,
+                    people,
+                    linesCache,
+                    maxLines));
+        }
+        return new VersionPage(List.copyOf(items), safeOffset, safeLimit, total);
+    }
+
+    /** Source unique du résumé courant (relational et git) : {@code documents.current_change_summary}. */
+    private String resolveCurrentChangeSummary(DocumentEntity document) {
+        return document.getCurrentChangeSummary();
+    }
+
+    private VersionSummary toVersionSummary(
+            DocumentEntity document,
+            int versionNo,
+            UUID authorId,
+            UUID archivedBy,
+            String changeSummary,
+            java.time.Instant createdAt,
+            boolean current,
+            Map<UUID, PersonRef> people,
+            Map<Integer, List<String>> linesCache,
+            int maxLines
+    ) {
+        int[] stats = lineStats(document, versionNo, linesCache, maxLines);
+        String name = VersionSummary.SYSTEM_AUTHOR_LABEL;
+        String initials = VersionSummary.SYSTEM_AUTHOR_INITIALS;
+        if (authorId != null) {
+            PersonRef p = people.get(authorId);
+            if (p == null) {
+                p = PersonRef.deleted(authorId);
+            }
+            name = p.displayName();
+            initials = p.initials();
+        }
+        return new VersionSummary(
+                versionNo,
+                authorId,
+                archivedBy,
+                changeSummary,
+                createdAt,
+                name,
+                initials,
+                stats[0],
+                stats[1],
+                current);
+    }
+
+    /**
+     * {@code [added, removed]} de la version {@code versionNo} vs la précédente ({@code n-1}).
+     * Sans version précédente (v1, trou de numérotation) : tout le contenu est « ajouté ».
+     * Au-delà du plafond de lignes : approximation par différence de taille (pas de diff).
+     */
+    private int[] lineStats(
+            DocumentEntity document,
+            int versionNo,
+            Map<Integer, List<String>> cache,
+            int maxLines
+    ) {
+        List<String> current = versionLines(document, versionNo, cache);
+        if (current == null) {
+            return new int[] {0, 0};
+        }
+        List<String> previous = versionNo > 1 ? versionLines(document, versionNo - 1, cache) : null;
+        if (previous == null) {
+            return new int[] {MarkdownLineDiff.nonBlankCount(current), 0};
+        }
+        if (current.size() > maxLines || previous.size() > maxLines) {
+            int delta = MarkdownLineDiff.nonBlankCount(current) - MarkdownLineDiff.nonBlankCount(previous);
+            return new int[] {Math.max(delta, 0), Math.max(-delta, 0)};
+        }
+        return MarkdownLineDiff.stats(previous, current);
+    }
+
+    private List<String> versionLines(
+            DocumentEntity document,
+            int versionNo,
+            Map<Integer, List<String>> cache
+    ) {
+        if (cache.containsKey(versionNo)) {
+            return cache.get(versionNo);
+        }
+        List<String> lines = null;
+        if (versionNo == document.getCurrentVersionNo()) {
+            lines = MarkdownLineDiff.linesOf(
+                    documentStore.readCurrentContent(document.getId(), document.getBody()));
+        } else if (documentStore.findVersion(document.getId(), versionNo).isPresent()) {
+            lines = MarkdownLineDiff.linesOf(documentStore.loadVersionBody(document.getId(), versionNo));
+        }
+        cache.put(versionNo, lines);
+        return lines;
+    }
+
+    private int diffMaxLines() {
+        return diffProperties == null ? DiffProperties.DEFAULT_MAX_LINES : diffProperties.getMaxLines();
+    }
+
+    /**
+     * Comparaison Markdown ligne à ligne de deux versions (archivées ou courante) du corps
+     * <strong>stocké</strong> — les transclusions ne sont jamais résolues. Viewer suffit.
+     */
+    @Transactional(readOnly = true)
+    public VersionCompareResponse compare(Jwt jwt, UUID documentId, int versionA, int versionB, String mode) {
+        if (mode != null && !mode.isBlank() && !"lines".equals(mode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mode non supporté : " + mode);
+        }
+        var user = userSyncService.syncFromJwt(jwt);
+        authorizationService.requireDocumentRelation(user.getId(), documentId, "viewer");
+        DocumentEntity document = require(documentId);
+        int maxLines = diffMaxLines();
+        List<String> before = compareLines(document, versionA, maxLines);
+        List<String> after = compareLines(document, versionB, maxLines);
+        MarkdownLineDiff.Result diff = MarkdownLineDiff.compare(before, after);
+        return new VersionCompareResponse(
+                documentId, versionA, versionB, diff.added(), diff.removed(), diff.hunks());
+    }
+
+    private List<String> compareLines(DocumentEntity document, int versionNo, int maxLines) {
+        Map<String, Object> body;
+        if (versionNo == document.getCurrentVersionNo()) {
+            body = documentStore.readCurrentContent(document.getId(), document.getBody());
+        } else {
+            documentStore.findVersion(document.getId(), versionNo)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Version " + versionNo + " introuvable pour ce document"));
+            body = documentStore.loadVersionBody(document.getId(), versionNo);
+        }
+        List<String> lines = MarkdownLineDiff.linesOf(body);
+        if (lines.size() > maxLines) {
+            throw new ResponseStatusException(
+                    HttpStatus.PAYLOAD_TOO_LARGE,
+                    "Version " + versionNo + " trop volumineuse pour la comparaison ("
+                            + lines.size() + " lignes, maximum " + maxLines + ")");
+        }
+        return lines;
     }
 
     @Transactional(readOnly = true)
@@ -629,7 +828,15 @@ public class DocumentService {
         DocumentEntity entity = repository.findActiveByIdForUpdate(documentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable"));
         assertExpectedVersion(entity, expectedVersionNo);
+        // Document archivé → 409 (règle commune update/restore) ; l'éventuelle bascule de statut
+        // est annulée avec la transaction si une règle ci-dessous échoue.
         StatusTransition statusTransition = applyBodyMutationStatusRules(entity);
+        // 404 : version cible inexistante (ou version courante, non archivée).
+        documentStore.findVersion(documentId, versionNo)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Version " + versionNo + " introuvable pour ce document"));
+        assertRestoreAllowed(documentId, user.getId());
         Map<String, Object> targetBody = transclusionResolver.normalizeForStorage(
                 documentStore.loadVersionBody(documentId, versionNo));
 
@@ -637,6 +844,7 @@ public class DocumentService {
                 documentStore.readCurrentContent(entity.getId(), entity.getBody()));
         int archivedVersionNo = entity.getCurrentVersionNo();
         String expectedGitHead = entity.getGitHeadSha();
+        String archivedSummary = entity.getCurrentChangeSummary();
         String summary = "Restauration de la version " + versionNo;
 
         UUID contentAuthorId = contentAuthorOf(entity);
@@ -646,11 +854,12 @@ public class DocumentService {
                 previousBody,
                 contentAuthorId,
                 user.getId(),
-                summary
+                archivedSummary
         );
 
         entity.setBody(copyBody(targetBody));
         entity.setCurrentVersionNo(archivedVersionNo + 1);
+        entity.setCurrentChangeSummary(summary);
         entity.setUpdatedBy(user.getId());
         entity.touch();
         DocumentEntity saved = repository.save(entity);
@@ -667,6 +876,9 @@ public class DocumentService {
         }
 
         syncDocumentLinks(saved, copyBody(targetBody));
+        // Comme update : la restauration est une sauvegarde explicite — brouillon du restaurateur
+        // consommé ; les brouillons des autres utilisateurs ne sont pas touchés.
+        discardDraft(saved.getId(), user.getId());
 
         auditService.record(
                 user.getId(),
@@ -696,6 +908,35 @@ public class DocumentService {
                 null
         );
         return toResponse(saved, user.getId());
+    }
+
+    /**
+     * Garde-fous de restauration (409) :
+     * <ul>
+     *   <li>un <em>autre</em> utilisateur détient un verrou d'édition actif (le restaurateur
+     *       lui-même, ou l'absence de verrou, sont acceptés) ;</li>
+     *   <li>une demande d'approbation est en cours (même message que les étiquettes gouvernées).</li>
+     * </ul>
+     */
+    private void assertRestoreAllowed(UUID documentId, UUID restorerId) {
+        if (editLockService != null) {
+            editLockService.activeHolderOtherThan(documentId, restorerId).ifPresent(lock -> {
+                String holder = lock.holderDisplayName() == null || lock.holderDisplayName().isBlank()
+                        ? "un autre utilisateur"
+                        : lock.holderDisplayName();
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Document en cours d'édition par " + holder + " : restauration impossible");
+            });
+        }
+        if (jdbc != null) {
+            Integer pending = jdbc.queryForObject(
+                    "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
+                    Integer.class, documentId);
+            if (pending != null && pending > 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
+            }
+        }
     }
 
     /**

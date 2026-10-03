@@ -22,6 +22,12 @@ public interface DocumentStore {
      */
     String createContent(UUID documentId, Map<String, Object> body, UUID authorId);
 
+    /** Variante avec résumé initial (message de commit Git si fourni). */
+    default String createContent(
+            UUID documentId, Map<String, Object> body, UUID authorId, String changeSummary) {
+        return createContent(documentId, body, authorId);
+    }
+
     /**
      * Contenu courant pour GET/Edit. Git : blob HEAD (canonique) ; relational : projection Postgres.
      */
@@ -64,6 +70,15 @@ public interface DocumentStore {
     Optional<StoredVersion> findVersion(UUID documentId, int versionNo);
 
     Page<StoredVersion> listVersions(UUID documentId, int page, int size);
+
+    /**
+     * Liste paginée par offset absolu (pas par numéro de page Spring).
+     * Requis pour la pagination « version courante en tête » (offset décalé de 1).
+     */
+    Page<StoredVersion> listVersionsFromOffset(UUID documentId, int offset, int size);
+
+    /** Nombre de versions archivées (hors courante). */
+    long countVersions(UUID documentId);
 
     VersionDiffResult diff(UUID documentId, int versionA, int versionB);
 
