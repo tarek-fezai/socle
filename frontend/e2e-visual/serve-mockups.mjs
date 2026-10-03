@@ -29,7 +29,7 @@ function rewriteHtml(html) {
   html, body { margin: 0; padding: 0; overflow: hidden; background: #FFFFFF;
     font-family: 'IBM Plex Sans', sans-serif; color: #0E0E10; }
   .serif { font-family: 'Instrument Serif', serif; }
-  a { text-decoration: none; }
+  a { color: inherit; text-decoration: none; }
   .sso:hover { background: #2C27C7; }
 </style>
 </head>`,

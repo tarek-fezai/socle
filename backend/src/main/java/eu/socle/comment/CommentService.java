@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.comment;
 
+import eu.socle.activity.ActivityEventService;
+import eu.socle.activity.ActivityEventTypes;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
@@ -62,6 +64,7 @@ public class CommentService {
     private final DocumentRepository documentRepository;
     private final DocumentStore documentStore;
     private final ReliabilityScoreService reliabilityScoreService;
+    private ActivityEventService activityEventService;
 
     public CommentService(
             JdbcTemplate jdbc,
@@ -81,6 +84,11 @@ public class CommentService {
         this.documentRepository = documentRepository;
         this.documentStore = documentStore;
         this.reliabilityScoreService = reliabilityScoreService;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setActivityEventService(ActivityEventService activityEventService) {
+        this.activityEventService = activityEventService;
     }
 
     @Transactional(readOnly = true)
@@ -204,6 +212,15 @@ public class CommentService {
                         "parentId", parentId != null ? parentId.toString() : "",
                         "anchored", anchor != null),
                 null);
+
+        if (activityEventService != null) {
+            activityEventService.record(
+                    ActivityEventTypes.COMMENT,
+                    user.getId(),
+                    documentId,
+                    doc.getSpaceId(),
+                    Map.of("commentId", id.toString()));
+        }
 
         List<MentionWarning> warnings = processMentions(user.getId(), documentId, body, id);
         reliabilityScoreService.onDocumentCommentChanged(documentId);

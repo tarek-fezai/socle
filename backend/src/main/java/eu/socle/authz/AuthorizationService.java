@@ -528,12 +528,16 @@ public class AuthorizationService {
                 """;
     }
 
-    private int bindReadableAndScope(
+    /**
+     * Bind les quatre tableaux UUID de {@link #READABLE_PREDICATE}
+     * (S_view, S_owner, D_direct, F_view).
+     *
+     * @return index du prochain paramètre à binder
+     */
+    public int bindReadable(
             java.sql.PreparedStatement ps,
             int startIdx,
-            ReadableScope readable,
-            DocumentScope scope,
-            List<UUID> folderTree
+            ReadableScope readable
     ) throws java.sql.SQLException {
         int idx = startIdx;
         Array sView = ps.getConnection().createArrayOf("uuid", readable.spaceViewerIds().toArray());
@@ -544,6 +548,17 @@ public class AuthorizationService {
         ps.setArray(idx++, sOwner);
         ps.setArray(idx++, dDirect);
         ps.setArray(idx++, fView);
+        return idx;
+    }
+
+    private int bindReadableAndScope(
+            java.sql.PreparedStatement ps,
+            int startIdx,
+            ReadableScope readable,
+            DocumentScope scope,
+            List<UUID> folderTree
+    ) throws java.sql.SQLException {
+        int idx = bindReadable(ps, startIdx, readable);
 
         UUID spaceId = scope.spaceId();
         if (spaceId == null) {

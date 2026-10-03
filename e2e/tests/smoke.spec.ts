@@ -35,12 +35,16 @@ test.describe.serial('Socle demo stack smoke', () => {
     expect(tokenB).toBeTruthy()
 
     await loginViaUi(page, USER_A, PASS_A)
-    await expect(page.getByRole('link', { name: /espaces/i })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: /tous les espaces|espaces/i }).first(),
+    ).toBeVisible()
 
     const ctxB = await browser.newContext()
     const pageB = await ctxB.newPage()
     await loginViaUi(pageB, USER_B, PASS_B)
-    await expect(pageB.getByRole('link', { name: /espaces/i })).toBeVisible()
+    await expect(
+      pageB.getByRole('link', { name: /tous les espaces|espaces/i }).first(),
+    ).toBeVisible()
     await ctxB.close()
   })
 
@@ -159,7 +163,8 @@ test.describe.serial('Socle demo stack smoke', () => {
     await page.goto('/search')
     await expect(page.getByRole('heading', { name: 'Recherche' })).toBeVisible()
     await page.getByRole('textbox', { name: /requête de recherche/i }).fill(documentTitle)
-    await page.getByRole('button', { name: 'Rechercher' }).click()
+    // Évite le chip sidebar « Rechercher » (shell) vs le submit de /search.
+    await page.locator('main').getByRole('button', { name: 'Rechercher' }).click()
     await expect(page.getByText(documentTitle).first()).toBeVisible({ timeout: 30_000 })
   })
 

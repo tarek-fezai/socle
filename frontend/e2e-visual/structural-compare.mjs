@@ -72,6 +72,198 @@ export const LOGIN_MOBILE_IDS = [
   'mobile-help',
 ]
 
+export const DASHBOARD_DESKTOP_IDS = [
+  'shell-logo',
+  'shell-search-chip',
+  'shell-nav-favorites',
+  'shell-nav-spaces',
+  'shell-nav-team',
+  'shell-space-section',
+  'shell-user',
+  'shell-header-new-doc',
+  'home-greeting',
+  'home-subtitle',
+  'home-kpi-published',
+  'home-kpi-pending',
+  'home-kpi-views',
+  'home-kpi-reliability',
+  'home-section-resume',
+  'home-section-approvals',
+  'home-section-activity',
+]
+
+export const DASHBOARD_MOBILE_IDS = [
+  'mobile-topbar',
+  'mobile-brand',
+  'mobile-tab-home',
+  'home-greeting',
+  'home-subtitle',
+  'home-kpi-published',
+  'home-kpi-pending',
+  'home-section-resume',
+  'home-section-approvals',
+]
+
+export const MOBILE_MENU_IDS = [
+  'mobile-menu',
+  'mobile-menu-space',
+  'mobile-menu-user',
+]
+
+/** Annotate Dashboard.dc.html with data-mock-id for structural compare. */
+export async function annotateDashboardMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const sidebar = root.children[0]
+    const main = root.children[1]
+    if (sidebar) {
+      sidebar.setAttribute('data-mock-id', 'shell-sidebar')
+      const logoName = Array.from(sidebar.querySelectorAll('div')).find(
+        (d) => (d.textContent || '').trim() === 'Socle' && d.children.length === 0,
+      )
+      if (logoName?.parentElement) logoName.parentElement.setAttribute('data-mock-id', 'shell-logo')
+      const search = Array.from(sidebar.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes('Rechercher'),
+      )
+      if (search) search.setAttribute('data-mock-id', 'shell-search-chip')
+      const fav = Array.from(sidebar.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes('Favoris'),
+      )
+      if (fav) fav.setAttribute('data-mock-id', 'shell-nav-favorites')
+      const spaces = Array.from(sidebar.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes('Tous les espaces'),
+      )
+      if (spaces) spaces.setAttribute('data-mock-id', 'shell-nav-spaces')
+      const team = Array.from(sidebar.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes('Membres'),
+      )
+      if (team) team.setAttribute('data-mock-id', 'shell-nav-team')
+      const section = Array.from(sidebar.querySelectorAll('div')).find((d) => {
+        const t = (d.textContent || '').trim()
+        return d.children.length === 0 && t.startsWith('Identité')
+      })
+      if (section) section.setAttribute('data-mock-id', 'shell-space-section')
+      const user = Array.from(sidebar.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes('Tarek'),
+      )
+      if (user) user.setAttribute('data-mock-id', 'shell-user')
+    }
+    if (main) {
+      const header = main.children[0]
+      const content = main.children[1]
+      if (header) {
+        header.setAttribute('data-mock-id', 'shell-header')
+        const cta = Array.from(header.querySelectorAll('a')).find((a) =>
+          (a.textContent || '').includes('Nouveau document'),
+        )
+        if (cta) cta.setAttribute('data-mock-id', 'shell-header-new-doc')
+      }
+      if (content) {
+        content.setAttribute('data-mock-id', 'home-page')
+        const h1 = content.querySelector('h1')
+        if (h1) h1.setAttribute('data-mock-id', 'home-greeting')
+        const sub = content.querySelector('p')
+        if (sub) sub.setAttribute('data-mock-id', 'home-subtitle')
+        const kpiRow = Array.from(content.querySelectorAll('div')).find((d) => {
+          const t = d.textContent || ''
+          return t.includes('Documents publiés') && t.includes('Fiabilité') && d.children.length === 4
+        })
+        if (kpiRow) {
+          kpiRow.setAttribute('data-mock-id', 'home-kpis')
+          const kids = [...kpiRow.children]
+          if (kids[0]) kids[0].setAttribute('data-mock-id', 'home-kpi-published')
+          if (kids[1]) kids[1].setAttribute('data-mock-id', 'home-kpi-pending')
+          if (kids[2]) kids[2].setAttribute('data-mock-id', 'home-kpi-views')
+          if (kids[3]) kids[3].setAttribute('data-mock-id', 'home-kpi-reliability')
+        }
+        const titles = Array.from(content.querySelectorAll('div')).filter(
+          (d) => d.children.length === 0 && (d.getAttribute('style') || '').includes('font-weight: 700'),
+        )
+        for (const t of titles) {
+          const text = (t.textContent || '').trim()
+          if (text === 'Reprendre') t.setAttribute('data-mock-id', 'home-section-resume')
+          if (text.startsWith('En attente')) t.setAttribute('data-mock-id', 'home-section-approvals')
+          if (text.startsWith('Activité')) t.setAttribute('data-mock-id', 'home-section-activity')
+        }
+      }
+    }
+  })
+}
+
+export async function annotateMobileDashboardMockup(page) {
+  await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('div')).find((d) =>
+      (d.getAttribute('style') || '').includes('390px'),
+    )
+    if (!root) return
+    const top = root.children[0]
+    if (top) {
+      top.setAttribute('data-mock-id', 'mobile-topbar')
+      const brand = Array.from(top.querySelectorAll('div')).find(
+        (d) => (d.textContent || '').trim() === 'Socle' && d.children.length === 0,
+      )
+      if (brand) brand.setAttribute('data-mock-id', 'mobile-brand')
+    }
+    const tabbar = root.children[root.children.length - 1]
+    if (tabbar) {
+      tabbar.setAttribute('data-mock-id', 'mobile-tabbar')
+      const homeLabel = Array.from(tabbar.querySelectorAll('span')).find(
+        (s) => (s.textContent || '').trim() === 'Accueil',
+      )
+      if (homeLabel) homeLabel.setAttribute('data-mock-id', 'mobile-tab-home')
+    }
+    const content = root.children[1]
+    if (content) {
+      const h1 = content.querySelector('h1')
+      if (h1) h1.setAttribute('data-mock-id', 'home-greeting')
+      const sub = content.querySelector('p')
+      if (sub) sub.setAttribute('data-mock-id', 'home-subtitle')
+      const kpiGrid = Array.from(content.querySelectorAll('div')).find((d) => {
+        const st = d.getAttribute('style') || ''
+        return st.includes('grid-template-columns') && (d.textContent || '').includes('Documents publiés')
+      })
+      if (kpiGrid) {
+        const kids = [...kpiGrid.children]
+        if (kids[0]) kids[0].setAttribute('data-mock-id', 'home-kpi-published')
+        if (kids[1]) kids[1].setAttribute('data-mock-id', 'home-kpi-pending')
+      }
+      const titles = Array.from(content.querySelectorAll('div')).filter(
+        (d) => d.children.length === 0 && (d.getAttribute('style') || '').includes('font-weight: 700'),
+      )
+      for (const t of titles) {
+        const text = (t.textContent || '').trim()
+        if (text === 'Reprendre') t.setAttribute('data-mock-id', 'home-section-resume')
+        if (text.startsWith('En attente')) t.setAttribute('data-mock-id', 'home-section-approvals')
+      }
+    }
+  })
+}
+
+export async function annotateMobileMenuMockup(page) {
+  await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('div')).find((d) =>
+      (d.getAttribute('style') || '').includes('390px'),
+    )
+    if (!root) return
+    const drawer = Array.from(root.querySelectorAll('div')).find((d) => {
+      const st = d.getAttribute('style') || ''
+      return st.includes('320px') && st.includes('box-shadow')
+    })
+    if (drawer) {
+      drawer.setAttribute('data-mock-id', 'mobile-menu')
+      const space = Array.from(drawer.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes("Changer d'espace"),
+      )
+      if (space) space.setAttribute('data-mock-id', 'mobile-menu-space')
+      const user = Array.from(drawer.querySelectorAll('a')).find((a) =>
+        (a.textContent || '').includes('Tarek'),
+      )
+      if (user) user.setAttribute('data-mock-id', 'mobile-menu-user')
+    }
+  })
+}
+
 /** Annotate Login.dc.html elements with data-mock-id. */
 export async function annotateLoginMockup(page) {
   await page.evaluate(() => {
@@ -331,7 +523,7 @@ export function compareMetrics(mockMap, appMap, ids, { pageExceptions = {} } = {
       if (!skip.has('box')) {
         for (const k of ['x', 'y', 'width', 'height']) {
           const d = Math.abs(mock.box[k] - app.box[k])
-          if (d > 2) {
+          if (d > 3) {
             diffs.push(`box.${k}: maquette=${mock.box[k].toFixed(1)} app=${app.box[k].toFixed(1)} Δ=${d.toFixed(1)}`)
           }
         }

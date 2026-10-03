@@ -11,7 +11,7 @@ import {
   listComments,
   type CommentAnchorInput,
 } from '../lib/comments'
-import { getResolvedDocument, type TipTapNode } from '../lib/documents'
+import { getResolvedDocument, recordDocumentView, type TipTapNode } from '../lib/documents'
 import { getSpace } from '../lib/spaces'
 
 function textOf(node: TipTapNode | undefined): string {
@@ -181,6 +181,13 @@ export function CompositePage() {
       setCommentsOpen(true)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (!id) return
+    void recordDocumentView(api, id).catch(() => {
+      // compteur non bloquant
+    })
+  }, [id])
 
   const highlightAnchors = useMemo(() => {
     const threads = comments.data?.threads ?? []
