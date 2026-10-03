@@ -654,11 +654,9 @@ public class DocumentService {
         return new VersionPage(List.copyOf(items), safeOffset, safeLimit, total);
     }
 
+    /** Source unique du résumé courant (relational et git) : {@code documents.current_change_summary}. */
     private String resolveCurrentChangeSummary(DocumentEntity document) {
-        if (document.getCurrentChangeSummary() != null) {
-            return document.getCurrentChangeSummary();
-        }
-        return documentStore.currentContentChangeSummary(document.getId()).orElse(null);
+        return document.getCurrentChangeSummary();
     }
 
     private VersionSummary toVersionSummary(

@@ -185,25 +185,6 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
     }
 
     @Override
-    public Optional<String> currentContentChangeSummary(UUID documentId) {
-        try {
-            var commits = git.log()
-                    .addPath(relativePath(documentId))
-                    .setMaxCount(1)
-                    .call();
-            for (RevCommit c : commits) {
-                String msg = c.getFullMessage();
-                if (msg != null && !msg.isBlank()) {
-                    return Optional.of(msg.trim());
-                }
-            }
-        } catch (GitAPIException e) {
-            // ignore — repli null
-        }
-        return Optional.empty();
-    }
-
-    @Override
     public Instant lastContentModifiedAt(UUID documentId, Instant documentCreatedAt) {
         try {
             var commits = git.log()

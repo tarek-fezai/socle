@@ -80,14 +80,6 @@ public interface DocumentStore {
     /** Nombre de versions archivées (hors courante). */
     long countVersions(UUID documentId);
 
-    /**
-     * Message de commit HEAD du document (mode git), sinon vide.
-     * Sert de repli pour le résumé de la version courante avant backfill relational.
-     */
-    default Optional<String> currentContentChangeSummary(UUID documentId) {
-        return Optional.empty();
-    }
-
     VersionDiffResult diff(UUID documentId, int versionA, int versionB);
 
     /** Corps d'une version archivée (restore). */
