@@ -75,7 +75,7 @@ export function ContentHealthPage() {
         {data.staleDocuments.map((d) => (
           <li key={d.id}>
             <Link
-              to={`/docs/${d.id}/view`}
+              to={`/docs/${d.id}`}
               className="flex items-center justify-between gap-3 rounded-xl border border-socle-line bg-white px-4 py-3 hover:border-[#C7C6F5]"
             >
               <div className="min-w-0">

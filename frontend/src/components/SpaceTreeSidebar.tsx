@@ -7,6 +7,7 @@ import { createDocument, emptyDocBody } from '../lib/documents'
 import {
   ancestorFolderIds,
   buildSpaceTree,
+  documentEditHref,
   documentHref,
   folderHref,
   getSpaceTree,
@@ -110,7 +111,7 @@ export function SpaceTreeSidebar({ spaceId, currentDocumentId, currentFolderId }
     onSuccess: (doc) => {
       void qc.invalidateQueries({ queryKey: spaceTreeKey(spaceId) })
       void qc.invalidateQueries({ queryKey: ['documents'] })
-      navigate(documentHref(doc.id))
+      navigate(documentEditHref(doc.id))
     },
   })
 

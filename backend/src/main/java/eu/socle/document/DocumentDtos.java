@@ -36,6 +36,8 @@ public final class DocumentDtos {
             String warning
     ) {}
 
+    public record TagRef(UUID id, String name, String color) {}
+
     public record DocumentResponse(
             UUID id,
             UUID spaceId,
@@ -58,8 +60,47 @@ public final class DocumentDtos {
             /** Modèle d'origine (null si page vierge ou modèle supprimé depuis). */
             UUID templateId,
             /** Version du modèle à la création. */
-            Integer templateVersion
+            Integer templateVersion,
+            /** Créateur du document (null si inconnu / données héritées). */
+            UUID createdBy,
+            /** Auteur du contenu courant (null si inconnu / données héritées). */
+            UUID updatedBy,
+            /** Étiquettes du document, triées par nom. */
+            List<TagRef> tags
     ) {
+        public DocumentResponse {
+            tags = tags == null ? List.of() : List.copyOf(tags);
+        }
+
+        /** Compat appels sans auteurs ni étiquettes. */
+        public DocumentResponse(
+                UUID id,
+                UUID spaceId,
+                UUID folderId,
+                String title,
+                String docType,
+                Map<String, Object> body,
+                String status,
+                int currentVersionNo,
+                Instant createdAt,
+                Instant updatedAt,
+                BigDecimal reliabilityScore,
+                Instant reliabilityComputedAt,
+                boolean stale,
+                Instant contentModifiedAt,
+                int stalenessThresholdDays,
+                String visibility,
+                int position,
+                UUID templateId,
+                Integer templateVersion
+        ) {
+            this(
+                    id, spaceId, folderId, title, docType, body, status, currentVersionNo,
+                    createdAt, updatedAt, reliabilityScore, reliabilityComputedAt,
+                    stale, contentModifiedAt, stalenessThresholdDays, visibility, position,
+                    templateId, templateVersion, null, null, List.of());
+        }
+
         /** Compat appels sans provenance modèle. */
         public DocumentResponse(
                 UUID id,

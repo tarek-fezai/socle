@@ -14,10 +14,12 @@ type Props = {
   resourceType: FavoriteResourceType
   resourceId: string
   className?: string
+  /** `page` : style barre haute de la page de lecture (Main.dc.html — étoile ambrée, fond #FFFBEB). */
+  variant?: 'default' | 'page'
 }
 
 /** Bouton étoile minimal (document / espace). */
-export function FavoriteStar({ resourceType, resourceId, className }: Props) {
+export function FavoriteStar({ resourceType, resourceId, className, variant = 'default' }: Props) {
   const qc = useQueryClient()
   const fav = useQuery({
     queryKey: favoriteKey(resourceType, resourceId),
@@ -41,6 +43,7 @@ export function FavoriteStar({ resourceType, resourceId, className }: Props) {
   })
 
   const on = Boolean(fav.data)
+  const page = variant === 'page'
 
   return (
     <button
@@ -48,6 +51,7 @@ export function FavoriteStar({ resourceType, resourceId, className }: Props) {
       className={className}
       aria-pressed={on}
       aria-label={on ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+      title={on ? 'Dans vos favoris' : 'Ajouter aux favoris'}
       data-testid="favorite-star"
       disabled={toggle.isPending || fav.isLoading}
       onClick={() => toggle.mutate()}
@@ -57,11 +61,12 @@ export function FavoriteStar({ resourceType, resourceId, className }: Props) {
         justifyContent: 'center',
         width: 32,
         height: 32,
-        borderRadius: 8,
+        borderRadius: page ? 7 : 8,
         border: '1px solid #ECECEE',
-        background: '#FFFFFF',
+        background: page && on ? '#FFFBEB' : '#FFFFFF',
         cursor: 'pointer',
-        color: on ? '#3730E0' : '#6B6B72',
+        color: page ? (on ? '#B7791F' : '#6B6B72') : on ? '#3730E0' : '#6B6B72',
+        padding: 0,
       }}
     >
       <svg

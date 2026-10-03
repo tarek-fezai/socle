@@ -37,7 +37,7 @@ export function DocumentsPage() {
     mutationFn: () => createDocument(api, 'Sans titre', spaceId),
     onSuccess: (doc) => {
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
-      navigate(`/docs/${doc.id}`)
+      navigate(`/docs/${doc.id}/edit`)
     },
   })
 

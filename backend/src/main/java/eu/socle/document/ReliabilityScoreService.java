@@ -370,22 +370,19 @@ public class ReliabilityScoreService {
     }
 
     /**
-     * Campagne active = la plus récente ({@code created_at DESC}) pour le document.
-     * {@code due_date} de la campagne = échéance d'attestation (schéma : pas de colonne
-     * {@code ack_due_date} sur la campagne ; {@code documents.ack_due_date} est distinct).
+     * Campagne active = la campagne ouverte ({@code closed_at IS NULL}) du document (au plus une).
+     * Audience = {@code audience_size} figée à la création (Y) ; accusés = lignes de la campagne (X).
+     * {@code due_date} de la campagne = échéance d'attestation.
      */
     private CampaignInfo loadActiveCampaign(UUID documentId) {
         List<CampaignInfo> campaigns = jdbcTemplate.query(
                 """
-                SELECT c.id, c.due_date, c.target_group_id,
+                SELECT c.id, c.due_date, c.audience_size,
                        (SELECT COUNT(*)::int FROM attestation_acknowledgments a
-                         WHERE a.document_id = c.document_id) AS ack_count,
-                       COALESCE((
-                         SELECT COUNT(*)::int FROM group_members gm
-                          WHERE gm.group_id = c.target_group_id
-                       ), 0) AS audience_size
+                         WHERE a.campaign_id = c.id) AS ack_count
                   FROM attestation_campaigns c
                  WHERE c.document_id = ?
+                   AND c.closed_at IS NULL
                  ORDER BY c.created_at DESC
                  LIMIT 1
                 """,

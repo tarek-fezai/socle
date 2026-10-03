@@ -10,6 +10,13 @@ export type DocumentSummary = {
   contentModifiedAt?: string | null
 }
 
+/** Étiquette rattachée à un document (triée par nom côté serveur). */
+export type TagRef = {
+  id: string
+  name: string
+  color?: string | null
+}
+
 export type DocumentDetail = {
   id: string
   spaceId: string
@@ -31,6 +38,12 @@ export type DocumentDetail = {
   stalenessThresholdDays?: number
   /** organisation | space | restricted */
   visibility?: 'organisation' | 'space' | 'restricted' | string
+  /** Créateur du document (null / absent = inconnu ou migration) */
+  createdBy?: string | null
+  /** Auteur du contenu courant (null / absent = inconnu ou migration) */
+  updatedBy?: string | null
+  /** Étiquettes, triées par nom */
+  tags?: TagRef[]
 }
 
 export type DocumentVisibility = 'organisation' | 'space' | 'restricted'

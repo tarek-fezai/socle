@@ -767,8 +767,30 @@ public class DocumentService {
                 vis,
                 d.getPosition(),
                 d.getTemplateId(),
-                d.getTemplateVersion()
+                d.getTemplateVersion(),
+                d.getCreatedBy(),
+                d.getUpdatedBy(),
+                loadTags(d.getId())
         );
+    }
+
+    private List<DocumentDtos.TagRef> loadTags(UUID documentId) {
+        if (jdbc == null) {
+            return List.of();
+        }
+        List<DocumentDtos.TagRef> tags = jdbc.query("""
+                SELECT t.id, t.name, t.color
+                  FROM document_tags dt
+                  JOIN tags t ON t.id = dt.tag_id
+                 WHERE dt.document_id = ?
+                 ORDER BY t.name
+                """,
+                (rs, i) -> new DocumentDtos.TagRef(
+                        (UUID) rs.getObject("id"),
+                        rs.getString("name"),
+                        rs.getString("color")),
+                documentId);
+        return tags == null ? List.of() : tags;
     }
 
     private static Map<String, Object> copyBody(Map<String, Object> body) {

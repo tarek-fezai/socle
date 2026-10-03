@@ -15,7 +15,20 @@ const PORT = 4174
 
 const LOCAL_FONT_LINK = `<link rel="stylesheet" href="/fonts/fonts.css" />`
 
-function rewriteHtml(html) {
+/**
+ * Main.dc.html uses a few design-canvas template bindings for its collapsible sidebar.
+ * Resolve them to the expanded state so the maquette renders like the design preview.
+ */
+function resolveTemplates(html) {
+  return html
+    .replace(/<sc-if value="\{\{collapsed\}\}"[^>]*>[\s\S]*?<\/sc-if>/g, '')
+    .replace(/\{\{sidebarWidth\}\}/g, '268')
+    .replace(/\{\{sidebarPad\}\}/g, '28px 22px')
+    .replace(/\{\{logoJustify\}\}/g, 'space-between')
+}
+
+function rewriteHtml(rawHtml) {
+  const html = resolveTemplates(rawHtml)
   return html
     .replace(/@import url\('https:\/\/fonts\.googleapis\.com[^']*'\);?/g, '')
     .replace(/<script src="\.\/support\.js"><\/script>/, '')

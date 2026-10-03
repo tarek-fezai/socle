@@ -62,7 +62,7 @@ function renderPage() {
       <MemoryRouter initialEntries={['/folders/proc']}>
         <Routes>
           <Route path="/folders/:id" element={<FolderPage />} />
-          <Route path="/docs/:id" element={<div>Page document</div>} />
+          <Route path="/docs/:id/edit" element={<div>Page document</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,

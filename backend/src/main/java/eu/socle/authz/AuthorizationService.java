@@ -9,6 +9,9 @@ import dev.openfga.sdk.api.client.model.ClientBatchCheckRequest;
 import dev.openfga.sdk.api.client.model.ClientBatchCheckSingleResponse;
 import dev.openfga.sdk.api.client.model.ClientCheckRequest;
 import dev.openfga.sdk.api.client.model.ClientListObjectsRequest;
+import dev.openfga.sdk.api.client.model.ClientListUsersRequest;
+import dev.openfga.sdk.api.model.FgaObject;
+import dev.openfga.sdk.api.model.UserTypeFilter;
 import dev.openfga.sdk.api.client.model.ClientReadRequest;
 import dev.openfga.sdk.api.client.model.ClientTupleKey;
 import dev.openfga.sdk.api.client.model.ClientTupleKeyWithoutCondition;
@@ -776,6 +779,39 @@ public class AuthorizationService {
 
     public List<UUID> listOwnedSpaceIds(UUID userId) {
         return listObjectsOfType(userId, "owner", "space");
+    }
+
+    /**
+     * Membres d'un espace = utilisateurs {@code viewer} (direct, groupe, hérité) — OpenFGA ListUsers.
+     * Utilisé pour figer la taille d'audience d'une campagne d'attestation.
+     */
+    public Set<UUID> listSpaceMemberIds(UUID spaceId) {
+        try {
+            var response = openFgaClient.listUsers(new ClientListUsersRequest()
+                            ._object(new FgaObject().type("space").id(spaceId.toString()))
+                            .relation("viewer")
+                            .userFilters(List.of(new UserTypeFilter().type("user"))))
+                    .join();
+            Set<UUID> members = new LinkedHashSet<>();
+            if (response.getUsers() == null) {
+                return members;
+            }
+            for (var u : response.getUsers()) {
+                var obj = u.getObject();
+                if (obj == null || !"user".equals(obj.getType()) || obj.getId() == null) {
+                    continue;
+                }
+                try {
+                    members.add(UUID.fromString(obj.getId()));
+                } catch (IllegalArgumentException ignored) {
+                    // user:* ou identifiant non UUID — ignoré
+                }
+            }
+            return members;
+        } catch (Exception e) {
+            log.error("OpenFGA listUsers failed space={}", spaceId, e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible");
+        }
     }
 
     /** ListObjects folder#viewer — plafonné ; croiser ensuite avec les dossiers de l'espace. */

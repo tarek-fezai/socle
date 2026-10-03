@@ -68,7 +68,7 @@ export function notificationResourceLink(n: NotificationItem): string | null {
   const docId = n.payload?.document_id
   if (typeof docId === 'string' && docId) {
     if (n.type === 'comment_mention') {
-      return `/docs/${docId}/view?comments=open`
+      return `/docs/${docId}?comments=open`
     }
     return `/docs/${docId}`
   }

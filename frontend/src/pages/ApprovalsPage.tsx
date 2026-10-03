@@ -221,7 +221,7 @@ export function ApprovalsPage() {
             </Link>
             {(openComments.data?.openThreadCount ?? 0) > 0 && (
               <Link
-                to={`/docs/${selected.documentId}/view?comments=open`}
+                to={`/docs/${selected.documentId}?comments=open`}
                 className="inline-block text-sm font-semibold text-socle-accent hover:underline"
                 data-testid="approval-open-comments-link"
               >
