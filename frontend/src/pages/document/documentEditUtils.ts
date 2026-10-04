@@ -122,8 +122,9 @@ export const EDITOR_NODE_TYPES = new Set([
   'date',
   'button',
   'video',
+  'transclusion',
 ])
-export const EDITOR_MARK_TYPES = new Set(['bold', 'italic', 'strike', 'code'])
+export const EDITOR_MARK_TYPES = new Set(['bold', 'italic', 'strike', 'code', 'underline', 'link'])
 
 export type UnsupportedContent = { nodes: string[]; marks: string[] }
 

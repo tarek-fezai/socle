@@ -1,17 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
-import { AttachmentImageNode, AttachmentNode } from '../components/attachments/attachmentExtensions'
 import { UploadStrip } from '../components/attachments/UploadStrip'
-import { ButtonNode } from '../components/rich-blocks/buttonExtension'
-import { DateNode } from '../components/rich-blocks/dateExtension'
-import { tableExtensions } from '../components/rich-blocks/tableExtensions'
-import { VideoNode } from '../components/rich-blocks/videoExtension'
 import { useAttachmentUploads, type UploadKind } from '../components/attachments/useAttachmentUploads'
-import { Placeholder } from '../lib/placeholderExtension'
 import { DEFAULT_PLACEHOLDER_HINT, PLACEHOLDER_NODE_TYPE, TEMPLATE_VARIABLES } from '../lib/templates'
 import { EditToolbar } from './document/EditToolbar'
+import { documentEditorExtensions } from './document/documentEditorExtensions'
 
 type Props = {
   content: Record<string, unknown>
@@ -64,16 +58,7 @@ export function DocumentEditor({
   const fileInput = useRef<HTMLInputElement>(null)
   const videoInput = useRef<HTMLInputElement>(null)
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder,
-      AttachmentImageNode,
-      AttachmentNode,
-      DateNode,
-      ButtonNode,
-      VideoNode,
-      ...tableExtensions,
-    ],
+    extensions: documentEditorExtensions(),
     content,
     editable,
     immediatelyRender: false,

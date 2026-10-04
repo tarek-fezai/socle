@@ -26,7 +26,6 @@ beforeAll(() => {
 const doc = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Bonjour' }] }] }
 
 const SOON_LABELS = [
-  'Souligné',
   'Couleur et surlignage',
   'Liste de tâches',
   'Diminuer le retrait',
@@ -34,7 +33,6 @@ const SOON_LABELS = [
   'Aligner à gauche',
   'Centrer',
   'Justifier',
-  'Insérer un lien',
   'Insérer un diagramme draw.io',
   'Mentionner une personne',
   'Réduire les blocs enrichis',

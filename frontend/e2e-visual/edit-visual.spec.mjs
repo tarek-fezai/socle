@@ -43,10 +43,10 @@
  *      glossaire pas encore livrée côté assistant.
  *
  * ── Exceptions visuelles assumées (app ≠ maquette, hors normalisation) ─────────────────────
- *  E1. Barre d'outils : fonctions encore manquantes (souligné, couleur/surlignage, liste de tâches,
- *      retraits, alignements, lien, draw.io, @mention, « Réduire les blocs enrichis ») rendues
- *      désactivées (`aria-disabled`, info-bulle « Bientôt disponible », opacité réduite à 55 %)
- *      au lieu d'être actives. Tableau, image, et (via Insérer) date / bouton / vidéo sont actifs.
+ *  E1. Barre d'outils : fonctions encore manquantes (couleur/surlignage, liste de tâches,
+ *      retraits, alignements, draw.io, @mention, « Réduire les blocs enrichis ») rendues
+ *      désactivées (`aria-disabled`, info-bulle « Bientôt disponible », opacité réduite à 55 %).
+ *      Souligné, lien, tableau, image, et (via Insérer) date / bouton / vidéo sont actifs.
  *      Exception structurelle `edit-toolbar` (skip text) : libellés agrégés icônes SVG + texte —
  *      contrôles comparés par le pixel-diff.
  *  E2. Menu « Insérer » : actifs = Bloc de code, Image, Vidéo, Tableau, Date & heure, Bouton,
@@ -449,18 +449,16 @@ test.describe('document edit behaviour', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(`/docs/${EDIT_DOC_ID}/edit`)
     await page.waitForSelector('[data-mock-id="edit-toolbar"]')
-    for (const label of ['Souligné', 'Insérer un diagramme draw.io', 'Mentionner une personne']) {
+    for (const label of ['Couleur et surlignage', 'Insérer un diagramme draw.io', 'Mentionner une personne']) {
       const btn = page.getByRole('button', { name: label })
       await expect(btn).toHaveAttribute('aria-disabled', 'true')
       await expect(btn).toHaveAttribute('title', 'Bientôt disponible')
     }
-    // Tableau + pièces jointes branchés : plus de « Bientôt disponible ».
-    const table = page.getByRole('button', { name: 'Insérer un tableau' })
-    await expect(table).not.toHaveAttribute('aria-disabled', 'true')
-    await expect(table).not.toHaveAttribute('data-soon', 'true')
-    const image = page.getByRole('button', { name: 'Insérer une image' })
-    await expect(image).not.toHaveAttribute('aria-disabled', 'true')
-    await expect(image).not.toHaveAttribute('data-soon', 'true')
+    for (const label of ['Souligné', 'Insérer un lien', 'Insérer un tableau', 'Insérer une image']) {
+      const btn = page.getByRole('button', { name: label })
+      await expect(btn).not.toHaveAttribute('aria-disabled', 'true')
+      await expect(btn).not.toHaveAttribute('data-soon', 'true')
+    }
     await expect(page.getByRole('button', { name: 'Gras' })).not.toHaveAttribute('aria-disabled', 'true')
   })
 

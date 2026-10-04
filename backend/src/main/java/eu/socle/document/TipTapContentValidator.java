@@ -2,11 +2,13 @@
 package eu.socle.document;
 
 import eu.socle.web.ApiErrors;
+import eu.socle.web.CodedStatusException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -37,7 +39,8 @@ public class TipTapContentValidator {
             Map.entry("text", Set.of()),
             Map.entry("heading", Set.of("level")),
             Map.entry("bulletList", Set.of()),
-            Map.entry("orderedList", Set.of("start")),
+            // TipTap ≥2.27 émet aussi `type` (null / 1 / a / A / i / I).
+            Map.entry("orderedList", Set.of("start", "type")),
             Map.entry("listItem", Set.of()),
             Map.entry("codeBlock", Set.of("language")),
             Map.entry("blockquote", Set.of()),
@@ -70,6 +73,20 @@ public class TipTapContentValidator {
             throw ApiErrors.contentInvalid("$", "type « doc » requis");
         }
         validateNode(body, "$");
+    }
+
+    /**
+     * Première erreur de validation, ou vide si conforme.
+     * Utile pour inventaire / journalisation sans interrompre le flux.
+     */
+    public Optional<String> firstError(Map<String, Object> body) {
+        try {
+            validate(body);
+            return Optional.empty();
+        } catch (CodedStatusException ex) {
+            String reason = ex.getReason();
+            return Optional.of(reason != null && !reason.isBlank() ? reason : ex.getMessage());
+        }
     }
 
     @SuppressWarnings("unchecked")

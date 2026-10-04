@@ -87,6 +87,21 @@ class TipTapContentValidatorTest {
     }
 
     @Test
+    void orderedListTypeAttrFromTipTap_ok() {
+        Map<String, Object> attrs = new LinkedHashMap<>();
+        attrs.put("start", 1);
+        attrs.put("type", null);
+        validator.validate(doc(Map.of(
+                "type", "orderedList",
+                "attrs", attrs,
+                "content", List.of(Map.of(
+                        "type", "listItem",
+                        "content", List.of(paragraph("Un"))
+                ))
+        )));
+    }
+
+    @Test
     void dateInvalid_is400() {
         assertInvalid(doc(Map.of("type", "date", "attrs", Map.of("value", "15/10/2026"))),
                 "value", "ISO");

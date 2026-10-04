@@ -24,6 +24,7 @@ export type ApiErrorCodes =
   | 'diff_too_large'
   | 'already_resolved'
   | 'step_advanced'
+  | 'content_invalid'
 
 type AxiosLikeError = {
   response?: {
@@ -82,9 +83,12 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
   if (code === 'already_resolved') {
     return 'Cette demande a déjà été traitée.'
   }
+  // content_invalid : conserver le détail serveur (chemin JSON du nœud + motif).
+  if (code === 'content_invalid' && detail) return detail
   if (detail) return detail
   if (status === 409) return 'Conflit — opération refusée.'
   if (status === 403) return 'Accès refusé pour cette action.'
   if (status === 404) return 'Ressource introuvable.'
+  if (status === 400) return fallback
   return fallback
 }

@@ -169,13 +169,33 @@ describe('contenu non éditable sans perte', () => {
       content: [
         p('ok'),
         { type: 'drawio', attrs: { xml: '<mxfile/>' } },
-        { type: 'paragraph', content: [{ type: 'text', text: 'lien', marks: [{ type: 'link' }] }] },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'surbrillance', marks: [{ type: 'highlight' }] }],
+        },
       ],
     }
     const u = findUnsupportedContent(body)
     expect(u.nodes).toEqual(['drawio'])
-    expect(u.marks).toEqual(['link'])
+    expect(u.marks).toEqual(['highlight'])
     expect(hasUnsupportedContent(u)).toBe(true)
+  })
+
+  it('accepte lien et souligné dans le schéma éditeur', () => {
+    const body = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'a', marks: [{ type: 'link', attrs: { href: 'https://example.org' } }] },
+            { type: 'text', text: 'b', marks: [{ type: 'underline' }] },
+          ],
+        },
+        { type: 'transclusion', attrs: { documentId: 'dddddddd-dddd-dddd-dddd-ddddddddddd1' } },
+      ],
+    }
+    expect(hasUnsupportedContent(findUnsupportedContent(body))).toBe(false)
   })
 
   it('accepte le schéma StarterKit + zones à compléter', () => {

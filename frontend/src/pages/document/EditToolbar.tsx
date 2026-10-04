@@ -524,7 +524,13 @@ export function EditToolbar({
       >
         I
       </Tool>
-      <Tool label="Souligné" soon className="edit-tool--glyph is-underline">
+      <Tool
+        label="Souligné"
+        active={editor.isActive('underline')}
+        disabled={readOnly}
+        onClick={run((c) => c.toggleUnderline())}
+        className="edit-tool--glyph is-underline"
+      >
         U
       </Tool>
       <Tool
@@ -648,7 +654,23 @@ export function EditToolbar({
           <line x1="4" y1="12" x2="20" y2="12" />
         </Svg>
       </Tool>
-      <Tool label="Insérer un lien" soon>
+      <Tool
+        label="Insérer un lien"
+        active={editor.isActive('link')}
+        disabled={readOnly}
+        onClick={() => {
+          if (readOnly || !editor) return
+          const prev = editor.getAttributes('link').href as string | undefined
+          const next = window.prompt('URL du lien', prev || 'https://')
+          if (next === null) return
+          const href = next.trim()
+          if (!href) {
+            editor.chain().focus().extendMarkRange('link').unsetLink().run()
+            return
+          }
+          editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
+        }}
+      >
         <Svg round={false}>
           <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
           <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
