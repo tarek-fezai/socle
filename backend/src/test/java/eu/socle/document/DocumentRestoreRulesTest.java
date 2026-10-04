@@ -302,6 +302,20 @@ class DocumentRestoreRulesTest {
     }
 
     @Test
+    void c_approvalInProgress_blocksUpdate_409() {
+        jdbc.update("INSERT INTO approval_requests (document_id, status, requested_by) VALUES (?, 'en_cours', ?)",
+                DOC, BOB);
+
+        assertThatThrownBy(() -> service.update(jwt(), DOC,
+                new DocumentDtos.UpdateDocumentRequest("Doc", entity.getBody(), "edit")))
+                .satisfies(t -> assertStatus(t, HttpStatus.CONFLICT))
+                .hasMessageContaining("Demande d'approbation en cours");
+
+        assertThat(versions.rows).hasSize(2);
+        assertThat(entity.getCurrentVersionNo()).isEqualTo(3);
+    }
+
+    @Test
     void c_resolvedApproval_doesNotBlock() {
         jdbc.update("INSERT INTO approval_requests (document_id, status, requested_by) VALUES (?, 'approuve', ?)",
                 DOC, BOB);

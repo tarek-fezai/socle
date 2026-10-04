@@ -284,6 +284,9 @@ class CrossDomainJunctionAuditTest {
         when(mockJdbc.update(any(String.class), any(), any(), any())).thenReturn(1);
         when(mockJdbc.update(any(String.class), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
+        // INSERT approval_requests : submitted_version_no + empreinte contenu (V38).
+        when(mockJdbc.update(any(String.class), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         var activities = new eu.socle.document.ApprovalActivitiesImpl(
                 mockJdbc, auditService, reliabilityScoreService, store,

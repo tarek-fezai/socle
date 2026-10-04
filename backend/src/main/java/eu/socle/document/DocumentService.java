@@ -482,6 +482,7 @@ public class DocumentService {
         DocumentEntity entity = repository.findActiveByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable"));
         assertExpectedVersion(entity, request.expectedVersionNo());
+        assertNoApprovalInProgress(id);
         String previousTitle = entity.getTitle();
         Map<String, Object> previousBody = copyBody(
                 documentStore.readCurrentContent(entity.getId(), entity.getBody()));
@@ -929,13 +930,22 @@ public class DocumentService {
                         "Document en cours d'édition par " + holder + " : restauration impossible");
             });
         }
-        if (jdbc != null) {
-            Integer pending = jdbc.queryForObject(
-                    "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
-                    Integer.class, documentId);
-            if (pending != null && pending > 0) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
-            }
+        assertNoApprovalInProgress(documentId);
+    }
+
+    /**
+     * Mutation de body (update / restore) interdite pendant une demande {@code en_cours}.
+     * Même message que les étiquettes gouvernées. Les brouillons autosave restent permis.
+     */
+    private void assertNoApprovalInProgress(UUID documentId) {
+        if (jdbc == null) {
+            return;
+        }
+        Integer pending = jdbc.queryForObject(
+                "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
+                Integer.class, documentId);
+        if (pending != null && pending > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
         }
     }
 

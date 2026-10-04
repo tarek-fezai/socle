@@ -173,6 +173,15 @@ class AuditEventWiringTest {
                         any(org.springframework.jdbc.core.RowMapper.class),
                         any()))
                 .thenReturn(List.of(USER));
+        // Empreinte post-soumission (v2 / "def") encore alignée avec le document courant.
+        org.mockito.Mockito.lenient().when(jdbcTemplate.queryForList(
+                        contains("submitted_content_version_no"),
+                        any(Object.class), any(Object.class)))
+                .thenReturn(List.of(Map.of(
+                        "submitted_ver", 2,
+                        "submitted_sha", "def",
+                        "current_ver", 2,
+                        "current_sha", "def")));
         ApprovalActivitiesImpl activities = new ApprovalActivitiesImpl(
                 jdbcTemplate, auditService,
                 mock(eu.socle.document.ReliabilityScoreService.class),
