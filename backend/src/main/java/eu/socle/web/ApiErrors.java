@@ -13,6 +13,8 @@ public final class ApiErrors {
     public static final String REJECT_JUSTIFICATION_REQUIRED = "reject_justification_required";
     public static final String GOVERNED_TAG_OWNER_ONLY = "governed_tag_owner_only";
     public static final String DIFF_TOO_LARGE = "diff_too_large";
+    /** Pièce jointe / multipart au-delà de la limite ({@code MaxUploadSizeExceededException}). */
+    public static final String PAYLOAD_TOO_LARGE = "payload_too_large";
 
     private ApiErrors() {}
 
