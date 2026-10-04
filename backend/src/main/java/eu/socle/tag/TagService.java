@@ -6,6 +6,7 @@ import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.document.DocumentDtos.TagRef;
 import eu.socle.user.UserSyncService;
+import eu.socle.web.ApiErrors;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -189,14 +190,13 @@ public class TagService {
             return;
         }
         if (!isOwner(userId, documentId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Étiquette gouvernée : seul un owner peut la rattacher ou la détacher");
+            throw ApiErrors.governedTagOwnerOnly();
         }
         Integer pending = jdbc.queryForObject(
                 "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
                 Integer.class, documentId);
         if (pending != null && pending > 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
+            throw ApiErrors.approvalInProgress();
         }
     }
 

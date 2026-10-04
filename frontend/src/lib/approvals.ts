@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { apiErrorCode, apiErrorStatus } from './apiError'
 import { fetchVersionCompare, type VersionCompare } from './documents'
+
+export { apiErrorCode, apiErrorDetail, apiErrorMessage, apiErrorStatus, apiProblem } from './apiError'
 
 /** Lien entrant visible (filtré côté serveur : jamais de titre illisible). */
 export type ImpactedLink = { id: string; title: string }
@@ -194,48 +197,11 @@ export function formatSlaRemaining(deadlineIso: string | null, nowMs = Date.now(
   return ms < 0 ? `SLA échu depuis ${shortDuration(-ms)}` : `SLA ${shortDuration(ms)} restantes`
 }
 
-function responseData(error: unknown): {
-  status?: number
-  data?: { error?: string; message?: string; detail?: string }
-} | undefined {
-  if (error && typeof error === 'object' && 'response' in error) {
-    return (
-      error as {
-        response?: { status?: number; data?: { error?: string; message?: string; detail?: string } }
-      }
-    ).response
-  }
-  return undefined
-}
-
-export function apiErrorStatus(error: unknown): number | undefined {
-  return responseData(error)?.status
-}
-
 export function approvalConflictCode(error: unknown): ApprovalConflictError | null {
-  const response = responseData(error)
-  if (response?.status !== 409) return null
-  const code = response.data?.error
+  if (apiErrorStatus(error) !== 409) return null
+  const code = apiErrorCode(error)
   if (code === 'step_advanced' || code === 'already_resolved') return code
   return null
 }
 
-export function apiErrorMessage(error: unknown, fallback: string): string {
-  const response = responseData(error)
-  const status = response?.status
-  const code = response?.data?.error
-  if (status === 409 && code === 'step_advanced') {
-    return 'Cette demande a été escaladée entretemps — l’étape a changé. Rechargez avant de décider.'
-  }
-  if (status === 409 && code === 'already_resolved') {
-    return 'Cette demande a déjà été traitée.'
-  }
-  if (status === 409) {
-    return response?.data?.message ?? response?.data?.detail ?? 'Conflit — opération refusée.'
-  }
-  if (status === 403) return 'Accès refusé pour cette action.'
-  if (status === 404) return 'Ressource introuvable.'
-  const detail = response?.data?.message ?? response?.data?.detail
-  if (detail) return detail
-  return fallback
-}
+// apiErrorMessage / apiErrorStatus réexportés depuis ./apiError (helper unique problem+json).

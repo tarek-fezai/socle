@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { apiErrorMessage } from '../lib/approvals'
+import { apiErrorMessage } from '../lib/apiError'
 import {
   fetchVersionCompare,
   getDocument,

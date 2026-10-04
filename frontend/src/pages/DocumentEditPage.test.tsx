@@ -539,14 +539,44 @@ describe('DocumentEditPage — assistant et métadonnées', () => {
     scenario.canManageAccess = true
     scenario.tags = [{ id: 't2', name: 'Confidentiel', governed: true }]
     deleteMock.mockRejectedValueOnce({
-      response: { status: 409, data: { message: 'Approbation en cours : étiquette de gouvernance verrouillée' } },
+      response: {
+        status: 409,
+        data: {
+          type: 'about:blank',
+          title: 'Conflict',
+          status: 409,
+          detail: "Demande d'approbation en cours",
+          instance: `/api/v1/documents/${DOC_ID}/tags/t2`,
+          code: 'approval_in_progress',
+        },
+      },
     })
     render(wrap(<DocumentEditPage />))
     const remove = (await screen.findByRole('button', { name: /Retirer le tag Confidentiel/ })) as HTMLButtonElement
     await waitFor(() => expect(remove.disabled).toBe(false))
     fireEvent.click(remove)
     await waitFor(() => expect(deleteMock).toHaveBeenCalledWith(`/api/v1/documents/${DOC_ID}/tags/t2`))
-    expect((await screen.findByTestId('tag-error')).textContent).toContain('Approbation en cours')
+    expect((await screen.findByTestId('tag-error')).textContent).toBe("Demande d'approbation en cours")
+  })
+
+  it('étiquette gouvernée 403 : affiche le detail problem+json', async () => {
+    scenario.canManageAccess = true
+    scenario.tags = [{ id: 't2', name: 'Confidentiel', governed: true }]
+    deleteMock.mockRejectedValueOnce({
+      response: {
+        status: 403,
+        data: {
+          status: 403,
+          detail: 'Étiquette gouvernée : seul un owner peut la rattacher ou la détacher',
+          code: 'governed_tag_owner_only',
+        },
+      },
+    })
+    render(wrap(<DocumentEditPage />))
+    const remove = (await screen.findByRole('button', { name: /Retirer le tag Confidentiel/ })) as HTMLButtonElement
+    await waitFor(() => expect(remove.disabled).toBe(false))
+    fireEvent.click(remove)
+    expect((await screen.findByTestId('tag-error')).textContent).toContain('Étiquette gouvernée')
   })
 
   it('suggestion de gouvernance désactivée hors propriétaire', async () => {

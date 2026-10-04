@@ -27,6 +27,7 @@ import eu.socle.template.TemplateService.TemplateInstantiation;
 import eu.socle.space.ExternalReferencePolicy;
 import eu.socle.trash.TrashService;
 import eu.socle.user.UserSyncService;
+import eu.socle.web.ApiErrors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -780,10 +781,7 @@ public class DocumentService {
         }
         List<String> lines = MarkdownLineDiff.linesOf(body);
         if (lines.size() > maxLines) {
-            throw new ResponseStatusException(
-                    HttpStatus.PAYLOAD_TOO_LARGE,
-                    "Version " + versionNo + " trop volumineuse pour la comparaison ("
-                            + lines.size() + " lignes, maximum " + maxLines + ")");
+            throw ApiErrors.diffTooLarge(versionNo, lines.size(), maxLines);
         }
         return lines;
     }
@@ -924,12 +922,7 @@ public class DocumentService {
     private void assertRestoreAllowed(UUID documentId, UUID restorerId) {
         if (editLockService != null) {
             editLockService.activeHolderOtherThan(documentId, restorerId).ifPresent(lock -> {
-                String holder = lock.holderDisplayName() == null || lock.holderDisplayName().isBlank()
-                        ? "un autre utilisateur"
-                        : lock.holderDisplayName();
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Document en cours d'édition par " + holder + " : restauration impossible");
+                throw ApiErrors.editLockHeld(lock.holderDisplayName());
             });
         }
         assertNoApprovalInProgress(documentId);
@@ -947,7 +940,7 @@ public class DocumentService {
                 "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
                 Integer.class, documentId);
         if (pending != null && pending > 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
+            throw ApiErrors.approvalInProgress();
         }
     }
 

@@ -5,6 +5,7 @@ import eu.socle.authz.AuthorizationService;
 import eu.socle.storage.DocumentStore;
 import eu.socle.template.TemplateBodySupport;
 import eu.socle.user.UserSyncService;
+import eu.socle.web.ApiErrors;
 import eu.socle.workflowdef.ApprovalWorkflowDefinitionService;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -399,8 +400,7 @@ public class DocumentApprovalService {
         }
         if ("rejete".equals(decision)
                 && (body.comment() == null || body.comment().isBlank())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Justification obligatoire pour un refus");
+            throw ApiErrors.rejectJustificationRequired();
         }
         if (body.expectedStepOrder() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "expectedStepOrder requis");
