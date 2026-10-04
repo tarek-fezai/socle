@@ -118,6 +118,17 @@ export function DocumentReadPage() {
     enabled: Boolean(id),
     retry: false,
   })
+  const currentApproval = useQuery({
+    queryKey: ['approval', id],
+    queryFn: async () => {
+      const res = await api.get<{ approvalRequestId: string }>(`/api/v1/documents/${id}/approvals/current`, {
+        validateStatus: (s) => s === 200 || s === 204,
+      })
+      return res.status === 204 ? null : res.data
+    },
+    enabled: Boolean(id) && doc.data?.status === 'en_revue',
+    retry: false,
+  })
   useEffect(() => {
     if (!id) return
     void recordDocumentView(api, id).catch(() => {
@@ -383,6 +394,19 @@ export function DocumentReadPage() {
           {publishMsg && !actionError && (
             <p className="doc-alert" role="status" data-testid="doc-publish-msg">
               {publishMsg}
+            </p>
+          )}
+
+          {d.status === 'en_revue' && currentApproval.data?.approvalRequestId && (
+            <p className="doc-alert" role="status" data-testid="doc-approval-banner">
+              Ce document est en revue.{' '}
+              <Link
+                to={`/approvals/${currentApproval.data.approvalRequestId}`}
+                className="doc-back"
+                data-testid="doc-view-approval"
+              >
+                Voir la demande
+              </Link>
             </p>
           )}
 

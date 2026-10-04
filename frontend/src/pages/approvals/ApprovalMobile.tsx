@@ -16,9 +16,16 @@ export function ApprovalMobile(p: ApprovalPanelProps) {
     ? `Étape ${current} — En attente de vous`
     : `Étape ${current} sur ${steps.length} — En attente de vous`
   const links = item.impactedLinks ?? []
+  const hiddenCount = item.hiddenImpactedCount ?? 0
   const hasCompare = item.baselineVersionNo != null && item.submittedVersionNo != null
+  const canDecide = p.canDecide !== false
   const blocked = p.deciding || p.stepAdvanced
-  const showJustif = justifOpen || Boolean(p.comment) || Boolean(p.actionError)
+  const showJustif = canDecide && (justifOpen || Boolean(p.comment) || Boolean(p.actionError))
+  const badgeText = canDecide
+    ? badge
+    : simplified
+      ? `Étape ${current} — Lecture`
+      : `Étape ${current} sur ${steps.length} — Lecture`
 
   function onRejectTap() {
     // Pas de champ dans la maquette : le premier appui ouvre la justification, le second envoie.
@@ -34,8 +41,12 @@ export function ApprovalMobile(p: ApprovalPanelProps) {
   return (
     <>
       <div className="appr-m-scroll" data-testid="approval-mobile">
-        <span className="appr-m-badge" data-mock-id="appr-m-badge" data-testid="approval-badge">
-          {badge}
+        <span
+          className={`appr-m-badge${canDecide ? '' : ' is-readonly'}`}
+          data-mock-id="appr-m-badge"
+          data-testid="approval-badge"
+        >
+          {badgeText}
         </span>
 
         <h1 className="appr-m-title" data-mock-id="appr-m-title">
@@ -108,7 +119,7 @@ export function ApprovalMobile(p: ApprovalPanelProps) {
           </div>
         )}
 
-        {links.length > 0 && (
+        {(links.length > 0 || hiddenCount > 0) && (
           <div className="appr-m-links" data-testid="approval-impacted-links">
             <div className="appr-m-card-label">Documents liés impactés</div>
             {links.map((l) => (
@@ -116,7 +127,19 @@ export function ApprovalMobile(p: ApprovalPanelProps) {
                 {l.title}
               </Link>
             ))}
+            {hiddenCount > 0 && (
+              <p className="appr-hidden-links" data-testid="approval-hidden-links">
+                {hiddenCount} document{hiddenCount > 1 ? 's' : ''} non accessible
+                {hiddenCount > 1 ? 's' : ''}
+              </p>
+            )}
           </div>
+        )}
+
+        {!canDecide && p.readOnlyReason && (
+          <p className="appr-readonly-reason" role="status" data-testid="approval-readonly-reason">
+            {p.readOnlyReason}
+          </p>
         )}
 
         {showJustif && (
@@ -130,38 +153,40 @@ export function ApprovalMobile(p: ApprovalPanelProps) {
             />
           </div>
         )}
-        {p.actionError && (
+        {canDecide && p.actionError && (
           <p className="appr-error" role="alert" data-testid="approval-error" style={{ marginTop: 0 }}>
             {p.actionError}
           </p>
         )}
-        {p.stepAdvanced && (
+        {canDecide && p.stepAdvanced && (
           <button type="button" onClick={p.onReload} className="hist-ghost appr-reload">
             Recharger
           </button>
         )}
       </div>
 
-      <div className="appr-m-bar" data-mock-id="appr-m-bar">
-        <button
-          type="button"
-          className="appr-m-reject"
-          disabled={blocked}
-          onClick={onRejectTap}
-          data-mock-id="appr-m-reject"
-        >
-          Rejeter
-        </button>
-        <button
-          type="button"
-          className="appr-m-approve"
-          disabled={blocked}
-          onClick={p.onApprove}
-          data-mock-id="appr-m-approve"
-        >
-          {p.deciding ? 'Envoi…' : 'Approuver'}
-        </button>
-      </div>
+      {canDecide && (
+        <div className="appr-m-bar" data-mock-id="appr-m-bar">
+          <button
+            type="button"
+            className="appr-m-reject"
+            disabled={blocked}
+            onClick={onRejectTap}
+            data-mock-id="appr-m-reject"
+          >
+            Rejeter
+          </button>
+          <button
+            type="button"
+            className="appr-m-approve"
+            disabled={blocked}
+            onClick={p.onApprove}
+            data-mock-id="appr-m-approve"
+          >
+            {p.deciding ? 'Envoi…' : 'Approuver'}
+          </button>
+        </div>
+      )}
     </>
   )
 }

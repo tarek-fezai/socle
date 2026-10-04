@@ -660,6 +660,18 @@ function EditSurface({
           Vous n&apos;avez pas le droit de modifier ce document : il est affiché en lecture seule.
         </EditNotice>
       )}
+      {pending && doc.status === 'en_revue' && (
+        <EditNotice testId="edit-approval-banner" tone="warn">
+          Ce document est en revue.{' '}
+          <Link
+            to={`/approvals/${pending.approvalRequestId}`}
+            className="doc-back"
+            data-testid="edit-view-approval"
+          >
+            Voir la demande
+          </Link>
+        </EditNotice>
+      )}
       {serverDraft && draftStale && !draftBusy && (
         <EditNotice testId="edit-draft-stale-banner" tone="warn">
           Le document a changé depuis votre brouillon (version {serverDraft.baseVersionNo} → {doc.currentVersionNo}).{' '}

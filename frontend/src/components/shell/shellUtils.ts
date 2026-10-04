@@ -37,12 +37,12 @@ export function isDocumentHistoryPath(pathname: string): boolean {
 }
 
 /**
- * `/approvals` (Approval.dc.html / MobileApproval.dc.html) et `/approvals/:requestId/diff`
- * (DiffApproval.dc.html) — barre haute (ou barre mobile 56 px) fournie par la page ; pas de barre
- * d'onglets du bas (la maquette mobile n'en a pas).
+ * `/approvals`, `/approvals/:requestId` (Approval.dc.html / MobileApproval.dc.html) et
+ * `/approvals/:requestId/diff` (DiffApproval.dc.html) — barre haute (ou barre mobile 56 px)
+ * fournie par la page ; pas de barre d'onglets du bas (la maquette mobile n'en a pas).
  */
 export function isApprovalsPath(pathname: string): boolean {
-  return /^\/approvals(?:\/[^/]+\/diff)?\/?$/.test(pathname)
+  return /^\/approvals(?:\/[^/]+(?:\/diff)?)?\/?$/.test(pathname)
 }
 
 /** Pages qui portent leur propre chrome (lecture, modification, historique, approbation). */

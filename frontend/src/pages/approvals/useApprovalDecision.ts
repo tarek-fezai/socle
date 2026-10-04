@@ -44,7 +44,7 @@ export function useApprovalDecision({ onDecided }: { onDecided?: () => void } = 
     onSuccess: () => {
       setError(null)
       setStepAdvanced(false)
-      void queryClient.invalidateQueries({ queryKey: ['approvals', 'mine'] })
+      void queryClient.invalidateQueries({ queryKey: ['approvals'] })
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
       onDecided?.()
     },
@@ -56,7 +56,7 @@ export function useApprovalDecision({ onDecided }: { onDecided?: () => void } = 
       )
       setStepAdvanced(code === 'step_advanced')
       if (code !== 'step_advanced') {
-        void queryClient.invalidateQueries({ queryKey: ['approvals', 'mine'] })
+        void queryClient.invalidateQueries({ queryKey: ['approvals'] })
       }
     },
   })

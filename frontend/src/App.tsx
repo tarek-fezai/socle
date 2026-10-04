@@ -69,6 +69,7 @@ export default function App() {
           <Route path="/tags/:id/export" element={<TagExportPage />} />
           <Route path="/documents/:id/history" element={<DocumentHistoryPage />} />
           <Route path="/approvals" element={<ApprovalsPage />} />
+          <Route path="/approvals/:requestId" element={<ApprovalsPage />} />
           <Route path="/approvals/:requestId/diff" element={<ApprovalDiffPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/audit" element={<AuditPage />} />

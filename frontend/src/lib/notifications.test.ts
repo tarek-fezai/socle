@@ -31,6 +31,33 @@ describe('notifications helpers', () => {
     ).toBe('/docs/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
   })
 
+  it('notificationResourceLink priorise approval_request_id', () => {
+    const req = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    expect(
+      notificationResourceLink({
+        id: '3',
+        type: 'approval_invalidated',
+        payload: {
+          approval_request_id: req,
+          document_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        },
+        documentTitle: null,
+        readAt: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      }),
+    ).toBe(`/approvals/${req}`)
+    expect(
+      notificationResourceLink({
+        id: '4',
+        type: 'approval_requested',
+        payload: { approval_request_id: req },
+        documentTitle: null,
+        readAt: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      }),
+    ).toBe(`/approvals/${req}`)
+  })
+
   it('formatNotificationMessage — external_reference_first', () => {
     expect(
       formatNotificationMessage({

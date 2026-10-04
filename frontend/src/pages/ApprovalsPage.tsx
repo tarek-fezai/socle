@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { initialsFromName } from '../components/shell/shellUtils'
 import { api } from '../lib/api'
-import { formatSlaCountdown, listMyApprovals } from '../lib/approvals'
+import {
+  cannotDecideMessage,
+  fetchApprovalDetail,
+  formatSlaCountdown,
+  listMyApprovals,
+} from '../lib/approvals'
 import { useIsMobile } from '../lib/useMediaQuery'
 import { HistoryMobileTop, HistoryTopBar } from './document/DocumentHistoryChrome'
 import { ApprovalDesktop, type ApprovalPanelProps } from './approvals/ApprovalDesktop'
@@ -17,19 +22,18 @@ import './document/document-history.css'
 import './approvals/approvals.css'
 
 /**
- * Écran « Approbation requise » (/approvals) — Approval.dc.html (desktop) et MobileApproval.dc.html.
- * Une seule demande est affichée à la fois ; un sélecteur n'apparaît que s'il y en a plusieurs.
+ * File « Mes approbations » (`/approvals`) et détail lecture/décision (`/approvals/:requestId`).
+ * La maquette Approval.dc.html / MobileApproval.dc.html correspond au détail (décision).
  */
 export function ApprovalsPage() {
-  const queryClient = useQueryClient()
-  const isMobile = useIsMobile()
-  const { me } = useAuth()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [comment, setComment] = useState('')
-  const [nowMs, setNowMs] = useState(() => Date.now())
-  /** Étape affichée à l'ouverture de chaque demande — envoyée comme expectedStepOrder. */
-  const seenSteps = useRef(new Map<string, number>())
+  const { requestId } = useParams<{ requestId?: string }>()
+  if (requestId) return <ApprovalDetailPage requestId={requestId} />
+  return <ApprovalsListPage />
+}
 
+function ApprovalsListPage() {
+  const isMobile = useIsMobile()
+  const [nowMs, setNowMs] = useState(() => Date.now())
   const mine = useQuery({
     queryKey: ['approvals', 'mine'],
     queryFn: () => listMyApprovals(api),
@@ -42,45 +46,135 @@ export function ApprovalsPage() {
   }, [])
 
   const items = mine.data ?? []
-  const selected = items.find((a) => a.approvalRequestId === selectedId) ?? items[0] ?? null
-  if (selected && !seenSteps.current.has(selected.approvalRequestId)) {
-    seenSteps.current.set(selected.approvalRequestId, selected.currentStepOrder)
+
+  let content
+  if (mine.isLoading) {
+    content = (
+      <div className="appr-state">
+        <p className="appr-state-text">Chargement…</p>
+      </div>
+    )
+  } else if (mine.isError) {
+    content = (
+      <div className="appr-state">
+        <p className="appr-state-text is-error" role="alert">
+          Impossible de charger vos approbations.
+        </p>
+      </div>
+    )
+  } else if (items.length === 0) {
+    content = (
+      <div className="appr-state">
+        <h1 className="appr-state-title">Mes approbations</h1>
+        <p className="appr-state-text">Aucune demande en attente pour vous.</p>
+      </div>
+    )
+  } else {
+    content = (
+      <div className="appr-list-wrap" data-testid="approvals-list">
+        <h1 className="appr-state-title" style={{ marginBottom: 16 }}>
+          Mes approbations
+        </h1>
+        <ul className="appr-switcher" aria-label="Demandes en attente">
+          {items.map((it) => (
+            <li key={it.approvalRequestId}>
+              <Link
+                to={`/approvals/${it.approvalRequestId}`}
+                className="appr-switch"
+                data-testid={`approval-list-item-${it.approvalRequestId}`}
+              >
+                <span>{it.documentTitle}</span>
+                <span className="appr-switch-meta">{formatSlaCountdown(it.slaDeadlineAt, nowMs)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  return (
+    <div className="doc-page appr-page" data-testid="approvals-page" data-mock-id="appr-page">
+      {isMobile ? (
+        <HistoryMobileTop title="Approbation" backTo="/" mockPrefix="appr" />
+      ) : (
+        <HistoryTopBar
+          mockPrefix="appr"
+          crumbs={[{ label: 'Accueil', to: '/' }, { label: 'Approbation requise' }]}
+        />
+      )}
+      {content}
+    </div>
+  )
+}
+
+function ApprovalDetailPage({ requestId }: { requestId: string }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const isMobile = useIsMobile()
+  const { me } = useAuth()
+  const [comment, setComment] = useState('')
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  /** Étape affichée à l'ouverture — envoyée comme expectedStepOrder. */
+  const seenStep = useRef<number | null>(null)
+
+  const detail = useQuery({
+    queryKey: ['approvals', 'detail', requestId],
+    queryFn: () => fetchApprovalDetail(api, requestId),
+    retry: false,
+    refetchInterval: (q) => (q.state.error ? false : 5_000),
+  })
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    seenStep.current = null
+    setComment('')
+  }, [requestId])
+
+  const selected = detail.data ?? null
+  if (selected && seenStep.current == null) {
+    seenStep.current = selected.currentStepOrder
   }
   const ctx = useApprovalContext(selected)
 
   const decision = useApprovalDecision({
     onDecided: () => {
       setComment('')
-      setSelectedId(null)
-      if (selected) seenSteps.current.delete(selected.approvalRequestId)
+      seenStep.current = null
+      void queryClient.invalidateQueries({ queryKey: ['approvals', 'detail', requestId] })
+      navigate('/approvals')
     },
   })
 
-  function select(id: string) {
-    setSelectedId(id)
-    setComment('')
-    decision.reset()
-  }
-
   function decide(kind: 'approuve' | 'rejete') {
-    if (!selected) return
+    if (!selected || !selected.canDecide) return
     decision.submit({
       item: selected,
       decision: kind,
-      expectedStepOrder: seenSteps.current.get(selected.approvalRequestId) ?? selected.currentStepOrder,
+      expectedStepOrder: seenStep.current ?? selected.currentStepOrder,
       comment,
     })
   }
 
   function reload() {
-    if (selected) seenSteps.current.delete(selected.approvalRequestId)
+    seenStep.current = null
     decision.reset()
-    setSelectedId(null)
     setComment('')
+    void queryClient.invalidateQueries({ queryKey: ['approvals', 'detail', requestId] })
     void queryClient.invalidateQueries({ queryKey: ['approvals', 'mine'] })
   }
 
   const meInitials = me?.avatarInitials || initialsFromName(me?.displayName ?? '') || '?'
+  const canDecide = selected?.canDecide === true
+  const readOnlyReason =
+    selected && !canDecide
+      ? cannotDecideMessage(selected.cannotDecideReason, selected.currentStepOrder)
+      : null
+
   const panel: ApprovalPanelProps | null = selected
     ? {
         item: selected,
@@ -98,66 +192,47 @@ export function ApprovalsPage() {
         actionError: decision.error,
         stepAdvanced: decision.stepAdvanced,
         onReload: reload,
+        canDecide,
+        readOnlyReason,
       }
     : null
 
-  const switcher = items.length > 1 && (
-    <ul className="appr-switcher" aria-label="Demandes en attente" data-testid="approval-switcher">
-      {items.map((it) => (
-        <li key={it.approvalRequestId}>
-          <button
-            type="button"
-            className={`appr-switch${it.approvalRequestId === selected?.approvalRequestId ? ' is-selected' : ''}`}
-            aria-pressed={it.approvalRequestId === selected?.approvalRequestId}
-            onClick={() => select(it.approvalRequestId)}
-          >
-            <span>{it.documentTitle}</span>
-            <span className="appr-switch-meta">{formatSlaCountdown(it.slaDeadlineAt, nowMs)}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  )
-
   let content
-  if (mine.isLoading) {
+  if (detail.isLoading) {
     content = (
       <div className="appr-state">
         <p className="appr-state-text">Chargement…</p>
       </div>
     )
-  } else if (mine.isError) {
+  } else if (detail.isError || !panel) {
     content = (
       <div className="appr-state">
-        <p className="appr-state-text is-error" role="alert">
-          Impossible de charger vos approbations.
+        <Link to="/approvals" className="hist-ghost">
+          Retour aux approbations
+        </Link>
+        <p className="appr-state-text is-error" role="alert" style={{ marginTop: 16 }}>
+          Impossible de charger cette demande d&apos;approbation.
         </p>
       </div>
     )
-  } else if (!panel) {
-    content = (
-      <div className="appr-state">
-        <h1 className="appr-state-title">Mes approbations</h1>
-        <p className="appr-state-text">Aucune demande en attente pour vous.</p>
-      </div>
-    )
   } else if (isMobile) {
-    content = (
-      <>
-        {switcher && <div style={{ padding: '16px 16px 0' }}>{switcher}</div>}
-        <ApprovalMobile {...panel} />
-      </>
-    )
+    content = <ApprovalMobile {...panel} />
   } else {
-    content = <ApprovalDesktop {...panel} switcher={switcher || null} />
+    content = <ApprovalDesktop {...panel} />
   }
 
   return (
     <div className="doc-page appr-page" data-testid="approvals-page" data-mock-id="appr-page">
       {isMobile ? (
-        <HistoryMobileTop title="Approbation" backTo="/" mockPrefix="appr" />
+        <HistoryMobileTop title="Approbation" backTo="/approvals" mockPrefix="appr" />
       ) : (
-        <HistoryTopBar mockPrefix="appr" crumbs={[{ label: 'Accueil', to: '/' }, { label: 'Approbation requise' }]}>
+        <HistoryTopBar
+          mockPrefix="appr"
+          crumbs={[
+            { label: 'Accueil', to: '/' },
+            { label: 'Approbation requise', to: '/approvals' },
+          ]}
+        >
           {selected && (
             <Link
               to={`/docs/${selected.documentId}?comments=open`}

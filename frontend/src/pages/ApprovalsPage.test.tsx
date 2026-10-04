@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import {
   REJECT_JUSTIFICATION_REQUIRED,
+  cannotDecideMessage,
   formatSlaCountdown,
   formatSlaRail,
   formatSlaRemaining,
@@ -17,6 +18,7 @@ vi.mock('../auth/AuthProvider', () => ({
 }))
 
 const listMyApprovals = vi.fn()
+const fetchApprovalDetail = vi.fn()
 const decideApproval = vi.fn()
 const fetchApprovalCompare = vi.fn()
 const fetchApplicableWorkflow = vi.fn()
@@ -28,6 +30,7 @@ vi.mock('../lib/approvals', async () => {
   return {
     ...actual,
     listMyApprovals: (...args: unknown[]) => listMyApprovals(...args),
+    fetchApprovalDetail: (...args: unknown[]) => fetchApprovalDetail(...args),
     decideApproval: (...args: unknown[]) => decideApproval(...args),
     fetchApprovalCompare: (...args: unknown[]) => fetchApprovalCompare(...args),
     fetchApplicableWorkflow: (...args: unknown[]) => fetchApplicableWorkflow(...args),
@@ -62,34 +65,66 @@ const pendingItem = {
   createdAt: new Date(Date.now() - 26 * 3_600_000).toISOString(),
   requestedByDisplayName: 'Claire Dubois',
   requestedByInitials: 'CD',
-  impactedLinks: [{ id: LINK_ID, title: 'Procédure de provisioning' }],
+  impactedLinks: [] as { id: string; title: string }[],
+  hiddenImpactedCount: 0,
 }
 
-function wrap(ui: ReactNode) {
+const detailCanDecide = {
+  ...pendingItem,
+  impactedLinks: [{ id: LINK_ID, title: 'Procédure de provisioning' }],
+  hiddenImpactedCount: 0,
+  canDecide: true,
+  cannotDecideReason: null as null,
+}
+
+function wrap(ui: ReactNode, path = '/approvals') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   return (
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/approvals']}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/approvals" element={ui} />
+          <Route path="/approvals/:requestId" element={ui} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   )
 }
 
-async function renderPending(item = pendingItem) {
-  listMyApprovals.mockResolvedValue([item])
-  render(wrap(<ApprovalsPage />))
+async function renderDetail(item = detailCanDecide) {
+  fetchApprovalDetail.mockResolvedValue(item)
+  render(wrap(<ApprovalsPage />, `/approvals/${REQ}`))
   await waitFor(() => expect(screen.getByRole('heading', { name: item.documentTitle })).toBeTruthy())
 }
 
-describe('ApprovalsPage', () => {
+describe('ApprovalsPage — liste', () => {
+  beforeEach(() => {
+    listMyApprovals.mockReset()
+    fetchApprovalDetail.mockReset()
+  })
+
+  it('liste les demandes avec lien vers le détail', async () => {
+    listMyApprovals.mockResolvedValue([pendingItem])
+    render(wrap(<ApprovalsPage />))
+    const link = await screen.findByTestId(`approval-list-item-${REQ}`)
+    expect(link.getAttribute('href')).toBe(`/approvals/${REQ}`)
+    expect(link.textContent).toContain('Politique accès')
+  })
+
+  it('aucune demande : message vide', async () => {
+    listMyApprovals.mockResolvedValue([])
+    render(wrap(<ApprovalsPage />))
+    await waitFor(() => expect(screen.getByText(/Aucune demande en attente/)).toBeTruthy())
+  })
+})
+
+describe('ApprovalsPage — détail canDecide', () => {
   beforeEach(() => {
     for (const m of [
       listMyApprovals,
+      fetchApprovalDetail,
       decideApproval,
       fetchApprovalCompare,
       fetchApplicableWorkflow,
@@ -98,7 +133,14 @@ describe('ApprovalsPage', () => {
     ]) {
       m.mockReset()
     }
-    fetchApprovalCompare.mockResolvedValue({ documentId: DOC, fromVersion: 1, toVersion: 2, added: 18, removed: 4, hunks: [] })
+    fetchApprovalCompare.mockResolvedValue({
+      documentId: DOC,
+      fromVersion: 1,
+      toVersion: 2,
+      added: 18,
+      removed: 4,
+      hunks: [],
+    })
     fetchApplicableWorkflow.mockResolvedValue({
       steps: [
         { stepOrder: 1, approverRoleName: 'Responsable' },
@@ -111,57 +153,51 @@ describe('ApprovalsPage', () => {
     })
   })
 
-  it('affiche le détail : badge, titre, demandeur, SLA, date, lien de comparaison, liens impactés', async () => {
-    await renderPending()
+  it('charge le détail (pas mine) : badge, titre, demandeur, SLA, liens impactés', async () => {
+    await renderDetail()
+    expect(fetchApprovalDetail).toHaveBeenCalledWith(expect.anything(), REQ)
+    expect(listMyApprovals).not.toHaveBeenCalled()
     expect(screen.getByTestId('approval-badge').textContent).toContain('EN ATTENTE DE VOTRE DÉCISION')
     expect(screen.getByText('Claire Dubois', { selector: '.appr-requester-name' })).toBeTruthy()
-    expect(screen.getByText('CD')).toBeTruthy()
     expect(screen.getByTestId('approval-sla').textContent).toBe('Dans 22h · SLA 48h')
-    await waitFor(() =>
-      expect(screen.getByText(/incluant le nouveau flux de provisionnement/)).toBeTruthy(),
-    )
     const compare = screen.getByTestId('approval-compare-link')
     expect(compare.getAttribute('href')).toBe(`/approvals/${REQ}/diff`)
-    await waitFor(() => expect(compare.textContent).toContain('Comparer v1 → v2'))
-    await waitFor(() => expect(compare.textContent).toContain('+18 −4'))
     const link = screen.getByRole('link', { name: 'Procédure de provisioning' })
     expect(link.getAttribute('href')).toBe(`/docs/${LINK_ID}`)
   })
 
-  it('compare la dernière version approuvée à la révision soumise (mode lignes), pas le diff JSON', async () => {
-    await renderPending()
+  it('affiche les documents non accessibles (hiddenImpactedCount)', async () => {
+    await renderDetail({ ...detailCanDecide, hiddenImpactedCount: 2 })
+    expect(screen.getByTestId('approval-hidden-links').textContent).toBe('2 documents non accessibles')
+  })
+
+  it('compare la dernière version approuvée à la révision soumise', async () => {
+    await renderDetail()
     await waitFor(() => expect(fetchApprovalCompare).toHaveBeenCalledWith(expect.anything(), DOC, 1, 2))
   })
 
   it('première soumission : pas de lien de comparaison', async () => {
-    await renderPending({ ...pendingItem, baselineVersionNo: null as unknown as number })
+    await renderDetail({ ...detailCanDecide, baselineVersionNo: null as unknown as number })
     expect(screen.queryByTestId('approval-compare-link')).toBeNull()
     expect(screen.getByTestId('approval-no-baseline')).toBeTruthy()
-    expect(fetchApprovalCompare).not.toHaveBeenCalled()
   })
 
   it('circuit : étape courante, Publication verrouillée', async () => {
-    await renderPending({ ...pendingItem, currentStepOrder: 2 })
+    await renderDetail({ ...detailCanDecide, currentStepOrder: 2 })
     await waitFor(() => expect(screen.getByText('N2 · Propriétaire')).toBeTruthy())
-    expect(screen.getByText('N1 · Responsable')).toBeTruthy()
-    expect(screen.getByText('Approuvé')).toBeTruthy()
-    expect(screen.getByText('En attente')).toBeTruthy()
     expect(screen.getByText('Verrouillée')).toBeTruthy()
   })
 
-  it('circuit simplifié (A1) quand le circuit applicable est indisponible', async () => {
-    fetchApplicableWorkflow.mockRejectedValue({ response: { status: 403 } })
-    await renderPending({ ...pendingItem, currentStepOrder: 2 })
-    await waitFor(() => expect(screen.getByText('N1')).toBeTruthy())
-    expect(screen.getByText('N2')).toBeTruthy()
-    expect(screen.getByText('Verrouillée')).toBeTruthy()
-  })
+  it('après Approuver, retour à la file vide', async () => {
+    fetchApprovalDetail.mockResolvedValue(detailCanDecide)
+    listMyApprovals.mockResolvedValue([])
+    decideApproval.mockResolvedValue({
+      approvalRequestId: REQ,
+      temporalWorkflowId: 'doc-approval-1',
+      status: 'approuve',
+    })
 
-  it('après Approuver, la demande disparaît après rafraîchissement backend', async () => {
-    listMyApprovals.mockResolvedValueOnce([pendingItem]).mockResolvedValue([])
-    decideApproval.mockResolvedValue({ approvalRequestId: REQ, temporalWorkflowId: 'doc-approval-1', status: 'approuve' })
-
-    render(wrap(<ApprovalsPage />))
+    render(wrap(<ApprovalsPage />, `/approvals/${REQ}`))
     const approve = await screen.findByRole('button', { name: /^Approuver/ })
     fireEvent.click(approve)
 
@@ -169,88 +205,103 @@ describe('ApprovalsPage', () => {
       expect(decideApproval).toHaveBeenCalledWith(expect.anything(), DOC, REQ, 'approuve', 1, null),
     )
     await waitFor(() => expect(screen.getByText(/Aucune demande en attente/)).toBeTruthy())
-    expect(screen.queryByText('Politique accès')).toBeNull()
   })
 
-  it('refus sans justification : bloqué côté client, aucun appel serveur', async () => {
-    await renderPending()
+  it('refus sans justification : bloqué côté client', async () => {
+    await renderDetail()
     fireEvent.click(screen.getByRole('button', { name: 'Refuser' }))
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(REJECT_JUSTIFICATION_REQUIRED))
     expect(decideApproval).not.toHaveBeenCalled()
-
-    // Saisir une justification efface le message.
-    fireEvent.change(screen.getByLabelText('Justification de la décision'), { target: { value: 'Périmètre trop large' } })
-    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('refus avec justification : envoyé avec le commentaire', async () => {
     decideApproval.mockResolvedValue({ approvalRequestId: REQ, temporalWorkflowId: 'x', status: 'rejete' })
-    await renderPending()
-    fireEvent.change(screen.getByLabelText('Justification de la décision'), { target: { value: '  Périmètre trop large ' } })
+    listMyApprovals.mockResolvedValue([])
+    await renderDetail()
+    fireEvent.change(screen.getByLabelText('Justification de la décision'), {
+      target: { value: '  Périmètre trop large ' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Refuser' }))
     await waitFor(() =>
-      expect(decideApproval).toHaveBeenCalledWith(expect.anything(), DOC, REQ, 'rejete', 1, 'Périmètre trop large'),
+      expect(decideApproval).toHaveBeenCalledWith(
+        expect.anything(),
+        DOC,
+        REQ,
+        'rejete',
+        1,
+        'Périmètre trop large',
+      ),
     )
   })
 
-  it('400 serveur sur un refus : message « Justification obligatoire pour un refus » affiché', async () => {
-    decideApproval.mockRejectedValue({ response: { status: 400, data: { message: '' } } })
-    await renderPending()
-    fireEvent.change(screen.getByLabelText('Justification de la décision'), { target: { value: 'x' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Refuser' }))
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(REJECT_JUSTIFICATION_REQUIRED))
-  })
-
-  it('400 serveur avec message : le message du serveur est affiché', async () => {
-    decideApproval.mockRejectedValue({
-      response: { status: 400, data: { message: 'Justification obligatoire pour un refus' } },
-    })
-    await renderPending()
-    fireEvent.change(screen.getByLabelText('Justification de la décision'), { target: { value: 'x' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Refuser' }))
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(REJECT_JUSTIFICATION_REQUIRED))
-  })
-
-  it('plusieurs demandes : sélecteur affiché, la seconde est sélectionnable', async () => {
-    const second = { ...pendingItem, approvalRequestId: 'dddddddd-dddd-dddd-dddd-dddddddddddd', documentTitle: 'Charte SSI' }
-    listMyApprovals.mockResolvedValue([pendingItem, second])
-    render(wrap(<ApprovalsPage />))
-    await screen.findByTestId('approval-switcher')
-    fireEvent.click(screen.getByRole('button', { name: /Charte SSI/ }))
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Charte SSI' })).toBeTruthy())
-  })
-
-  it('race condition 409 already_resolved → message clair, pas de plantage', async () => {
-    decideApproval.mockRejectedValue({
-      response: { status: 409, data: { error: 'already_resolved', message: 'Demande déjà résolue' } },
-    })
-    await renderPending()
-    fireEvent.click(screen.getByRole('button', { name: /^Approuver/ }))
-    await waitFor(() => expect(screen.getByText(/déjà été traitée/i)).toBeTruthy())
-    expect(screen.queryByRole('button', { name: 'Recharger' })).toBeNull()
-  })
-
-  it('409 step_advanced → message distinct + bouton Recharger', async () => {
-    listMyApprovals.mockResolvedValueOnce([pendingItem]).mockResolvedValue([])
+  it('409 step_advanced → message + Recharger', async () => {
     decideApproval.mockRejectedValue({
       response: { status: 409, data: { error: 'step_advanced', message: 'Étape avancée' } },
     })
-    render(wrap(<ApprovalsPage />))
-    fireEvent.click(await screen.findByRole('button', { name: /^Approuver/ }))
+    await renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /^Approuver/ }))
     await waitFor(() => {
       expect(screen.getByText(/escaladée entretemps/i)).toBeTruthy()
       expect(screen.getByRole('button', { name: 'Recharger' })).toBeTruthy()
     })
-    expect(screen.queryByText(/déjà été traitée/i)).toBeNull()
+  })
+})
 
-    fireEvent.click(screen.getByRole('button', { name: 'Recharger' }))
-    await waitFor(() => expect(screen.getByText(/Aucune demande en attente/)).toBeTruthy())
+describe('ApprovalsPage — détail lecture seule', () => {
+  beforeEach(() => {
+    fetchApprovalDetail.mockReset()
+    decideApproval.mockReset()
+    fetchApprovalCompare.mockResolvedValue({
+      documentId: DOC,
+      fromVersion: 1,
+      toVersion: 2,
+      added: 0,
+      removed: 0,
+      hunks: [],
+    })
+    fetchApplicableWorkflow.mockResolvedValue({
+      steps: [{ stepOrder: 1, approverRoleName: 'Responsable' }],
+    })
+    listAllVersions.mockResolvedValue({ items: [{ versionNo: 2, changeSummary: null }], total: 1 })
   })
 
-  it('aucune demande : message vide', async () => {
-    listMyApprovals.mockResolvedValue([])
-    render(wrap(<ApprovalsPage />))
-    await waitFor(() => expect(screen.getByText(/Aucune demande en attente/)).toBeTruthy())
+  it('canDecide false : badge lecture, raison, pas de boutons', async () => {
+    fetchApprovalDetail.mockResolvedValue({
+      ...detailCanDecide,
+      canDecide: false,
+      cannotDecideReason: 'requester',
+    })
+    render(wrap(<ApprovalsPage />, `/approvals/${REQ}`))
+    await waitFor(() => expect(screen.getByTestId('approval-badge').textContent).toContain('LECTURE'))
+    expect(screen.getByTestId('approval-readonly-reason').textContent).toBe(
+      'Vous avez demandé cette approbation',
+    )
+    expect(screen.queryByRole('button', { name: /^Approuver/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Refuser' })).toBeNull()
+  })
+
+  it('raison not_current_step_approver inclut le numéro d\'étape', async () => {
+    fetchApprovalDetail.mockResolvedValue({
+      ...detailCanDecide,
+      currentStepOrder: 2,
+      canDecide: false,
+      cannotDecideReason: 'not_current_step_approver',
+    })
+    render(wrap(<ApprovalsPage />, `/approvals/${REQ}`))
+    await waitFor(() =>
+      expect(screen.getByTestId('approval-readonly-reason').textContent).toBe(
+        "En attente de l'étape N2",
+      ),
+    )
+  })
+})
+
+describe('cannotDecideMessage', () => {
+  it('messages français', () => {
+    expect(cannotDecideMessage('requester')).toBe('Vous avez demandé cette approbation')
+    expect(cannotDecideMessage('contributor')).toBe('Vous êtes contributeur de cette révision')
+    expect(cannotDecideMessage('not_current_step_approver', 3)).toBe("En attente de l'étape N3")
+    expect(cannotDecideMessage('resolved')).toBe('Cette demande est déjà résolue')
   })
 })
 

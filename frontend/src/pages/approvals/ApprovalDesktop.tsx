@@ -30,6 +30,10 @@ export type ApprovalPanelProps = {
   actionError: string | null
   stepAdvanced: boolean
   onReload: () => void
+  /** false → mode lecture (pas de boutons de décision). Défaut : true. */
+  canDecide?: boolean
+  /** Message affiché en mode lecture (raison `cannotDecideReason`). */
+  readOnlyReason?: string | null
 }
 
 function CheckIcon({ size, stroke }: { size: number; stroke: number }) {
@@ -130,14 +134,48 @@ export function JustificationField({
   )
 }
 
+function ImpactedLinksBlock({
+  links,
+  hiddenCount,
+}: {
+  links: { id: string; title: string }[]
+  hiddenCount: number
+}) {
+  return (
+    <div>
+      <div className="appr-rail-label" data-mock-id="appr-rail-label-links">
+        Documents liés impactés
+      </div>
+      {links.length > 0 ? (
+        <div className="appr-links" data-testid="approval-impacted-links">
+          {links.map((l, i) => (
+            <Link key={l.id} to={`/docs/${l.id}`} className="appr-link" data-mock-id={`appr-link-${i}`}>
+              {l.title}
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="appr-rail-muted">Aucun document lié impacté</div>
+      )}
+      {hiddenCount > 0 && (
+        <p className="appr-hidden-links" data-testid="approval-hidden-links">
+          {hiddenCount} document{hiddenCount > 1 ? 's' : ''} non accessible{hiddenCount > 1 ? 's' : ''}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function ApprovalDesktop(p: ApprovalPanelProps & { switcher?: ReactNode }) {
   const { item, ctx } = p
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const name = requesterName(item)
   const links = item.impactedLinks ?? []
+  const hiddenCount = item.hiddenImpactedCount ?? 0
   const hasCompare = item.baselineVersionNo != null && item.submittedVersionNo != null
   const added = formatLinesAdded(ctx.added)
   const removed = formatLinesRemoved(ctx.removed)
+  const canDecide = p.canDecide !== false
   const blocked = p.deciding || p.stepAdvanced
 
   return (
@@ -145,9 +183,13 @@ export function ApprovalDesktop(p: ApprovalPanelProps & { switcher?: ReactNode }
       <div className="appr-main">
         <div className="appr-column">
           {p.switcher}
-          <div className="appr-badge" data-mock-id="appr-badge" data-testid="approval-badge">
+          <div
+            className={`appr-badge${canDecide ? '' : ' is-readonly'}`}
+            data-mock-id="appr-badge"
+            data-testid="approval-badge"
+          >
             <span className="appr-badge-dot" aria-hidden />
-            EN ATTENTE DE VOTRE DÉCISION
+            {canDecide ? 'EN ATTENTE DE VOTRE DÉCISION' : 'LECTURE'}
           </div>
           <h1 className="appr-title" data-mock-id="appr-title">
             {item.documentTitle}
@@ -160,49 +202,59 @@ export function ApprovalDesktop(p: ApprovalPanelProps & { switcher?: ReactNode }
 
           <Circuit ctx={ctx} meInitials={p.meInitials} />
 
-          <div className="appr-label appr-justif-label" data-mock-id="appr-justif-label">
-            Justification de la décision
-          </div>
-          <JustificationField
-            comment={p.comment}
-            onComment={p.onComment}
-            invalid={Boolean(p.actionError)}
-            inputRef={textareaRef}
-          />
-          {p.actionError && (
-            <p className="appr-error" role="alert" data-testid="approval-error">
-              {p.actionError}
+          {!canDecide && p.readOnlyReason && (
+            <p className="appr-readonly-reason" role="status" data-testid="approval-readonly-reason">
+              {p.readOnlyReason}
             </p>
           )}
-          {p.stepAdvanced && (
-            <button type="button" onClick={p.onReload} className="hist-ghost appr-reload">
-              Recharger
-            </button>
-          )}
 
-          <div className="appr-actions">
-            <button
-              type="button"
-              className="appr-btn appr-approve"
-              disabled={blocked}
-              onClick={p.onApprove}
-              data-mock-id="appr-approve"
-            >
-              {p.deciding ? 'Envoi…' : approveLabel(item.submittedVersionNo)}
-            </button>
-            <button
-              type="button"
-              className="appr-btn appr-reject"
-              disabled={blocked}
-              onClick={() => {
-                if (!p.comment.trim()) textareaRef.current?.focus()
-                p.onReject()
-              }}
-              data-mock-id="appr-reject"
-            >
-              Refuser
-            </button>
-          </div>
+          {canDecide && (
+            <>
+              <div className="appr-label appr-justif-label" data-mock-id="appr-justif-label">
+                Justification de la décision
+              </div>
+              <JustificationField
+                comment={p.comment}
+                onComment={p.onComment}
+                invalid={Boolean(p.actionError)}
+                inputRef={textareaRef}
+              />
+              {p.actionError && (
+                <p className="appr-error" role="alert" data-testid="approval-error">
+                  {p.actionError}
+                </p>
+              )}
+              {p.stepAdvanced && (
+                <button type="button" onClick={p.onReload} className="hist-ghost appr-reload">
+                  Recharger
+                </button>
+              )}
+
+              <div className="appr-actions">
+                <button
+                  type="button"
+                  className="appr-btn appr-approve"
+                  disabled={blocked}
+                  onClick={p.onApprove}
+                  data-mock-id="appr-approve"
+                >
+                  {p.deciding ? 'Envoi…' : approveLabel(item.submittedVersionNo)}
+                </button>
+                <button
+                  type="button"
+                  className="appr-btn appr-reject"
+                  disabled={blocked}
+                  onClick={() => {
+                    if (!p.comment.trim()) textareaRef.current?.focus()
+                    p.onReject()
+                  }}
+                  data-mock-id="appr-reject"
+                >
+                  Refuser
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -271,27 +323,7 @@ export function ApprovalDesktop(p: ApprovalPanelProps & { switcher?: ReactNode }
           )}
         </div>
 
-        <div>
-          <div className="appr-rail-label" data-mock-id="appr-rail-label-links">
-            Documents liés impactés
-          </div>
-          {links.length > 0 ? (
-            <div className="appr-links" data-testid="approval-impacted-links">
-              {links.map((l, i) => (
-                <Link
-                  key={l.id}
-                  to={`/docs/${l.id}`}
-                  className="appr-link"
-                  data-mock-id={`appr-link-${i}`}
-                >
-                  {l.title}
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="appr-rail-muted">Aucun document lié impacté</div>
-          )}
-        </div>
+        <ImpactedLinksBlock links={links} hiddenCount={hiddenCount} />
       </aside>
     </div>
   )

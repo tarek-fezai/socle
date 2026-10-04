@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { apiErrorMessage, listMyApprovals, type ApprovalItem } from '../../lib/approvals'
+import { apiErrorMessage, fetchApprovalDetail, type ApprovalItem } from '../../lib/approvals'
 import { fetchVersionCompare, listAllVersions } from '../../lib/documents'
 import { useIsMobile } from '../../lib/useMediaQuery'
 import { DiffView, type FullContext } from '../document/DiffView'
@@ -63,14 +63,16 @@ function VersionSelect({
  */
 export function ApprovalDiffPage() {
   const { requestId = '' } = useParams()
-  const mine = useQuery({
-    queryKey: ['approvals', 'mine'],
-    queryFn: () => listMyApprovals(api),
-    refetchInterval: 5_000,
+  const detail = useQuery({
+    queryKey: ['approvals', 'detail', requestId],
+    queryFn: () => fetchApprovalDetail(api, requestId),
+    enabled: Boolean(requestId),
+    retry: false,
+    refetchInterval: (q) => (q.state.error ? false : 5_000),
   })
-  const item = mine.data?.find((a) => a.approvalRequestId === requestId) ?? null
+  const item = detail.data ?? null
 
-  if (mine.isLoading) {
+  if (detail.isLoading) {
     return (
       <div className="doc-page adiff-page" data-testid="approval-diff-loading">
         <div className="appr-state">
@@ -79,7 +81,7 @@ export function ApprovalDiffPage() {
       </div>
     )
   }
-  if (mine.isError || !item) {
+  if (detail.isError || !item) {
     return (
       <div className="doc-page adiff-page" data-testid="approval-diff-missing">
         <div className="appr-state">
@@ -87,22 +89,23 @@ export function ApprovalDiffPage() {
             Retour aux approbations
           </Link>
           <p className="appr-state-text is-error" role="alert" style={{ marginTop: 16 }}>
-            {mine.isError
-              ? 'Impossible de charger vos approbations.'
-              : 'Cette demande n’est plus en attente ou ne vous est pas destinée.'}
+            {detail.isError
+              ? 'Impossible de charger cette demande d’approbation.'
+              : 'Cette demande est introuvable ou inaccessible.'}
           </p>
         </div>
       </div>
     )
   }
-  return <DiffSurface item={item} />
+  return <DiffSurface item={item} canDecide={item.canDecide} />
 }
 
-function DiffSurface({ item }: { item: ApprovalItem }) {
+function DiffSurface({ item, canDecide }: { item: ApprovalItem; canDecide: boolean }) {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const [params, setParams] = useSearchParams()
   const id = item.documentId
+  const detailHref = `/approvals/${item.approvalRequestId}`
   const expectedStep = useRef(item.currentStepOrder)
 
   const all = useQuery({
@@ -148,8 +151,10 @@ function DiffSurface({ item }: { item: ApprovalItem }) {
       : { status: wantFull ? 'loading' : 'idle' }
 
   const decision = useApprovalDecision({ onDecided: () => navigate('/approvals') })
-  const approve = () =>
+  const approve = () => {
+    if (!canDecide) return
     decision.submit({ item, decision: 'approuve', expectedStepOrder: expectedStep.current, comment: '' })
+  }
 
   const title = compareTitle(from, to)
   const added = compare.data ? formatLinesAdded(compare.data.added) : null
@@ -225,15 +230,17 @@ function DiffSurface({ item }: { item: ApprovalItem }) {
   if (isMobile) {
     return (
       <div className="doc-page diff-page adiff-page" data-testid="approval-diff-page" data-mock-id="adiff-page">
-        <HistoryMobileTop title={title} backTo="/approvals" mockPrefix="adiff" />
+        <HistoryMobileTop title={title} backTo={detailHref} mockPrefix="adiff" />
         {controls}
         {error}
         {body}
-        <div className="diff-body">
-          <button type="button" className="hist-cta" disabled={busy} onClick={approve} data-testid="adiff-approve">
-            {decision.pending ? 'Envoi…' : cta}
-          </button>
-        </div>
+        {canDecide && (
+          <div className="diff-body">
+            <button type="button" className="hist-cta" disabled={busy} onClick={approve} data-testid="adiff-approve">
+              {decision.pending ? 'Envoi…' : cta}
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -242,21 +249,23 @@ function DiffSurface({ item }: { item: ApprovalItem }) {
     <div className="doc-page diff-page adiff-page" data-testid="approval-diff-page" data-mock-id="adiff-page">
       <HistoryTopBar
         mockPrefix="adiff"
-        crumbs={[{ label: 'Approbation', to: '/approvals' }, { label: title }]}
+        crumbs={[{ label: 'Approbation', to: detailHref }, { label: title }]}
       >
-        <Link to="/approvals" className="hist-ghost" data-mock-id="adiff-back">
+        <Link to={detailHref} className="hist-ghost" data-mock-id="adiff-back">
           Retour à l&apos;approbation
         </Link>
-        <button
-          type="button"
-          className="hist-cta"
-          disabled={busy}
-          onClick={approve}
-          data-testid="adiff-approve"
-          data-mock-id="adiff-approve"
-        >
-          {decision.pending ? 'Envoi…' : cta}
-        </button>
+        {canDecide && (
+          <button
+            type="button"
+            className="hist-cta"
+            disabled={busy}
+            onClick={approve}
+            data-testid="adiff-approve"
+            data-mock-id="adiff-approve"
+          >
+            {decision.pending ? 'Envoi…' : cta}
+          </button>
+        )}
       </HistoryTopBar>
       {controls}
       {error}

@@ -65,6 +65,10 @@ export function formatNotificationMessage(n: NotificationItem): string {
 }
 
 export function notificationResourceLink(n: NotificationItem): string | null {
+  const approvalRequestId = n.payload?.approval_request_id
+  if (typeof approvalRequestId === 'string' && approvalRequestId) {
+    return `/approvals/${approvalRequestId}`
+  }
   const docId = n.payload?.document_id
   if (typeof docId === 'string' && docId) {
     if (n.type === 'comment_mention') {

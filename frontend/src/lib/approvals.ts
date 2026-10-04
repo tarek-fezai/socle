@@ -1,13 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { fetchVersionCompare, type VersionCompare } from './documents'
 
-/** Lien sortant visible par l'approbateur (filtré côté serveur : jamais de titre illisible). */
+/** Lien entrant visible (filtré côté serveur : jamais de titre illisible). */
 export type ImpactedLink = { id: string; title: string }
 
 /**
+ * Raisons pour lesquelles l'utilisateur ne peut pas décider
+ * (`GET /api/v1/approvals/{requestId}` → `cannotDecideReason`).
+ */
+export type CannotDecideReason =
+  | 'requester'
+  | 'contributor'
+  | 'not_current_step_approver'
+  | 'resolved'
+
+/**
  * `GET /api/v1/approvals/mine` (`ApprovalView`).
- * Types alignés sur `components['schemas']['ApprovalView']` (openapi régénéré avec le backend
- * « refus justifié, liens filtrés, base dernière approuvée »), champs nullables côté Jackson.
+ * La file « mine » n'inclut plus les liens impactés (tableaux vides / `hiddenImpactedCount: 0`) ;
+ * le détail enrichi vient de `GET /api/v1/approvals/{requestId}`.
  * `baselineVersionNo` = `submitted_version_no` de la dernière demande APPROUVÉE (null si jamais approuvé).
  */
 export type ApprovalItem = {
@@ -25,6 +35,17 @@ export type ApprovalItem = {
   requestedByDisplayName?: string | null
   requestedByInitials?: string | null
   impactedLinks?: ImpactedLink[] | null
+  /** Documents liés non accessibles (toujours 0 sur `/mine`). */
+  hiddenImpactedCount?: number
+}
+
+/**
+ * `GET /api/v1/approvals/{requestId}` (`ApprovalDetailView`) —
+ * champs `ApprovalView` + capacité de décision + liens entrants filtrés.
+ */
+export type ApprovalDetail = ApprovalItem & {
+  canDecide: boolean
+  cannotDecideReason: CannotDecideReason | null
 }
 
 export type { VersionCompare }
@@ -65,6 +86,36 @@ export async function listMyApprovals(api: {
 }) {
   const { data } = await api.get<ApprovalItem[]>('/api/v1/approvals/mine')
   return data
+}
+
+/** Détail lecture/décision (`GET /api/v1/approvals/{requestId}`). */
+export async function fetchApprovalDetail(
+  api: { get: <T>(url: string) => Promise<{ data: T }> },
+  requestId: string,
+): Promise<ApprovalDetail> {
+  const { data } = await api.get<ApprovalDetail>(`/api/v1/approvals/${requestId}`)
+  return data
+}
+
+/** Message français pour un mode lecture seule. */
+export function cannotDecideMessage(
+  reason: CannotDecideReason | null | undefined,
+  currentStepOrder?: number | null,
+): string {
+  switch (reason) {
+    case 'requester':
+      return 'Vous avez demandé cette approbation'
+    case 'contributor':
+      return 'Vous êtes contributeur de cette révision'
+    case 'not_current_step_approver': {
+      const n = currentStepOrder != null && currentStepOrder > 0 ? currentStepOrder : null
+      return n != null ? `En attente de l'étape N${n}` : "En attente de l'étape en cours"
+    }
+    case 'resolved':
+      return 'Cette demande est déjà résolue'
+    default:
+      return 'Vous ne pouvez pas décider sur cette demande'
+  }
 }
 
 export async function decideApproval(
