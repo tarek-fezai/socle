@@ -33,8 +33,8 @@ FROM alpine@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4
 
 RUN apk add --no-cache ca-certificates \
     && adduser -D -u 10001 -H -s /sbin/nologin appuser \
-    && mkdir -p /app /data/git-content /openfga-config /tmp \
-    && chown -R 10001:10001 /app /data/git-content /openfga-config /tmp
+    && mkdir -p /app /data/git-content /data/blobs /openfga-config /tmp \
+    && chown -R 10001:10001 /app /data/git-content /data/blobs /openfga-config /tmp
 
 ENV JAVA_HOME=/opt/java
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
