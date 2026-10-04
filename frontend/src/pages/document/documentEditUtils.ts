@@ -123,6 +123,9 @@ export const EDITOR_NODE_TYPES = new Set([
   'button',
   'video',
   'transclusion',
+  'poll',
+  'chart',
+  'linkPreview',
 ])
 export const EDITOR_MARK_TYPES = new Set(['bold', 'italic', 'strike', 'code', 'underline', 'link'])
 

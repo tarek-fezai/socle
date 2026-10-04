@@ -212,7 +212,7 @@ describe('contenu non éditable sans perte', () => {
   })
 
   it('les blocs enrichis (tableaux, date, bouton, vidéo) sont dans le schéma de l’éditeur', () => {
-    for (const t of ['table', 'tableRow', 'tableCell', 'tableHeader', 'date', 'button', 'video']) {
+    for (const t of ['table', 'tableRow', 'tableCell', 'tableHeader', 'date', 'button', 'video', 'poll', 'chart', 'linkPreview']) {
       expect(EDITOR_NODE_TYPES.has(t), t).toBe(true)
     }
     const body = {

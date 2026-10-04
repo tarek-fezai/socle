@@ -43,14 +43,13 @@
  *      glossaire pas encore livrée côté assistant.
  *
  * ── Exceptions visuelles assumées (app ≠ maquette, hors normalisation) ─────────────────────
- *  E1. Barre d'outils : fonctions encore manquantes (couleur/surlignage, liste de tâches,
- *      retraits, alignements, draw.io, @mention, « Réduire les blocs enrichis ») rendues
- *      désactivées (`aria-disabled`, info-bulle « Bientôt disponible », opacité réduite à 55 %).
- *      Souligné, lien, tableau, image, et (via Insérer) date / bouton / vidéo sont actifs.
- *      Exception structurelle `edit-toolbar` (skip text) : libellés agrégés icônes SVG + texte —
- *      contrôles comparés par le pixel-diff.
- *  E2. Menu « Insérer » : actifs = Bloc de code, Image, Vidéo, Tableau, Date & heure, Bouton,
- *      Fichier joint ; les autres entrées restent désactivées (« Bientôt disponible »).
+ *  E1. Barre d'outils : fonctions encore manquantes (couleur/surlignage, liste de tâches, retraits,
+ *      alignements, draw.io, @mention, « Réduire les blocs enrichis ») rendues désactivées
+ *      (`aria-disabled`, info-bulle « Bientôt disponible », opacité réduite à 55 %). Souligné, lien,
+ *      tableau, image sont actifs. Exception structurelle `edit-toolbar` (skip text) : libellés
+ *      agrégés icônes SVG + texte — contrôles comparés par le pixel-diff.
+ *  E2. Menu « Insérer » : actifs = Bloc de code, Image, Vidéo, Aperçu de lien, Tableau, Graphique,
+ *      Sondage, Date & heure, Bouton, Fichier joint ; Transclure / Schéma restent « bientôt ».
  *  E3. Propriétaire : « Équipe {nom de l'espace} » (maquette : « Équipe Identité »).
  *  E4. Carte « Paragraphe long » : message calculé (« Ce paragraphe dépasse N mots (M) — … ») au lieu
  *      du texte statique « Le paragraphe édité dépasse 60 mots — … » ; bouton « Aller au paragraphe »

@@ -10,10 +10,10 @@ import {
   VIDEO_UNAVAILABLE_LABEL,
   clearDocumentAccessCache,
 } from '../../components/rich-blocks/RichBlockViews'
-import { formatDateFr, todayIsoDate } from '../../components/rich-blocks/richBlockUtils'
+import { chartAccessibilityLabel, formatDateFr, todayIsoDate } from '../../components/rich-blocks/richBlockUtils'
 import { TipTapReadView } from './TipTapReadView'
 
-vi.mock('../../lib/api', () => ({ api: { get: vi.fn() } }))
+vi.mock('../../lib/api', () => ({ api: { get: vi.fn(), put: vi.fn(), post: vi.fn() } }))
 vi.mock('../../lib/attachments', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/attachments')>()),
   attachmentObjectUrl: vi.fn(),
@@ -117,5 +117,64 @@ describe('TipTapReadView — vidéo', () => {
   it('une vidéo sans identifiant reste un bloc non pris en charge', () => {
     view(doc({ type: 'video', attrs: { filename: 'x.mp4' } }))
     expect(screen.getByTestId('unsupported-block')).toBeTruthy()
+  })
+})
+
+const POLL_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+
+describe('TipTapReadView — sondage', () => {
+  it('affiche les résultats agrégés du sondage', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        question: 'Votre avis ?',
+        options: ['Oui', 'Non'],
+        closed: false,
+        myVote: 'Oui',
+        totalVotes: 10,
+        results: [
+          { option: 'Oui', count: 7 },
+          { option: 'Non', count: 3 },
+        ],
+      },
+    })
+    view(
+      doc({
+        type: 'poll',
+        attrs: { id: POLL_ID, question: 'Votre avis ?', options: ['Oui', 'Non'] },
+      }),
+    )
+    expect(await screen.findByTestId('doc-poll')).toBeTruthy()
+    const stats = await screen.findAllByTestId('doc-poll-stat')
+    expect(stats.map((el) => el.textContent?.replace(/\u00a0/g, ' '))).toEqual(['7 (70 %)', '3 (30 %)'])
+    expect(api.get).toHaveBeenCalledWith(`/api/v1/polls/${POLL_ID}`)
+  })
+})
+
+describe('TipTapReadView — graphique', () => {
+  it('expose un libellé accessible avec titre et séries', () => {
+    const labels = ['A', 'B']
+    const series = [{ name: 'S1', values: [1, 2] }]
+    view(
+      doc({
+        type: 'chart',
+        attrs: { chartType: 'bar', labels, series, title: 'Revenus' },
+      }),
+    )
+    const aria = screen.getByTestId('doc-chart-aria')
+    expect(aria.getAttribute('aria-label')).toBe(chartAccessibilityLabel('Revenus', labels, series))
+  })
+})
+
+describe('TipTapReadView — aperçu de lien', () => {
+  it('affiche le domaine sur la carte', () => {
+    view(
+      doc({
+        type: 'linkPreview',
+        attrs: { url: 'https://example.org/page', domain: 'example.org' },
+      }),
+    )
+    expect(screen.getByTestId('doc-link-preview-domain').textContent).toBe('example.org')
+    const link = screen.getByTestId('doc-link-preview')
+    expect(link.getAttribute('href')).toBe('https://example.org/page')
   })
 })

@@ -793,6 +793,163 @@ ol.doc-list {
   background: #0e0e10;
 }
 
+/* Sondage */
+
+.doc-poll {
+  margin: 0 0 32px;
+  padding: 16px 18px;
+  border: 1px solid #ececee;
+  border-radius: 10px;
+  background: #fafafe;
+}
+
+.doc-poll-question {
+  margin: 0 0 12px;
+  font-weight: 600;
+  color: #43434a;
+}
+
+.doc-poll-closed {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #9b9ba1;
+}
+
+.doc-poll-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-poll-option {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 4px 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dedee1;
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  color: #43434a;
+  cursor: pointer;
+}
+
+.doc-poll-option.is-voted {
+  border-color: #3730e0;
+}
+
+.doc-poll-option:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.doc-poll-option-label {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.doc-poll-bar-wrap {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  height: 6px;
+  border-radius: 3px;
+  background: #ececee;
+  overflow: hidden;
+}
+
+.doc-poll-bar {
+  display: block;
+  height: 100%;
+  background: #3730e0;
+  border-radius: 3px;
+}
+
+.doc-poll-stat {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 12.5px;
+  color: #6b6862;
+}
+
+/* Graphique */
+
+.doc-chart-wrap {
+  margin: 0 0 32px;
+}
+
+.doc-chart-title {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: #43434a;
+}
+
+.doc-chart-canvas {
+  min-height: 280px;
+  padding: 8px 4px;
+  border: 1px solid #ececee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+/* Aperçu de lien */
+
+.doc-link-preview {
+  display: flex;
+  gap: 14px;
+  margin: 0 0 32px;
+  padding: 14px 16px;
+  border: 1px solid #ececee;
+  border-radius: 10px;
+  background: #fafafe;
+  text-decoration: none;
+  color: inherit;
+}
+
+.doc-link-preview.is-inert {
+  cursor: default;
+}
+
+.doc-link-preview:hover:not(.is-inert) {
+  border-color: #3730e0;
+}
+
+.doc-link-preview-thumb {
+  flex: 0 0 72px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.doc-link-preview-thumb img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+}
+
+.doc-link-preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.doc-link-preview-title {
+  font-weight: 600;
+  color: #3730e0;
+  word-break: break-word;
+}
+
+.doc-link-preview-domain {
+  font-size: 13px;
+  color: #9b9ba1;
+}
+
 /* Bloc non pris en charge (draw.io, captures, extensions futures) */
 
 .doc-unsupported {

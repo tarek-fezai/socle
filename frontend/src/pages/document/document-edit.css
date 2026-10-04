@@ -837,6 +837,77 @@ a.edit-crumb:hover {
   font: inherit;
 }
 
+.edit-poll-node .doc-poll,
+.edit-chart-node .doc-chart-wrap,
+.edit-link-preview-node .doc-link-preview {
+  margin-bottom: 0;
+}
+
+.edit-poll-form,
+.edit-chart-form,
+.edit-link-preview-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: #43434a;
+}
+
+.edit-poll-form label,
+.edit-chart-form label,
+.edit-link-preview-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 160px;
+}
+
+.edit-poll-form input,
+.edit-poll-form textarea,
+.edit-chart-form input,
+.edit-chart-form select,
+.edit-link-preview-form input {
+  padding: 4px 8px;
+  border: 1px solid #dedee1;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.edit-poll-close-btn,
+.edit-link-preview-refresh {
+  align-self: flex-end;
+  padding: 6px 10px;
+  border: 1px solid #dedee1;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.edit-chart-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.edit-chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.edit-chart-table th,
+.edit-chart-table td {
+  border: 1px solid #ececee;
+  padding: 4px;
+}
+
+.edit-chart-table input {
+  width: 100%;
+  min-width: 48px;
+  box-sizing: border-box;
+}
+
 .edit-prose table {
   width: 100%;
   margin: 0 0 18px;

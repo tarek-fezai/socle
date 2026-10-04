@@ -2,11 +2,20 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import type { ChainedCommands, Editor } from '@tiptap/react'
 import type { UploadKind } from '../../components/attachments/useAttachmentUploads'
+import { isSafeHttpUrl } from '../../lib/comments'
 import {
   BUTTON_NODE_TYPE,
+  CHART_NODE_TYPE,
   DATE_NODE_TYPE,
   DEFAULT_BUTTON_HREF,
   DEFAULT_BUTTON_LABEL,
+  DEFAULT_LINK_PREVIEW_URL,
+  DEFAULT_POLL_OPTIONS,
+  DEFAULT_POLL_QUESTION,
+  domainFromUrl,
+  LINK_PREVIEW_NODE_TYPE,
+  POLL_NODE_TYPE,
+  SAMPLE_CHART_ATTRS,
   todayIsoDate,
 } from '../../components/rich-blocks/richBlockUtils'
 
@@ -219,6 +228,59 @@ function insertButton(ed: Editor) {
     .run()
 }
 
+function insertPoll(ed: Editor) {
+  ed.chain()
+    .focus()
+    .insertContent([
+      {
+        type: POLL_NODE_TYPE,
+        attrs: {
+          id: crypto.randomUUID(),
+          question: DEFAULT_POLL_QUESTION,
+          options: [...DEFAULT_POLL_OPTIONS],
+        },
+      },
+      { type: 'paragraph' },
+    ])
+    .run()
+}
+
+function insertChart(ed: Editor) {
+  ed.chain()
+    .focus()
+    .insertContent([{ type: CHART_NODE_TYPE, attrs: { ...SAMPLE_CHART_ATTRS } }, { type: 'paragraph' }])
+    .run()
+}
+
+function insertLinkPreview(ed: Editor) {
+  const prompted = window.prompt('URL de la page', DEFAULT_LINK_PREVIEW_URL)
+  const url = (prompted ?? DEFAULT_LINK_PREVIEW_URL).trim()
+  const safe = isSafeHttpUrl(url) ? url : DEFAULT_LINK_PREVIEW_URL
+  ed.chain()
+    .focus()
+    .insertContent([
+      {
+        type: LINK_PREVIEW_NODE_TYPE,
+        attrs: { url: safe, domain: domainFromUrl(safe), title: null, thumbnailId: null },
+      },
+      { type: 'paragraph' },
+    ])
+    .run()
+}
+
+function insertHyperlink(ed: Editor) {
+  const prev = String(ed.getAttributes('link').href ?? '')
+  const raw = window.prompt('URL du lien', prev || 'https://')
+  if (raw === null) return
+  const url = raw.trim()
+  if (!url) {
+    ed.chain().focus().extendMarkRange('link').unsetLink().run()
+    return
+  }
+  if (!isSafeHttpUrl(url)) return
+  ed.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+}
+
 const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
   {
     title: 'Pages',
@@ -261,6 +323,7 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
             <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
           </Svg>
         ),
+        run: (ed) => insertLinkPreview(ed),
       },
       {
         id: 'attachment',
@@ -298,6 +361,7 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
             <line x1="6" y1="20" x2="6" y2="14" />
           </Svg>
         ),
+        run: (ed) => insertChart(ed),
       },
       {
         id: 'poll',
@@ -308,6 +372,7 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </Svg>
         ),
+        run: (ed) => insertPoll(ed),
       },
     ],
   },
@@ -658,18 +723,7 @@ export function EditToolbar({
         label="Insérer un lien"
         active={editor.isActive('link')}
         disabled={readOnly}
-        onClick={() => {
-          if (readOnly || !editor) return
-          const prev = editor.getAttributes('link').href as string | undefined
-          const next = window.prompt('URL du lien', prev || 'https://')
-          if (next === null) return
-          const href = next.trim()
-          if (!href) {
-            editor.chain().focus().extendMarkRange('link').unsetLink().run()
-            return
-          }
-          editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
-        }}
+        onClick={() => insertHyperlink(editor)}
       >
         <Svg round={false}>
           <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
