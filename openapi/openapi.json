@@ -4892,6 +4892,33 @@
         }
       }
     },
+    "/api/v1/approvals/{requestId}" : {
+      "get" : {
+        "tags" : [ "approval-controller" ],
+        "operationId" : "get_13",
+        "parameters" : [ {
+          "name" : "requestId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApprovalDetailView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/approvals/mine" : {
       "get" : {
         "tags" : [ "approval-controller" ],
@@ -7869,6 +7896,10 @@
             "items" : {
               "$ref" : "#/components/schemas/ImpactedLink"
             }
+          },
+          "hiddenImpactedCount" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -8064,6 +8095,72 @@
           "total" : {
             "type" : "integer",
             "format" : "int64"
+          }
+        }
+      },
+      "ApprovalDetailView" : {
+        "type" : "object",
+        "properties" : {
+          "approvalRequestId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "documentTitle" : {
+            "type" : "string"
+          },
+          "temporalWorkflowId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "currentStepOrder" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "slaDeadlineAt" : {
+            "type" : "string"
+          },
+          "submittedVersionNo" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "baselineVersionNo" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "requestedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "createdAt" : {
+            "type" : "string"
+          },
+          "requestedByDisplayName" : {
+            "type" : "string"
+          },
+          "requestedByInitials" : {
+            "type" : "string"
+          },
+          "impactedLinks" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImpactedLink"
+            }
+          },
+          "hiddenImpactedCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "canDecide" : {
+            "type" : "boolean"
+          },
+          "cannotDecideReason" : {
+            "type" : "string"
           }
         }
       },
