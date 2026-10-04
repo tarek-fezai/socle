@@ -1,5 +1,10 @@
 server:
   port: ${SERVER_PORT:8080}
+  error:
+    # Les raisons métier 4xx passent par ApiExceptionHandler (Problem Detail).
+    # Ne jamais exposer message/stack via le ErrorAttributes Spring par défaut.
+    include-message: never
+    include-stacktrace: never
 
 spring:
   application:

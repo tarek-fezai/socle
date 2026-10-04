@@ -236,7 +236,10 @@ describe('ApprovalsPage — détail canDecide', () => {
 
   it('409 step_advanced → message + Recharger', async () => {
     decideApproval.mockRejectedValue({
-      response: { status: 409, data: { error: 'step_advanced', message: 'Étape avancée' } },
+      response: {
+        status: 409,
+        data: { status: 409, code: 'step_advanced', detail: 'Étape avancée' },
+      },
     })
     await renderDetail()
     fireEvent.click(screen.getByRole('button', { name: /^Approuver/ }))

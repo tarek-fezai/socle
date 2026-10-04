@@ -8,7 +8,7 @@ import { CommentSelectionButton, CommentsPanel } from '../components/CommentsPan
 import { PlaceholderBanner } from '../components/PlaceholderBanner'
 import type { ShellOutletContext } from '../components/shell/shellUtils'
 import { api } from '../lib/api'
-import { apiErrorMessage } from '../lib/approvals'
+import { apiErrorMessage } from '../lib/apiError'
 import {
   deleteDocumentDraft,
   documentDraftKey,

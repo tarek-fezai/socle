@@ -2,10 +2,9 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
+import { apiErrorCode, apiErrorMessage } from '../../lib/apiError'
 import {
   REJECT_JUSTIFICATION_REQUIRED,
-  apiErrorMessage,
-  apiErrorStatus,
   approvalConflictCode,
   decideApproval,
   type ApprovalItem,
@@ -48,14 +47,15 @@ export function useApprovalDecision({ onDecided }: { onDecided?: () => void } = 
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
       onDecided?.()
     },
-    onError: (err, vars) => {
-      const code = approvalConflictCode(err)
-      const rejectWithoutReason = vars.decision === 'rejete' && apiErrorStatus(err) === 400
-      setError(
-        apiErrorMessage(err, rejectWithoutReason ? REJECT_JUSTIFICATION_REQUIRED : 'Échec de la décision'),
-      )
-      setStepAdvanced(code === 'step_advanced')
-      if (code !== 'step_advanced') {
+    onError: (err) => {
+      const conflict = approvalConflictCode(err)
+      const fallback =
+        apiErrorCode(err) === 'reject_justification_required'
+          ? REJECT_JUSTIFICATION_REQUIRED
+          : 'Échec de la décision'
+      setError(apiErrorMessage(err, fallback))
+      setStepAdvanced(conflict === 'step_advanced')
+      if (conflict !== 'step_advanced') {
         void queryClient.invalidateQueries({ queryKey: ['approvals'] })
       }
     },

@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { api } from '../lib/api'
-import { apiErrorMessage } from '../lib/approvals'
+import { apiErrorMessage } from '../lib/apiError'
 import {
   VERSION_PAGE_SIZE,
   getDocument,

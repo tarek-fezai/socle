@@ -307,12 +307,20 @@ describe('DocumentHistoryPage', () => {
   it('échec de la restauration : message dans la modale (409 explicite)', async () => {
     restoreVersion.mockRejectedValue({
       isAxiosError: true,
-      response: { status: 409, data: { message: 'Le document a changé' } },
+      response: {
+        status: 409,
+        data: {
+          status: 409,
+          detail: "Document en cours d'édition par Bob : restauration impossible",
+          code: 'edit_lock_held',
+        },
+      },
     })
     render(wrap(<DocumentHistoryPage />))
     fireEvent.click(within(await screen.findByTestId('history-row-11')).getByRole('button', { name: 'Restaurer' }))
     fireEvent.click(within(await screen.findByRole('dialog')).getByTestId('restore-confirm'))
     await waitFor(() => expect(screen.getByTestId('restore-error')).toBeTruthy())
+    expect(screen.getByTestId('restore-error').textContent).toContain("édition par Bob")
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 

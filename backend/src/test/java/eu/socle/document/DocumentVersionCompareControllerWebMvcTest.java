@@ -6,11 +6,15 @@ import eu.socle.document.DocumentDtos.CompareHunk;
 import eu.socle.document.DocumentDtos.CompareLine;
 import eu.socle.document.DocumentDtos.CompareSpan;
 import eu.socle.document.DocumentDtos.VersionCompareResponse;
+import eu.socle.web.ApiErrors;
+import eu.socle.web.ApiExceptionHandler;
 import eu.socle.workflowdef.ApprovalWorkflowDefinitionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -22,10 +26,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SecurityWebMvcTest(controllers = DocumentController.class)
+@Import(ApiExceptionHandler.class)
 class DocumentVersionCompareControllerWebMvcTest {
 
     static final UUID DOC = UUID.fromString("11111111-1111-1111-1111-111111111111");
@@ -73,14 +79,18 @@ class DocumentVersionCompareControllerWebMvcTest {
     @Test
     void compare_413_and404_andMode_arePropagated() throws Exception {
         when(service.compare(any(), eq(DOC), eq(1), eq(2), eq("lines")))
-                .thenThrow(new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "trop volumineuse"));
+                .thenThrow(ApiErrors.diffTooLarge(2, 12_000, 8_000));
         mockMvc.perform(get("/api/v1/documents/{id}/versions/1/compare/2?mode=lines", DOC).with(jwt()))
-                .andExpect(status().isPayloadTooLarge());
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ApiErrors.DIFF_TOO_LARGE))
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("trop volumineuse")));
 
         when(service.compare(any(), eq(DOC), eq(1), eq(9), eq("lines")))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Version 9 introuvable"));
         mockMvc.perform(get("/api/v1/documents/{id}/versions/1/compare/9", DOC).with(jwt()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Version 9 introuvable"));
     }
 
     @Test
