@@ -30,6 +30,13 @@ export function isImageMediaType(mediaType: string | null | undefined): boolean 
   return typeof mediaType === 'string' && mediaType.toLowerCase().startsWith('image/')
 }
 
+/** Vidéos acceptées pour le bloc `video` (lecture native du navigateur). */
+export const VIDEO_MEDIA_TYPES = ['video/mp4', 'video/webm']
+
+export function isVideoMediaType(mediaType: string | null | undefined): boolean {
+  return typeof mediaType === 'string' && VIDEO_MEDIA_TYPES.includes(mediaType.toLowerCase())
+}
+
 /** « 1,4 Mo », « 320 Ko », « 12 o » — unités décimales, virgule française. */
 export function formatBytes(bytes: number | null | undefined): string {
   if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return ''

@@ -81,6 +81,83 @@ class TipTapMarkdownTest {
     }
 
     @Test
+    void roundTrip_dateDirective() {
+        Map<String, Object> date = new LinkedHashMap<>();
+        date.put("type", TipTapMarkdown.DATE_TYPE);
+        date.put("attrs", Map.of("value", "2026-10-15"));
+        Map<String, Object> wrap = new LinkedHashMap<>();
+        wrap.put("type", "paragraph");
+        wrap.put("content", List.of(date));
+        Map<String, Object> body = doc(wrap);
+        assertRoundTripEquals(body);
+        assertThat(TipTapMarkdown.toMarkdown(body))
+                .contains("::date{value=\"2026-10-15\"}")
+                .doesNotContain(":::socle-json");
+    }
+
+    @Test
+    void roundTrip_buttonHrefAndDocumentId() {
+        Map<String, Object> external = new LinkedHashMap<>();
+        external.put("type", TipTapMarkdown.BUTTON_TYPE);
+        external.put("attrs", Map.of("label", "Voir le site", "href", "https://example.org/x"));
+        Map<String, Object> internal = new LinkedHashMap<>();
+        internal.put("type", TipTapMarkdown.BUTTON_TYPE);
+        internal.put("attrs", Map.of("label", "Doc lié", "documentId", TARGET.toString()));
+        Map<String, Object> body = doc(external, internal);
+        assertRoundTripEquals(body);
+        String md = TipTapMarkdown.toMarkdown(body);
+        assertThat(md)
+                .contains("::button{label=\"Voir le site\" href=\"https://example.org/x\"}")
+                .contains("::button{label=\"Doc lié\" documentId=\"" + TARGET + "\"}")
+                .doesNotContain(":::socle-json");
+    }
+
+    @Test
+    void roundTrip_videoDirective() {
+        Map<String, Object> video = new LinkedHashMap<>();
+        video.put("type", TipTapMarkdown.VIDEO_TYPE);
+        video.put("attrs", Map.of("id", ATTACHMENT.toString()));
+        Map<String, Object> body = doc(video);
+        assertRoundTripEquals(body);
+        assertThat(TipTapMarkdown.toMarkdown(body))
+                .contains("::video{id=\"" + ATTACHMENT + "\"}")
+                .doesNotContain(":::socle-json");
+    }
+
+    @Test
+    void roundTrip_simpleGfmTable() {
+        Map<String, Object> body = doc(simpleTable(
+                List.of("Rôle", "Revue"),
+                List.of("Administrateur", "Trimestrielle"),
+                List.of("Analyste", "Semestrielle")
+        ));
+        assertRoundTripEquals(body);
+        String md = TipTapMarkdown.toMarkdown(body);
+        assertThat(md)
+                .contains("| Rôle | Revue |")
+                .contains("| --- | --- |")
+                .contains("| Administrateur | Trimestrielle |")
+                .doesNotContain(":::socle-json");
+    }
+
+    @Test
+    void tableWithMergedCell_fallsBackToSocleJson_andRoundTrips() {
+        Map<String, Object> cell = new LinkedHashMap<>();
+        cell.put("type", "tableCell");
+        cell.put("attrs", Map.of("colspan", 2));
+        cell.put("content", List.of(para("fusion")));
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("type", "tableRow");
+        row.put("content", List.of(cell));
+        Map<String, Object> table = new LinkedHashMap<>();
+        table.put("type", "table");
+        table.put("content", List.of(row));
+        Map<String, Object> body = doc(table);
+        assertRoundTripEquals(body);
+        assertThat(TipTapMarkdown.toMarkdown(body)).contains(":::socle-json");
+    }
+
+    @Test
     void attachment_withExtraAttrs_fallsBackToSocleJson_andRoundTrips() {
         Map<String, Object> node = attachment(ATTACHMENT);
         @SuppressWarnings("unchecked")
@@ -368,6 +445,33 @@ class TipTapMarkdownTest {
         attrs.put("alt", alt);
         n.put("attrs", attrs);
         return n;
+    }
+
+    @SafeVarargs
+    private static Map<String, Object> simpleTable(List<String> header, List<String>... dataRows) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        rows.add(tableRow(header, true));
+        for (List<String> data : dataRows) {
+            rows.add(tableRow(data, false));
+        }
+        Map<String, Object> table = new LinkedHashMap<>();
+        table.put("type", "table");
+        table.put("content", rows);
+        return table;
+    }
+
+    private static Map<String, Object> tableRow(List<String> cells, boolean header) {
+        List<Map<String, Object>> cellNodes = new ArrayList<>();
+        for (String text : cells) {
+            Map<String, Object> cell = new LinkedHashMap<>();
+            cell.put("type", header ? "tableHeader" : "tableCell");
+            cell.put("content", List.of(para(text)));
+            cellNodes.add(cell);
+        }
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("type", "tableRow");
+        row.put("content", cellNodes);
+        return row;
     }
 
     private static Map<String, Object> codeBlock(String text, String language) {

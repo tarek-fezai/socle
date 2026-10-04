@@ -99,7 +99,7 @@ export function saveStatusText(s: SaveStatus): string {
 /* Contenu non éditable sans perte                                      */
 /* ------------------------------------------------------------------ */
 
-/** Nœuds / marques que le schéma TipTap (StarterKit + zones à compléter + images / fichiers joints) sait représenter. */
+/** Nœuds / marques que le schéma TipTap (StarterKit + zones à compléter + images / fichiers joints / vidéos / tableaux / dates / boutons) sait représenter. */
 export const EDITOR_NODE_TYPES = new Set([
   'doc',
   'paragraph',
@@ -115,8 +115,16 @@ export const EDITOR_NODE_TYPES = new Set([
   'placeholder',
   'image',
   'attachment',
+  'table',
+  'tableRow',
+  'tableCell',
+  'tableHeader',
+  'date',
+  'button',
+  'video',
+  'transclusion',
 ])
-export const EDITOR_MARK_TYPES = new Set(['bold', 'italic', 'strike', 'code'])
+export const EDITOR_MARK_TYPES = new Set(['bold', 'italic', 'strike', 'code', 'underline', 'link'])
 
 export type UnsupportedContent = { nodes: string[]; marks: string[] }
 

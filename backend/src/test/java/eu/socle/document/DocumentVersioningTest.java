@@ -101,11 +101,11 @@ class DocumentVersioningTest {
 
     @Test
     void update_archivesOldBodyThenIncrementsVersion() {
-        DocumentEntity entity = document(DOC, Map.of("blocks", List.of("old")), 1);
+        DocumentEntity entity = document(DOC, VersionTestSupport.doc("old"), 1);
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
         doNothing().when(authorizationService).requireDocumentRelation(USER, DOC, "editor");
 
-        Map<String, Object> newBody = Map.of("blocks", List.of("new"));
+        Map<String, Object> newBody = VersionTestSupport.doc("new");
         var response = service.update(jwt(), DOC, new UpdateDocumentRequest("Titre", newBody, "fix"));
 
         ArgumentCaptor<DocumentVersionEntity> versionCap = ArgumentCaptor.forClass(DocumentVersionEntity.class);
@@ -115,7 +115,7 @@ class DocumentVersioningTest {
 
         DocumentVersionEntity archived = versionCap.getValue();
         assertThat(archived.getVersionNo()).isEqualTo(1);
-        assertThat(archived.getBodySnapshot()).isEqualTo(Map.of("blocks", List.of("old")));
+        assertThat(archived.getBodySnapshot()).isEqualTo(VersionTestSupport.doc("old"));
         // Résumé de la version archivée (v1 n'en avait pas) — pas celui de la nouvelle version.
         assertThat(archived.getChangeSummary()).isNull();
         assertThat(entity.getCurrentChangeSummary()).isEqualTo("fix");
@@ -133,12 +133,12 @@ class DocumentVersioningTest {
     @Test
     void update_archivesWithPreviousContentAuthor_notCurrentEditor() {
         UUID alice = UUID.fromString("aaaaaaaa-1111-1111-1111-111111111111");
-        DocumentEntity entity = document(DOC, Map.of("blocks", List.of("old")), 1);
+        DocumentEntity entity = document(DOC, VersionTestSupport.doc("old"), 1);
         entity.setUpdatedBy(alice);
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
         doNothing().when(authorizationService).requireDocumentRelation(USER, DOC, "editor");
 
-        service.update(jwt(), DOC, new UpdateDocumentRequest("Titre", Map.of("blocks", List.of("new")), "edit"));
+        service.update(jwt(), DOC, new UpdateDocumentRequest("Titre", VersionTestSupport.doc("new"), "edit"));
 
         ArgumentCaptor<DocumentVersionEntity> versionCap = ArgumentCaptor.forClass(DocumentVersionEntity.class);
         verify(versionRepository).save(versionCap.capture());
@@ -151,12 +151,12 @@ class DocumentVersioningTest {
     void update_whenDocumentSaveFails_doesNotLeaveCommittedVersionOutsideTransaction() {
         // Même méthode @Transactional : si save(document) échoue, Spring rollback aussi la version.
         // Ici on vérifie l'ordre + que l'exception remonte (pas de succès partiel côté API).
-        DocumentEntity entity = document(DOC, Map.of("v", 1), 1);
+        DocumentEntity entity = document(DOC, VersionTestSupport.doc("v1"), 1);
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
         doNothing().when(authorizationService).requireDocumentRelation(USER, DOC, "editor");
         when(documentRepository.save(any())).thenThrow(new RuntimeException("constraint"));
 
-        assertThatThrownBy(() -> service.update(jwt(), DOC, new UpdateDocumentRequest("T", Map.of("v", 2))))
+        assertThatThrownBy(() -> service.update(jwt(), DOC, new UpdateDocumentRequest("T", VersionTestSupport.doc("v2"))))
                 .hasMessageContaining("constraint");
 
         verify(versionRepository).save(any(DocumentVersionEntity.class));
@@ -197,9 +197,9 @@ class DocumentVersioningTest {
 
     @Test
     void restore_createsNewVersionWithoutRewritingHistory() {
-        DocumentEntity entity = document(DOC, Map.of("blocks", List.of("current")), 3);
+        DocumentEntity entity = document(DOC, VersionTestSupport.doc("current"), 3);
         entity.setCurrentChangeSummary("résumé v3");
-        DocumentVersionEntity target = version(1, Map.of("blocks", List.of("old")));
+        DocumentVersionEntity target = version(1, VersionTestSupport.doc("old"));
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
         doNothing().when(authorizationService).requireDocumentRelation(USER, DOC, "editor");
         when(versionRepository.findByDocumentIdAndVersionNo(DOC, 1)).thenReturn(Optional.of(target));
@@ -210,7 +210,7 @@ class DocumentVersioningTest {
         verify(versionRepository).save(versionCap.capture());
         DocumentVersionEntity archived = versionCap.getValue();
         assertThat(archived.getVersionNo()).isEqualTo(3);
-        assertThat(archived.getBodySnapshot()).isEqualTo(Map.of("blocks", List.of("current")));
+        assertThat(archived.getBodySnapshot()).isEqualTo(VersionTestSupport.doc("current"));
         assertThat(archived.getChangeSummary()).isEqualTo("résumé v3");
         assertThat(entity.getCurrentChangeSummary()).isEqualTo("Restauration de la version 1");
         assertThat(archived.getAuthorId()).isEqualTo(USER);
@@ -219,7 +219,7 @@ class DocumentVersioningTest {
         // Historique existant (v1) non réécrit
         verify(versionRepository, never()).save(argThat(v -> v != null && v.getVersionNo() == 1));
 
-        assertThat(response.body()).isEqualTo(Map.of("blocks", List.of("old")));
+        assertThat(response.body()).isEqualTo(VersionTestSupport.doc("old"));
         assertThat(response.currentVersionNo()).isEqualTo(4);
         assertThat(entity.getUpdatedBy()).isEqualTo(USER);
 

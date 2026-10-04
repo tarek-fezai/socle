@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.user.UserSyncService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -40,7 +41,28 @@ public class DocumentDraftService {
     private final UserSyncService userSyncService;
     private final AuthorizationService authorizationService;
     private final EditLockService editLockService;
+    private final TipTapContentValidator tipTapContentValidator;
 
+    @Autowired
+    public DocumentDraftService(
+            JdbcTemplate jdbc,
+            ObjectMapper objectMapper,
+            UserSyncService userSyncService,
+            AuthorizationService authorizationService,
+            EditLockService editLockService,
+            TipTapContentValidator tipTapContentValidator
+    ) {
+        this.jdbc = jdbc;
+        this.objectMapper = objectMapper;
+        this.userSyncService = userSyncService;
+        this.authorizationService = authorizationService;
+        this.editLockService = editLockService;
+        this.tipTapContentValidator = tipTapContentValidator != null
+                ? tipTapContentValidator
+                : new TipTapContentValidator();
+    }
+
+    /** Constructeur tests / compat — validateur par défaut. */
     public DocumentDraftService(
             JdbcTemplate jdbc,
             ObjectMapper objectMapper,
@@ -48,11 +70,8 @@ public class DocumentDraftService {
             AuthorizationService authorizationService,
             EditLockService editLockService
     ) {
-        this.jdbc = jdbc;
-        this.objectMapper = objectMapper;
-        this.userSyncService = userSyncService;
-        this.authorizationService = authorizationService;
-        this.editLockService = editLockService;
+        this(jdbc, objectMapper, userSyncService, authorizationService, editLockService,
+                new TipTapContentValidator());
     }
 
     public record DraftView(String title, Map<String, Object> body, int baseVersionNo, Instant updatedAt) {}
@@ -73,6 +92,7 @@ public class DocumentDraftService {
         if (body == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "body requis");
         }
+        tipTapContentValidator.validate(body);
         if (baseVersionNo == null || baseVersionNo < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "baseVersionNo requis");
         }

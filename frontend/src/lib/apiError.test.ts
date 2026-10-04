@@ -49,4 +49,13 @@ describe('apiError (problem+json)', () => {
   it('fallback sans corps', () => {
     expect(apiErrorMessage(new Error('network'), 'Échec')).toBe('Échec')
   })
+
+  it('content_invalid conserve le chemin JSON du détail', () => {
+    const err = axiosErr(400, {
+      status: 400,
+      code: 'content_invalid',
+      detail: '$.content[2].attrs.type: attribut non autorisé : type',
+    })
+    expect(apiErrorMessage(err, 'Échec')).toBe('$.content[2].attrs.type: attribut non autorisé : type')
+  })
 })

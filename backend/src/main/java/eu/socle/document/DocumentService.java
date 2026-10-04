@@ -68,6 +68,7 @@ public class DocumentService {
     private AttachmentService attachmentService;
     private EditLockService editLockService;
     private DiffProperties diffProperties;
+    private TipTapContentValidator tipTapContentValidator = new TipTapContentValidator();
 
     /**
      * Constructeur tests unitaires — provider relational implicite ;
@@ -194,6 +195,19 @@ public class DocumentService {
     @Autowired(required = false)
     void setDiffProperties(DiffProperties diffProperties) {
         this.diffProperties = diffProperties;
+    }
+
+    @Autowired(required = false)
+    void setTipTapContentValidator(TipTapContentValidator tipTapContentValidator) {
+        if (tipTapContentValidator != null) {
+            this.tipTapContentValidator = tipTapContentValidator;
+        }
+    }
+
+    private Map<String, Object> normalizeAndValidateBody(Map<String, Object> body) {
+        Map<String, Object> normalized = transclusionResolver.normalizeForStorage(body);
+        tipTapContentValidator.validate(normalized);
+        return normalized;
     }
 
     private static final int DEFAULT_LIST_LIMIT = 20;
@@ -340,7 +354,7 @@ public class DocumentService {
         entity.setDocType(requestedDocType != null
                 ? requestedDocType
                 : template != null ? blankToNull(template.docType()) : null);
-        Map<String, Object> body = transclusionResolver.normalizeForStorage(
+        Map<String, Object> body = normalizeAndValidateBody(
                 copyBody(template != null ? template.body() : request.body()));
         entity.setBody(body);
         if (template != null) {
@@ -503,7 +517,7 @@ public class DocumentService {
 
         UUID contentAuthorId = contentAuthorOf(entity);
         String archivedSummary = entity.getCurrentChangeSummary();
-        Map<String, Object> newBody = transclusionResolver.normalizeForStorage(copyBody(request.body()));
+        Map<String, Object> newBody = normalizeAndValidateBody(copyBody(request.body()));
         String newSummary = resolveChangeSummary(
                 request.changeSummary(), archivedVersionNo + 1, previousBody, newBody);
         documentStore.archiveVersion(
@@ -847,7 +861,7 @@ public class DocumentService {
                         HttpStatus.NOT_FOUND,
                         "Version " + versionNo + " introuvable pour ce document"));
         assertRestoreAllowed(documentId, user.getId());
-        Map<String, Object> targetBody = transclusionResolver.normalizeForStorage(
+        Map<String, Object> targetBody = normalizeAndValidateBody(
                 documentStore.loadVersionBody(documentId, versionNo));
 
         Map<String, Object> previousBody = copyBody(

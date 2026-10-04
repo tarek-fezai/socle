@@ -3,6 +3,8 @@ import { Fragment, useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { AttachmentFile, AttachmentImage } from '../../components/attachments/AttachmentViews'
+import { RichButton, RichVideo } from '../../components/rich-blocks/RichBlockViews'
+import { formatDateFr } from '../../components/rich-blocks/richBlockUtils'
 import { highlightAnchorsHtml, isSafeHttpUrl } from '../../lib/comments'
 import type { TipTapNode } from '../../lib/documents'
 import { PLACEHOLDER_NODE_TYPE, DEFAULT_PLACEHOLDER_HINT } from '../../lib/templates'
@@ -217,6 +219,10 @@ function inlineNodeHtml(node: TipTapNode, anchors: HighlightAnchor[]): string {
     return wrapMarks(inner, node.marks)
   }
   if (node.type === 'hardBreak') return '<br>'
+  if (node.type === 'date') {
+    const value = (node.attrs as { value?: unknown } | undefined)?.value
+    return `<span class="doc-date">${esc(formatDateFr(value))}</span>`
+  }
   // Nœud inline inconnu : texte brut seulement (jamais de JSON).
   const t = nodeText(node)
   return t ? esc(t) : ''
@@ -456,6 +462,19 @@ function renderBlock(node: TipTapNode, ctx: Ctx): ReactNode {
           sizeBytes={typeof attrs.sizeBytes === 'number' ? attrs.sizeBytes : null}
           mediaType={typeof attrs.mediaType === 'string' ? attrs.mediaType : undefined}
         />
+      )
+    }
+    case 'button': {
+      const attrs = (node.attrs ?? {}) as Record<string, unknown>
+      return <RichButton label={attrs.label} href={attrs.href} documentId={attrs.documentId} />
+    }
+    case 'video': {
+      const attrs = (node.attrs ?? {}) as Record<string, unknown>
+      if (typeof attrs.id !== 'string' || !attrs.id) return <UnsupportedBlock type={type} />
+      return (
+        <div className="doc-video-wrap">
+          <RichVideo id={attrs.id} filename={typeof attrs.filename === 'string' ? attrs.filename : undefined} />
+        </div>
       )
     }
     case 'image': {

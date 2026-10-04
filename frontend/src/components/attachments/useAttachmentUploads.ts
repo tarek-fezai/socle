@@ -7,9 +7,11 @@ import {
   IMAGE_NODE_TYPE,
   attachmentNodeAttrs,
   isImageMediaType,
+  isVideoMediaType,
   uploadAttachment,
   type AttachmentInfo,
 } from '../../lib/attachments'
+import { VIDEO_NODE_TYPE } from '../rich-blocks/richBlockUtils'
 
 export type UploadItem = {
   key: string
@@ -20,15 +22,23 @@ export type UploadItem = {
   error?: string
 }
 
-/** `image` : bloc image si le serveur confirme un type image/*, sinon fichier joint. `file` : toujours un fichier joint. */
-export type UploadKind = 'image' | 'file'
+/**
+ * `image` : bloc image si le serveur confirme un type image/*, sinon fichier joint. `file` : toujours un
+ * fichier joint. `video` : toujours un bloc vidéo (mp4 / webm uniquement).
+ */
+export type UploadKind = 'image' | 'file' | 'video'
+
+export const VIDEO_UPLOAD_ERROR = 'Seules les vidéos MP4 et WebM sont acceptées.'
 
 let seq = 0
 
+const BLOCK_ATOM_TYPES = new Set([IMAGE_NODE_TYPE, ATTACHMENT_NODE_TYPE, VIDEO_NODE_TYPE])
+
 function insertNode(editor: Editor, info: AttachmentInfo, kind: UploadKind, pos?: number) {
   const asImage = kind === 'image' && isImageMediaType(info.mediaType)
+  const asVideo = kind === 'video'
   const node = {
-    type: asImage ? IMAGE_NODE_TYPE : ATTACHMENT_NODE_TYPE,
+    type: asVideo ? VIDEO_NODE_TYPE : asImage ? IMAGE_NODE_TYPE : ATTACHMENT_NODE_TYPE,
     attrs: { ...attachmentNodeAttrs(info), ...(asImage ? { alt: info.filename } : {}) },
   }
   const chain = editor.chain().focus()
@@ -37,7 +47,7 @@ function insertNode(editor: Editor, info: AttachmentInfo, kind: UploadKind, pos?
   chain.run()
   // Un bloc atomique en fin de document : prévoir un paragraphe pour continuer à écrire.
   const last = editor.state.doc.lastChild
-  if (last && (last.type.name === IMAGE_NODE_TYPE || last.type.name === ATTACHMENT_NODE_TYPE)) {
+  if (last && BLOCK_ATOM_TYPES.has(last.type.name)) {
     editor.commands.insertContentAt(editor.state.doc.content.size, { type: 'paragraph' })
   }
 }
@@ -72,7 +82,15 @@ export function useAttachmentUploads(documentId: string | undefined, getEditor: 
       let pos = opts.pos
       for (const file of files) {
         const key = `up-${++seq}`
-        const kind: UploadKind = opts.kind ?? (isImageMediaType(file.type) ? 'image' : 'file')
+        const kind: UploadKind =
+          opts.kind ?? (isImageMediaType(file.type) ? 'image' : isVideoMediaType(file.type) ? 'video' : 'file')
+        if (kind === 'video' && !isVideoMediaType(file.type)) {
+          setItems((prev) => [
+            ...prev,
+            { key, filename: file.name, progress: 0, status: 'error', error: VIDEO_UPLOAD_ERROR },
+          ])
+          continue
+        }
         setItems((prev) => [...prev, { key, filename: file.name, progress: 0, status: 'uploading' }])
         const ctrl = new AbortController()
         controllers.current.add(ctrl)

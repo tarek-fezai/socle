@@ -26,7 +26,6 @@ beforeAll(() => {
 const doc = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Bonjour' }] }] }
 
 const SOON_LABELS = [
-  'Souligné',
   'Couleur et surlignage',
   'Liste de tâches',
   'Diminuer le retrait',
@@ -34,9 +33,7 @@ const SOON_LABELS = [
   'Aligner à gauche',
   'Centrer',
   'Justifier',
-  'Insérer un lien',
   'Insérer un diagramme draw.io',
-  'Insérer un tableau',
   'Mentionner une personne',
   'Réduire les blocs enrichis',
 ]
@@ -86,12 +83,53 @@ describe('EditToolbar', () => {
     const panel = await screen.findByTestId('edit-insert-panel')
     expect(panel.textContent).toContain('Vidéo')
     const soonItems = panel.querySelectorAll('[data-soon="true"]')
-    expect(soonItems.length).toBeGreaterThan(5)
+    expect(soonItems.length).toBeGreaterThanOrEqual(5)
     for (const el of soonItems) expect(el.getAttribute('aria-disabled')).toBe('true')
+    // Vidéo, tableau, date et bouton sont branchés.
+    for (const label of ['Vidéo', 'Tableau', 'Date & heure', 'Bouton']) {
+      const item = screen.getByText(label).closest('button')!
+      expect(item.getAttribute('data-soon'), label).toBeNull()
+      expect(item.getAttribute('aria-disabled'), label).toBeNull()
+    }
     // « Fichier joint » n'est plus « bientôt » : branché sur l'envoi de pièces jointes.
     const attachment = screen.getByText('Fichier joint').closest('button')!
     expect(attachment.getAttribute('data-soon')).toBeNull()
     expect(attachment.getAttribute('aria-disabled')).toBeNull()
+  })
+})
+
+describe('EditToolbar — blocs enrichis', () => {
+  it('« Insérer un tableau » crée un tableau 3×3 avec ligne d’en-tête', async () => {
+    const onChange = vi.fn()
+    render(<DocumentEditor variant="document" content={doc} onChange={onChange} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Insérer un tableau' }))
+    await waitFor(() => {
+      const json = onChange.mock.calls.at(-1)?.[0] as { content: Array<{ type: string; content?: Array<{ content: Array<{ type: string }> }> }> }
+      const table = json.content.find((n) => n.type === 'table')
+      expect(table?.content).toHaveLength(3)
+      expect(table?.content?.[0].content.map((c) => c.type)).toEqual(['tableHeader', 'tableHeader', 'tableHeader'])
+      expect(table?.content?.[1].content.map((c) => c.type)).toEqual(['tableCell', 'tableCell', 'tableCell'])
+    })
+  })
+
+  it('le menu Insérer ajoute une date du jour et un bouton', async () => {
+    const onChange = vi.fn()
+    render(<DocumentEditor variant="document" content={doc} onChange={onChange} />)
+    fireEvent.click(await screen.findByTestId('edit-insert-btn'))
+    fireEvent.click(screen.getByText('Date & heure'))
+    await waitFor(() => {
+      const json = JSON.stringify(onChange.mock.calls.at(-1)?.[0])
+      expect(json).toContain('"type":"date"')
+      expect(json).toMatch(/"value":"\d{4}-\d{2}-\d{2}"/)
+    })
+    fireEvent.click(screen.getByTestId('edit-insert-btn'))
+    fireEvent.click(screen.getByText('Bouton'))
+    await waitFor(() => {
+      const json = JSON.stringify(onChange.mock.calls.at(-1)?.[0])
+      expect(json).toContain('"type":"button"')
+      expect(json).toContain('"label":"Action"')
+      expect(json).toContain('"href":"https://example.org"')
+    })
   })
 })
 
@@ -163,6 +201,39 @@ describe('EditToolbar — pièces jointes', () => {
       expect(json).toContain('"mediaType":"application/pdf"')
     })
     expect(await screen.findByTestId('attachment-file')).toBeTruthy()
+  })
+
+  it('« Vidéo » envoie un mp4 puis insère un bloc video', async () => {
+    vi.mocked(uploadAttachment).mockResolvedValueOnce({
+      id: 'att-3',
+      filename: 'demo.mp4',
+      mediaType: 'video/mp4',
+      sizeBytes: 5000,
+    })
+    const onChange = vi.fn()
+    render(<DocumentEditor variant="document" content={doc} onChange={onChange} documentId="doc-1" />)
+    const input = (await screen.findByTestId('edit-video-input')) as HTMLInputElement
+    expect(input.getAttribute('accept')).toBe('video/mp4,video/webm')
+    const click = vi.spyOn(input, 'click')
+    fireEvent.click(screen.getByTestId('edit-insert-btn'))
+    fireEvent.click(screen.getByText('Vidéo'))
+    expect(click).toHaveBeenCalled()
+    fireEvent.change(input, { target: { files: [new File(['x'], 'demo.mp4', { type: 'video/mp4' })] } })
+    await waitFor(() => {
+      const json = JSON.stringify(onChange.mock.calls.at(-1)?.[0])
+      expect(json).toContain('"type":"video"')
+      expect(json).toContain('"id":"att-3"')
+    })
+  })
+
+  it('refuse une vidéo hors mp4 / webm sans appeler l’API', async () => {
+    vi.mocked(uploadAttachment).mockClear()
+    render(<DocumentEditor variant="document" content={doc} onChange={() => undefined} documentId="doc-1" />)
+    const input = await screen.findByTestId('edit-video-input')
+    fireEvent.change(input, { target: { files: [new File(['x'], 'film.avi', { type: 'video/x-msvideo' })] } })
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe('Seules les vidéos MP4 et WebM sont acceptées.')
+    expect(uploadAttachment).not.toHaveBeenCalled()
   })
 
   it('affiche l’erreur réelle du serveur quand l’envoi échoue', async () => {

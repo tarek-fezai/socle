@@ -324,6 +324,27 @@ describe('DocumentHistoryPage', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
+  it('échec de la restauration : content_invalid affiche le chemin du nœud', async () => {
+    restoreVersion.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: {
+          status: 400,
+          detail: '$.content[2].attrs.type: attribut non autorisé : type',
+          code: 'content_invalid',
+        },
+      },
+    })
+    render(wrap(<DocumentHistoryPage />))
+    fireEvent.click(within(await screen.findByTestId('history-row-11')).getByRole('button', { name: 'Restaurer' }))
+    fireEvent.click(within(await screen.findByRole('dialog')).getByTestId('restore-confirm'))
+    await waitFor(() => expect(screen.getByTestId('restore-error')).toBeTruthy())
+    expect(screen.getByTestId('restore-error').textContent).toContain('$.content[2].attrs.type')
+    expect(screen.getByTestId('restore-error').textContent).toContain('attribut non autorisé')
+    expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+
   it('document archivé → Restaurer désactivé, aucun appel API', async () => {
     getDocument.mockResolvedValue(docDetail({ status: 'archive' }))
     render(wrap(<DocumentHistoryPage />))

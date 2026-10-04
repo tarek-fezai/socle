@@ -75,7 +75,7 @@ class DocumentDraftUpdateTest {
         entity.setId(DOC);
         entity.setSpaceId(SPACE);
         entity.setTitle("Doc");
-        entity.setBody(Map.of("blocks", List.of("old")));
+        entity.setBody(VersionTestSupport.doc("old"));
         entity.setStatus("brouillon");
         entity.setCurrentVersionNo(1);
         entity.setCreatedBy(USER);
@@ -89,7 +89,7 @@ class DocumentDraftUpdateTest {
     @Test
     void explicitUpdate_createsExactlyOneVersion_andDeletesCallersDraft() {
         var response = service.update(jwt(), DOC,
-                new UpdateDocumentRequest("Titre", Map.of("blocks", List.of("new")), "save"));
+                new UpdateDocumentRequest("Titre", VersionTestSupport.doc("new"), "save"));
 
         verify(versionRepository, times(1)).save(any(DocumentVersionEntity.class));
         assertThat(response.currentVersionNo()).isEqualTo(2);
@@ -101,7 +101,7 @@ class DocumentDraftUpdateTest {
         when(documentRepository.save(any())).thenThrow(new RuntimeException("constraint"));
 
         assertThatThrownBy(() -> service.update(jwt(), DOC,
-                new UpdateDocumentRequest("Titre", Map.of("blocks", List.of("new")), "save")))
+                new UpdateDocumentRequest("Titre", VersionTestSupport.doc("new"), "save")))
                 .hasMessageContaining("constraint");
 
         verify(jdbc, never()).update(eq(DELETE_DRAFT), any(), any());

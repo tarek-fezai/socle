@@ -2,6 +2,13 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import type { ChainedCommands, Editor } from '@tiptap/react'
 import type { UploadKind } from '../../components/attachments/useAttachmentUploads'
+import {
+  BUTTON_NODE_TYPE,
+  DATE_NODE_TYPE,
+  DEFAULT_BUTTON_HREF,
+  DEFAULT_BUTTON_LABEL,
+  todayIsoDate,
+} from '../../components/rich-blocks/richBlockUtils'
 
 export const SOON_TITLE = 'Bientôt disponible'
 
@@ -184,10 +191,32 @@ type InsertItem = {
   label: string
   bg: string
   icon: ReactNode
-  /** « Bloc de code » (StarterKit). */
+  /** Insertion directe dans l'éditeur (bloc de code, tableau, date, bouton). */
   run?: (editor: Editor) => void
   /** « Fichier joint » : ouvre le sélecteur de fichiers (envoi vers l'API). */
   pick?: UploadKind
+}
+
+/** Tableau 3×3 avec ligne d'en-tête. */
+function insertTable(ed: Editor) {
+  ed.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+}
+
+/** Date du jour (modifiable ensuite via le sélecteur de date du nœud). */
+function insertDate(ed: Editor) {
+  ed.chain().focus().insertContent({ type: DATE_NODE_TYPE, attrs: { value: todayIsoDate() } }).run()
+}
+
+/** Bouton d'exemple : l'auteur remplace le libellé et le lien. */
+function insertButton(ed: Editor) {
+  ed.chain()
+    .focus()
+    .insertContent([
+      { type: BUTTON_NODE_TYPE, attrs: { label: DEFAULT_BUTTON_LABEL, href: DEFAULT_BUTTON_HREF } },
+      // Paragraphe à la suite : le curseur ne reste pas sélectionné sur le nœud atomique.
+      { type: 'paragraph' },
+    ])
+    .run()
 }
 
 const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
@@ -220,6 +249,7 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
             <rect x="1" y="5" width="15" height="14" rx="2" />
           </Svg>
         ),
+        pick: 'video',
       },
       {
         id: 'link-preview',
@@ -255,6 +285,7 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
             <line x1="9" y1="4" x2="9" y2="20" />
           </Svg>
         ),
+        run: (ed) => insertTable(ed),
       },
       {
         id: 'chart',
@@ -319,6 +350,7 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
             <line x1="3" y1="10" x2="21" y2="10" />
           </Svg>
         ),
+        run: (ed) => insertDate(ed),
       },
       {
         id: 'button',
@@ -330,6 +362,7 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
             <line x1="8" y1="12" x2="16" y2="12" />
           </Svg>
         ),
+        run: (ed) => insertButton(ed),
       },
     ],
   },
@@ -438,7 +471,7 @@ function InsertMenu({
 /**
  * Barre d'outils de l'écran Modifier (Edit.dc.html). Actions réellement branchées : annuler /
  * rétablir, titres, gras / italique / barré, citation, effacer la mise en forme, listes, séparateur,
- * bloc de code, image et fichier joint (envoi API). Le reste est affiché grisé (`aria-disabled`,
+ * bloc de code, tableau, date, bouton, image, vidéo et fichier joint (envoi API). Le reste est affiché grisé (`aria-disabled`,
  * « Bientôt disponible »).
  */
 export function EditToolbar({
@@ -491,7 +524,13 @@ export function EditToolbar({
       >
         I
       </Tool>
-      <Tool label="Souligné" soon className="edit-tool--glyph is-underline">
+      <Tool
+        label="Souligné"
+        active={editor.isActive('underline')}
+        disabled={readOnly}
+        onClick={run((c) => c.toggleUnderline())}
+        className="edit-tool--glyph is-underline"
+      >
         U
       </Tool>
       <Tool
@@ -615,7 +654,23 @@ export function EditToolbar({
           <line x1="4" y1="12" x2="20" y2="12" />
         </Svg>
       </Tool>
-      <Tool label="Insérer un lien" soon>
+      <Tool
+        label="Insérer un lien"
+        active={editor.isActive('link')}
+        disabled={readOnly}
+        onClick={() => {
+          if (readOnly || !editor) return
+          const prev = editor.getAttributes('link').href as string | undefined
+          const next = window.prompt('URL du lien', prev || 'https://')
+          if (next === null) return
+          const href = next.trim()
+          if (!href) {
+            editor.chain().focus().extendMarkRange('link').unsetLink().run()
+            return
+          }
+          editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
+        }}
+      >
         <Svg round={false}>
           <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
           <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
@@ -639,7 +694,7 @@ export function EditToolbar({
           <path d="M10 6.5h4a3 3 0 0 1 3 3V14" />
         </Svg>
       </Tool>
-      <Tool label="Insérer un tableau" soon>
+      <Tool label="Insérer un tableau" disabled={readOnly} onClick={() => insertTable(editor)}>
         <Svg>
           <rect x="3" y="4" width="18" height="16" rx="1.5" />
           <line x1="3" y1="10" x2="21" y2="10" />

@@ -27,6 +27,9 @@ public final class TipTapMarkdown {
     public static final String TRANSCLUSION_TYPE = "transclusion";
     public static final String ATTACHMENT_TYPE = "attachment";
     public static final String IMAGE_TYPE = "image";
+    public static final String DATE_TYPE = "date";
+    public static final String BUTTON_TYPE = "button";
+    public static final String VIDEO_TYPE = "video";
     public static final String ATTR_DOCUMENT_ID = "documentId";
     public static final String ATTR_ATTACHMENT_ID = "id";
     public static final String SOCLE_JSON_FENCE = ":::socle-json";
@@ -38,6 +41,16 @@ public final class TipTapMarkdown {
             "^::attachment\\{id=\"([^\"]*)\"\\}\\s*$");
     private static final Pattern IMAGE_ATTACHMENT_LINE = Pattern.compile(
             "^!\\[([^\\]]*)]\\(attachment:([0-9a-fA-F-]{36})\\)\\s*$");
+    private static final Pattern DATE_LINE = Pattern.compile(
+            "^::date\\{value=\"(\\d{4}-\\d{2}-\\d{2})\"\\}\\s*$");
+    private static final Pattern VIDEO_LINE = Pattern.compile(
+            "^::video\\{id=\"([^\"]*)\"\\}\\s*$");
+    private static final Pattern BUTTON_LINE = Pattern.compile(
+            "^::button\\{(.*)\\}\\s*$");
+    private static final Pattern BUTTON_ATTR = Pattern.compile(
+            "(label|href|documentId)=\"([^\"]*)\"");
+    private static final Pattern GFM_TABLE_SEP = Pattern.compile(
+            "^\\|?\\s*:?-{3,}:?\\s*(\\|\\s*:?-{3,}:?\\s*)+\\|?\\s*$");
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
     private TipTapMarkdown() {}
@@ -107,16 +120,7 @@ public final class TipTapMarkdown {
                 sb.append("#".repeat(Math.max(1, Math.min(level, 6)))).append(' ')
                         .append(inlineMarkdown(block)).append("\n\n");
             }
-            case "paragraph" -> {
-                if (!block.containsKey("content")
-                        || (block.get("content") instanceof List<?> c && c.isEmpty())) {
-                    // Paragraphe vide : marqueur dédié
-                    sb.append("\\\n\n");
-                    return;
-                }
-                String inline = inlineMarkdown(block);
-                sb.append(escapeParagraphMarkdown(inline)).append("\n\n");
-            }
+            case "paragraph" -> appendParagraphOrDate(sb, block);
             case "bulletList" -> appendList(sb, block, false);
             case "orderedList" -> appendList(sb, block, true);
             case "codeBlock" -> appendCodeBlock(sb, block);
@@ -124,6 +128,10 @@ public final class TipTapMarkdown {
             case TRANSCLUSION_TYPE -> appendTransclusion(sb, block);
             case ATTACHMENT_TYPE -> appendAttachment(sb, block);
             case IMAGE_TYPE -> appendImageAttachment(sb, block);
+            case "table" -> appendGfmTable(sb, block);
+            case DATE_TYPE -> appendDate(sb, block);
+            case BUTTON_TYPE -> appendButton(sb, block);
+            case VIDEO_TYPE -> appendVideo(sb, block);
             default -> appendSocleJson(sb, block);
         }
     }
@@ -246,6 +254,58 @@ public final class TipTapMarkdown {
                 content.add(node);
                 i++;
                 continue;
+            }
+
+            Matcher dateM = DATE_LINE.matcher(line);
+            if (dateM.matches()) {
+                flushPara.run();
+                flushList.run();
+                Map<String, Object> dateNode = new LinkedHashMap<>();
+                dateNode.put("type", DATE_TYPE);
+                dateNode.put("attrs", Map.of("value", dateM.group(1)));
+                Map<String, Object> wrap = new LinkedHashMap<>();
+                wrap.put("type", "paragraph");
+                wrap.put("content", List.of(dateNode));
+                content.add(wrap);
+                i++;
+                continue;
+            }
+
+            Matcher videoM = VIDEO_LINE.matcher(line);
+            if (videoM.matches()) {
+                flushPara.run();
+                flushList.run();
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("type", VIDEO_TYPE);
+                node.put("attrs", Map.of(ATTR_ATTACHMENT_ID, videoM.group(1)));
+                content.add(node);
+                i++;
+                continue;
+            }
+
+            Matcher buttonM = BUTTON_LINE.matcher(line);
+            if (buttonM.matches()) {
+                flushPara.run();
+                flushList.run();
+                Map<String, Object> attrs = parseButtonAttrs(buttonM.group(1));
+                if (attrs != null) {
+                    Map<String, Object> node = new LinkedHashMap<>();
+                    node.put("type", BUTTON_TYPE);
+                    node.put("attrs", attrs);
+                    content.add(node);
+                }
+                i++;
+                continue;
+            }
+
+            if (looksLikeGfmTable(lines, i)) {
+                flushPara.run();
+                flushList.run();
+                int consumed = parseGfmTable(lines, i, content);
+                if (consumed > 0) {
+                    i += consumed;
+                    continue;
+                }
             }
 
             if (line.matches("^#{1,6}\\s+.*") || line.matches("^#{1,6}$")) {
@@ -425,6 +485,219 @@ public final class TipTapMarkdown {
         sb.append("![").append(alt).append("](attachment:").append(id).append(")\n\n");
     }
 
+    /** Paragraphe, ou {@code ::date{value="…"}} si le seul enfant est un nœud date. */
+    @SuppressWarnings("unchecked")
+    private static void appendParagraphOrDate(StringBuilder sb, Map<String, Object> block) {
+        Object content = block.get("content");
+        if (!(content instanceof List<?> c) || c.isEmpty()) {
+            sb.append("\\\n\n");
+            return;
+        }
+        if (c.size() == 1 && c.getFirst() instanceof Map<?, ?> only
+                && DATE_TYPE.equals(String.valueOf(only.get("type")))) {
+            appendDate(sb, (Map<String, Object>) only);
+            return;
+        }
+        for (Object o : c) {
+            if (o instanceof Map<?, ?> n) {
+                String t = String.valueOf(n.get("type"));
+                if (!"text".equals(t) && !"hardBreak".equals(t)) {
+                    // date/bouton/etc. mélangés → laisser vide → garde socle-json
+                    return;
+                }
+            }
+        }
+        String inline = inlineMarkdown(block);
+        sb.append(escapeParagraphMarkdown(inline)).append("\n\n");
+    }
+
+    /** {@code ::date{value="AAAA-MM-JJ"}} — attrs = {value} uniquement. */
+    private static void appendDate(StringBuilder sb, Map<String, Object> block) {
+        Object attrs = block.get("attrs");
+        if (!(attrs instanceof Map<?, ?> am) || am.size() != 1 || !am.containsKey("value")) {
+            return;
+        }
+        String value = String.valueOf(am.get("value"));
+        if (!value.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return;
+        }
+        if (block.containsKey("content") && !isEmptyContent(block.get("content"))) {
+            return;
+        }
+        sb.append("::date{value=\"").append(value).append("\"}\n\n");
+    }
+
+    /** {@code ::video{id="…"}} — attrs = {id} uniquement. */
+    private static void appendVideo(StringBuilder sb, Map<String, Object> block) {
+        Object attrs = block.get("attrs");
+        if (!(attrs instanceof Map<?, ?> am) || am.size() != 1 || !am.containsKey(ATTR_ATTACHMENT_ID)) {
+            return;
+        }
+        if (block.containsKey("content") && !isEmptyContent(block.get("content"))) {
+            return;
+        }
+        String id = String.valueOf(am.get(ATTR_ATTACHMENT_ID));
+        if (!isValidUuid(id)) {
+            return;
+        }
+        sb.append("::video{id=\"").append(id).append("\"}\n\n");
+    }
+
+    /**
+     * {@code ::button{label="…" href="…"}} ou {@code documentId="…"}.
+     * Attrs autorisés uniquement : label + (href | documentId).
+     */
+    private static void appendButton(StringBuilder sb, Map<String, Object> block) {
+        Object attrs = block.get("attrs");
+        if (!(attrs instanceof Map<?, ?> am)) {
+            return;
+        }
+        if (block.containsKey("content") && !isEmptyContent(block.get("content"))) {
+            return;
+        }
+        Object label = am.get("label");
+        Object href = am.get("href");
+        Object docId = am.get("documentId");
+        if (!(label instanceof String labelStr) || labelStr.isBlank()) {
+            return;
+        }
+        if (labelStr.contains("\"") || labelStr.contains("\n")) {
+            return;
+        }
+        for (Object key : am.keySet()) {
+            String k = String.valueOf(key);
+            if (!"label".equals(k) && !"href".equals(k) && !"documentId".equals(k)) {
+                return;
+            }
+        }
+        StringBuilder dir = new StringBuilder("::button{label=\"").append(labelStr).append('"');
+        if (href instanceof String hs && !hs.isBlank()) {
+            if (hs.contains("\"") || hs.contains("\n")) {
+                return;
+            }
+            dir.append(" href=\"").append(hs).append('"');
+        } else if (docId instanceof String ds && isValidUuid(ds)) {
+            dir.append(" documentId=\"").append(ds).append('"');
+        } else {
+            return;
+        }
+        sb.append(dir).append("}\n\n");
+    }
+
+    /**
+     * Tableau GFM simple (en-tête + séparateur + lignes, cellules texte sans fusion).
+     * Sinon laisse vide → garde {@code :::socle-json}.
+     */
+    @SuppressWarnings("unchecked")
+    private static void appendGfmTable(StringBuilder sb, Map<String, Object> block) {
+        Object content = block.get("content");
+        if (!(content instanceof List<?> rows) || rows.size() < 2) {
+            return;
+        }
+        List<List<String>> grid = new ArrayList<>();
+        int cols = -1;
+        for (Object rowObj : rows) {
+            if (!(rowObj instanceof Map<?, ?> row) || !"tableRow".equals(String.valueOf(row.get("type")))) {
+                return;
+            }
+            Object cellsObj = row.get("content");
+            if (!(cellsObj instanceof List<?> cells) || cells.isEmpty()) {
+                return;
+            }
+            if (cols < 0) {
+                cols = cells.size();
+            } else if (cells.size() != cols) {
+                return;
+            }
+            List<String> line = new ArrayList<>();
+            for (Object cellObj : cells) {
+                if (!(cellObj instanceof Map<?, ?> cell)) {
+                    return;
+                }
+                String ct = String.valueOf(cell.get("type"));
+                if (!"tableCell".equals(ct) && !"tableHeader".equals(ct)) {
+                    return;
+                }
+                Object attrs = cell.get("attrs");
+                if (attrs instanceof Map<?, ?> am) {
+                    Object cs = am.get("colspan");
+                    Object rs = am.get("rowspan");
+                    if (cs instanceof Number n && n.intValue() > 1) {
+                        return;
+                    }
+                    if (rs instanceof Number n && n.intValue() > 1) {
+                        return;
+                    }
+                }
+                String plain = tableCellPlainText((Map<String, Object>) cell);
+                if ("\u0000".equals(plain)) {
+                    return;
+                }
+                line.add(plain);
+            }
+            grid.add(line);
+        }
+        // Première ligne = en-tête
+        sb.append('|');
+        for (String h : grid.getFirst()) {
+            sb.append(' ').append(escapeTableCell(h)).append(" |");
+        }
+        sb.append('\n');
+        sb.append('|');
+        for (int i = 0; i < cols; i++) {
+            sb.append(" --- |");
+        }
+        sb.append('\n');
+        for (int r = 1; r < grid.size(); r++) {
+            sb.append('|');
+            for (String cell : grid.get(r)) {
+                sb.append(' ').append(escapeTableCell(cell)).append(" |");
+            }
+            sb.append('\n');
+        }
+        sb.append('\n');
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String tableCellPlainText(Map<String, Object> cell) {
+        Object content = cell.get("content");
+        if (!(content instanceof List<?> blocks) || blocks.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Object b : blocks) {
+            if (!(b instanceof Map<?, ?> para) || !"paragraph".equals(String.valueOf(para.get("type")))) {
+                return "\u0000"; // signal non-simple
+            }
+            Object inline = para.get("content");
+            if (!(inline instanceof List<?> parts)) {
+                continue;
+            }
+            for (Object p : parts) {
+                if (!(p instanceof Map<?, ?> t) || !"text".equals(String.valueOf(t.get("type")))) {
+                    return "\u0000";
+                }
+                if (t.containsKey("marks") && t.get("marks") instanceof List<?> m && !m.isEmpty()) {
+                    return "\u0000";
+                }
+                sb.append(String.valueOf(t.get("text")));
+            }
+            sb.append(' ');
+        }
+        String s = sb.toString().trim();
+        if (s.indexOf('\u0000') >= 0) {
+            return "\u0000";
+        }
+        return s;
+    }
+
+    private static String escapeTableCell(String cell) {
+        if (cell == null || "\u0000".equals(cell)) {
+            return "";
+        }
+        return cell.replace("|", "\\|").replace("\n", " ");
+    }
+
     @SuppressWarnings("unchecked")
     private static void appendList(StringBuilder sb, Map<String, Object> block, boolean ordered) {
         Object content = block.get("content");
@@ -529,6 +802,106 @@ public final class TipTapMarkdown {
 
     private static boolean isEmptyContent(Object content) {
         return content == null || (content instanceof List<?> list && list.isEmpty());
+    }
+
+    private static Map<String, Object> parseButtonAttrs(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        Map<String, Object> attrs = new LinkedHashMap<>();
+        Matcher m = BUTTON_ATTR.matcher(raw);
+        while (m.find()) {
+            attrs.put(m.group(1), m.group(2));
+        }
+        if (!attrs.containsKey("label")) {
+            return null;
+        }
+        if (!attrs.containsKey("href") && !attrs.containsKey("documentId")) {
+            return null;
+        }
+        if (attrs.containsKey("href") && attrs.containsKey("documentId")) {
+            // Un seul cible — garder href
+            attrs.remove("documentId");
+        }
+        return attrs;
+    }
+
+    private static boolean looksLikeGfmTable(String[] lines, int i) {
+        if (i + 1 >= lines.length) {
+            return false;
+        }
+        String header = lines[i].trim();
+        String sep = lines[i + 1].trim();
+        return header.contains("|") && GFM_TABLE_SEP.matcher(sep).matches();
+    }
+
+    /** @return nombre de lignes consommées, ou 0 si échec */
+    private static int parseGfmTable(String[] lines, int start, List<Map<String, Object>> content) {
+        if (!looksLikeGfmTable(lines, start)) {
+            return 0;
+        }
+        List<String> headerCells = splitTableRow(lines[start]);
+        if (headerCells.isEmpty()) {
+            return 0;
+        }
+        List<Map<String, Object>> rows = new ArrayList<>();
+        rows.add(tableRow(headerCells, true));
+        int i = start + 2;
+        while (i < lines.length && lines[i].contains("|") && !lines[i].isBlank()) {
+            if (GFM_TABLE_SEP.matcher(lines[i].trim()).matches()) {
+                break;
+            }
+            List<String> cells = splitTableRow(lines[i]);
+            if (cells.size() != headerCells.size()) {
+                break;
+            }
+            rows.add(tableRow(cells, false));
+            i++;
+        }
+        if (rows.size() < 2) {
+            return 0;
+        }
+        Map<String, Object> table = new LinkedHashMap<>();
+        table.put("type", "table");
+        table.put("content", rows);
+        content.add(table);
+        return i - start;
+    }
+
+    private static List<String> splitTableRow(String line) {
+        String trimmed = line.trim();
+        if (trimmed.startsWith("|")) {
+            trimmed = trimmed.substring(1);
+        }
+        if (trimmed.endsWith("|")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        List<String> cells = new ArrayList<>();
+        for (String part : trimmed.split("\\|", -1)) {
+            cells.add(part.trim().replace("\\|", "|"));
+        }
+        return cells;
+    }
+
+    private static Map<String, Object> tableRow(List<String> cells, boolean header) {
+        List<Map<String, Object>> cellNodes = new ArrayList<>();
+        for (String text : cells) {
+            Map<String, Object> para = new LinkedHashMap<>();
+            para.put("type", "paragraph");
+            if (text.isEmpty()) {
+                para.put("content", List.of());
+            } else {
+                para.put("content", List.of(plainText(text)));
+            }
+            Map<String, Object> cell = new LinkedHashMap<>();
+            cell.put("type", header ? "tableHeader" : "tableCell");
+            cell.put("content", List.of(para));
+            cellNodes.add(cell);
+        }
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("type", "tableRow");
+        row.put("content", cellNodes);
+        return row;
     }
 
     private static void appendSocleJson(StringBuilder sb, Map<String, Object> block) {
@@ -913,7 +1286,25 @@ public final class TipTapMarkdown {
     public static Object normalize(Object o) {
         if (o instanceof Map<?, ?> m) {
             Map<String, Object> out = new LinkedHashMap<>();
-            m.forEach((k, v) -> out.put(String.valueOf(k), normalize(v)));
+            m.forEach((k, v) -> {
+                String key = String.valueOf(k);
+                Object nv = normalize(v);
+                // Ignorer colspan/rowspan par défaut (=1) et colwidth null — TipTap vs GFM.
+                if (("colspan".equals(key) || "rowspan".equals(key))
+                        && nv instanceof Number n && n.intValue() == 1) {
+                    return;
+                }
+                if ("colwidth".equals(key) && (nv == null || (nv instanceof List<?> l && l.isEmpty()))) {
+                    return;
+                }
+                if ("attrs".equals(key) && nv instanceof Map<?, ?> am && am.isEmpty()) {
+                    return;
+                }
+                if ("content".equals(key) && nv instanceof List<?> cl && cl.isEmpty()) {
+                    return;
+                }
+                out.put(key, nv);
+            });
             return out;
         }
         if (o instanceof List<?> list) {

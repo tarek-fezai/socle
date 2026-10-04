@@ -79,12 +79,12 @@ class DocumentStatusOnMutationTest {
 
     @Test
     void update_onValide_setsEnRevue_andClearsReliabilityScoreImmediately() {
-        DocumentEntity entity = document("valide", Map.of("v", 1), 2);
+        DocumentEntity entity = document("valide", VersionTestSupport.doc("v1"), 2);
         entity.setReliabilityScore(new BigDecimal("87.50"));
         entity.setReliabilityComputedAt(Instant.parse("2026-09-01T00:00:00Z"));
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
 
-        var response = service.update(jwt(), DOC, new UpdateDocumentRequest("T", Map.of("v", 2), "edit"));
+        var response = service.update(jwt(), DOC, new UpdateDocumentRequest("T", VersionTestSupport.doc("v2"), "edit"));
 
         assertThat(response.status()).isEqualTo("en_revue");
         assertThat(entity.getStatus()).isEqualTo("en_revue");
@@ -104,8 +104,8 @@ class DocumentStatusOnMutationTest {
 
     @Test
     void restore_onValide_setsEnRevue_andAuditsStatusTransition() {
-        DocumentEntity entity = document("valide", Map.of("blocks", List.of("current")), 3);
-        DocumentVersionEntity target = version(1, Map.of("blocks", List.of("old")));
+        DocumentEntity entity = document("valide", VersionTestSupport.doc("current"), 3);
+        DocumentVersionEntity target = version(1, VersionTestSupport.doc("old"));
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
         when(versionRepository.findByDocumentIdAndVersionNo(DOC, 1)).thenReturn(Optional.of(target));
 
@@ -125,10 +125,10 @@ class DocumentStatusOnMutationTest {
 
     @Test
     void update_onBrouillon_keepsStatus() {
-        DocumentEntity entity = document("brouillon", Map.of("v", 1), 1);
+        DocumentEntity entity = document("brouillon", VersionTestSupport.doc("v1"), 1);
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
 
-        var response = service.update(jwt(), DOC, new UpdateDocumentRequest("T", Map.of("v", 2)));
+        var response = service.update(jwt(), DOC, new UpdateDocumentRequest("T", VersionTestSupport.doc("v2")));
 
         assertThat(response.status()).isEqualTo("brouillon");
 
@@ -143,8 +143,8 @@ class DocumentStatusOnMutationTest {
 
     @Test
     void restore_onEnRevue_keepsStatus() {
-        DocumentEntity entity = document("en_revue", Map.of("blocks", List.of("a")), 2);
-        DocumentVersionEntity target = version(1, Map.of("blocks", List.of("b")));
+        DocumentEntity entity = document("en_revue", VersionTestSupport.doc("a"), 2);
+        DocumentVersionEntity target = version(1, VersionTestSupport.doc("b"));
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
         when(versionRepository.findByDocumentIdAndVersionNo(DOC, 1)).thenReturn(Optional.of(target));
 
@@ -155,10 +155,10 @@ class DocumentStatusOnMutationTest {
 
     @Test
     void update_onArchive_rejectedWith409() {
-        DocumentEntity entity = document("archive", Map.of("v", 1), 1);
+        DocumentEntity entity = document("archive", VersionTestSupport.doc("v1"), 1);
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
 
-        assertThatThrownBy(() -> service.update(jwt(), DOC, new UpdateDocumentRequest("T", Map.of("v", 2))))
+        assertThatThrownBy(() -> service.update(jwt(), DOC, new UpdateDocumentRequest("T", VersionTestSupport.doc("v2"))))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.CONFLICT));
@@ -169,7 +169,7 @@ class DocumentStatusOnMutationTest {
 
     @Test
     void restore_onArchive_rejectedWith409() {
-        DocumentEntity entity = document("archive", Map.of("v", 1), 2);
+        DocumentEntity entity = document("archive", VersionTestSupport.doc("v1"), 2);
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
 
         assertThatThrownBy(() -> service.restore(jwt(), DOC, 1, 2))
