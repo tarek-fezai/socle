@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { ChangeSummaryPopover } from './ChangeSummaryPopover'
 import { saveStatusText, type PresenceAvatar, type SaveStatus } from './documentEditUtils'
 import type { Crumb } from './DocumentChrome'
 
@@ -49,7 +50,9 @@ export type EditTopBarProps = {
   reviewLabel: string
   reviewDisabled: boolean
   reviewReason: string | null
-  onSendReview: () => void
+  onSendReview: (changeSummary: string) => void
+  saveVersionDisabled: boolean
+  onSaveVersion: (changeSummary: string) => void
 }
 
 export function EditTopBar({
@@ -64,6 +67,8 @@ export function EditTopBar({
   reviewDisabled,
   reviewReason,
   onSendReview,
+  saveVersionDisabled,
+  onSaveVersion,
 }: EditTopBarProps) {
   return (
     <div className="edit-topbar" data-mock-id="edit-topbar" data-testid="edit-topbar">
@@ -127,17 +132,23 @@ export function EditTopBar({
         >
           {previewing ? 'Édition' : 'Aperçu'}
         </button>
-        <button
-          type="button"
-          className="edit-cta"
+        {/* Exception visuelle : popover résumé facultatif (hors maquette pixel-perfect). */}
+        <ChangeSummaryPopover
+          label="Enregistrer la version"
+          buttonClassName="edit-ghost"
+          testId="edit-save-version"
+          disabled={saveVersionDisabled}
+          title="Créer une version (Ctrl/Cmd+S)"
+          onConfirm={onSaveVersion}
+        />
+        <ChangeSummaryPopover
+          label={reviewLabel}
+          buttonClassName="edit-cta"
+          testId="edit-send-review"
           disabled={reviewDisabled}
           title={reviewReason ?? undefined}
-          onClick={onSendReview}
-          data-mock-id="edit-send-review"
-          data-testid="edit-send-review"
-        >
-          {reviewLabel}
-        </button>
+          onConfirm={onSendReview}
+        />
       </div>
     </div>
   )

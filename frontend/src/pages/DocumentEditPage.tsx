@@ -278,7 +278,7 @@ function EditSurface({
    * Version explicite : crée une version via `updateDocument` (le serveur supprime alors le brouillon).
    * Sans effet si le contenu est identique à la version publiée. Résout `true` si une version a été créée.
    */
-  const createVersion = useCallback(async (): Promise<boolean> => {
+  const createVersion = useCallback(async (changeSummary?: string): Promise<boolean> => {
     const d = draftRef.current
     if (!d.title.trim()) throw new Error('Le titre du document ne peut pas être vide.')
     if (draftKeyRef.current === publishedKeyRef.current) {
@@ -296,6 +296,7 @@ function EditSurface({
       d.body,
       doc.docType?.trim() || null,
       versionRef.current,
+      changeSummary ?? null,
     )
     versionRef.current = updated.currentVersionNo ?? versionRef.current
     publishedKeyRef.current = JSON.stringify(d)
@@ -314,10 +315,10 @@ function EditSurface({
   }, [id, doc.docType, qc])
 
   /** Brouillon vidé sur le serveur puis version : l'ordre garantit que la version reflète le dernier brouillon. */
-  const persistVersion = useCallback(async () => {
+  const persistVersion = useCallback(async (changeSummary?: string) => {
     const saved = await autosave.flush()
     if (!saved) throw new Error("L'enregistrement du brouillon a échoué : corrigez-le avant de créer une version.")
-    return createVersion()
+    return createVersion(changeSummary)
   }, [autosave, createVersion])
 
   /* ---------- données annexes ---------- */
@@ -403,9 +404,9 @@ function EditSurface({
   /* ---------- actions ---------- */
 
   const send = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (changeSummary: string) => {
       // Brouillon vidé, puis version (si le contenu diffère du publié), puis demande d'approbation.
-      await persistVersion()
+      await persistVersion(changeSummary)
       const { data } = await api.post<{ approvalRequestId: string; temporalWorkflowId: string; status: string }>(
         `/api/v1/documents/${id}/approvals`,
       )
@@ -432,7 +433,7 @@ function EditSurface({
   })
 
   const saveVersion = useMutation({
-    mutationFn: () => persistVersion(),
+    mutationFn: (changeSummary: string) => persistVersion(changeSummary),
     onSuccess: () => setDraftError(null),
     onError: (err) => {
       setVersionMsg(null)
@@ -461,7 +462,8 @@ function EditSurface({
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 's') return
       e.preventDefault()
       if (!canWrite || saveVersionRef.current.isPending) return
-      saveVersionRef.current.mutate()
+      // Raccourci clavier : résumé vide → génération auto côté serveur.
+      saveVersionRef.current.mutate('')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -646,7 +648,9 @@ function EditSurface({
         reviewLabel={send.isPending ? 'Envoi…' : pending ? 'En révision' : 'Envoyer en révision'}
         reviewDisabled={review.disabled || send.isPending}
         reviewReason={review.reason}
-        onSendReview={() => send.mutate()}
+        onSendReview={(summary) => send.mutate(summary)}
+        saveVersionDisabled={!canWrite || saveVersion.isPending}
+        onSaveVersion={(summary) => saveVersion.mutate(summary)}
       />
       {holder && (
         <EditLockBanner name={holder.name} initials={holder.initials} minutes={minutesSince(holder.since)} />

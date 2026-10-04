@@ -12,8 +12,10 @@ import eu.socle.document.DocumentDtos.CompareSpan;
 import eu.socle.storage.TipTapMarkdown;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +32,14 @@ public final class MarkdownLineDiff {
 
     /** Lignes de contexte autour de chaque modification. */
     public static final int CONTEXT_LINES = 3;
+
+    /** Longueur max des résumés auto (et borne UI). */
+    public static final int MAX_SUMMARY_LENGTH = 200;
+
+    public static final String CREATION_SUMMARY = "Création du document";
+
+    /** Moins typographique (U+2212) dans « (+A −R) ». */
+    private static final char MINUS = '\u2212';
 
     private static final Pattern HEADING = Pattern.compile("^#{1,6}\\s+(.*?)\\s*#*\\s*$");
     private static final Pattern TOKEN = Pattern.compile("\\s+|[\\p{L}\\p{N}_]+|[^\\s\\p{L}\\p{N}_]");
@@ -67,6 +77,71 @@ public final class MarkdownLineDiff {
             lines.add(parts[i]);
         }
         return lines;
+    }
+
+    /**
+     * Résumé déterministe d'une création de version lorsque le client n'en fournit pas :
+     * {@code Modifié : <titres de section des hunks, 3 max> (+A −R)}, tronqué à
+     * {@link #MAX_SUMMARY_LENGTH}. Pas d'IA.
+     */
+    public static String autoChangeSummary(Map<String, Object> previousBody, Map<String, Object> newBody) {
+        Result r = compare(linesOf(previousBody), linesOf(newBody));
+        Set<String> titles = new LinkedHashSet<>();
+        for (CompareHunk hunk : r.hunks()) {
+            if (hunk.lines() == null || hunk.lines().isEmpty()) {
+                continue;
+            }
+            boolean changed = false;
+            for (CompareLine line : hunk.lines()) {
+                if ("add".equals(line.kind()) || "del".equals(line.kind())) {
+                    changed = true;
+                    break;
+                }
+            }
+            if (!changed) {
+                continue;
+            }
+            String header = hunk.header();
+            if (header == null || header.isBlank()) {
+                // Si le titre est dans le contexte du hunk, header peut être encore vide
+                // (headingBefore est capturé avant la ligne titre) — rescanner les lignes.
+                for (CompareLine line : hunk.lines()) {
+                    String fromLine = headingText(line.text());
+                    if (fromLine != null && !fromLine.isBlank()) {
+                        header = fromLine;
+                        break;
+                    }
+                }
+            }
+            if (header != null && !header.isBlank()) {
+                titles.add(header.trim());
+            }
+            if (titles.size() >= 3) {
+                break;
+            }
+        }
+        StringBuilder sb = new StringBuilder("Modifié : ");
+        if (!titles.isEmpty()) {
+            sb.append(String.join(", ", titles));
+            sb.append(' ');
+        }
+        sb.append("(+")
+                .append(r.added())
+                .append(' ')
+                .append(MINUS)
+                .append(r.removed())
+                .append(')');
+        return truncateSummary(sb.toString());
+    }
+
+    static String truncateSummary(String summary) {
+        if (summary == null) {
+            return null;
+        }
+        if (summary.length() <= MAX_SUMMARY_LENGTH) {
+            return summary;
+        }
+        return summary.substring(0, MAX_SUMMARY_LENGTH);
     }
 
     /** Compteurs seuls (liste des versions) — pas de construction de hunks. */
