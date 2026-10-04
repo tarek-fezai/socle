@@ -4,6 +4,10 @@ import StarterKit from '@tiptap/starter-kit'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { AttachmentImageNode, AttachmentNode } from '../components/attachments/attachmentExtensions'
 import { UploadStrip } from '../components/attachments/UploadStrip'
+import { ButtonNode } from '../components/rich-blocks/buttonExtension'
+import { DateNode } from '../components/rich-blocks/dateExtension'
+import { tableExtensions } from '../components/rich-blocks/tableExtensions'
+import { VideoNode } from '../components/rich-blocks/videoExtension'
 import { useAttachmentUploads, type UploadKind } from '../components/attachments/useAttachmentUploads'
 import { Placeholder } from '../lib/placeholderExtension'
 import { DEFAULT_PLACEHOLDER_HINT, PLACEHOLDER_NODE_TYPE, TEMPLATE_VARIABLES } from '../lib/templates'
@@ -58,8 +62,18 @@ export function DocumentEditor({
   canUploadRef.current = Boolean(documentId) && editable
   const imageInput = useRef<HTMLInputElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const videoInput = useRef<HTMLInputElement>(null)
   const editor = useEditor({
-    extensions: [StarterKit, Placeholder, AttachmentImageNode, AttachmentNode],
+    extensions: [
+      StarterKit,
+      Placeholder,
+      AttachmentImageNode,
+      AttachmentNode,
+      DateNode,
+      ButtonNode,
+      VideoNode,
+      ...tableExtensions,
+    ],
     content,
     editable,
     immediatelyRender: false,
@@ -149,7 +163,7 @@ export function DocumentEditor({
           readOnly={!editable}
           attachments={{
             enabled: Boolean(documentId),
-            pick: (kind) => (kind === 'image' ? imageInput : fileInput).current?.click(),
+            pick: (kind) => (kind === 'image' ? imageInput : kind === 'video' ? videoInput : fileInput).current?.click(),
           }}
         />
         <input
@@ -161,6 +175,16 @@ export function DocumentEditor({
           aria-hidden
           data-testid="edit-image-input"
           onChange={onFilesChosen('image')}
+        />
+        <input
+          ref={videoInput}
+          type="file"
+          accept="video/mp4,video/webm"
+          hidden
+          tabIndex={-1}
+          aria-hidden
+          data-testid="edit-video-input"
+          onChange={onFilesChosen('video')}
         />
         <input
           ref={fileInput}

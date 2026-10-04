@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import type { EditLockStatus } from '../../lib/editLock'
 import {
+  EDITOR_NODE_TYPES,
   countWordsFromTipTap,
   findUnsupportedContent,
   formatClockFr,
@@ -185,6 +186,33 @@ describe('contenu non éditable sans perte', () => {
         { type: 'placeholder', attrs: { hint: 'Objet' } },
         { type: 'blockquote', content: [p('citation')] },
         { type: 'codeBlock', content: [{ type: 'text', text: 'x' }] },
+      ],
+    }
+    expect(hasUnsupportedContent(findUnsupportedContent(body))).toBe(false)
+  })
+
+  it('les blocs enrichis (tableaux, date, bouton, vidéo) sont dans le schéma de l’éditeur', () => {
+    for (const t of ['table', 'tableRow', 'tableCell', 'tableHeader', 'date', 'button', 'video']) {
+      expect(EDITOR_NODE_TYPES.has(t), t).toBe(true)
+    }
+    const body = {
+      type: 'doc',
+      content: [
+        {
+          type: 'table',
+          content: [
+            {
+              type: 'tableRow',
+              content: [
+                { type: 'tableHeader', content: [p('A')] },
+                { type: 'tableCell', content: [p('B')] },
+              ],
+            },
+          ],
+        },
+        { type: 'paragraph', content: [{ type: 'date', attrs: { value: '2026-10-15' } }] },
+        { type: 'button', attrs: { label: 'Action', href: 'https://example.org' } },
+        { type: 'video', attrs: { id: 'v1' } },
       ],
     }
     expect(hasUnsupportedContent(findUnsupportedContent(body))).toBe(false)

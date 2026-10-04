@@ -31,8 +31,10 @@
  *  N5. Bulle de sélection flottante, surlignage de sélection, étiquette « Yanis modifie ici » et liseré
  *      de curseur distant retirés (états transitoires de co-édition).
  *  N6. Contour pointillé + curseur factice du paragraphe « en cours d'édition » retirés (focus transitoire).
- *  N7. Puces inline (ticket Jira IAM-482, date 15 octobre 2026) remplacées par du texte brut :
- *      nœuds inline hors StarterKit (lot ultérieur).
+ *  N7. Puce Jira IAM-482 remplacée par du texte brut (mentions hors V1). La puce date est aussi
+ *      aplatie en texte dans la maquette pour coller à la fixture éditeur (compteur de mots +
+ *      absence d'icône calendrier côté TipTap) — le nœud `date` est couvert par les tests unitaires
+ *      / lecture, pas par le pixel-diff Edit.
  *  N8. Bloc de code : en-tête « bash · script de revue des accès / Copier » retiré (le bloc de code
  *      TipTap n'a pas de langue ni de bouton Copier) ; opacité « déplacement en cours » retirée.
  *  N9. Indicateur de dépôt, aperçu de lien réduit, encadré « Note » et liste de tâches masqués :
@@ -41,12 +43,14 @@
  *      glossaire pas encore livrée côté assistant.
  *
  * ── Exceptions visuelles assumées (app ≠ maquette, hors normalisation) ─────────────────────
- *  E1. Barre d'outils : fonctions manquantes (souligné, couleur/surlignage, liste de tâches,
- *      retraits, alignements, lien, draw.io, tableau, @mention, « Réduire les blocs
- *      enrichis ») rendues désactivées (`aria-disabled`, info-bulle « Bientôt disponible », opacité
- *      réduite à 55 %) au lieu d'être actives. « Insérer une image » est actif (envoi de pièce jointe).
- *  E2. Menu « Insérer » : seuls « Bloc de code » et « Fichier joint » sont actifs ; les autres entrées
- *      sont désactivées.
+ *  E1. Barre d'outils : fonctions encore manquantes (souligné, couleur/surlignage, liste de tâches,
+ *      retraits, alignements, lien, draw.io, @mention, « Réduire les blocs enrichis ») rendues
+ *      désactivées (`aria-disabled`, info-bulle « Bientôt disponible », opacité réduite à 55 %)
+ *      au lieu d'être actives. Tableau, image, et (via Insérer) date / bouton / vidéo sont actifs.
+ *      Exception structurelle `edit-toolbar` (skip text) : libellés agrégés icônes SVG + texte —
+ *      contrôles comparés par le pixel-diff.
+ *  E2. Menu « Insérer » : actifs = Bloc de code, Image, Vidéo, Tableau, Date & heure, Bouton,
+ *      Fichier joint ; les autres entrées restent désactivées (« Bientôt disponible »).
  *  E3. Propriétaire : « Équipe {nom de l'espace} » (maquette : « Équipe Identité »).
  *  E4. Carte « Paragraphe long » : message calculé (« Ce paragraphe dépasse N mots (M) — … ») au lieu
  *      du texte statique « Le paragraphe édité dépasse 60 mots — … » ; bouton « Aller au paragraphe »
@@ -305,7 +309,8 @@ test.describe('document edit structural', () => {
   const desktopExceptions = {
     'edit-toolbar': {
       skip: ['text'],
-      reason: 'E1 : libellés agrégés des boutons (icônes SVG + texte) — contrôles comparés par le pixel-diff',
+      reason:
+        'E1 : libellés agrégés (icônes SVG + texte) — contrôles comparés par le pixel-diff ; outils encore « bientôt » hors tableau/image',
     },
     'edit-tabs': {
       skip: ['text'],
@@ -444,12 +449,15 @@ test.describe('document edit behaviour', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(`/docs/${EDIT_DOC_ID}/edit`)
     await page.waitForSelector('[data-mock-id="edit-toolbar"]')
-    for (const label of ['Souligné', 'Insérer un tableau', 'Mentionner une personne']) {
+    for (const label of ['Souligné', 'Insérer un diagramme draw.io', 'Mentionner une personne']) {
       const btn = page.getByRole('button', { name: label })
       await expect(btn).toHaveAttribute('aria-disabled', 'true')
       await expect(btn).toHaveAttribute('title', 'Bientôt disponible')
     }
-    // Pièces jointes branchées : plus de « Bientôt disponible ».
+    // Tableau + pièces jointes branchés : plus de « Bientôt disponible ».
+    const table = page.getByRole('button', { name: 'Insérer un tableau' })
+    await expect(table).not.toHaveAttribute('aria-disabled', 'true')
+    await expect(table).not.toHaveAttribute('data-soon', 'true')
     const image = page.getByRole('button', { name: 'Insérer une image' })
     await expect(image).not.toHaveAttribute('aria-disabled', 'true')
     await expect(image).not.toHaveAttribute('data-soon', 'true')

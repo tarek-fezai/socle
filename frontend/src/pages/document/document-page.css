@@ -735,6 +735,64 @@ ol.doc-list {
   cursor: progress;
 }
 
+/* Blocs enrichis : date, bouton (CTA), vidéo */
+
+.doc-date {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: #f0effc;
+  color: #3730e0;
+  font-size: 0.95em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.doc-cta-wrap {
+  margin: 0 0 26px;
+}
+
+/* Bouton TipTap uniquement (ne pas écraser le CTA barre haute « Publier »). */
+.doc-cta-wrap .doc-cta {
+  display: inline-block;
+  margin-left: 0;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 9px;
+  background: #3730e0;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: normal;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.doc-cta-wrap .doc-cta:hover:not(:disabled):not(.is-disabled) {
+  background: #2f28c4;
+}
+
+.doc-cta-wrap .doc-cta.is-disabled,
+.doc-cta-wrap .doc-cta:disabled {
+  background: #ececee;
+  color: #9b9ba1;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.doc-video-wrap {
+  margin: 0 0 32px;
+}
+
+.doc-video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: #0e0e10;
+}
+
 /* Bloc non pris en charge (draw.io, captures, extensions futures) */
 
 .doc-unsupported {
