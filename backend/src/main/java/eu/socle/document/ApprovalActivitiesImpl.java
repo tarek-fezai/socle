@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.document;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.activity.ActivityEventService;
 import eu.socle.activity.ActivityEventTypes;
@@ -15,7 +14,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,7 +28,10 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
     private final JdbcTemplate jdbcTemplate;
     private final AuditService auditService;
     private final ReliabilityScoreService reliabilityScoreService;
+    /** Conservé pour compatibilité DI / tests ; la soumission n'écrit plus via le store. */
+    @SuppressWarnings("unused")
     private final DocumentStore documentStore;
+    @SuppressWarnings("unused")
     private final ObjectMapper objectMapper;
     private final ApprovalRoleResolver approvalRoleResolver;
     private ActivityEventService activityEventService;
@@ -92,8 +93,7 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                 documentId, approvalRequestId, temporalWorkflowId, firstStepOrder);
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT current_version_no, body, git_head_sha, updated_by, created_by,
-                       current_change_summary
+                SELECT current_version_no, git_head_sha
                   FROM documents
                  WHERE id = ? AND deleted_at IS NULL
                 """, documentId);
@@ -102,50 +102,22 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         }
         Map<String, Object> docRow = rows.getFirst();
         int submittedVersionNo = ((Number) docRow.get("current_version_no")).intValue();
-        Map<String, Object> body = parseBody(docRow.get("body"));
-        String expectedHead = docRow.get("git_head_sha") == null
+        String contentHeadSha = docRow.get("git_head_sha") == null
                 ? null
                 : String.valueOf(docRow.get("git_head_sha"));
-        UUID contentAuthorId = toUuid(docRow.get("updated_by"));
-        if (contentAuthorId == null) {
-            contentAuthorId = toUuid(docRow.get("created_by"));
-        }
-        Object rawSummary = docRow.get("current_change_summary");
-        String archivedSummary = rawSummary == null ? null : String.valueOf(rawSummary);
-        String submissionSummary = "Soumission pour approbation";
 
-        // Archive + bump via DocumentStore — contenu identique : author = auteur du contenu,
-        // archived_by / committer = demandeur. updated_by inchangé (pas de mutation de contenu).
-        // Résumé archivé = résumé du contenu ; résumé courant = motif de soumission.
-        documentStore.archiveVersion(
-                documentId,
-                submittedVersionNo,
-                body,
-                contentAuthorId,
-                requesterId,
-                archivedSummary);
-        String newHead = documentStore.writeCurrentContent(
-                documentId,
-                body,
-                contentAuthorId,
-                requesterId,
-                submissionSummary,
-                expectedHead);
-
-        int contentVersionNo = submittedVersionNo + 1;
+        // Pas de version dupliquée : le contenu courant est soumis tel quel.
+        // submitted_version_no = current_version_no ; current_change_summary inchangé ;
+        // aucune écriture DocumentStore (ni commit git).
         jdbcTemplate.update("""
                 UPDATE documents
                    SET status = 'en_revue',
-                       current_version_no = current_version_no + 1,
-                       current_change_summary = ?,
-                       git_head_sha = COALESCE(?, git_head_sha),
                        updated_at = now()
                  WHERE id = ? AND deleted_at IS NULL
                 """,
-                submissionSummary, newHead, documentId);
+                documentId);
 
-        // Empreinte du contenu sous revue (= état post-bump, contenu inchangé).
-        // Comparée à recordFinalDecision pour refuser une approbation si muté entre-temps.
+        // Empreinte = contenu sous revue (égal à current_* au moment de la soumission).
         jdbcTemplate.update("""
                 INSERT INTO approval_requests
                   (id, document_id, workflow_id, temporal_workflow_id, requested_by,
@@ -156,7 +128,7 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                 """,
                 approvalRequestId, documentId, workflowDefId, temporalWorkflowId, requesterId,
                 firstStepOrder, firstStepSlaHours, submittedVersionNo,
-                contentVersionNo, newHead);
+                submittedVersionNo, contentHeadSha);
 
         auditService.recordSync(
                 requesterId,
@@ -703,21 +675,5 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
             return u;
         }
         return UUID.fromString(String.valueOf(raw));
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseBody(Object raw) {
-        if (raw == null) {
-            return Map.of();
-        }
-        if (raw instanceof Map<?, ?> map) {
-            return new HashMap<>((Map<String, Object>) map);
-        }
-        try {
-            String json = raw.toString();
-            return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (Exception e) {
-            throw new IllegalStateException("body document illisible pour soumission", e);
-        }
     }
 }

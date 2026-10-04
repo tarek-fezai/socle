@@ -8,7 +8,6 @@ import eu.socle.storage.DocumentStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -53,15 +52,11 @@ class ApprovalContentFingerprintTest {
 
     @BeforeEach
     void setUp() {
-        when(store.writeCurrentContent(any(), any(), any(), any(), any(), any())).thenReturn("head-submitted");
         activities = new ApprovalActivitiesImpl(
                 jdbc, audit, reliability, store, new ObjectMapper(), mock(ApprovalRoleResolver.class));
         when(jdbc.update(anyString(), any(Object.class))).thenReturn(1);
         when(jdbc.update(anyString(), any(Object.class), any(Object.class))).thenReturn(1);
         when(jdbc.update(anyString(), any(Object.class), any(Object.class), any(Object.class))).thenReturn(1);
-        when(jdbc.update(anyString(), any(Object.class), any(Object.class), any(Object.class),
-                any(Object.class), any(Object.class), any(Object.class), any(Object.class), any(Object.class)))
-                .thenReturn(1);
         when(jdbc.update(anyString(), any(Object.class), any(Object.class), any(Object.class),
                 any(Object.class), any(Object.class), any(Object.class), any(Object.class), any(Object.class),
                 any(Object.class), any(Object.class)))
@@ -69,24 +64,22 @@ class ApprovalContentFingerprintTest {
     }
 
     @Test
-    void recordSubmission_storesContentFingerprint() {
+    void recordSubmission_storesContentFingerprint_withoutVersionBump() {
         Map<String, Object> docRow = new HashMap<>();
         docRow.put("current_version_no", 3);
-        docRow.put("body", Map.of("type", "doc"));
         docRow.put("git_head_sha", "old");
-        docRow.put("updated_by", ACTOR);
-        docRow.put("created_by", ACTOR);
-        docRow.put("current_change_summary", "edit");
         when(jdbc.queryForList(contains("current_version_no"), eq(DOC))).thenReturn(List.of(docRow));
 
         activities.recordSubmission(DOC, ACTOR, REQ, UUID.randomUUID(), "wf-1", 1, 24);
 
-        ArgumentCaptor<Object[]> args = ArgumentCaptor.forClass(Object[].class);
-        // INSERT avec empreinte : contentVersionNo=4, newHead=head-submitted
+        verify(store, never()).archiveVersion(any(), any(Integer.class), any(), any(), any(), any());
+        verify(store, never()).writeCurrentContent(any(), any(), any(), any(), any(), any());
+        // Empreinte = current (pas de bump) : version 3 / sha "old"
         verify(jdbc).update(
                 contains("submitted_content_version_no"),
                 eq(REQ), eq(DOC), any(), eq("wf-1"), eq(ACTOR),
-                eq(1), eq(24), eq(3), eq(4), eq("head-submitted"));
+                eq(1), eq(24), eq(3), eq(3), eq("old"));
+        verify(jdbc).update(contains("status = 'en_revue'"), eq(DOC));
     }
 
     @Test

@@ -37,6 +37,29 @@ public class DocumentApprovalService {
 
     public static final String TASK_QUEUE = "document-approval";
 
+    /**
+     * Version de référence pour le diff d'approbation.
+     * <ul>
+     *   <li><strong>Schéma actuel</strong> : {@code submitted_version_no} = contenu courant soumis
+     *       (pas de bump) → baseline = version archivée {@code submitted - 1} si elle existe.</li>
+     *   <li><strong>Ancien schéma</strong> : soumission archivait vN puis créait vN+1 vide ;
+     *       {@code submitted_version_no} = N (contenu réel) → baseline = N−1, inchangé.</li>
+     * </ul>
+     */
+    static final String BASELINE_VERSION_SQL = """
+            CASE
+              WHEN ar.submitted_version_no IS NOT NULL
+               AND ar.submitted_version_no > 1
+               AND EXISTS (
+                 SELECT 1 FROM document_versions dv
+                  WHERE dv.document_id = ar.document_id
+                    AND dv.version_no = ar.submitted_version_no - 1
+               )
+              THEN ar.submitted_version_no - 1
+              ELSE NULL
+            END AS baseline_version_no
+            """;
+
     private final WorkflowClient workflowClient;
     private final DocumentRepository documentRepository;
     private final UserSyncService userSyncService;
@@ -184,21 +207,14 @@ public class DocumentApprovalService {
         var user = userSyncService.syncFromJwt(jwt);
         authorizationService.requireDocumentRelation(user.getId(), documentId, "viewer");
 
-        List<ApprovalView> rows = jdbcTemplate.query("""
+        List<ApprovalView> rows = jdbcTemplate.query(
+                """
                 SELECT ar.id, ar.document_id, d.title AS document_title,
                        ar.temporal_workflow_id, ar.status, ar.requested_by, ar.created_at,
                        ar.current_step_order, ar.sla_deadline_at, ar.submitted_version_no,
-                       CASE
-                         WHEN ar.submitted_version_no IS NOT NULL
-                          AND ar.submitted_version_no > 1
-                          AND EXISTS (
-                            SELECT 1 FROM document_versions dv
-                             WHERE dv.document_id = ar.document_id
-                               AND dv.version_no = ar.submitted_version_no - 1
-                          )
-                         THEN ar.submitted_version_no - 1
-                         ELSE NULL
-                       END AS baseline_version_no
+                """
+                        + BASELINE_VERSION_SQL
+                        + """
                   FROM approval_requests ar
                   JOIN documents d ON d.id = ar.document_id
                  WHERE ar.document_id = ? AND ar.status = 'en_cours'
@@ -219,21 +235,15 @@ public class DocumentApprovalService {
      */
     public List<ApprovalView> listMine(Jwt jwt) {
         var user = userSyncService.syncFromJwt(jwt);
-        List<Candidate> candidates = jdbcTemplate.query("""
+        List<Candidate> candidates = jdbcTemplate.query(
+                """
                 SELECT ar.id, ar.document_id, d.title AS document_title,
                        ar.temporal_workflow_id, ar.status, ar.requested_by, ar.created_at,
                        ar.current_step_order, ar.sla_deadline_at, ar.submitted_version_no,
-                       CASE
-                         WHEN ar.submitted_version_no IS NOT NULL
-                          AND ar.submitted_version_no > 1
-                          AND EXISTS (
-                            SELECT 1 FROM document_versions dv
-                             WHERE dv.document_id = ar.document_id
-                               AND dv.version_no = ar.submitted_version_no - 1
-                          )
-                         THEN ar.submitted_version_no - 1
-                         ELSE NULL
-                       END AS baseline_version_no,
+                """
+                        + BASELINE_VERSION_SQL
+                        + """
+                       ,
                        aws.approver_role_id
                   FROM approval_requests ar
                   JOIN documents d ON d.id = ar.document_id
