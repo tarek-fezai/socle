@@ -692,6 +692,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents/{id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["upload_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/documents/{id}/approvals/{requestId}/decide": {
         parameters: {
             query?: never;
@@ -1796,7 +1828,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/approvals/{requestId}": {
+    "/api/v1/attachments/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1804,6 +1836,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_13"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_14"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2502,6 +2550,23 @@ export interface components {
             ackCount?: number;
             /** Format: int32 */
             audienceSize?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        AttachmentResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            documentId?: string;
+            filename?: string;
+            mediaType?: string;
+            /** Format: int64 */
+            sizeBytes?: number;
+            sha256?: string;
+            /** Format: int32 */
+            width?: number;
+            /** Format: int32 */
+            height?: number;
             /** Format: date-time */
             createdAt?: string;
         };
@@ -4902,6 +4967,64 @@ export interface operations {
             };
         };
     };
+    upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AttachmentResponse"];
+                };
+            };
+        };
+    };
+    upload_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AttachmentResponse"];
+                };
+            };
+        };
+    };
     decide: {
         parameters: {
             query?: never;
@@ -6934,6 +7057,30 @@ export interface operations {
         };
     };
     get_13: {
+        parameters: {
+            query?: never;
+            header?: {
+                Range?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    get_14: {
         parameters: {
             query?: never;
             header?: never;
