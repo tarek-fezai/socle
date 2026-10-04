@@ -13,7 +13,7 @@ import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
 import { describe, expect, it } from 'vitest'
 import { HOME_SEED } from './dashboard-fixtures.mjs'
-import { EDIT_CUSTOM_FIELDS, EDIT_WRITING_HINTS } from './edit-fixtures.mjs'
+import { EDIT_CUSTOM_FIELDS, EDIT_WRITING_HINTS, editDocument } from './edit-fixtures.mjs'
 import { COMPARE_11_12, HIST_VERSIONS_DESKTOP, HIST_VERSIONS_MOBILE } from './history-fixtures.mjs'
 import {
   APPR_DETAIL_DESKTOP,
@@ -85,6 +85,43 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
 
   it('pageDocument matches DocumentResponse', () => {
     validate('DocumentResponse', pageDocument('desktop'))
+  })
+
+  it('editDocument matches DocumentResponse', () => {
+    validate('DocumentResponse', editDocument())
+  })
+
+  describe('pièces jointes dans les corps TipTap', () => {
+    type Node = { type: string; attrs?: Record<string, unknown>; content?: Node[] }
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+    const bodies: Array<[string, Node]> = [
+      ['page desktop', pageDocument('desktop').body as Node],
+      ['page mobile', pageDocument('mobile').body as Node],
+      ['edit', editDocument().body as Node],
+    ]
+
+    it.each(bodies)('%s : un nœud image + un nœud attachment valides', (_label, body) => {
+      const top = body.content ?? []
+      const images = top.filter((n) => n.type === 'image')
+      const files = top.filter((n) => n.type === 'attachment')
+      expect(images).toHaveLength(1)
+      expect(files).toHaveLength(1)
+
+      const img = images[0].attrs ?? {}
+      expect(img.id).toMatch(UUID)
+      expect(img.filename).toEqual(expect.any(String))
+      expect(String(img.mediaType)).toMatch(/^image\//)
+      expect(img.sizeBytes).toEqual(expect.any(Number))
+      expect(img.width).toEqual(expect.any(Number))
+      expect(img.height).toEqual(expect.any(Number))
+
+      const file = files[0].attrs ?? {}
+      expect(file.id).toMatch(UUID)
+      expect(file.filename).toEqual(expect.any(String))
+      expect(file.mediaType).toEqual(expect.any(String))
+      expect(file.sizeBytes).toEqual(expect.any(Number))
+      expect(file.id).not.toBe(img.id)
+    })
   })
 
   it('PAGE_ATTESTATION matches ActiveAttestation', () => {

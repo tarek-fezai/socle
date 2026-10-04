@@ -741,6 +741,7 @@ function EditSurface({
               onChange={setBody}
               editable={bodyEditable}
               hidden={previewing}
+              documentId={id || undefined}
               titleSlot={titleSlot}
               onEditorReady={(ed) => {
                 editorRef.current = ed
