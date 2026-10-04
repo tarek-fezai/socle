@@ -55,7 +55,7 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SOCLE_ATTACHMENT_ALLOWED_TYPES` | png/jpeg/webp/gif, pdf, mp4/webm, office, txt/csv, zip | no | no | Comma-separated MIME allow-list (Tika-detected). SVG not included; WebP via TwelveMonkeys |
 | `SOCLE_LINK_PREVIEW_ENABLED` | `false` | no | no | When false: local URL+domain card only, no outbound fetch |
 | `SOCLE_LINK_PREVIEW_ALLOWED_DOMAINS` | empty | when enabled | no | Comma-separated host allow-list (exact or suffix) |
-| `SOCLE_LINK_PREVIEW_PROXY_URL` | empty | no | no | Optional outbound HTTP proxy for preview fetches |
+| `SOCLE_LINK_PREVIEW_PROXY_URL` | empty | no | no | Optional outbound HTTP(S) proxy for **all** preview fetches (HTML page + thumbnail). When set, DNS for the target is performed by the proxy — **the proxy MUST deny RFC1918 / link-local / metadata / ULA / benchmarking (198.18/15) / class E / NAT64 / 6to4** (app-side SSRF still validates URL whitelist and ports) |
 | `SOCLE_LINK_PREVIEW_CACHE_TTL_HOURS` | `168` | no | no | Preview cache TTL (hours) |
 | `SOCLE_LINK_PREVIEW_RATE_LIMIT_PER_MINUTE` | `10` | no | no | Per-user preview fetch rate limit |
 

@@ -30,7 +30,6 @@ class SsrfGuardTest {
         assertThatThrownBy(() -> {
             URI uri = SsrfGuard.requireHttpUrl(url);
             if ("example.com".equals(uri.getHost())) {
-                // port non 80/443 déjà refusé dans requireHttpUrl
                 return;
             }
             SsrfGuard.resolveAndRejectPrivate(uri.getHost());
@@ -62,8 +61,25 @@ class SsrfGuardTest {
     }
 
     @Test
+    void blocksBenchmarkingClassEAndBroadcast() throws Exception {
+        assertThat(SsrfGuard.isBlocked(InetAddress.getByName("198.18.0.1"))).isTrue();
+        assertThat(SsrfGuard.isBlocked(InetAddress.getByName("198.19.255.255"))).isTrue();
+        assertThat(SsrfGuard.isBlocked(InetAddress.getByName("240.0.0.1"))).isTrue();
+        assertThat(SsrfGuard.isBlocked(InetAddress.getByName("255.255.255.255"))).isTrue();
+    }
+
+    @Test
+    void blocksNat64And6to4EmbeddedPrivate() throws Exception {
+        // 64:ff9b::10.0.0.1
+        assertThat(SsrfGuard.isBlocked(InetAddress.getByName("64:ff9b::a00:1"))).isTrue();
+        // 2002:0a00:0001:: = 6to4 of 10.0.0.1
+        assertThat(SsrfGuard.isBlocked(InetAddress.getByName("2002:a00:1::"))).isTrue();
+        // IPv4-mapped ::ffff:127.0.0.1
+        assertThat(SsrfGuard.isBlocked(InetAddress.getByName("::ffff:127.0.0.1"))).isTrue();
+    }
+
+    @Test
     void resolveHostnameThatMapsToPrivate_isRejected() {
-        // "localhost" résout toujours vers loopback — aucun connect TCP.
         assertThatThrownBy(() -> SsrfGuard.resolveAndRejectPrivate("localhost"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("privée");

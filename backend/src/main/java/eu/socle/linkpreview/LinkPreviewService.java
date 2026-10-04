@@ -2,12 +2,23 @@
 package eu.socle.linkpreview;
 
 import eu.socle.attachment.AttachmentService;
+import eu.socle.attachment.MediaTypeDetector;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.document.DocumentRepository;
 import eu.socle.linkpreview.LinkPreviewDtos.PreviewView;
 import eu.socle.user.UserSyncService;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.io.HttpClientConnectionManager;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.util.Timeout;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,13 +34,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ProxySelector;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -48,14 +53,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Aperçu de lien : désactivé par défaut (carte locale URL+domaine, aucun appel externe).
- * Activé : whitelist + anti-SSRF (DNS, IP privées, redirections, ports 80/443).
+ * Activé : whitelist + anti-SSRF (DnsResolver validant, IP privées, redirections, ports 80/443).
+ * Client Apache HttpClient 5 unique pour page et vignette (TLS hostname vérifié).
  */
 @Service
 public class LinkPreviewService {
 
     private static final int MAX_REDIRECTS = 3;
-    private static final int MAX_BYTES = 1_048_576;
-    private static final Duration TIMEOUT = Duration.ofSeconds(5);
+    static final int MAX_BYTES = 1_048_576;
+    private static final Timeout TIMEOUT = Timeout.ofSeconds(5);
 
     private final LinkPreviewProperties properties;
     private final JdbcTemplate jdbc;
@@ -64,7 +70,11 @@ public class LinkPreviewService {
     private final DocumentRepository documentRepository;
     private final AuditService auditService;
     private final Clock clock;
+    private final ValidatingDnsResolver dnsResolver;
+    private final CloseableHttpClient httpClient;
+    private final boolean proxyConfigured;
     private AttachmentService attachmentService;
+    private MediaTypeDetector mediaTypeDetector;
 
     /** Compteur simple par utilisateur (fenêtre 1 minute). */
     private final ConcurrentHashMap<UUID, RateWindow> rate = new ConcurrentHashMap<>();
@@ -78,6 +88,21 @@ public class LinkPreviewService {
             AuditService auditService,
             Clock clock
     ) {
+        this(properties, jdbc, userSyncService, authorizationService, documentRepository, auditService, clock,
+                new ValidatingDnsResolver());
+    }
+
+    /** Constructeur test : DnsResolver injecté (rebinding, etc.). */
+    LinkPreviewService(
+            LinkPreviewProperties properties,
+            JdbcTemplate jdbc,
+            UserSyncService userSyncService,
+            AuthorizationService authorizationService,
+            DocumentRepository documentRepository,
+            AuditService auditService,
+            Clock clock,
+            ValidatingDnsResolver dnsResolver
+    ) {
         this.properties = properties;
         this.jdbc = jdbc;
         this.userSyncService = userSyncService;
@@ -85,11 +110,41 @@ public class LinkPreviewService {
         this.documentRepository = documentRepository;
         this.auditService = auditService;
         this.clock = clock;
+        this.dnsResolver = dnsResolver;
+
+        HttpClientConnectionManager cm = PoolingHttpClientConnectionManagerBuilder.create()
+                .setDnsResolver(dnsResolver)
+                .build();
+
+        RequestConfig.Builder reqCfg = RequestConfig.custom()
+                .setConnectionRequestTimeout(TIMEOUT)
+                .setResponseTimeout(TIMEOUT)
+                .setRedirectsEnabled(false);
+
+        var clientBuilder = HttpClients.custom()
+                .setConnectionManager(cm)
+                .setDefaultRequestConfig(reqCfg.build())
+                .disableRedirectHandling();
+
+        String proxyUrl = properties.getProxyUrl();
+        this.proxyConfigured = proxyUrl != null && !proxyUrl.isBlank();
+        if (proxyConfigured) {
+            URI proxy = URI.create(proxyUrl.trim());
+            int port = proxy.getPort() > 0 ? proxy.getPort() : 8080;
+            clientBuilder.setProxy(new HttpHost(proxy.getScheme(), proxy.getHost(), port));
+        }
+
+        this.httpClient = clientBuilder.build();
     }
 
     @Autowired(required = false)
     void setAttachmentService(AttachmentService attachmentService) {
         this.attachmentService = attachmentService;
+    }
+
+    @Autowired(required = false)
+    void setMediaTypeDetector(MediaTypeDetector mediaTypeDetector) {
+        this.mediaTypeDetector = mediaTypeDetector;
     }
 
     /** Carte sans fetch (toujours disponible). */
@@ -112,19 +167,23 @@ public class LinkPreviewService {
 
         URI start = SsrfGuard.requireHttpUrl(url);
         SsrfGuard.requireAllowedDomain(start, properties.allowedDomainSet());
-        SsrfGuard.resolveAndRejectPrivate(start.getHost());
-
-        String norm = normalize(start);
-        String hash = sha256(norm);
-        Optional<PreviewView> cached = readCache(hash);
-        if (cached.isPresent()) {
-            return cached.get();
+        // Sans proxy : résolution locale validée. Avec proxy : la résolution cible est côté proxy
+        // (le proxy DOIT bloquer les plages internes — voir configuration.md).
+        if (!proxyConfigured) {
+            dnsResolver.resolveOrReject(start.getHost());
         }
 
         if (documentId != null) {
             documentRepository.findActiveById(documentId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable"));
             authorizationService.requireDocumentRelation(user.getId(), documentId, "editor");
+        }
+
+        String norm = normalize(start);
+        String hash = sha256(norm);
+        Optional<PreviewView> cached = readCache(hash, jwt, documentId);
+        if (cached.isPresent()) {
+            return cached.get();
         }
 
         FetchResult fetched = fetchHtml(start);
@@ -161,7 +220,7 @@ public class LinkPreviewService {
         return new PreviewView(norm, start.getHost().toLowerCase(Locale.ROOT), title, thumbId, true);
     }
 
-    private Optional<PreviewView> readCache(String hash) {
+    private Optional<PreviewView> readCache(String hash, Jwt jwt, UUID documentId) {
         Instant now = clock.instant();
         List<PreviewView> rows = jdbc.query("""
                 SELECT url_norm, domain, title, thumbnail_attachment_id, expires_at
@@ -173,6 +232,12 @@ public class LinkPreviewService {
                         return null;
                     }
                     UUID thumb = (UUID) rs.getObject("thumbnail_attachment_id");
+                    if (thumb != null && documentId != null) {
+                        thumb = ensureThumbnailForDocument(jwt, documentId, thumb);
+                    } else if (thumb != null && documentId == null) {
+                        // Pas de document cible : ne pas exposer une vignette d'un autre doc.
+                        thumb = null;
+                    }
                     return new PreviewView(
                             rs.getString("url_norm"),
                             rs.getString("domain"),
@@ -184,80 +249,106 @@ public class LinkPreviewService {
         return rows.stream().filter(v -> v != null).findFirst();
     }
 
-    FetchResult fetchHtml(URI start) {
-        HttpClient.Builder builder = HttpClient.newBuilder()
-                .connectTimeout(TIMEOUT)
-                .followRedirects(HttpClient.Redirect.NEVER);
-        if (properties.getProxyUrl() != null && !properties.getProxyUrl().isBlank()) {
-            URI proxy = URI.create(properties.getProxyUrl().trim());
-            builder.proxy(ProxySelector.of(new InetSocketAddress(proxy.getHost(),
-                    proxy.getPort() > 0 ? proxy.getPort() : 8080)));
+    /**
+     * Si la vignette appartient déjà au document, la réutilise ; sinon la recopie
+     * comme nouvelle pièce jointe du document courant (pas de partage cross-document).
+     */
+    private UUID ensureThumbnailForDocument(Jwt jwt, UUID documentId, UUID thumbId) {
+        List<UUID> owners = jdbc.query(
+                "SELECT document_id FROM attachments WHERE id = ? AND deleted_at IS NULL",
+                (rs, i) -> (UUID) rs.getObject(1),
+                thumbId);
+        if (owners.isEmpty()) {
+            return null;
         }
-        HttpClient client = builder.build();
+        if (documentId.equals(owners.getFirst())) {
+            return thumbId;
+        }
+        if (attachmentService == null) {
+            return null;
+        }
+        try (AttachmentService.AttachmentContent content =
+                     attachmentService.openForDownload(jwt, thumbId, Optional.empty())) {
+            byte[] bytes;
+            try (InputStream in = content.blob().content()) {
+                bytes = readLimited(in, MAX_BYTES);
+            }
+            String filename = content.row().originalFilename() != null
+                    ? content.row().originalFilename() : "preview.bin";
+            // Type détecté côté upload (Tika), pas l'en-tête distant.
+            MultipartFile file = new BytesMultipartFile(filename, "application/octet-stream", bytes);
+            return attachmentService.upload(jwt, documentId, file).id();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
+    FetchResult fetchHtml(URI start) {
         URI current = start;
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
             SsrfGuard.requireHttpUrl(current.toString());
             SsrfGuard.requireAllowedDomain(current, properties.allowedDomainSet());
-            List<InetAddress> resolved = SsrfGuard.resolveAndRejectPrivate(current.getHost());
-            // Revérification explicite (défense en profondeur)
-            for (InetAddress a : resolved) {
-                if (SsrfGuard.isBlocked(a)) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "Aperçu de lien refusé : adresse réseau privée ou réservée");
-                }
+            if (!proxyConfigured) {
+                dnsResolver.resolveOrReject(current.getHost());
             }
 
-            HttpRequest req = HttpRequest.newBuilder(current)
-                    .timeout(TIMEOUT)
-                    .header("User-Agent", "SocleLinkPreview/1.0")
-                    .header("Accept", "text/html")
-                    .GET()
-                    .build();
-            HttpResponse<InputStream> resp;
+            final URI hopUri = current;
+            final int hopIdx = hop;
+            HttpGet get = new HttpGet(hopUri);
+            get.setHeader("User-Agent", "SocleLinkPreview/1.0");
+            get.setHeader("Accept", "text/html");
+
             try {
-                resp = client.send(req, HttpResponse.BodyHandlers.ofInputStream());
-            } catch (IOException | InterruptedException e) {
-                Thread.currentThread().interrupt();
+                return httpClient.execute(get, resp -> {
+                    int code = resp.getCode();
+                    if (code >= 300 && code < 400) {
+                        var locHeader = resp.getFirstHeader("Location");
+                        String loc = locHeader != null ? locHeader.getValue() : null;
+                        if (loc == null || hopIdx == MAX_REDIRECTS) {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                    "Aperçu de lien refusé : redirection invalide");
+                        }
+                        throw new RedirectSignal(hopUri.resolve(loc));
+                    }
+                    if (code < 200 || code >= 300) {
+                        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Aperçu de lien : HTTP " + code);
+                    }
+                    HttpEntity entity = resp.getEntity();
+                    String ctype = entity != null && entity.getContentType() != null
+                            ? entity.getContentType() : "";
+                    if (!ctype.toLowerCase(Locale.ROOT).startsWith("text/html")) {
+                        EntityUtils.consumeQuietly(entity);
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "Aperçu de lien refusé : text/html uniquement");
+                    }
+                    byte[] body;
+                    try (InputStream in = entity.getContent()) {
+                        body = readLimited(in, MAX_BYTES);
+                    }
+                    String html = new String(body, StandardCharsets.UTF_8);
+                    String ogImage = null;
+                    try {
+                        Document doc = Jsoup.parse(html, hopUri.toString());
+                        var meta = doc.selectFirst("meta[property=og:image]");
+                        if (meta != null) {
+                            ogImage = meta.attr("abs:content");
+                            if (ogImage.isBlank()) {
+                                ogImage = null;
+                            }
+                        }
+                    } catch (Exception ignored) {
+                        // titre via extractTitle
+                    }
+                    return new FetchResult(html, ogImage);
+                });
+            } catch (RedirectSignal rs) {
+                current = rs.target();
+                continue;
+            } catch (ResponseStatusException e) {
+                throw e;
+            } catch (IOException e) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Échec de récupération de l'aperçu");
             }
-            int code = resp.statusCode();
-            if (code >= 300 && code < 400) {
-                String loc = resp.headers().firstValue("location").orElse(null);
-                if (loc == null || hop == MAX_REDIRECTS) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aperçu de lien refusé : redirection invalide");
-                }
-                current = start.resolve(loc);
-                continue;
-            }
-            if (code < 200 || code >= 300) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Aperçu de lien : HTTP " + code);
-            }
-            String ctype = resp.headers().firstValue("content-type").orElse("").toLowerCase(Locale.ROOT);
-            if (!ctype.startsWith("text/html")) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aperçu de lien refusé : text/html uniquement");
-            }
-            byte[] body;
-            try {
-                body = readLimited(resp.body(), MAX_BYTES);
-            } catch (IOException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Échec de lecture de l'aperçu");
-            }
-            String html = new String(body, StandardCharsets.UTF_8);
-            String ogImage = null;
-            try {
-                Document doc = Jsoup.parse(html, current.toString());
-                var meta = doc.selectFirst("meta[property=og:image]");
-                if (meta != null) {
-                    ogImage = meta.attr("abs:content");
-                    if (ogImage.isBlank()) {
-                        ogImage = null;
-                    }
-                }
-            } catch (Exception ignored) {
-                // titre via extractTitle
-            }
-            return new FetchResult(html, ogImage);
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aperçu de lien refusé : trop de redirections");
     }
@@ -265,37 +356,96 @@ public class LinkPreviewService {
     private UUID tryStoreThumbnail(Jwt jwt, UUID documentId, String imageUrl) {
         try {
             URI img = SsrfGuard.requireHttpUrl(imageUrl);
-            // Même garde pour la vignette (pas de domaine hors whitelist)
             if (!properties.allowedDomainSet().isEmpty()) {
-                // autoriser tout domaine de la whitelist OU même hôte que la page
                 try {
                     SsrfGuard.requireAllowedDomain(img, properties.allowedDomainSet());
                 } catch (ResponseStatusException ex) {
                     return null;
                 }
             }
-            SsrfGuard.resolveAndRejectPrivate(img.getHost());
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(TIMEOUT)
-                    .followRedirects(HttpClient.Redirect.NEVER)
-                    .build();
-            HttpRequest req = HttpRequest.newBuilder(img).timeout(TIMEOUT).GET().build();
-            HttpResponse<byte[]> resp = client.send(req, HttpResponse.BodyHandlers.ofByteArray());
-            if (resp.statusCode() != 200 || resp.body() == null || resp.body().length == 0
-                    || resp.body().length > MAX_BYTES) {
+            if (!proxyConfigured) {
+                dnsResolver.resolveOrReject(img.getHost());
+            }
+
+            byte[] body = fetchBytesLimited(img);
+            if (body == null || body.length == 0) {
                 return null;
             }
-            String ctype = resp.headers().firstValue("content-type").orElse("image/png");
-            if (!ctype.startsWith("image/")) {
+            String detected = "application/octet-stream";
+            if (mediaTypeDetector != null) {
+                detected = mediaTypeDetector.detect(new ByteArrayInputStream(body), "preview.bin");
+            }
+            if (!detected.startsWith("image/")) {
                 return null;
             }
-            MultipartFile file = new BytesMultipartFile(
-                    "preview.jpg", ctype.split(";")[0].trim(), resp.body());
+            String filename = detected.contains("png") ? "preview.png"
+                    : detected.contains("webp") ? "preview.webp"
+                    : detected.contains("gif") ? "preview.gif" : "preview.jpg";
+            // Content-Type du MultipartFile ignoré par AttachmentService (Tika) — hint fichier seulement.
+            MultipartFile file = new BytesMultipartFile(filename, "application/octet-stream", body);
             var info = attachmentService.upload(jwt, documentId, file);
             return info.id();
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** Fetch binaire borné (même client, mêmes gardes, redirections revalidées). */
+    byte[] fetchBytesLimited(URI start) throws IOException {
+        URI current = start;
+        for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+            SsrfGuard.requireHttpUrl(current.toString());
+            if (!proxyConfigured) {
+                dnsResolver.resolveOrReject(current.getHost());
+            }
+            HttpGet get = new HttpGet(current);
+            get.setHeader("User-Agent", "SocleLinkPreview/1.0");
+            final URI hopUri = current;
+            final int hopIdx = hop;
+            try {
+                return httpClient.execute(get, resp -> {
+                    int code = resp.getCode();
+                    if (code >= 300 && code < 400) {
+                        var locHeader = resp.getFirstHeader("Location");
+                        String loc = locHeader != null ? locHeader.getValue() : null;
+                        if (loc == null || hopIdx == MAX_REDIRECTS) {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                    "Aperçu de lien refusé : redirection invalide");
+                        }
+                        throw new RedirectSignal(hopUri.resolve(loc));
+                    }
+                    if (code != 200) {
+                        EntityUtils.consumeQuietly(resp.getEntity());
+                        return null;
+                    }
+                    HttpEntity entity = resp.getEntity();
+                    if (entity == null) {
+                        return null;
+                    }
+                    try (InputStream in = entity.getContent()) {
+                        return readLimited(in, MAX_BYTES);
+                    }
+                });
+            } catch (RedirectSignal rs) {
+                current = rs.target();
+            } catch (ResponseStatusException e) {
+                if (e.getStatusCode() == HttpStatus.BAD_REQUEST
+                        && e.getReason() != null
+                        && e.getReason().contains("trop volumineux")) {
+                    throw e;
+                }
+                return null;
+            }
+        }
+        return null;
+    }
+
+    boolean isProxyConfigured() {
+        return proxyConfigured;
+    }
+
+    ValidatingDnsResolver dnsResolver() {
+        return dnsResolver;
     }
 
     /** MultipartFile minimal pour stocker une vignette sans dépendance test. */
@@ -339,11 +489,12 @@ public class LinkPreviewService {
         return fallbackHost;
     }
 
-    private static byte[] readLimited(InputStream in, int max) throws IOException {
+    static byte[] readLimited(InputStream in, int max) throws IOException {
         try (in) {
             byte[] buf = in.readNBytes(max + 1);
             if (buf.length > max) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aperçu de lien refusé : contenu trop volumineux");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Aperçu de lien refusé : contenu trop volumineux");
             }
             return buf;
         }
@@ -384,4 +535,17 @@ public class LinkPreviewService {
     record FetchResult(String html, String ogImage) {}
 
     private record RateWindow(long minute, AtomicInteger count) {}
+
+    /** Redirection manuelle hors du callback execute. */
+    private static final class RedirectSignal extends RuntimeException {
+        private final URI target;
+
+        RedirectSignal(URI target) {
+            this.target = target;
+        }
+
+        URI target() {
+            return target;
+        }
+    }
 }
