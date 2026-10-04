@@ -15,11 +15,14 @@ import java.util.stream.Collectors;
 public class AttachmentProperties {
 
     private int maxMb = 25;
+    /** Plafond distinct pour {@code video/mp4} et {@code video/webm}. */
+    private int maxVideoMb = 200;
     private int orphanRetentionDays = 7;
     /** Plafond largeur×hauteur avant décodage pixel (anti bombe de décompression). */
     private long maxImagePixels = 40_000_000L;
     private String allowedMediaTypes =
             "image/png,image/jpeg,image/webp,image/gif,application/pdf,"
+                    + "video/mp4,video/webm,"
                     + "application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,"
                     + "application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,"
                     + "application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,"
@@ -35,6 +38,29 @@ public class AttachmentProperties {
 
     public long maxBytes() {
         return Math.max(1, maxMb) * 1024L * 1024L;
+    }
+
+    public int getMaxVideoMb() {
+        return maxVideoMb;
+    }
+
+    public void setMaxVideoMb(int maxVideoMb) {
+        this.maxVideoMb = maxVideoMb;
+    }
+
+    public long maxVideoBytes() {
+        return Math.max(1, maxVideoMb) * 1024L * 1024L;
+    }
+
+    /** Limite applicable selon le type MIME détecté. */
+    public long maxBytesFor(String mediaType) {
+        if (mediaType != null) {
+            String base = mediaType.toLowerCase(Locale.ROOT).split(";")[0].trim();
+            if ("video/mp4".equals(base) || "video/webm".equals(base)) {
+                return maxVideoBytes();
+            }
+        }
+        return maxBytes();
     }
 
     public int getOrphanRetentionDays() {

@@ -110,6 +110,7 @@ class AttachmentSecurityWebMvcTest {
         AttachmentProperties attachmentProperties() {
             AttachmentProperties p = new AttachmentProperties();
             p.setMaxMb(MAX_MB);
+            p.setMaxVideoMb(MAX_MB);
             return p;
         }
     }
@@ -428,6 +429,51 @@ class AttachmentSecurityWebMvcTest {
     }
 
     @Test
+    void upload_mp4_isDetectedAndServedInline_withRange() throws Exception {
+        byte[] mp4 = minimalMp4();
+        MvcResult up = mockMvc.perform(upload("clip.mp4", "application/octet-stream", mp4).with(jwt()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mediaType").value("video/mp4"))
+                .andReturn();
+        String id = JsonPath.read(up.getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(get("/api/v1/attachments/{id}", id).with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "video/mp4"))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        org.hamcrest.Matchers.startsWith("inline;")));
+
+        mockMvc.perform(get("/api/v1/attachments/{id}", id)
+                        .header(HttpHeaders.RANGE, "bytes=0-3")
+                        .with(jwt()))
+                .andExpect(status().isPartialContent())
+                .andExpect(header().string(HttpHeaders.CONTENT_RANGE,
+                        "bytes 0-3/" + mp4.length));
+    }
+
+    @Test
+    void upload_webm_isDetected() throws Exception {
+        mockMvc.perform(upload("clip.webm", "application/octet-stream", minimalWebm()).with(jwt()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mediaType").value("video/webm"));
+    }
+
+    @Test
+    void upload_videoOverDistinctLimit_is413() throws Exception {
+        byte[] mp4 = minimalMp4();
+        byte[] big = new byte[MAX_MB * 1024 * 1024 + 1];
+        System.arraycopy(mp4, 0, big, 0, mp4.length);
+        java.util.Arrays.fill(big, mp4.length, big.length, (byte) 0);
+
+        mockMvc.perform(upload("big.mp4", "video/mp4", big).with(jwt()))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.code").value(ApiErrors.PAYLOAD_TOO_LARGE));
+
+        assertThat(count("SELECT count(*) FROM attachments")).isZero();
+        assertThat(blobFileCount()).isZero();
+    }
+
+    @Test
     void upload_filenameIsSanitised_pathAndMarkupStripped() throws Exception {
         mockMvc.perform(upload("../../etc/<evil>.txt", "text/plain", "x".getBytes(StandardCharsets.UTF_8))
                         .with(jwt()))
@@ -472,5 +518,25 @@ class AttachmentSecurityWebMvcTest {
 
     private static String sha256Hex(byte[] data) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data));
+    }
+
+    /** ISO BMFF minimal avec boîte {@code ftyp} — Tika → {@code video/mp4}. */
+    private static byte[] minimalMp4() {
+        return new byte[] {
+                0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70,
+                0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x00, 0x01,
+                0x69, 0x73, 0x6F, 0x6D, 0x61, 0x76, 0x63, 0x31
+        };
+    }
+
+    /** En-tête EBML WebM — Tika → {@code video/webm}. */
+    private static byte[] minimalWebm() {
+        return new byte[] {
+                0x1A, 0x45, (byte) 0xDF, (byte) 0xA3, 0x01, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x1F, 0x42, (byte) 0x86, (byte) 0x81, 0x01,
+                0x42, (byte) 0xF7, (byte) 0x81, 0x01, 0x42, (byte) 0xF2, (byte) 0x81, 0x04,
+                0x42, (byte) 0xF3, (byte) 0x81, 0x08, 0x42, (byte) 0x82, (byte) 0x84,
+                0x77, 0x65, 0x62, 0x6D
+        };
     }
 }

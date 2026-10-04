@@ -117,8 +117,10 @@ public class AttachmentService {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fichier requis");
         }
+        // Plafond multipart = max(fichier, vidéo) — le plafond métier dépend du type détecté.
+        long absoluteMax = Math.max(properties.maxBytes(), properties.maxVideoBytes());
         long declared = file.getSize();
-        if (declared > properties.maxBytes()) {
+        if (declared > absoluteMax) {
             throw ApiErrors.payloadTooLarge();
         }
 
@@ -128,7 +130,7 @@ public class AttachmentService {
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lecture du fichier impossible");
         }
-        if (raw.length > properties.maxBytes()) {
+        if (raw.length > absoluteMax) {
             throw ApiErrors.payloadTooLarge();
         }
 
@@ -141,6 +143,9 @@ public class AttachmentService {
         }
         if (!properties.isAllowed(detected)) {
             throw ApiErrors.attachmentTypeRejected(detected);
+        }
+        if (raw.length > properties.maxBytesFor(detected)) {
+            throw ApiErrors.payloadTooLarge();
         }
 
         String mediaType = detected;
@@ -360,6 +365,18 @@ public class AttachmentService {
         return INLINE_IMAGES.contains(base);
     }
 
+    /** Images et vidéos servies en {@code inline} pour affichage / lecture dans la page. */
+    public static boolean isInlineMedia(String mediaType) {
+        if (isInlineImage(mediaType)) {
+            return true;
+        }
+        if (mediaType == null) {
+            return false;
+        }
+        String base = mediaType.toLowerCase(Locale.ROOT).split(";")[0].trim();
+        return "video/mp4".equals(base) || "video/webm".equals(base);
+    }
+
     @SuppressWarnings("unchecked")
     public static Set<UUID> extractAttachmentIds(Map<String, Object> body) {
         Set<UUID> ids = new HashSet<>();
@@ -546,7 +563,7 @@ public class AttachmentService {
     static String contentDisposition(AttachmentRow row) {
         String filename = row.originalFilename() == null ? "fichier" : row.originalFilename();
         String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
-        String disposition = isInlineImage(row.mediaType()) ? "inline" : "attachment";
+        String disposition = isInlineMedia(row.mediaType()) ? "inline" : "attachment";
         return disposition + "; filename=\"" + filename.replace("\"", "")
                 + "\"; filename*=UTF-8''" + encoded;
     }
