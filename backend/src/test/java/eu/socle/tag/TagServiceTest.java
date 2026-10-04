@@ -5,6 +5,7 @@ import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.document.DocumentDtos.TagRef;
+import eu.socle.identity.IdentityFacade;
 import eu.socle.user.UserEntity;
 import eu.socle.user.UserSyncService;
 import org.junit.jupiter.api.BeforeAll;
@@ -65,6 +66,7 @@ class TagServiceTest {
     @Mock AuthorizationService authorizationService;
     @Mock UserSyncService userSyncService;
     @Mock AuditService auditService;
+    @Mock IdentityFacade identityFacade;
 
     TagService service;
     Jwt jwt;
@@ -103,7 +105,11 @@ class TagServiceTest {
                 """);
         jdbc.execute("""
                 CREATE TABLE tags (
-                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL UNIQUE, color TEXT
+                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                  name TEXT NOT NULL UNIQUE,
+                  color TEXT,
+                  created_by UUID,
+                  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
                 """);
         jdbc.execute("""
@@ -113,6 +119,13 @@ class TagServiceTest {
                   PRIMARY KEY (document_id, tag_id)
                 )
                 """);
+        jdbc.execute("""
+                CREATE TABLE instance_settings (
+                  id BOOLEAN PRIMARY KEY DEFAULT true CHECK (id),
+                  tag_creation_policy TEXT NOT NULL DEFAULT 'any_editor'
+                )
+                """);
+        jdbc.update("INSERT INTO instance_settings (id, tag_creation_policy) VALUES (true, 'any_editor')");
         jdbc.update("INSERT INTO documents (id, title, space_id) VALUES (?, 'Doc', ?)", DOC, SPACE);
         jdbc.update("INSERT INTO documents (id, title, deleted_at) VALUES (?, 'Corbeille', now())", TRASHED);
     }
@@ -123,10 +136,12 @@ class TagServiceTest {
         jdbc.update("DELETE FROM approval_role_assignments");
         jdbc.update("DELETE FROM document_tags");
         jdbc.update("DELETE FROM tags");
-        service = new TagService(jdbc, userSyncService, authorizationService, auditService);
+        jdbc.update("UPDATE instance_settings SET tag_creation_policy = 'any_editor'");
+        service = new TagService(jdbc, userSyncService, authorizationService, auditService, identityFacade);
         UserEntity user = new UserEntity();
         user.setId(USER);
         when(userSyncService.syncFromJwt(any())).thenReturn(user);
+        when(identityFacade.isSystemAdmin(any())).thenReturn(false);
         jwt = Jwt.withTokenValue("t").header("alg", "none").subject("sub").build();
     }
 

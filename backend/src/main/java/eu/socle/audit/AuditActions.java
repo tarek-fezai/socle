@@ -46,6 +46,21 @@ public final class AuditActions {
     public static final String DOCUMENT_TAG_REMOVED = "document.tag_removed";
     public static final String DOCUMENT_CUSTOM_FIELD_UPDATED = "document.custom_field_updated";
 
+    /** Administration des tags (TagsAdmin). */
+    public static final String TAG_CREATED = "tag.created";
+    public static final String TAG_RENAMED = "tag.renamed";
+    public static final String TAG_DELETED = "tag.deleted";
+    public static final String TAG_MERGED = "tag.merged";
+    public static final String TAG_CREATION_POLICY_CHANGED = "tag.creation_policy_changed";
+    /** Transfert d'une attribution de rôle lors d'une fusion de tags gouvernés. */
+    public static final String APPROVAL_ROLE_SCOPE_TRANSFERRED = "approval_role.scope_transferred";
+
+    /** Administration des définitions de champs personnalisés (CustomFields). */
+    public static final String CUSTOM_FIELD_CREATED = "custom_field.created";
+    public static final String CUSTOM_FIELD_UPDATED = "custom_field.updated";
+    public static final String CUSTOM_FIELD_ARCHIVED = "custom_field.archived";
+    public static final String CUSTOM_FIELD_OPTION_ARCHIVED = "custom_field.option_archived";
+
     public static final String SPACE_CREATED = "space.created";
     public static final String SPACE_UPDATED = "space.updated";
     public static final String SPACE_OWNER_ADDED = "space.owner_added";

@@ -2,6 +2,7 @@
 package eu.socle.document;
 
 import eu.socle.authz.AuthorizationService;
+import eu.socle.customfield.DocumentCustomFieldService;
 import eu.socle.storage.DocumentStore;
 import eu.socle.template.TemplateBodySupport;
 import eu.socle.user.UserSyncService;
@@ -66,6 +67,7 @@ public class DocumentApprovalService {
     private final TransactionTemplate transactionTemplate;
     private final DocumentStore documentStore;
     private final DocumentRelatedLinksService relatedLinksService;
+    private final DocumentCustomFieldService customFieldService;
     private final boolean workerEnabled;
 
     private WorkerFactory workerFactory;
@@ -83,6 +85,7 @@ public class DocumentApprovalService {
             PlatformTransactionManager transactionManager,
             DocumentStore documentStore,
             DocumentRelatedLinksService relatedLinksService,
+            DocumentCustomFieldService customFieldService,
             @Value("${socle.temporal.worker-enabled:true}") boolean workerEnabled
     ) {
         this.workflowClient = workflowClient;
@@ -96,6 +99,7 @@ public class DocumentApprovalService {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.documentStore = documentStore;
         this.relatedLinksService = relatedLinksService;
+        this.customFieldService = customFieldService;
         this.workerEnabled = workerEnabled;
     }
 
@@ -142,6 +146,7 @@ public class DocumentApprovalService {
         this.transactionTemplate = transactionTemplate;
         this.documentStore = null;
         this.relatedLinksService = relatedLinksService;
+        this.customFieldService = null;
         this.workerEnabled = workerEnabled;
     }
 
@@ -192,6 +197,10 @@ public class DocumentApprovalService {
         if (!remaining.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     TemplateBodySupport.placeholderConflictMessage(remaining));
+        }
+
+        if (customFieldService != null) {
+            customFieldService.requireRequiredFieldsFilled(documentId);
         }
 
         Integer open = jdbcTemplate.queryForObject(

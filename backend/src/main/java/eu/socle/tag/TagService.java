@@ -5,6 +5,7 @@ import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.document.DocumentDtos.TagRef;
+import eu.socle.identity.IdentityFacade;
 import eu.socle.user.UserSyncService;
 import eu.socle.web.ApiErrors;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,17 +54,20 @@ public class TagService {
     private final UserSyncService userSyncService;
     private final AuthorizationService authorizationService;
     private final AuditService auditService;
+    private final IdentityFacade identityFacade;
 
     public TagService(
             JdbcTemplate jdbc,
             UserSyncService userSyncService,
             AuthorizationService authorizationService,
-            AuditService auditService
+            AuditService auditService,
+            IdentityFacade identityFacade
     ) {
         this.jdbc = jdbc;
         this.userSyncService = userSyncService;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
+        this.identityFacade = identityFacade;
     }
 
     /** @param created true si l'étiquette vient d'être rattachée (false = déjà présente, idempotent) */
@@ -108,8 +114,14 @@ public class TagService {
             String clean = normalizeName(name);
             tag = findByName(clean);
             if (tag == null) {
-                tagCreated = jdbc.update(
-                        "INSERT INTO tags (name) VALUES (?) ON CONFLICT (name) DO NOTHING", clean) > 0;
+                if (isTagCreationRestricted() && !identityFacade.isSystemAdmin(jwt)) {
+                    throw ApiErrors.tagCreationRestricted();
+                }
+                tagCreated = jdbc.update("""
+                        INSERT INTO tags (name, created_by, created_at)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT (name) DO NOTHING
+                        """, clean, user.getId(), Timestamp.from(Instant.now())) > 0;
                 tag = findByName(clean);
                 if (tag == null) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -233,6 +245,16 @@ public class TagService {
                     "Nom d'étiquette trop long (" + MAX_NAME_LENGTH + " caractères max)");
         }
         return clean;
+    }
+
+    private boolean isTagCreationRestricted() {
+        List<String> rows = jdbc.query(
+                "SELECT tag_creation_policy FROM instance_settings WHERE id = true",
+                (rs, i) -> rs.getString(1));
+        if (rows.isEmpty()) {
+            return false;
+        }
+        return TagAdminService.POLICY_ADMINS_ONLY.equals(rows.getFirst());
     }
 
     private static String escapeLike(String s) {
