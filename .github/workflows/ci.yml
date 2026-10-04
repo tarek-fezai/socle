@@ -143,6 +143,31 @@ jobs:
       - name: Test authorization model
         run: fga model test --tests infra/openfga/model.fga.yaml
 
+  # Catch unknown JSON keys (ex. "_comment") that break Keycloak --import-realm.
+  # e2e mounts e2e/realm-socle.ci.json only — this job covers every realm file.
+  keycloak-realms:
+    name: keycloak-realms
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Keycloak realm import
+        env:
+          KEYCLOAK_IMAGE: quay.io/keycloak/keycloak:26.0
+          KEYCLOAK_VERIFY_LOG_DIR: ${{ runner.temp }}/keycloak-realm-logs
+          KEYCLOAK_VERIFY_TIMEOUT_SEC: "300"
+        run: |
+          set -euo pipefail
+          chmod +x infra/keycloak/verify-realm-import.sh
+          bash infra/keycloak/verify-realm-import.sh
+      - name: Upload Keycloak import logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: keycloak-realm-import-logs
+          path: ${{ runner.temp }}/keycloak-realm-logs/
+          if-no-files-found: ignore
+          retention-days: 7
+
   e2e:
     name: e2e
     runs-on: ubuntu-latest
@@ -161,6 +186,7 @@ jobs:
               - '.github/workflows/release.yml'
               - '.github/workflows/ci.yml'
               - 'e2e/**'
+              - 'infra/keycloak/**'
 
       - name: Skip when paths do not match (PR/push only)
         if: |
