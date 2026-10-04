@@ -252,9 +252,85 @@ export const HISTORY_MOBILE_IDS = [
   'doc-mobile-tab-history',
 ]
 
+/** Approbation — Approval.dc.html (étape N2 en attente, v12 → v13). */
+export const APPROVAL_DESKTOP_IDS = [
+  'appr-topbar',
+  'appr-breadcrumb-current',
+  'appr-comments',
+  'appr-badge',
+  'appr-title',
+  'appr-lede',
+  'appr-circuit',
+  'appr-circuit-label',
+  'appr-step-1-node',
+  'appr-step-1-name',
+  'appr-step-1-status',
+  'appr-step-2-node',
+  'appr-step-2-name',
+  'appr-step-2-status',
+  'appr-publication-name',
+  'appr-publication-status',
+  'appr-justif-label',
+  'appr-field',
+  'appr-approve',
+  'appr-reject',
+  'appr-rail',
+  'appr-rail-label-requester',
+  'appr-requester-avatar',
+  'appr-requester-name',
+  'appr-rail-label-submitted',
+  'appr-submitted',
+  'appr-rail-label-sla',
+  'appr-sla',
+  'appr-rail-label-changes',
+  'appr-compare-link',
+  'appr-compare-label',
+  'appr-compare-counts',
+  'appr-rail-label-links',
+  'appr-link-0',
+  'appr-link-1',
+]
+
+/** Comparaison d'approbation — DiffApproval.dc.html (v12 → v13, côte à côte). */
+export const DIFF_APPROVAL_IDS = [
+  'adiff-topbar',
+  'adiff-breadcrumb-current',
+  'adiff-back',
+  'adiff-approve',
+  'adiff-controls',
+  'adiff-sel-from',
+  'adiff-sel-to',
+  'adiff-added',
+  'adiff-removed',
+  'adiff-badge',
+  'diff-box',
+  'diff-hunk-0',
+  'diff-hunk-1',
+  'diff-hunk-2',
+]
+
+/** Approbation mobile — MobileApproval.dc.html (étape 1 sur 2). */
+export const APPROVAL_MOBILE_IDS = [
+  'appr-mobile-title',
+  'appr-m-badge',
+  'appr-m-title',
+  'appr-m-sub',
+  'appr-m-chain',
+  'appr-m-chain-label',
+  'appr-m-step-1',
+  'appr-m-step-2',
+  'appr-m-diff-link',
+  'appr-m-diff-text',
+  'appr-m-quote',
+  'appr-m-quote-text',
+  'appr-m-bar',
+  'appr-m-reject',
+  'appr-m-approve',
+]
+
 /** Actions pinned à line-height 1 des deux côtés (maquette : <a>/<span> ; app : <a>/<button>). */
 const ACTION_ID_RE =
-  /^(hist-back|hist-r\d+-(compare|restore)|hist-m-(compare|restore)-\d+|diff-(back|restore|seg-\w+)|restore-(cancel|confirm))$/
+  /^(hist-back|hist-r\d+-(compare|restore)|hist-m-(compare|restore)-\d+|diff-(back|restore|seg-\w+)|restore-(cancel|confirm)|appr-(comments|approve|reject|m-reject|m-approve)|adiff-(back|approve))$/
 
 export const MOBILE_MENU_IDS = [
   'mobile-menu',
@@ -818,6 +894,105 @@ export async function annotateMobileHistoryMockup(page) {
   })
 }
 
+/**
+ * Annotate Approval.dc.html : root > [topbar, body > [main > colonne, rail]].
+ * colonne > [badge, h1, p, circuit, libellé, champ, actions] ; rail > [demandeur, soumis, échéance, modifs, liens].
+ */
+export async function annotateApprovalMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const [topbar, body] = [...root.children]
+    set(topbar, 'appr-topbar')
+    set(topbar?.children[0]?.lastElementChild, 'appr-breadcrumb-current')
+    set(topbar?.children[1], 'appr-comments')
+    const col = body?.children[0]?.children[0]
+    const [badge, h1, lede, circuit, justLabel, field, actions] = [...(col?.children ?? [])]
+    set(badge, 'appr-badge')
+    set(h1, 'appr-title')
+    set(lede, 'appr-lede')
+    set(circuit, 'appr-circuit')
+    set(circuit?.children[0], 'appr-circuit-label')
+    const steps = [...(circuit?.children[1]?.children ?? [])].filter((_, i) => i % 2 === 0)
+    steps.forEach((step, i) => {
+      const p = i === 2 ? 'appr-publication' : `appr-step-${i + 1}`
+      if (i < 2) set(step.children[0], `${p}-node`)
+      set(step.children[1], `${p}-name`)
+      set(step.children[2], `${p}-status`)
+    })
+    set(justLabel, 'appr-justif-label')
+    set(field, 'appr-field')
+    set(actions?.children[0], 'appr-approve')
+    set(actions?.children[1], 'appr-reject')
+    const rail = body?.children[1]
+    set(rail, 'appr-rail')
+    const [requester, submitted, sla, changes, links] = [...(rail?.children ?? [])]
+    set(requester?.children[0], 'appr-rail-label-requester')
+    set(requester?.children[1]?.children[0], 'appr-requester-avatar')
+    set(requester?.children[1]?.children[1], 'appr-requester-name')
+    set(submitted?.children[0], 'appr-rail-label-submitted')
+    set(submitted?.children[1], 'appr-submitted')
+    set(sla?.children[0], 'appr-rail-label-sla')
+    set(sla?.children[1], 'appr-sla')
+    set(changes?.children[0], 'appr-rail-label-changes')
+    set(changes?.children[1], 'appr-compare-link')
+    set(changes?.children[1]?.children[0], 'appr-compare-label')
+    set(changes?.children[1]?.children[1], 'appr-compare-counts')
+    set(links?.children[0], 'appr-rail-label-links')
+    ;[...(links?.children[1]?.children ?? [])].forEach((a, i) => set(a, `appr-link-${i}`))
+  })
+}
+
+/** Annotate DiffApproval.dc.html : root > [topbar, controls, body > box > (.hunk, .diffline…)]. */
+export async function annotateDiffApprovalMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const [topbar, controls, body] = [...root.children]
+    set(topbar, 'adiff-topbar')
+    set(topbar?.children[0]?.lastElementChild, 'adiff-breadcrumb-current')
+    set(topbar?.children[1]?.children[0], 'adiff-back')
+    set(topbar?.children[1]?.children[1], 'adiff-approve')
+    set(controls, 'adiff-controls')
+    set(controls?.children[0], 'adiff-sel-from')
+    set(controls?.children[2], 'adiff-sel-to')
+    set(controls?.children[3], 'adiff-added')
+    set(controls?.children[4], 'adiff-removed')
+    set(controls?.children[5], 'adiff-badge')
+    const box = body?.children[0]
+    set(box, 'diff-box')
+    box?.querySelectorAll('.hunk > .cell').forEach((cell, i) => set(cell, `diff-hunk-${i}`))
+  })
+}
+
+/** Annotate MobileApproval.dc.html : root > [topbar, défilement > (badge, h1, sous-titre, chaîne, lien, citation), barre]. */
+export async function annotateMobileApprovalMockup(page) {
+  await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('div')).find((d) =>
+      (d.getAttribute('style') || '').includes('390px'),
+    )
+    if (!root) return
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    set(root.children[0]?.children[1], 'appr-mobile-title')
+    const [badge, h1, sub, chain, diff, quote] = [...(root.children[1]?.children ?? [])]
+    set(badge, 'appr-m-badge')
+    set(h1, 'appr-m-title')
+    set(sub, 'appr-m-sub')
+    set(chain, 'appr-m-chain')
+    set(chain?.children[0], 'appr-m-chain-label')
+    ;[...(chain?.children[1]?.children ?? [])].forEach((row, i) => set(row.children[1], `appr-m-step-${i + 1}`))
+    set(diff, 'appr-m-diff-link')
+    set(diff?.children[0], 'appr-m-diff-text')
+    set(quote, 'appr-m-quote')
+    set(quote?.children[0], 'appr-m-quote-text')
+    const bar = root.children[2]
+    set(bar, 'appr-m-bar')
+    set(bar?.children[0], 'appr-m-reject')
+    set(bar?.children[1], 'appr-m-approve')
+  })
+}
 export async function collectMetrics(page, ids) {
   // Pin line-height so glyph box heights are comparable across UA defaults
   await page.evaluate(
