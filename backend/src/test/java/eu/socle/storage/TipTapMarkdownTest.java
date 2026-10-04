@@ -51,6 +51,47 @@ class TipTapMarkdownTest {
         ));
     }
 
+    static final UUID ATTACHMENT = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd");
+
+    @Test
+    void roundTrip_attachmentDirective() {
+        Map<String, Object> body = doc(para("Avant"), attachment(ATTACHMENT), para("Après"));
+        assertRoundTripEquals(body);
+        assertThat(TipTapMarkdown.toMarkdown(body))
+                .contains("::attachment{id=\"" + ATTACHMENT + "\"}")
+                .doesNotContain(":::socle-json");
+    }
+
+    @Test
+    void roundTrip_imageAttachment_withAlt() {
+        Map<String, Object> body = doc(para("Avant"), imageAttachment(ATTACHMENT, "Schéma réseau"), para("Après"));
+        assertRoundTripEquals(body);
+        assertThat(TipTapMarkdown.toMarkdown(body))
+                .contains("![Schéma réseau](attachment:" + ATTACHMENT + ")")
+                .doesNotContain(":::socle-json");
+    }
+
+    @Test
+    void roundTrip_attachmentAndImage_adjacentAndFirstLast() {
+        assertRoundTripEquals(doc(
+                attachment(ATTACHMENT),
+                imageAttachment(ATTACHMENT, "alt"),
+                attachment(UUID.fromString("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"))
+        ));
+    }
+
+    @Test
+    void attachment_withExtraAttrs_fallsBackToSocleJson_andRoundTrips() {
+        Map<String, Object> node = attachment(ATTACHMENT);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attrs = new LinkedHashMap<>((Map<String, Object>) node.get("attrs"));
+        attrs.put("filename", "extra.pdf");
+        node.put("attrs", attrs);
+        Map<String, Object> body = doc(node);
+        assertRoundTripEquals(body);
+        assertThat(TipTapMarkdown.toMarkdown(body)).contains(":::socle-json");
+    }
+
     @Test
     void roundTrip_unknownNodeWithAttrsAndNestedContent() {
         Map<String, Object> callout = new LinkedHashMap<>();
@@ -309,6 +350,23 @@ class TipTapMarkdownTest {
         Map<String, Object> n = new LinkedHashMap<>();
         n.put("type", TransclusionResolver.NODE_TYPE);
         n.put("attrs", Map.of(TransclusionResolver.ATTR_DOCUMENT_ID, id.toString()));
+        return n;
+    }
+
+    private static Map<String, Object> attachment(UUID id) {
+        Map<String, Object> n = new LinkedHashMap<>();
+        n.put("type", "attachment");
+        n.put("attrs", new LinkedHashMap<>(Map.of("id", id.toString())));
+        return n;
+    }
+
+    private static Map<String, Object> imageAttachment(UUID id, String alt) {
+        Map<String, Object> n = new LinkedHashMap<>();
+        n.put("type", "image");
+        Map<String, Object> attrs = new LinkedHashMap<>();
+        attrs.put("id", id.toString());
+        attrs.put("alt", alt);
+        n.put("attrs", attrs);
         return n;
     }
 

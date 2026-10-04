@@ -110,6 +110,22 @@ public final class TipTapPdfRenderer {
             }
             return out;
         }
+        if ("image".equals(type) || "attachment".equals(type)) {
+            Map<String, Object> attrs = attrsOf(node);
+            Object filename = attrs.get("filename");
+            Object alt = attrs.get("alt");
+            Object size = attrs.get("sizeBytes");
+            String label = filename != null ? String.valueOf(filename)
+                    : (alt != null && !String.valueOf(alt).isBlank() ? String.valueOf(alt) : "Pièce jointe");
+            if ("image".equals(type)) {
+                out.add("[Image] " + label);
+            } else if (size instanceof Number n) {
+                out.add("[Fichier joint] " + label + " (" + n.longValue() + " o)");
+            } else {
+                out.add("[Fichier joint] " + label);
+            }
+            return out;
+        }
         Object content = node.get("content");
         if (content instanceof List<?> children) {
             for (Object child : children) {
