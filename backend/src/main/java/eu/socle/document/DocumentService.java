@@ -3,6 +3,7 @@ package eu.socle.document;
 
 import eu.socle.activity.ActivityEventService;
 import eu.socle.activity.ActivityEventTypes;
+import eu.socle.attachment.AttachmentService;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
@@ -64,6 +65,7 @@ public class DocumentService {
     private final DocumentLinkService documentLinkService;
     private final TemplateService templateService;
     private ActivityEventService activityEventService;
+    private AttachmentService attachmentService;
     private EditLockService editLockService;
     private DiffProperties diffProperties;
 
@@ -176,6 +178,11 @@ public class DocumentService {
     @Autowired(required = false)
     void setActivityEventService(ActivityEventService activityEventService) {
         this.activityEventService = activityEventService;
+    }
+
+    @Autowired(required = false)
+    void setAttachmentService(AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
     }
 
     /** Verrou d'édition : une restauration ne doit pas écraser le travail d'un autre éditeur actif. */
@@ -378,6 +385,7 @@ public class DocumentService {
         }
 
         syncDocumentLinks(saved, body);
+        markAttachmentsReferenced(saved.getId(), body);
 
         Map<String, Object> createMeta = new LinkedHashMap<>();
         createMeta.put("title", saved.getTitle());
@@ -530,6 +538,7 @@ public class DocumentService {
         }
 
         syncDocumentLinks(saved, newBody);
+        markAttachmentsReferenced(saved.getId(), newBody);
         discardDraft(saved.getId(), user.getId());
 
         auditService.record(
@@ -877,6 +886,7 @@ public class DocumentService {
         }
 
         syncDocumentLinks(saved, copyBody(targetBody));
+        markAttachmentsReferenced(saved.getId(), copyBody(targetBody));
         // Comme update : la restauration est une sauvegarde explicite — brouillon du restaurateur
         // consommé ; les brouillons des autres utilisateurs ne sont pas touchés.
         discardDraft(saved.getId(), user.getId());
@@ -960,6 +970,13 @@ public class DocumentService {
             return;
         }
         documentLinkService.replaceOutgoingLinks(doc.getId(), doc.getSpaceId(), tipTapBody);
+    }
+
+    private void markAttachmentsReferenced(UUID documentId, Map<String, Object> tipTapBody) {
+        if (attachmentService == null || documentId == null || tipTapBody == null) {
+            return;
+        }
+        attachmentService.markReferenced(documentId, tipTapBody);
     }
 
     /** Soft-delete (corbeille) — délégué à {@link TrashService}. */

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
+import { AttachmentImageNode, AttachmentNode } from '../components/attachments/attachmentExtensions'
+import { UploadStrip } from '../components/attachments/UploadStrip'
+import { useAttachmentUploads, type UploadKind } from '../components/attachments/useAttachmentUploads'
 import { Placeholder } from '../lib/placeholderExtension'
 import { DEFAULT_PLACEHOLDER_HINT, PLACEHOLDER_NODE_TYPE, TEMPLATE_VARIABLES } from '../lib/templates'
 import { EditToolbar } from './document/EditToolbar'
@@ -23,6 +26,11 @@ type Props = {
   onEditorReady?: (editor: Editor | null) => void
   /** Variante `document` : masque l'éditeur (aperçu) sans le démonter. */
   hidden?: boolean
+  /**
+   * Document porteur des pièces jointes (images, fichiers). Sans lui (édition de modèle),
+   * l'envoi est indisponible : boutons inactifs, glisser-déposer et collage ignorés.
+   */
+  documentId?: string
 }
 
 export function DocumentEditor({
@@ -34,13 +42,24 @@ export function DocumentEditor({
   titleSlot,
   onEditorReady,
   hidden = false,
+  documentId,
 }: Props) {
   const [hint, setHint] = useState('')
   const lastEmitted = useRef<Record<string, unknown> | null>(null)
   const initialContent = useRef<Record<string, unknown>>(content)
   const documentVariant = variant === 'document'
+  const editorRef = useRef<Editor | null>(null)
+  const getEditor = useCallback(() => editorRef.current, [])
+  const uploads = useAttachmentUploads(documentId, getEditor)
+  // Les options de `useEditor` sont figées à la création : les gestionnaires passent par ces refs.
+  const uploadRef = useRef(uploads.upload)
+  uploadRef.current = uploads.upload
+  const canUploadRef = useRef(false)
+  canUploadRef.current = Boolean(documentId) && editable
+  const imageInput = useRef<HTMLInputElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
   const editor = useEditor({
-    extensions: [StarterKit, Placeholder],
+    extensions: [StarterKit, Placeholder, AttachmentImageNode, AttachmentNode],
     content,
     editable,
     immediatelyRender: false,
@@ -51,6 +70,26 @@ export function DocumentEditor({
           : 'prose prose-slate max-w-none min-h-[280px] focus:outline-none px-1 py-2',
         ...(documentVariant ? { 'aria-label': 'Contenu du document', 'data-testid': 'edit-prosemirror' } : {}),
       },
+      // Coller une image (capture d'écran…) : envoi puis insertion à la sélection.
+      handlePaste: (_view, event) => {
+        if (!canUploadRef.current) return false
+        const data = event.clipboardData
+        const images = Array.from(data?.files ?? []).filter((f) => f.type.startsWith('image/'))
+        if (images.length === 0 || data?.getData('text/plain')) return false
+        event.preventDefault()
+        void uploadRef.current(images, { kind: 'image' })
+        return true
+      },
+      // Déposer des fichiers : images → bloc image, autres → fichier joint, à l'endroit du dépôt.
+      handleDrop: (view, event, _slice, moved) => {
+        if (moved || !canUploadRef.current) return false
+        const files = Array.from(event.dataTransfer?.files ?? [])
+        if (files.length === 0) return false
+        event.preventDefault()
+        const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos
+        void uploadRef.current(files, { pos })
+        return true
+      },
     },
     onUpdate: ({ editor: ed }) => {
       const json = ed.getJSON() as Record<string, unknown>
@@ -58,6 +97,13 @@ export function DocumentEditor({
       onChange(json)
     },
   })
+
+  useEffect(() => {
+    editorRef.current = editor ?? null
+    return () => {
+      editorRef.current = null
+    }
+  }, [editor])
 
   useEffect(() => {
     onEditorReady?.(editor ?? null)
@@ -87,10 +133,45 @@ export function DocumentEditor({
 
   if (!editor) return null
 
+  function onFilesChosen(kind: UploadKind) {
+    return (e: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? [])
+      e.target.value = ''
+      if (files.length > 0) void uploads.upload(files, { kind })
+    }
+  }
+
   if (documentVariant) {
     return (
       <div className="edit-editor" hidden={hidden} data-testid="edit-editor">
-        <EditToolbar editor={editor} readOnly={!editable} />
+        <EditToolbar
+          editor={editor}
+          readOnly={!editable}
+          attachments={{
+            enabled: Boolean(documentId),
+            pick: (kind) => (kind === 'image' ? imageInput : fileInput).current?.click(),
+          }}
+        />
+        <input
+          ref={imageInput}
+          type="file"
+          accept="image/*"
+          hidden
+          tabIndex={-1}
+          aria-hidden
+          data-testid="edit-image-input"
+          onChange={onFilesChosen('image')}
+        />
+        <input
+          ref={fileInput}
+          type="file"
+          hidden
+          tabIndex={-1}
+          aria-hidden
+          data-testid="edit-file-input"
+          onChange={onFilesChosen('file')}
+        />
+        <UploadStrip items={uploads.items} onDismiss={uploads.dismiss} />
         {titleSlot}
         <EditorContent editor={editor} className="edit-editor-content" />
       </div>

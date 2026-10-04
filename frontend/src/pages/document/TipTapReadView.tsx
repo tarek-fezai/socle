@@ -2,6 +2,7 @@
 import { Fragment, useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import DOMPurify from 'dompurify'
+import { AttachmentFile, AttachmentImage } from '../../components/attachments/AttachmentViews'
 import { highlightAnchorsHtml, isSafeHttpUrl } from '../../lib/comments'
 import type { TipTapNode } from '../../lib/documents'
 import { PLACEHOLDER_NODE_TYPE, DEFAULT_PLACEHOLDER_HINT } from '../../lib/templates'
@@ -445,8 +446,34 @@ function renderBlock(node: TipTapNode, ctx: Ctx): ReactNode {
         </div>
       )
     }
+    case 'attachment': {
+      const attrs = (node.attrs ?? {}) as Record<string, unknown>
+      if (typeof attrs.id !== 'string' || !attrs.id) return <UnsupportedBlock type={type} />
+      return (
+        <AttachmentFile
+          id={attrs.id}
+          filename={typeof attrs.filename === 'string' ? attrs.filename : undefined}
+          sizeBytes={typeof attrs.sizeBytes === 'number' ? attrs.sizeBytes : null}
+          mediaType={typeof attrs.mediaType === 'string' ? attrs.mediaType : undefined}
+        />
+      )
+    }
     case 'image': {
       const attrs = (node.attrs ?? {}) as Record<string, unknown>
+      if (typeof attrs.id === 'string' && attrs.id) {
+        return (
+          <figure className="doc-figure">
+            <AttachmentImage
+              id={attrs.id}
+              alt={typeof attrs.alt === 'string' ? attrs.alt : ''}
+              filename={typeof attrs.filename === 'string' ? attrs.filename : undefined}
+              width={typeof attrs.width === 'number' ? attrs.width : null}
+              height={typeof attrs.height === 'number' ? attrs.height : null}
+            />
+            {figureCaption(ctx, node)}
+          </figure>
+        )
+      }
       const src = safeImageSrc(attrs.src)
       if (!src) return <UnsupportedBlock type={type} caption={captionLabel(ctx, node)} />
       return (

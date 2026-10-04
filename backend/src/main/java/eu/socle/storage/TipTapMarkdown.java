@@ -25,12 +25,19 @@ import java.util.regex.Pattern;
 public final class TipTapMarkdown {
 
     public static final String TRANSCLUSION_TYPE = "transclusion";
+    public static final String ATTACHMENT_TYPE = "attachment";
+    public static final String IMAGE_TYPE = "image";
     public static final String ATTR_DOCUMENT_ID = "documentId";
+    public static final String ATTR_ATTACHMENT_ID = "id";
     public static final String SOCLE_JSON_FENCE = ":::socle-json";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Pattern TRANSCLUSION_LINE = Pattern.compile(
             "^::transclusion\\{documentId=\"([^\"]*)\"\\}\\s*$");
+    private static final Pattern ATTACHMENT_LINE = Pattern.compile(
+            "^::attachment\\{id=\"([^\"]*)\"\\}\\s*$");
+    private static final Pattern IMAGE_ATTACHMENT_LINE = Pattern.compile(
+            "^!\\[([^\\]]*)]\\(attachment:([0-9a-fA-F-]{36})\\)\\s*$");
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
     private TipTapMarkdown() {}
@@ -115,6 +122,8 @@ public final class TipTapMarkdown {
             case "codeBlock" -> appendCodeBlock(sb, block);
             case "blockquote" -> appendBlockquote(sb, block);
             case TRANSCLUSION_TYPE -> appendTransclusion(sb, block);
+            case ATTACHMENT_TYPE -> appendAttachment(sb, block);
+            case IMAGE_TYPE -> appendImageAttachment(sb, block);
             default -> appendSocleJson(sb, block);
         }
     }
@@ -204,6 +213,36 @@ public final class TipTapMarkdown {
                 Map<String, Object> node = new LinkedHashMap<>();
                 node.put("type", TRANSCLUSION_TYPE);
                 node.put("attrs", Map.of(ATTR_DOCUMENT_ID, id));
+                content.add(node);
+                i++;
+                continue;
+            }
+
+            Matcher att = ATTACHMENT_LINE.matcher(line);
+            if (att.matches()) {
+                flushPara.run();
+                flushList.run();
+                String id = att.group(1);
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("type", ATTACHMENT_TYPE);
+                node.put("attrs", Map.of(ATTR_ATTACHMENT_ID, id));
+                content.add(node);
+                i++;
+                continue;
+            }
+
+            Matcher img = IMAGE_ATTACHMENT_LINE.matcher(line);
+            if (img.matches()) {
+                flushPara.run();
+                flushList.run();
+                String alt = img.group(1);
+                String id = img.group(2);
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("type", IMAGE_TYPE);
+                Map<String, Object> attrs = new LinkedHashMap<>();
+                attrs.put(ATTR_ATTACHMENT_ID, id);
+                attrs.put("alt", alt);
+                node.put("attrs", attrs);
                 content.add(node);
                 i++;
                 continue;
@@ -326,6 +365,64 @@ public final class TipTapMarkdown {
             return;
         }
         sb.append("::transclusion{documentId=\"").append(id).append("\"}\n\n");
+    }
+
+    /** Directive fichier : {@code ::attachment{id="…"}} — attrs = {id} uniquement. */
+    private static void appendAttachment(StringBuilder sb, Map<String, Object> block) {
+        Object attrs = block.get("attrs");
+        if (!(attrs instanceof Map<?, ?> am)) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        if (am.size() != 1 || !am.containsKey(ATTR_ATTACHMENT_ID)) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        if (block.containsKey("content") && !isEmptyContent(block.get("content"))) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        String id = String.valueOf(am.get(ATTR_ATTACHMENT_ID));
+        if (!isValidUuid(id)) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        sb.append("::attachment{id=\"").append(id).append("\"}\n\n");
+    }
+
+    /** Image protégée : {@code ![alt](attachment:<id>)} — attrs = {id} ou {id,alt}. */
+    private static void appendImageAttachment(StringBuilder sb, Map<String, Object> block) {
+        Object attrs = block.get("attrs");
+        if (!(attrs instanceof Map<?, ?> am)) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        if (!am.containsKey(ATTR_ATTACHMENT_ID)) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        for (Object key : am.keySet()) {
+            String k = String.valueOf(key);
+            if (!ATTR_ATTACHMENT_ID.equals(k) && !"alt".equals(k)) {
+                appendSocleJson(sb, block);
+                return;
+            }
+        }
+        if (block.containsKey("content") && !isEmptyContent(block.get("content"))) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        String id = String.valueOf(am.get(ATTR_ATTACHMENT_ID));
+        if (!isValidUuid(id)) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        String alt = am.containsKey("alt") ? String.valueOf(am.get("alt")) : "";
+        if (alt.contains("]") || alt.contains("\n")) {
+            appendSocleJson(sb, block);
+            return;
+        }
+        sb.append("![").append(alt).append("](attachment:").append(id).append(")\n\n");
     }
 
     @SuppressWarnings("unchecked")

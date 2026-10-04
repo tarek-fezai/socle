@@ -3,6 +3,7 @@ package eu.socle.trash;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.socle.attachment.AttachmentService;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
@@ -45,6 +46,7 @@ public class TrashService {
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private AttachmentService attachmentService;
 
     @Autowired
     public TrashService(
@@ -72,6 +74,11 @@ public class TrashService {
         this.auditService = auditService;
         this.objectMapper = objectMapper;
         this.clock = clock;
+    }
+
+    @Autowired(required = false)
+    void setAttachmentService(AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
     }
 
     private static final int MAX_LIST_LIMIT = 200;
@@ -558,14 +565,12 @@ public class TrashService {
 
     private void hardDeleteResource(String type, UUID id) {
         switch (type) {
-            case "document" -> jdbcTemplate.update(
-                    "DELETE FROM documents WHERE id = ? AND deleted_at IS NOT NULL", id);
+            case "document" -> hardDeleteDocument(id);
             case "folder" -> {
                 // Children soft-deleted first (docs then subfolders) to avoid FK surprises
                 for (UUID child : descendantFolderIds(id)) {
                     for (UUID docId : softDeletedDocumentsInFolder(child)) {
-                        jdbcTemplate.update(
-                                "DELETE FROM documents WHERE id = ? AND deleted_at IS NOT NULL", docId);
+                        hardDeleteDocument(docId);
                         jdbcTemplate.update(
                                 "DELETE FROM trash_items WHERE resource_type = 'document' AND resource_id = ?",
                                 docId);
@@ -576,8 +581,7 @@ public class TrashService {
                             child);
                 }
                 for (UUID docId : softDeletedDocumentsInFolder(id)) {
-                    jdbcTemplate.update(
-                            "DELETE FROM documents WHERE id = ? AND deleted_at IS NOT NULL", docId);
+                    hardDeleteDocument(docId);
                     jdbcTemplate.update(
                             "DELETE FROM trash_items WHERE resource_type = 'document' AND resource_id = ?",
                             docId);
@@ -586,8 +590,7 @@ public class TrashService {
             }
             case "space" -> {
                 for (UUID docId : softDeletedDocumentsInSpace(id)) {
-                    jdbcTemplate.update(
-                            "DELETE FROM documents WHERE id = ? AND deleted_at IS NOT NULL", docId);
+                    hardDeleteDocument(docId);
                     jdbcTemplate.update(
                             "DELETE FROM trash_items WHERE resource_type = 'document' AND resource_id = ?",
                             docId);
@@ -602,6 +605,16 @@ public class TrashService {
             }
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "type inconnu");
         }
+    }
+
+    private void hardDeleteDocument(UUID documentId) {
+        if (attachmentService != null) {
+            attachmentService.purgeForDocument(documentId, null, true);
+        } else {
+            jdbcTemplate.update("DELETE FROM attachments WHERE document_id = ?", documentId);
+        }
+        jdbcTemplate.update(
+                "DELETE FROM documents WHERE id = ? AND deleted_at IS NOT NULL", documentId);
     }
 
     private void cleanupOrphanTrashItems() {

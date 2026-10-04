@@ -24,6 +24,25 @@ storage:
     existingClaim: "" # empty → chart creates PVC when provider=git
     storageSize: 20Gi
 
+# Binary attachments (BlobStore) — exclusive provider per instance.
+blob:
+  provider: local # local | s3
+  local:
+    mountPath: /data/blobs
+    existingClaim: "" # empty → chart creates PVC when provider=local
+    storageSize: 20Gi
+  s3:
+    endpoint: "" # required when provider=s3 (Garage / SeaweedFS…) — never a default AWS URL
+    region: us-east-1
+    bucket: ""
+    pathStyle: true
+    serverSideEncryption: true
+    # credentials via secret keys SOCLE_BLOB_S3_ACCESS_KEY / SOCLE_BLOB_S3_SECRET_KEY
+
+attachment:
+  maxMb: 25
+  orphanRetentionDays: 7
+
 openfga:
   mode: external # embedded | external
   autoInit: true

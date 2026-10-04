@@ -6,7 +6,10 @@
  * Documented exceptions (see also page-fixtures.mjs):
  *  - Onglet « Index » : bouton désactivé (title="bientôt") au lieu d'un lien Index.dc.html.
  *  - « Champs personnalisés » : omis tant qu'aucune définition n'existe (masqué dans la maquette).
- *  - Figures draw.io / captures d'écran : « Bloc non pris en charge dans cette version » (lot 3).
+ *  - Figures draw.io : « Bloc non pris en charge dans cette version » (lot 3). Les captures d'écran
+ *    sont des blocs `image` (pièce jointe, légende « Fig. 2 — … ») et il existe un bloc `attachment`
+ *    (fichier joint, absent de Main.dc.html) en fin de corps : plus d'exception « figure manquante »
+ *    pour les images / fichiers, seulement pour draw.io.
  *  - Propriétaire : « Équipe {nom de l'espace} » (maquette : « Équipe Identité »).
  *  - Bouton d'attestation : police IBM Plex (app) vs Arial UA (maquette).
  *  - Sélecteur de langue retiré de la maquette (hors V1).
@@ -40,6 +43,9 @@ import {
   SPACE_IDENTITE,
   TREE_IDENTITE,
   VISUAL_NOW,
+  ATTACHMENT_FILE_ID,
+  ATTACHMENT_IMAGE_ID,
+  mockAttachmentRoutes,
   pageDocument,
   pageDocumentViewer,
 } from './page-fixtures.mjs'
@@ -96,6 +102,7 @@ async function injectOidcSession(page) {
 async function mockPageApis(page, { variant = 'desktop', attestation = true, editor = true, related = true } = {}) {
   await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
   await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
+  await mockAttachmentRoutes(page)
   await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/resolved`, (route) =>
     json(route, editor ? pageDocument(variant) : pageDocumentViewer(variant)),
   )
@@ -273,12 +280,13 @@ test.describe('document page structural', () => {
   }
 
   const belowFoldExceptions = {
-    // Box.y : figures lot 3 absentes côté app (exception lot 3).
-    'doc-related-title': { skip: ['box'], reason: 'Figures lot 3 absentes → décalage vertical' },
-    'doc-related-link': { skip: ['box'], reason: 'Figures lot 3 absentes → décalage vertical' },
+    // Box.y : figures draw.io absentes côté app (exception lot 3) + carte « fichier joint » sans
+    // équivalent dans la maquette. L'image (Fig. 2) est rendue mais la maquette masque ses <figure>.
+    'doc-related-title': { skip: ['box'], reason: 'Figures draw.io (lot 3) et fichier joint → décalage vertical' },
+    'doc-related-link': { skip: ['box'], reason: 'Figures draw.io (lot 3) et fichier joint → décalage vertical' },
     'doc-feedback-label': {
       skip: ['box', 'text'],
-      reason: 'Libellé desktop/mobile partagé ; y dépend des figures lot 3',
+      reason: 'Libellé desktop/mobile partagé ; y dépend des figures draw.io (lot 3) et du fichier joint',
     },
   }
   test('desktop Page structural match', async ({ page }, testInfo) => {
@@ -427,6 +435,27 @@ test.describe('document page behaviour', () => {
     await expect(page.getByTestId('tab-edit')).toHaveCount(0)
     await expect(page.getByTestId('doc-publish')).toHaveCount(0)
     await expect(page.getByTestId('doc-feedback')).toBeVisible()
+  })
+
+  test('pièces jointes : image légendée (Fig. 2) + carte fichier joint', async ({ page }) => {
+    await prep(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`/docs/${PAGE_DOC_ID}`)
+    await page.waitForSelector('[data-mock-id="doc-title"]')
+
+    const image = page.getByTestId('attachment-image')
+    await expect(image).toHaveCount(1)
+    await expect(image).toHaveAttribute('data-attachment-id', ATTACHMENT_IMAGE_ID)
+    await expect(image).toHaveAttribute('alt', "Capture d'écran du formulaire de demande d'accès")
+    await expect(page.locator('figure.doc-figure figcaption')).toContainText(
+      'Fig. 2 — Formulaire soumis par le demandeur, avec justification obligatoire au-delà de 90 jours.',
+    )
+
+    const file = page.getByTestId('attachment-file')
+    await expect(file).toHaveCount(1)
+    await expect(file).toHaveAttribute('data-attachment-id', ATTACHMENT_FILE_ID)
+    await expect(file.locator('.doc-attachment-name')).toHaveText('matrice-habilitations-2026.pdf')
+    await expect(file.locator('.doc-attachment-meta')).toContainText('482 Ko')
   })
 
   test('blocs non supportés : libellé neutre, pas de JSON brut', async ({ page }) => {

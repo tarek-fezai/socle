@@ -13,7 +13,9 @@
  * ── Fixture applicative (edit-fixtures.mjs) ──────────────────────────────────────────────
  *  - Le seul éditeur est l'utilisateur courant, qui détient le verrou exclusif ; aucun bandeau de
  *    co-édition (la maquette en montre un : co-édition hors V1, voir « Normalisation »).
- *  - Corps limité aux nœuds du StarterKit (+ zones à compléter) ; paragraphes de remplissage sous la
+ *  - Corps limité aux nœuds du StarterKit (+ zones à compléter, + un bloc `image` et un bloc
+ *    `attachment` en fin de corps — la maquette n'en montre pas dans le corps, seulement l'entrée
+ *    « Fichier joint » du menu Insérer, masquée ouverte) ; paragraphes de remplissage sous la
  *    ligne de flottaison pour afficher exactement « 1 240 mots · 6 min de lecture ».
  *  - Seuil « paragraphe long » du serveur calé entre le chapeau et le paragraphe « en cours d'édition ».
  *  - Menu « Insérer » fermé (la maquette le montre ouvert) ; le titre du menu « Titre 2 » est obtenu
@@ -40,10 +42,11 @@
  *
  * ── Exceptions visuelles assumées (app ≠ maquette, hors normalisation) ─────────────────────
  *  E1. Barre d'outils : fonctions manquantes (souligné, couleur/surlignage, liste de tâches,
- *      retraits, alignements, lien, image, draw.io, tableau, @mention, « Réduire les blocs
+ *      retraits, alignements, lien, draw.io, tableau, @mention, « Réduire les blocs
  *      enrichis ») rendues désactivées (`aria-disabled`, info-bulle « Bientôt disponible », opacité
- *      réduite à 55 %) au lieu d'être actives.
- *  E2. Menu « Insérer » : seul « Bloc de code » est actif ; les autres entrées sont désactivées.
+ *      réduite à 55 %) au lieu d'être actives. « Insérer une image » est actif (envoi de pièce jointe).
+ *  E2. Menu « Insérer » : seuls « Bloc de code » et « Fichier joint » sont actifs ; les autres entrées
+ *      sont désactivées.
  *  E3. Propriétaire : « Équipe {nom de l'espace} » (maquette : « Équipe Identité »).
  *  E4. Carte « Paragraphe long » : message calculé (« Ce paragraphe dépasse N mots (M) — … ») au lieu
  *      du texte statique « Le paragraphe édité dépasse 60 mots — … » ; bouton « Aller au paragraphe »
@@ -92,6 +95,7 @@ import {
   editDocument,
   editLockMine,
 } from './edit-fixtures.mjs'
+import { ATTACHMENT_FILE_ID, ATTACHMENT_IMAGE_ID, mockAttachmentRoutes } from './page-fixtures.mjs'
 import { FAVORITES_SEED, NOTIFICATIONS_SEED, SPACE_INFRA, TREE_INFRA } from './dashboard-fixtures.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -157,6 +161,7 @@ async function mockEditApis(page, { lockHolder = null, putCalls = [], draftPutCa
   })
   await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
   await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
+  await mockAttachmentRoutes(page)
   await page.route(`**/api/v1/documents/${EDIT_DOC_ID}`, (route) => {
     const req = route.request()
     if (req.method() === 'PUT') {
@@ -439,11 +444,32 @@ test.describe('document edit behaviour', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(`/docs/${EDIT_DOC_ID}/edit`)
     await page.waitForSelector('[data-mock-id="edit-toolbar"]')
-    for (const label of ['Souligné', 'Insérer un tableau', 'Insérer une image', 'Mentionner une personne']) {
+    for (const label of ['Souligné', 'Insérer un tableau', 'Mentionner une personne']) {
       const btn = page.getByRole('button', { name: label })
       await expect(btn).toHaveAttribute('aria-disabled', 'true')
       await expect(btn).toHaveAttribute('title', 'Bientôt disponible')
     }
+    // Pièces jointes branchées : plus de « Bientôt disponible ».
+    const image = page.getByRole('button', { name: 'Insérer une image' })
+    await expect(image).not.toHaveAttribute('aria-disabled', 'true')
+    await expect(image).not.toHaveAttribute('data-soon', 'true')
     await expect(page.getByRole('button', { name: 'Gras' })).not.toHaveAttribute('aria-disabled', 'true')
+  })
+
+  test('pièces jointes : bloc image + bloc fichier joint rendus dans l’éditeur', async ({ page }) => {
+    await prep(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`/docs/${EDIT_DOC_ID}/edit`)
+    await page.waitForSelector('[data-mock-id="edit-toolbar"]')
+
+    const image = page.locator('.ProseMirror').getByTestId('attachment-image')
+    await expect(image).toHaveCount(1)
+    await expect(image).toHaveAttribute('data-attachment-id', ATTACHMENT_IMAGE_ID)
+
+    const file = page.locator('.ProseMirror').getByTestId('attachment-file')
+    await expect(file).toHaveCount(1)
+    await expect(file).toHaveAttribute('data-attachment-id', ATTACHMENT_FILE_ID)
+    await expect(file.locator('.doc-attachment-name')).toHaveText('matrice-habilitations-2026.pdf')
+    await expect(file.locator('.doc-attachment-meta')).toContainText('482 Ko')
   })
 })

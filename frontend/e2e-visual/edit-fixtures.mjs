@@ -6,7 +6,8 @@
  * Choix de fixture (voir l'en-tête de edit-visual.spec.mjs pour la liste complète des exceptions) :
  *  - le seul éditeur est l'utilisateur courant et il détient le verrou : pas de bandeau de co-édition,
  *    un seul avatar de présence ;
- *  - le corps ne contient que des nœuds StarterKit : pas de puce Jira / date, pas de callout, pas de
+ *  - le corps ne contient que des nœuds StarterKit (+ un bloc `image` et un bloc `attachment` en fin
+ *    de corps, sous la ligne de flottaison) : pas de puce Jira / date, pas de callout, pas de
  *    case à cocher, pas de lien réduit (la maquette est normalisée dans le spec) ;
  *  - des paragraphes de remplissage SOUS la ligne de flottaison amènent le compteur à exactement
  *    1 240 mots, comme la maquette ;
@@ -15,7 +16,7 @@
  *  - 3 tags (IAM, RGPD, Critique) et 2 champs personnalisés (Référence réglementaire, Système concerné).
  */
 import { ME_TAREK, SPACE_IDENTITE, TREE_IDENTITE, VISUAL_NOW } from './dashboard-fixtures.mjs'
-import { CAMPAIGN_ID, PAGE_COMMENTS, pageDocument } from './page-fixtures.mjs'
+import { ATTACHMENT_NODE, CAMPAIGN_ID, IMAGE_NODE, PAGE_COMMENTS, pageDocument } from './page-fixtures.mjs'
 
 export { ME_TAREK, SPACE_IDENTITE, TREE_IDENTITE, VISUAL_NOW, CAMPAIGN_ID, PAGE_COMMENTS }
 
@@ -95,6 +96,11 @@ export function editBody() {
     blocks.push(p(words.slice(0, take).join(' ')))
     remaining -= take
   }
+  // Pièces jointes (nœuds sans texte : le compteur de mots reste à 1 240) en fin de corps, sous la
+  // ligne de flottaison. Éditeur : l'image est rendue sans légende (la légende n'existe qu'en lecture).
+  const image = structuredClone(IMAGE_NODE)
+  delete image.attrs.caption
+  blocks.push(image, structuredClone(ATTACHMENT_NODE))
   if (countWords(LEAD) > EDIT_LONG_THRESHOLD || countWords(CHANTIER) > EDIT_LONG_THRESHOLD) {
     throw new Error('le chapeau dépasse le seuil de paragraphe long')
   }

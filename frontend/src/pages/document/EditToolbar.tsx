@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import type { ChainedCommands, Editor } from '@tiptap/react'
+import type { UploadKind } from '../../components/attachments/useAttachmentUploads'
 
 export const SOON_TITLE = 'Bientôt disponible'
+
+/** Envoi de pièces jointes : `enabled` faux (modèle, document inconnu) → boutons inactifs. */
+export type ToolbarAttachments = {
+  enabled: boolean
+  pick: (kind: UploadKind) => void
+}
 
 const INK = '#43434A'
 const MUTED = '#9B9BA1'
@@ -177,8 +184,10 @@ type InsertItem = {
   label: string
   bg: string
   icon: ReactNode
-  /** Seul « Bloc de code » est branché (StarterKit). */
+  /** « Bloc de code » (StarterKit). */
   run?: (editor: Editor) => void
+  /** « Fichier joint » : ouvre le sélecteur de fichiers (envoi vers l'API). */
+  pick?: UploadKind
 }
 
 const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
@@ -233,6 +242,7 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
             <polyline points="13.5 2 13.5 7.5 19 7.5" />
           </Svg>
         ),
+        pick: 'file',
       },
       {
         id: 'table',
@@ -325,7 +335,15 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
   },
 ]
 
-function InsertMenu({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
+function InsertMenu({
+  editor,
+  readOnly,
+  attachments,
+}: {
+  editor: Editor
+  readOnly: boolean
+  attachments?: ToolbarAttachments
+}) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const ref = useDismiss(open, () => setOpen(false))
@@ -372,17 +390,25 @@ function InsertMenu({ editor, readOnly }: { editor: Editor; readOnly: boolean })
                 <div className="edit-insert-title">{g.title}</div>
                 <div className="edit-insert-grid">
                   {items.map((it) => {
-                    const live = Boolean(it.run)
+                    const live = Boolean(it.run || it.pick)
+                    // Fichier joint : branché, mais inactif sans document porteur (modèle).
+                    const unavailable = Boolean(it.pick) && !attachments?.enabled
                     return (
                       <button
                         key={it.id}
                         type="button"
                         className={`edit-insert-item${live ? '' : ' is-soon'}`}
-                        aria-disabled={live ? undefined : true}
+                        aria-disabled={!live || unavailable ? true : undefined}
                         title={live ? undefined : SOON_TITLE}
                         data-soon={live ? undefined : 'true'}
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
+                          if (it.pick) {
+                            if (unavailable) return
+                            attachments?.pick(it.pick)
+                            setOpen(false)
+                            return
+                          }
                           if (!it.run) return
                           it.run(editor)
                           setOpen(false)
@@ -412,9 +438,18 @@ function InsertMenu({ editor, readOnly }: { editor: Editor; readOnly: boolean })
 /**
  * Barre d'outils de l'écran Modifier (Edit.dc.html). Actions réellement branchées : annuler /
  * rétablir, titres, gras / italique / barré, citation, effacer la mise en forme, listes, séparateur,
- * bloc de code. Le reste est affiché grisé (`aria-disabled`, « Bientôt disponible »).
+ * bloc de code, image et fichier joint (envoi API). Le reste est affiché grisé (`aria-disabled`,
+ * « Bientôt disponible »).
  */
-export function EditToolbar({ editor, readOnly = false }: { editor: Editor; readOnly?: boolean }) {
+export function EditToolbar({
+  editor,
+  readOnly = false,
+  attachments,
+}: {
+  editor: Editor
+  readOnly?: boolean
+  attachments?: ToolbarAttachments
+}) {
   const can = (fn: () => boolean) => !readOnly && fn()
   const run = (fn: (c: ChainedCommands) => ChainedCommands) => () => {
     fn(editor.chain().focus()).run()
@@ -586,7 +621,11 @@ export function EditToolbar({ editor, readOnly = false }: { editor: Editor; read
           <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
         </Svg>
       </Tool>
-      <Tool label="Insérer une image" soon>
+      <Tool
+        label="Insérer une image"
+        disabled={readOnly || !attachments?.enabled}
+        onClick={() => attachments?.pick('image')}
+      >
         <Svg>
           <rect x="3" y="3" width="18" height="18" rx="2" />
           <circle cx="8.5" cy="8.5" r="1.5" />
@@ -611,7 +650,7 @@ export function EditToolbar({ editor, readOnly = false }: { editor: Editor; read
         @
       </Tool>
       <Sep />
-      <InsertMenu editor={editor} readOnly={readOnly} />
+      <InsertMenu editor={editor} readOnly={readOnly} attachments={attachments} />
       <Sep />
       <button
         type="button"

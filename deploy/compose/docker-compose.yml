@@ -9,6 +9,15 @@ x-backend-env: &backend-env
   SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
   SOCLE_STORAGE_PROVIDER: ${SOCLE_STORAGE_PROVIDER:-git}
   SOCLE_STORAGE_GIT_PATH: ${SOCLE_STORAGE_GIT_REPOSITORY_PATH:-/data/git-content}
+  SOCLE_BLOB_PROVIDER: ${SOCLE_BLOB_PROVIDER:-local}
+  SOCLE_BLOB_LOCAL_DIR: ${SOCLE_BLOB_LOCAL_DIR:-/data/blobs}
+  SOCLE_BLOB_S3_ENDPOINT: ${SOCLE_BLOB_S3_ENDPOINT:-}
+  SOCLE_BLOB_S3_REGION: ${SOCLE_BLOB_S3_REGION:-garage}
+  SOCLE_BLOB_S3_BUCKET: ${SOCLE_BLOB_S3_BUCKET:-}
+  SOCLE_BLOB_S3_ACCESS_KEY: ${SOCLE_BLOB_S3_ACCESS_KEY:-}
+  SOCLE_BLOB_S3_SECRET_KEY: ${SOCLE_BLOB_S3_SECRET_KEY:-}
+  SOCLE_BLOB_S3_PATH_STYLE: ${SOCLE_BLOB_S3_PATH_STYLE:-true}
+  SOCLE_ATTACHMENT_MAX_MB: ${SOCLE_ATTACHMENT_MAX_MB:-25}
   OPENFGA_API_URL: ${OPENFGA_API_URL:-http://openfga:8080}
   OPENFGA_STORE_ID: ${OPENFGA_STORE_ID:-}
   OPENFGA_MODEL_ID: ${OPENFGA_MODEL_ID:-}
@@ -190,6 +199,7 @@ services:
       <<: *backend-env
     volumes:
       - git-content:/data/git-content
+      - blob-content:/data/blobs
       - openfga-config:/openfga-config
     depends_on:
       postgres:
@@ -208,6 +218,24 @@ services:
       timeout: 5s
       retries: 30
       start_period: 90s
+    restart: unless-stopped
+
+  # Optional S3-compatible store for blob tests (Garage).
+  # Usage: SOCLE_BLOB_PROVIDER=s3 + credentials below, then
+  #   docker compose --profile s3 up -d
+  garage:
+    profiles: ["s3"]
+    image: dxflrs/garage:v1.0.1
+    command: ["/garage", "server"]
+    environment:
+      GARAGE_ALLOW_WORLD_READABLE_SECRETS: "true"
+    volumes:
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+      - ./garage/garage.toml:/etc/garage.toml:ro
+    ports:
+      - "${GARAGE_S3_PORT:-3900}:3900"
+      - "${GARAGE_ADMIN_PORT:-3903}:3903"
     restart: unless-stopped
 
   frontend:
@@ -278,6 +306,9 @@ services:
 volumes:
   postgres-data:
   git-content:
+  blob-content:
+  garage-meta:
+  garage-data:
   openfga-config:
   caddy-data:
   caddy-config:

@@ -1,0 +1,14 @@
+{{- if and (eq (default "local" .Values.blob.provider) "local") (not .Values.blob.local.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "socle.fullname" . }}-blob-content
+  labels:
+    {{- include "socle.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.blob.local.storageSize }}
+{{- end }}

@@ -7,6 +7,19 @@ metadata:
 data:
   SOCLE_STORAGE_PROVIDER: {{ .Values.storage.provider | quote }}
   SOCLE_STORAGE_GIT_PATH: {{ .Values.storage.git.mountPath | quote }}
+  SOCLE_BLOB_PROVIDER: {{ default "local" .Values.blob.provider | quote }}
+  {{- if eq (default "local" .Values.blob.provider) "local" }}
+  SOCLE_BLOB_LOCAL_DIR: {{ .Values.blob.local.mountPath | quote }}
+  {{- end }}
+  {{- if eq (default "local" .Values.blob.provider) "s3" }}
+  SOCLE_BLOB_S3_ENDPOINT: {{ required "blob.s3.endpoint is required when blob.provider=s3" .Values.blob.s3.endpoint | quote }}
+  SOCLE_BLOB_S3_REGION: {{ .Values.blob.s3.region | quote }}
+  SOCLE_BLOB_S3_BUCKET: {{ required "blob.s3.bucket is required when blob.provider=s3" .Values.blob.s3.bucket | quote }}
+  SOCLE_BLOB_S3_PATH_STYLE: {{ .Values.blob.s3.pathStyle | quote }}
+  SOCLE_BLOB_S3_SSE: {{ .Values.blob.s3.serverSideEncryption | quote }}
+  {{- end }}
+  SOCLE_ATTACHMENT_MAX_MB: {{ .Values.attachment.maxMb | default 25 | quote }}
+  SOCLE_ATTACHMENT_ORPHAN_RETENTION_DAYS: {{ .Values.attachment.orphanRetentionDays | default 7 | quote }}
   OPENFGA_API_URL: {{ if eq .Values.openfga.mode "embedded" }}{{ printf "http://%s-openfga:8080" (include "socle.fullname" .) | quote }}{{ else }}{{ .Values.openfga.external.apiUrl | quote }}{{ end }}
   OPENFGA_STORE_ID: {{ .Values.openfga.external.storeId | quote }}
   OPENFGA_MODEL_ID: {{ .Values.openfga.external.modelId | quote }}

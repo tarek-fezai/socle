@@ -8,6 +8,7 @@
 | PostgreSQL `openfga` | Authorization tuples | Required for access control |
 | PostgreSQL `temporal` + `temporal_visibility` | Workflow history & visibility | In-flight approvals survive restore if consistent |
 | Git content volume | `git-content` / `SOCLE_STORAGE_GIT_PATH` | **Required** when `SOCLE_STORAGE_PROVIDER=git` — canonical document bodies |
+| Blob volume / S3 bucket | `blob-content` / `SOCLE_BLOB_LOCAL_DIR` or `SOCLE_BLOB_S3_BUCKET` | **Required** with Postgres — attachment bytes; metadata alone is not enough to restore files |
 | OpenFGA config volume | `openfga-config/` (`store.id`, `model.id`, fingerprint) | **Cache only** — store/model ids are recoverable from the OpenFGA DB; losing this volume must not create a second store |
 | Caddy TLS | `caddy-data` | Only if not using external cert manager |
 
@@ -58,6 +59,10 @@ docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -Fc temporal_visibil
 docker run --rm -v socle-production_git-content:/data -v "$PWD:/backup" alpine \
   tar czf /backup/git-content.tgz -C /data .
 
+# Local blob provider (skip if SOCLE_BLOB_PROVIDER=s3 — backup the bucket instead)
+docker run --rm -v socle-production_blob-content:/data -v "$PWD:/backup" alpine \
+  tar czf /backup/blob-content.tgz -C /data .
+
 docker compose start backend webhook-worker
 ```
 
@@ -66,8 +71,9 @@ docker compose start backend webhook-worker
 1. Stop application services (`backend`, `frontend`, `webhook-worker`, `caddy`).
 2. Restore Postgres dumps into empty databases (or recreate volume + init scripts, then `pg_restore`).
 3. Restore Git volume tarball to `git-content`.
-4. Ensure `OPENFGA_STORE_ID` / `OPENFGA_MODEL_ID` in env match the restored OpenFGA DB (or re-run model publish if store id changed — tuples must align).
-5. Start stack; watch backend logs for storage consistency validators.
+4. Restore blob volume (`blob-content`) or the S3-compatible bucket together with Postgres — attachment rows without bytes are unusable.
+5. Ensure `OPENFGA_STORE_ID` / `OPENFGA_MODEL_ID` in env match the restored OpenFGA DB (or re-run model publish if store id changed — tuples must align).
+6. Start stack; watch backend logs for storage consistency validators.
 
 ## Post-restore verification
 

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.privacy;
 
+import eu.socle.attachment.AttachmentService;
 import eu.socle.comment.CommentDtos.PersonalCommentExport;
 import eu.socle.comment.CommentService;
 import eu.socle.document.DocumentDraftService;
 import eu.socle.document.DocumentDraftService.PersonalDraftExport;
 import eu.socle.user.UserSyncService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,7 @@ public class PersonalDataExportService {
     private final CommentService commentService;
     private final DocumentDraftService draftService;
     private final UserSyncService userSyncService;
+    private AttachmentService attachmentService;
 
     public PersonalDataExportService(
             CommentService commentService,
@@ -39,6 +42,11 @@ public class PersonalDataExportService {
         this.commentService = commentService;
         this.draftService = draftService;
         this.userSyncService = userSyncService;
+    }
+
+    @Autowired(required = false)
+    void setAttachmentService(AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
     }
 
     @Transactional(readOnly = true)
@@ -52,6 +60,9 @@ public class PersonalDataExportService {
         out.put("displayName", user.getDisplayName());
         out.put("comments", comments);
         out.put("documentDrafts", drafts);
+        if (attachmentService != null) {
+            out.put("attachments", attachmentService.exportPersonalMetadata(user.getId()));
+        }
         return out;
     }
 

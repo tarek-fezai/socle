@@ -15,8 +15,34 @@ public final class ApiErrors {
     public static final String DIFF_TOO_LARGE = "diff_too_large";
     /** Pièce jointe / multipart au-delà de la limite ({@code MaxUploadSizeExceededException}). */
     public static final String PAYLOAD_TOO_LARGE = "payload_too_large";
+    /** Type MIME détecté hors liste blanche (ou SVG). */
+    public static final String ATTACHMENT_TYPE_REJECTED = "attachment_type_rejected";
+    /** Dimensions image (largeur×hauteur) au-delà de {@code SOCLE_ATTACHMENT_MAX_IMAGE_PIXELS}. */
+    public static final String IMAGE_TOO_LARGE = "image_too_large";
 
     private ApiErrors() {}
+
+    public static CodedStatusException attachmentTypeRejected(String mediaType) {
+        String detail = mediaType == null || mediaType.isBlank()
+                ? "Type de fichier non autorisé"
+                : "Type de fichier non autorisé : " + mediaType;
+        return new CodedStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ATTACHMENT_TYPE_REJECTED, detail);
+    }
+
+    public static CodedStatusException payloadTooLarge() {
+        return new CodedStatusException(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                PAYLOAD_TOO_LARGE,
+                "Fichier trop volumineux");
+    }
+
+    public static CodedStatusException imageTooLarge(int width, int height, long maxPixels) {
+        return new CodedStatusException(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                IMAGE_TOO_LARGE,
+                "Image trop volumineuse (" + width + "×" + height
+                        + ", maximum " + maxPixels + " pixels)");
+    }
 
     public static CodedStatusException approvalInProgress() {
         return new CodedStatusException(

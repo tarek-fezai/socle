@@ -63,6 +63,10 @@ public final class AuditActions {
     public static final String FOLDER_EXPORTED = "folder.exported";
     public static final String TAG_EXPORTED = "tag.exported";
 
+    /** Pièces jointes (pas d'audit sur les lectures). */
+    public static final String ATTACHMENT_UPLOADED = "attachment.uploaded";
+    public static final String ATTACHMENT_PURGED = "attachment.purged";
+
     /** Définitions d'approbation (admin). */
     public static final String WORKFLOW_CREATED = "workflow.created";
     public static final String WORKFLOW_UPDATED = "workflow.updated";

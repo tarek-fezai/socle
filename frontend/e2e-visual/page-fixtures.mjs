@@ -4,10 +4,14 @@
  * MobilePage.dc.html numbers and copy ("Politique de gestion des accès").
  *
  * Pixel exceptions (documented in page-visual.spec.mjs):
- *  - draw.io figures and screenshot captures are NOT seeded as supported blocks: the
- *    maquette shows SVG / dashed placeholders there, the app renders the
- *    « Bloc non pris en charge dans cette version » placeholder. They sit below the
- *    900px fold on desktop and are excluded from the pixel frame.
+ *  - draw.io figures are NOT seeded as supported blocks: the maquette shows SVG there, the
+ *    app renders the « Bloc non pris en charge dans cette version » placeholder. They sit
+ *    below the 900px fold on desktop and are excluded from the pixel frame.
+ *  - Fig. 2 (« Capture d'écran — formulaire de demande d'accès ») est un vrai bloc `image`
+ *    (pièce jointe, légende numérotée « Fig. 2 — … ») ; un bloc `attachment` (fichier joint)
+ *    clôt le corps. La maquette Main.dc.html n'a pas de carte « fichier joint » : elle n'est
+ *    donc comparée ni en pixel (sous la ligne de flottaison) ni en structurel.
+ *    Les octets de l'image sont servis par `mockAttachmentRoutes`.
  *  - « Champs personnalisés » is omitted in the app when the organisation has no
  *    field definitions (no API yet) → hidden in the maquette before comparing.
  */
@@ -21,6 +25,57 @@ export const RELATED_IDS = [
   'd0000001-0000-4000-8000-0000000000a1',
   'd0000001-0000-4000-8000-0000000000a2',
 ]
+
+/** Identifiants stables des pièces jointes de la fixture (UUID de style fixture). */
+export const ATTACHMENT_IMAGE_ID = 'e0000001-0000-4000-8000-000000000001'
+export const ATTACHMENT_FILE_ID = 'e0000001-0000-4000-8000-000000000002'
+
+/** Bloc `image` (pièce jointe) : Fig. 2 de la maquette — légende numérotée par la vue lecture. */
+export const IMAGE_NODE = {
+  type: 'image',
+  attrs: {
+    id: ATTACHMENT_IMAGE_ID,
+    filename: 'formulaire-demande-acces.png',
+    mediaType: 'image/png',
+    sizeBytes: 184320,
+    width: 1280,
+    height: 640,
+    alt: "Capture d'écran du formulaire de demande d'accès",
+    caption: 'Formulaire soumis par le demandeur, avec justification obligatoire au-delà de 90 jours.',
+  },
+}
+
+/** Bloc `attachment` (fichier joint). */
+export const ATTACHMENT_NODE = {
+  type: 'attachment',
+  attrs: {
+    id: ATTACHMENT_FILE_ID,
+    filename: 'matrice-habilitations-2026.pdf',
+    mediaType: 'application/pdf',
+    sizeBytes: 482000,
+  },
+}
+
+/** PNG 64×32 uni (#EEEDFD), servi pour l'image de la fixture — évite l'état « Image indisponible ». */
+export const ATTACHMENT_IMAGE_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAS0lEQVR4AeXBAQ0AIAzAsH3+rYIDwoWsnXveJ0ziJE7iJE7iJE7iJE7iJE7iJE7iJE7iJE7iJE7iJE7iJE7iJE7iJE7iJE7iJE7iFny2BBc0RmPoAAAAAElFTkSuQmCC'
+
+/**
+ * Sert les octets de l'image (et du fichier) pour `GET /api/v1/attachments/:id`.
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockAttachmentRoutes(page) {
+  await page.route(`**/api/v1/attachments/${ATTACHMENT_IMAGE_ID}`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from(ATTACHMENT_IMAGE_PNG_BASE64, 'base64'),
+    }),
+  )
+  await page.route(`**/api/v1/attachments/${ATTACHMENT_FILE_ID}`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/pdf', body: Buffer.from('%PDF-1.4\n%%EOF\n') }),
+  )
+}
 
 const text = (t, marks) => ({ type: 'text', text: t, ...(marks ? { marks } : {}) })
 const p = (t) => ({ type: 'paragraph', content: [text(t)] })
@@ -67,17 +122,20 @@ export function pageBody(variant = 'desktop') {
           row([cell('Analyste conformité'), cell('Registres & audits'), cell('Semestrielle')]),
         ],
       },
-      // Exception pixel : draw.io / capture d'écran → bloc non pris en charge (sous la ligne de flottaison).
+      // Exception pixel : draw.io → bloc non pris en charge (sous la ligne de flottaison).
       {
         type: 'drawio',
         attrs: { caption: "Circuit d'approbation à deux niveaux ; un refus à N2 renvoie la demande au demandeur." },
       },
-      { type: 'screenshot', attrs: { caption: 'Formulaire soumis par le demandeur, avec justification obligatoire au-delà de 90 jours.' } },
+      // Fig. 2 : capture d'écran = pièce jointe image (légende « Fig. 2 — … »).
+      structuredClone(IMAGE_NODE),
       h2('Flux de provisionnement'),
       p(
         "L'événement d'embauche déclenche la création du compte dans le moteur IGA, qui provisionne immédiatement l'annuaire central et synchronise les applications SaaS à échéance quotidienne.",
       ),
       { type: 'drawio', attrs: { caption: "Le SIRH déclenche le provisionnement immédiat de l'annuaire, la synchronisation SaaS suit en tâche planifiée." } },
+      // Fichier joint (absent de la maquette) : en fin de corps, sous la ligne de flottaison.
+      structuredClone(ATTACHMENT_NODE),
     ],
   }
 }
