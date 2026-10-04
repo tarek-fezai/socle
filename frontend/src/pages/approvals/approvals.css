@@ -1,0 +1,704 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/*
+ * Écrans d'approbation — Approval.dc.html (1440×900), DiffApproval.dc.html (1440×900) et
+ * MobileApproval.dc.html (390×844). Partage les jetons de document-page.css / document-history.css
+ * (barre haute, boutons fantôme/CTA, diff) ; préfixes `appr-` (approbation) et `adiff-` (comparaison).
+ * Polices : Instrument Serif (titre), IBM Plex Sans (corps), IBM Plex Mono (diff). Aucune police ajoutée.
+ * Couleurs : #3730E0 accent · #0E0E10 encre · #43434A corps · #9B9BA1 secondaire · #ECECEE filets ·
+ * #1E8E5A approuvé · #B54708 refus / échéance · #B7791F attente.
+ *
+ * Les maquettes n'appliquent aucun reset `box-sizing` (content-box) alors que le projet utilise le
+ * preflight Tailwind (border-box) : chaque bloc dimensionné est donc explicitement en content-box.
+ */
+
+.appr-page a.doc-crumb {
+  color: #9b9ba1;
+}
+
+.appr-page a.doc-crumb:hover {
+  color: #3730e0;
+}
+
+/* —— Colonne principale (desktop) —— */
+
+.appr-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-width: 0;
+}
+
+.appr-main {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  box-sizing: content-box;
+  padding: 44px 40px 48px;
+  min-width: 0;
+}
+
+.appr-column {
+  width: 680px;
+  max-width: 100%;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.appr-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.appr-switch {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 12px;
+  border: 1px solid #ececee;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  color: #43434a;
+  cursor: pointer;
+}
+
+.appr-switch:hover {
+  background: #f5f5f7;
+}
+
+.appr-switch.is-selected {
+  border-color: #c7c6f5;
+  background: #f0effc;
+  color: #0e0e10;
+}
+
+.appr-switch-meta {
+  font-size: 11.5px;
+  color: #b54708;
+}
+
+.appr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: content-box;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b7791f;
+  background: #fbf3e4;
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-bottom: 16px;
+}
+
+.appr-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b7791f;
+  flex-shrink: 0;
+}
+
+.appr-title {
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1.15;
+  margin: 0 0 10px;
+  color: #0e0e10;
+}
+
+.appr-lede {
+  font-size: 14.5px;
+  color: #6b6b72;
+  margin: 0 0 28px;
+  line-height: 1.6;
+}
+
+.appr-lede strong {
+  color: #0e0e10;
+  font-weight: 700;
+}
+
+/* —— Circuit d'approbation (stepper) —— */
+
+.appr-circuit {
+  box-sizing: content-box;
+  border: 1px solid #ececee;
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 24px;
+}
+
+.appr-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9b9ba1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.appr-circuit .appr-label {
+  margin-bottom: 16px;
+}
+
+.appr-justif-label {
+  margin-bottom: 8px;
+}
+
+.appr-steps {
+  display: flex;
+  align-items: flex-start;
+}
+
+.appr-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.appr-step.is-locked {
+  opacity: 0.5;
+}
+
+.appr-step-node {
+  box-sizing: content-box;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.appr-step-node.is-done {
+  background: #1e8e5a;
+}
+
+.appr-step-node.is-current {
+  background: #f0effc;
+  border: 2px solid #3730e0;
+}
+
+.appr-step-node.is-todo,
+.appr-step-node.is-locked {
+  border: 1.5px solid #dedee1;
+}
+
+.appr-step-initials {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3730e0;
+}
+
+.appr-step-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0e0e10;
+  text-align: center;
+}
+
+.appr-step.is-locked .appr-step-name {
+  color: #6b6b72;
+}
+
+.appr-step-status {
+  font-size: 11px;
+  text-align: center;
+  color: #9b9ba1;
+}
+
+.appr-step-status.is-done {
+  color: #1e8e5a;
+}
+
+.appr-step-status.is-current {
+  color: #b7791f;
+}
+
+.appr-link-line {
+  box-sizing: content-box;
+  flex-grow: 1;
+  height: 1px;
+  background: #ececee;
+  margin-top: 17px;
+}
+
+.appr-link-line.is-dashed {
+  border-top: 1px dashed #dedee1;
+}
+
+/* —— Justification —— */
+
+.appr-field {
+  box-sizing: content-box;
+  border: 1px solid #ececee;
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-bottom: 22px;
+  min-height: 60px;
+}
+
+.appr-field:focus-within {
+  border-color: #c7c6f5;
+}
+
+.appr-field.is-invalid {
+  border-color: #f3c9bb;
+}
+
+.appr-field textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 60px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: normal;
+  color: #0e0e10;
+}
+
+.appr-field textarea::placeholder {
+  color: #c2c2c6;
+}
+
+.appr-error {
+  margin: -12px 0 14px;
+  font-size: 13px;
+  color: #b54708;
+}
+
+.appr-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.appr-btn {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: normal;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.appr-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.appr-approve {
+  flex: 1;
+  box-sizing: content-box;
+  text-align: center;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 8px;
+  background: #1e8e5a;
+  color: #ffffff;
+}
+
+.appr-approve:hover:not(:disabled) {
+  background: #187048;
+}
+
+.appr-reject {
+  box-sizing: content-box;
+  padding: 12px 22px;
+  border: 1px solid #f3c9bb;
+  border-radius: 8px;
+  background: none;
+  color: #b54708;
+}
+
+.appr-reject:hover:not(:disabled) {
+  background: #fbe2db;
+}
+
+.appr-reload {
+  margin: 0 0 14px;
+}
+
+/* —— Rail de méta-données —— */
+
+.appr-rail {
+  box-sizing: content-box;
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid #ececee;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  overflow: hidden;
+}
+
+.appr-rail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9b9ba1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.appr-requester {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.appr-avatar {
+  box-sizing: content-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #eeedfd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3730e0;
+}
+
+.appr-requester-name {
+  font-size: 13.5px;
+  color: #0e0e10;
+  font-weight: 500;
+}
+
+.appr-rail-value {
+  font-size: 13.5px;
+  color: #43434a;
+}
+
+.appr-rail-value.is-sla {
+  color: #b54708;
+  font-weight: 500;
+}
+
+.appr-compare-link {
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid #ececee;
+  border-radius: 8px;
+}
+
+.appr-compare-link:hover {
+  background: #f5f5f7;
+}
+
+.appr-compare-label {
+  font-size: 13px;
+  color: #3730e0;
+  font-weight: 600;
+}
+
+.appr-compare-counts {
+  font-size: 11.5px;
+  color: #9b9ba1;
+}
+
+.appr-rail-muted {
+  font-size: 13px;
+  color: #9b9ba1;
+}
+
+.appr-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.appr-link {
+  font-size: 13px;
+  color: #43434a;
+  padding: 6px 0;
+}
+
+.appr-link:hover {
+  color: #3730e0;
+}
+
+/* —— Écran de repli (chargement / aucune demande / erreur) —— */
+
+.appr-state {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  padding: 44px;
+}
+
+.appr-state-title {
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-size: 28px;
+  margin: 0 0 8px;
+  color: #0e0e10;
+}
+
+.appr-state-text {
+  font-size: 14px;
+  color: #6b6b72;
+  margin: 0;
+}
+
+.appr-state-text.is-error {
+  color: #b54708;
+}
+
+/* —— Comparaison d'approbation (DiffApproval.dc.html) —— */
+
+.adiff-page .diff-controls {
+  height: auto;
+  box-sizing: border-box;
+  padding: 14px 44px;
+}
+
+.adiff-page .diff-sel {
+  line-height: normal;
+  box-sizing: content-box;
+}
+
+.adiff-page .diff-sel-select:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.adiff-badge {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: content-box;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b7791f;
+  background: #fbf3e4;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+.adiff-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b7791f;
+  flex-shrink: 0;
+}
+
+.adiff-error {
+  margin: 0 44px 12px;
+  font-size: 13px;
+  color: #b54708;
+}
+
+/* —— Mobile (MobileApproval.dc.html, 390 px) —— */
+
+.appr-m-scroll {
+  flex: 1 1 auto;
+  box-sizing: content-box;
+  padding: 20px 16px 12px;
+  min-width: 0;
+}
+
+.appr-m-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: content-box;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b7791f;
+  background: #fdf3e3;
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-bottom: 16px;
+}
+
+.appr-m-title {
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-size: 25px;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  color: #0e0e10;
+}
+
+.appr-m-sub {
+  font-size: 12.5px;
+  color: #9b9ba1;
+  margin-bottom: 20px;
+}
+
+.appr-m-card {
+  box-sizing: content-box;
+  border: 1px solid #ececee;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.appr-m-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b0b0b5;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.appr-m-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.appr-m-step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.appr-m-node {
+  box-sizing: content-box;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.appr-m-node.is-reached {
+  background: #3730e0;
+}
+
+.appr-m-node.is-todo {
+  border: 1.5px solid #dedee1;
+}
+
+.appr-m-step-name {
+  font-size: 13px;
+  color: #43434a;
+}
+
+.appr-m-step-name.is-todo {
+  color: #9b9ba1;
+}
+
+.appr-m-diff-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.appr-m-diff-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0e0e10;
+}
+
+.appr-m-quote {
+  border-left: 3px solid #3730e0;
+  background: #fafafe;
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 18px;
+}
+
+.appr-m-quote p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #33333c;
+}
+
+.appr-m-links {
+  margin-bottom: 18px;
+}
+
+.appr-m-links .appr-link {
+  display: block;
+}
+
+.appr-m-justif .appr-label {
+  margin-bottom: 8px;
+}
+
+.appr-m-justif .appr-field {
+  margin-bottom: 14px;
+}
+
+.appr-m-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  border-top: 1px solid #ececee;
+  background: #ffffff;
+}
+
+.appr-m-reject {
+  flex: 1;
+  box-sizing: content-box;
+  padding: 12px 0;
+  border: 1px solid #ececee;
+  border-radius: 9px;
+  background: none;
+  color: #b54708;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: normal;
+  cursor: pointer;
+}
+
+.appr-m-approve {
+  flex: 1.4;
+  box-sizing: content-box;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 9px;
+  background: #3730e0;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: normal;
+  cursor: pointer;
+}
+
+.appr-m-reject:disabled,
+.appr-m-approve:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media print {
+  .appr-actions,
+  .appr-m-bar {
+    display: none !important;
+  }
+}
