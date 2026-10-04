@@ -170,7 +170,7 @@ class DocumentDraftServiceTest {
         lockFor(ALICE);
 
         for (int i = 1; i <= 20; i++) {
-            service.put(jwt, DOC, "Titre " + i, Map.of("blocks", List.of("v" + i)), 3);
+            service.put(jwt, DOC, "Titre " + i, VersionTestSupport.doc("v" + i), 3);
         }
 
         assertThat(count("SELECT count(*) FROM document_versions WHERE document_id = ?", DOC)).isZero();
@@ -180,7 +180,7 @@ class DocumentDraftServiceTest {
         assertThat(count("SELECT count(*) FROM document_drafts WHERE document_id = ?", DOC)).isEqualTo(1);
         DraftView draft = service.get(jwt, DOC);
         assertThat(draft.title()).isEqualTo("Titre 20");
-        assertThat(draft.body()).isEqualTo(Map.of("blocks", List.of("v20")));
+        assertThat(draft.body()).isEqualTo(VersionTestSupport.doc("v20"));
         assertThat(draft.baseVersionNo()).isEqualTo(3);
         assertThat(draft.updatedAt()).isNotNull();
     }
@@ -214,7 +214,7 @@ class DocumentDraftServiceTest {
     @Test
     void getDraftOfAnotherUser_is404() {
         lockFor(ALICE);
-        service.put(jwt, DOC, "Privé", Map.of("a", 1), 3);
+        service.put(jwt, DOC, "Privé", VersionTestSupport.doc("a"), 3);
 
         currentUser = BOB;
         assertThatThrownBy(() -> service.get(jwt, DOC))
@@ -229,10 +229,10 @@ class DocumentDraftServiceTest {
     @Test
     void drafts_areIndependentPerUser() {
         lockFor(ALICE);
-        service.put(jwt, DOC, "Alice", Map.of("a", 1), 3);
+        service.put(jwt, DOC, "Alice", VersionTestSupport.doc("a"), 3);
         currentUser = BOB;
         lockFor(BOB);
-        service.put(jwt, DOC, "Bob", Map.of("b", 2), 3);
+        service.put(jwt, DOC, "Bob", VersionTestSupport.doc("b"), 3);
 
         assertThat(service.get(jwt, DOC).title()).isEqualTo("Bob");
         currentUser = ALICE;
@@ -245,13 +245,13 @@ class DocumentDraftServiceTest {
     @Test
     void putWithoutEditLock_is409_andWritesNothing() {
         // aucun verrou, puis verrou détenu par quelqu'un d'autre
-        assertThatThrownBy(() -> service.put(jwt, DOC, "T", Map.of("a", 1), 3))
+        assertThatThrownBy(() -> service.put(jwt, DOC, "T", VersionTestSupport.doc("a"), 3))
                 .satisfies(t -> {
                     assertStatus(t, HttpStatus.CONFLICT);
                     assertThat(((ResponseStatusException) t).getReason()).contains("Verrou d'édition");
                 });
         lockFor(BOB);
-        assertThatThrownBy(() -> service.put(jwt, DOC, "T", Map.of("a", 1), 3))
+        assertThatThrownBy(() -> service.put(jwt, DOC, "T", VersionTestSupport.doc("a"), 3))
                 .satisfies(t -> assertStatus(t, HttpStatus.CONFLICT));
 
         assertThat(count("SELECT count(*) FROM document_drafts")).isZero();
@@ -261,7 +261,7 @@ class DocumentDraftServiceTest {
     void putWithExpiredLock_is409() {
         lockFor(ALICE);
         jdbc.update("UPDATE document_edit_locks SET heartbeat_at = now() - interval '10 minutes'");
-        assertThatThrownBy(() -> service.put(jwt, DOC, "T", Map.of("a", 1), 3))
+        assertThatThrownBy(() -> service.put(jwt, DOC, "T", VersionTestSupport.doc("a"), 3))
                 .satisfies(t -> assertStatus(t, HttpStatus.CONFLICT));
     }
 
@@ -271,7 +271,7 @@ class DocumentDraftServiceTest {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé (editor)"))
                 .when(authorizationService).requireDocumentRelation(ALICE, DOC, "editor");
 
-        assertThatThrownBy(() -> service.put(jwt, DOC, "T", Map.of("a", 1), 3))
+        assertThatThrownBy(() -> service.put(jwt, DOC, "T", VersionTestSupport.doc("a"), 3))
                 .satisfies(t -> assertStatus(t, HttpStatus.FORBIDDEN));
         assertThatThrownBy(() -> service.get(jwt, DOC))
                 .satisfies(t -> assertStatus(t, HttpStatus.FORBIDDEN));
@@ -303,7 +303,7 @@ class DocumentDraftServiceTest {
     @Test
     void delete_removesOwnDraft_then404() {
         lockFor(ALICE);
-        service.put(jwt, DOC, "T", Map.of("a", 1), 3);
+        service.put(jwt, DOC, "T", VersionTestSupport.doc("a"), 3);
 
         service.delete(jwt, DOC);
 
@@ -314,10 +314,10 @@ class DocumentDraftServiceTest {
     @Test
     void export_and_erase_coverOnlyTheUsersDrafts() {
         lockFor(ALICE);
-        service.put(jwt, DOC, "Alice", Map.of("a", 1), 3);
+        service.put(jwt, DOC, "Alice", VersionTestSupport.doc("a"), 3);
         currentUser = BOB;
         lockFor(BOB);
-        service.put(jwt, DOC, "Bob", Map.of("b", 2), 3);
+        service.put(jwt, DOC, "Bob", VersionTestSupport.doc("b"), 3);
 
         List<DocumentDraftService.PersonalDraftExport> export = service.exportFor(ALICE);
         assertThat(export).hasSize(1);

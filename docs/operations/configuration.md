@@ -48,10 +48,11 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SOCLE_BLOB_S3_SECRET_KEY` | empty | when `s3` | **yes** | Secret key |
 | `SOCLE_BLOB_S3_PATH_STYLE` | `true` | no | no | Path-style addressing (Garage / MinIO) |
 | `SOCLE_BLOB_S3_SSE` | `true` | no | no | Request SSE-S3 (`AES256`) when the service supports it |
-| `SOCLE_ATTACHMENT_MAX_MB` | `25` | no | no | Max upload size (MB); also sets `spring.servlet.multipart.max-*-size` |
+| `SOCLE_ATTACHMENT_MAX_MB` | `25` | no | no | Max upload size (MB) for non-video MIME types |
+| `SOCLE_ATTACHMENT_MAX_VIDEO_MB` | `200` | no | no | Max upload size (MB) for `video/mp4` and `video/webm`; also sets `spring.servlet.multipart.max-*-size` |
 | `SOCLE_ATTACHMENT_ORPHAN_RETENTION_DAYS` | `7` | no | no | Days before unreferenced uploads are purged (draft-referenced IDs are skipped) |
 | `SOCLE_ATTACHMENT_MAX_IMAGE_PIXELS` | `40000000` | no | no | Max width×height before pixel decode (decompression-bomb guard) |
-| `SOCLE_ATTACHMENT_ALLOWED_TYPES` | png/jpeg/webp/gif, pdf, office, txt/csv, zip | no | no | Comma-separated MIME allow-list (Tika-detected). SVG not included; WebP via TwelveMonkeys |
+| `SOCLE_ATTACHMENT_ALLOWED_TYPES` | png/jpeg/webp/gif, pdf, mp4/webm, office, txt/csv, zip | no | no | Comma-separated MIME allow-list (Tika-detected). SVG not included; WebP via TwelveMonkeys |
 
 ## Temporal
 

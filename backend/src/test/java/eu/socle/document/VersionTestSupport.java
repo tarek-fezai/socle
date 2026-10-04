@@ -115,6 +115,11 @@ final class VersionTestSupport {
         return d;
     }
 
+    /** Corps TipTap minimal valide (paragraphe texte) — pour create/update/draft/restore. */
+    static Map<String, Object> doc(String text) {
+        return docOf(List.of(p(text == null ? "" : text)));
+    }
+
     static Map<String, Object> p(String text) {
         Map<String, Object> n = new LinkedHashMap<>();
         n.put("type", "paragraph");

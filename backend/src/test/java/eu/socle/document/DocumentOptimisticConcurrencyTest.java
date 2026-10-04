@@ -67,14 +67,14 @@ class DocumentOptimisticConcurrencyTest {
 
     @Test
     void relational_secondUpdateWithStaleExpectedVersion_returns409() {
-        DocumentEntity entity = document(1, Map.of("v", 1));
+        DocumentEntity entity = document(1, VersionTestSupport.doc("v1"));
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
 
-        service.update(jwt(), DOC, new UpdateDocumentRequest("T", Map.of("v", 2), "a", 1));
+        service.update(jwt(), DOC, new UpdateDocumentRequest("T", VersionTestSupport.doc("v2"), "a", 1));
         assertThat(entity.getCurrentVersionNo()).isEqualTo(2);
 
         assertThatThrownBy(() ->
-                service.update(jwt(), DOC, new UpdateDocumentRequest("T", Map.of("v", 3), "b", 1)))
+                service.update(jwt(), DOC, new UpdateDocumentRequest("T", VersionTestSupport.doc("v3"), "b", 1)))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> {
                     ResponseStatusException rse = (ResponseStatusException) ex;
@@ -84,7 +84,7 @@ class DocumentOptimisticConcurrencyTest {
                 });
 
         assertThat(entity.getCurrentVersionNo()).isEqualTo(2);
-        assertThat(entity.getBody()).isEqualTo(Map.of("v", 2));
+        assertThat(entity.getBody()).isEqualTo(VersionTestSupport.doc("v2"));
     }
 
     @Test
@@ -93,7 +93,7 @@ class DocumentOptimisticConcurrencyTest {
         DocumentEntity entity = document(3, Map.of("x", 1));
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
 
-        var response = service.update(jwt(), DOC, new UpdateDocumentRequest("T", Map.of("x", 2), null, 3));
+        var response = service.update(jwt(), DOC, new UpdateDocumentRequest("T", VersionTestSupport.doc("x2"), null, 3));
         assertThat(response.currentVersionNo()).isEqualTo(4);
     }
 
