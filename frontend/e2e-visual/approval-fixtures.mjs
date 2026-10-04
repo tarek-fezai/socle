@@ -21,7 +21,10 @@ export const APPR_NOW = Date.parse('2026-09-28T09:14:00.000Z')
 const CREATED_AT = '2026-09-27T07:14:00.000Z'
 const DEADLINE_AT = new Date(Date.parse(CREATED_AT) + 48 * 3_600_000).toISOString()
 
-/** Approval.dc.html : étape N2 en attente (N1 approuvée), révision v13 contre la v12 approuvée. */
+/**
+ * File `/approvals/mine` : plus de liens impactés (tableaux vides / hiddenImpactedCount: 0).
+ * Les pixel-tests de décision utilisent `APPR_DETAIL_*` via `GET /approvals/{id}`.
+ */
 export const APPR_ITEM_DESKTOP = {
   approvalRequestId: APPR_REQUEST_ID,
   documentId: PAGE_DOC_ID,
@@ -36,17 +39,42 @@ export const APPR_ITEM_DESKTOP = {
   createdAt: CREATED_AT,
   requestedByDisplayName: 'Claire Dubois',
   requestedByInitials: 'CD',
+  impactedLinks: [],
+  hiddenImpactedCount: 0,
+}
+
+/** MobileApproval — file mine (N1), sans liens. */
+export const APPR_ITEM_MOBILE = {
+  ...APPR_ITEM_DESKTOP,
+  currentStepOrder: 1,
+}
+
+/** Détail décision (Approval.dc.html) — canDecide + liens entrants filtrés. */
+export const APPR_DETAIL_DESKTOP = {
+  ...APPR_ITEM_DESKTOP,
   impactedLinks: [
     { id: APPR_LINK_PROVISIONING_ID, title: 'Procédure de provisioning' },
     { id: APPR_LINK_REVIEW_ID, title: 'Revue périodique des droits' },
   ],
+  hiddenImpactedCount: 0,
+  canDecide: true,
+  cannotDecideReason: null,
 }
 
-/** MobileApproval.dc.html : étape N1 (« vous »), aucun lien impacté (exception M3). */
-export const APPR_ITEM_MOBILE = {
-  ...APPR_ITEM_DESKTOP,
-  currentStepOrder: 1,
+/** Détail mobile (MobileApproval.dc.html) — canDecide, aucun lien (exception M3). */
+export const APPR_DETAIL_MOBILE = {
+  ...APPR_ITEM_MOBILE,
   impactedLinks: [],
+  hiddenImpactedCount: 0,
+  canDecide: true,
+  cannotDecideReason: null,
+}
+
+/** Mode lecture seule (exception A9 vs maquette — badge LECTURE, pas de boutons). */
+export const APPR_DETAIL_READONLY = {
+  ...APPR_DETAIL_DESKTOP,
+  canDecide: false,
+  cannotDecideReason: 'requester',
 }
 
 export const APPR_SUMMARY_DESKTOP =

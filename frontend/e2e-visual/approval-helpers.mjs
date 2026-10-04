@@ -9,9 +9,11 @@ import { versionPage } from './history-fixtures.mjs'
 import { AUTH_CONFIG, json } from './history-helpers.mjs'
 import {
   APPR_COMPARE_12_13,
+  APPR_DETAIL_DESKTOP,
   APPR_DOC_ID,
   APPR_ITEM_DESKTOP,
   APPR_NOW,
+  APPR_REQUEST_ID,
   APPR_VERSIONS_DESKTOP,
   APPR_WORKFLOW_DESKTOP,
 } from './approval-fixtures.mjs'
@@ -47,6 +49,8 @@ async function injectSession(page) {
  * @param {import('@playwright/test').Page} page
  * @param {{
  *   items?: object[],
+ *   detail?: object | null,
+ *   detailStatus?: number,
  *   workflow?: object | null,
  *   versions?: object[],
  *   compare?: object,
@@ -58,6 +62,8 @@ async function injectSession(page) {
 export async function mockApprovalApis(page, opts = {}) {
   const {
     items = [APPR_ITEM_DESKTOP],
+    detail = APPR_DETAIL_DESKTOP,
+    detailStatus = 200,
     workflow = APPR_WORKFLOW_DESKTOP,
     versions = APPR_VERSIONS_DESKTOP,
     compare = APPR_COMPARE_12_13,
@@ -67,16 +73,28 @@ export async function mockApprovalApis(page, opts = {}) {
   } = opts
   const doc = pageDocument('desktop')
   const base = `**/api/v1/documents/${APPR_DOC_ID}`
+  const detailId = detail?.approvalRequestId ?? APPR_REQUEST_ID
 
   await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
   await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
   await page.route('**/api/v1/approvals/mine', (route) => json(route, items))
+  await page.route(`**/api/v1/approvals/${detailId}`, (route) => {
+    if (route.request().method() !== 'GET') return route.continue()
+    if (detailStatus !== 200 || detail == null) {
+      return json(route, { error: 'not_found' }, detailStatus === 200 ? 404 : detailStatus)
+    }
+    return json(route, detail)
+  })
   await page.route(`${base}/approvals/applicable-workflow`, (route) =>
     workflow ? json(route, workflow) : json(route, { error: 'forbidden' }, 403),
   )
   await page.route(`${base}/approvals/*/decide`, (route) => {
     decisions?.calls.push({ url: route.request().url(), body: route.request().postDataJSON() })
-    return json(route, decideBody ?? { approvalRequestId: items[0]?.approvalRequestId, status: 'approuve' }, decideStatus)
+    return json(
+      route,
+      decideBody ?? { approvalRequestId: detailId, status: 'approuve' },
+      decideStatus,
+    )
   })
   await page.route(base, (route) => json(route, doc))
   await page.route(`${base}/resolved`, (route) => json(route, doc))

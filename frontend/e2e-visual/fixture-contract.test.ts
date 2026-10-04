@@ -16,6 +16,12 @@ import { HOME_SEED } from './dashboard-fixtures.mjs'
 import { EDIT_CUSTOM_FIELDS, EDIT_WRITING_HINTS } from './edit-fixtures.mjs'
 import { COMPARE_11_12, HIST_VERSIONS_DESKTOP, HIST_VERSIONS_MOBILE } from './history-fixtures.mjs'
 import {
+  APPR_DETAIL_DESKTOP,
+  APPR_DETAIL_MOBILE,
+  APPR_ITEM_DESKTOP,
+  APPR_ITEM_MOBILE,
+} from './approval-fixtures.mjs'
+import {
   PAGE_ATTESTATION,
   PAGE_FEEDBACK_EDITOR,
   PAGE_FEEDBACK_VIEWER,
@@ -115,5 +121,15 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
 
   it('EDIT_CUSTOM_FIELDS items match CustomFieldView', () => {
     for (const f of EDIT_CUSTOM_FIELDS) validate('CustomFieldView', f)
+  })
+
+  it('APPR_ITEM_* match ApprovalView', () => {
+    validate('ApprovalView', APPR_ITEM_DESKTOP)
+    validate('ApprovalView', APPR_ITEM_MOBILE)
+  })
+
+  it('APPR_DETAIL_* match ApprovalDetailView', () => {
+    validate('ApprovalDetailView', APPR_DETAIL_DESKTOP)
+    validate('ApprovalDetailView', APPR_DETAIL_MOBILE)
   })
 })

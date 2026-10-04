@@ -25,6 +25,8 @@
  *        (v13), la maquette le code en dur.
  *  - A7  Shell (sidebar) : comparaison limitée à la colonne principale (x ≥ 268), comme history-visual.
  *  - A8  Glyphes masqués dans les diffs pixel ; le texte est couvert par le test structurel.
+ *  - A9  Mode lecture seule (`canDecide: false`) : badge « LECTURE », raison, pas de boutons
+ *        Approuver/Refuser — hors maquette Approval.dc.html (pas de pixel-diff lecture seule).
  */
 import { test, expect } from '@playwright/test'
 import {
@@ -34,7 +36,11 @@ import {
   collectMetrics,
   compareMetrics,
 } from './structural-compare.mjs'
-import { APPR_ITEM_DESKTOP, APPR_REQUEST_ID } from './approval-fixtures.mjs'
+import {
+  APPR_DETAIL_DESKTOP,
+  APPR_DETAIL_READONLY,
+  APPR_REQUEST_ID,
+} from './approval-fixtures.mjs'
 import {
   MOCK,
   diffRatio,
@@ -47,7 +53,7 @@ import {
 
 test.use({ timezoneId: 'Europe/Paris' })
 
-const URL = '/approvals'
+const URL = `/approvals/${APPR_REQUEST_ID}`
 const CLIP = { x: 268, y: 0, width: 1172, height: 900 }
 
 async function openApprovals(page, opts) {
@@ -55,7 +61,8 @@ async function openApprovals(page, opts) {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto(URL)
   await page.waitForSelector('[data-mock-id="appr-step-2-name"]')
-  if (!opts?.items || opts.items[0]?.baselineVersionNo != null) {
+  const detail = opts?.detail ?? APPR_DETAIL_DESKTOP
+  if (detail.baselineVersionNo != null && detail.canDecide !== false) {
     await page.waitForSelector('[data-mock-id="appr-compare-counts"]')
   }
   await settleFonts(page)
@@ -141,9 +148,21 @@ test.describe('Approbation — comportement', () => {
   })
 
   test('première soumission (aucune base approuvée) : pas de lien de comparaison', async ({ page }) => {
-    await openApprovals(page, { items: [{ ...APPR_ITEM_DESKTOP, baselineVersionNo: null, impactedLinks: [] }] })
+    await openApprovals(page, {
+      detail: { ...APPR_DETAIL_DESKTOP, baselineVersionNo: null, impactedLinks: [] },
+    })
     await expect(page.getByTestId('approval-compare-link')).toHaveCount(0)
     await expect(page.getByTestId('approval-no-baseline')).toBeVisible()
+  })
+
+  test('lecture seule (A9) : badge LECTURE, raison, pas de boutons', async ({ page }) => {
+    await openApprovals(page, { detail: APPR_DETAIL_READONLY })
+    await expect(page.getByTestId('approval-badge')).toContainText('LECTURE')
+    await expect(page.getByTestId('approval-readonly-reason')).toHaveText(
+      'Vous avez demandé cette approbation',
+    )
+    await expect(page.getByRole('button', { name: /Approuver/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Refuser' })).toHaveCount(0)
   })
 
   test('refus sans justification : bloqué côté client, aucun appel', async ({ page }) => {

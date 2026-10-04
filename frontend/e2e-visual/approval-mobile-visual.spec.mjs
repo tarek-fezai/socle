@@ -26,6 +26,7 @@ import {
   compareMetrics,
 } from './structural-compare.mjs'
 import {
+  APPR_DETAIL_MOBILE,
   APPR_ITEM_MOBILE,
   APPR_REQUEST_ID,
   APPR_VERSIONS_MOBILE,
@@ -35,9 +36,10 @@ import { MOCK, diffRatio, maskGlyphs, prepApproval, settleFonts, writeStructural
 
 test.use({ timezoneId: 'Europe/Paris' })
 
-const URL = '/approvals'
+const URL = `/approvals/${APPR_REQUEST_ID}`
 const MOBILE_OPTS = {
   items: [APPR_ITEM_MOBILE],
+  detail: APPR_DETAIL_MOBILE,
   workflow: APPR_WORKFLOW_MOBILE,
   versions: APPR_VERSIONS_MOBILE,
 }

@@ -10,7 +10,8 @@
  *  - D2  « Depuis » / « Vers » : `<select>` natifs (texte du conteneur non comparé), comme diff-visual.
  *  - D3  CTA « Approuver la révision v13 » : bouton qui décide (la maquette navigue vers Approval) ;
  *        un échec serveur s'affiche sous la barre de contrôles.
- *  - D4  Fil d'Ariane « Approbation → Comparer v12 → v13 » : « Approbation » renvoie à /approvals.
+ *  - D4  Fil d'Ariane « Approbation → Comparer v12 → v13 » : « Approbation » renvoie au détail
+ *        `/approvals/:requestId`.
  *  - D5  La maquette colore mal les cellules « nouvelle version » des lignes 1-2 (classe posée sur le
  *        `.side` lui-même) ; la règle est corrigée côté maquette avant comparaison, comme diff-visual.
  *  - D6  Blocs « N lignes inchangées » dépliés avant la capture (la maquette les affiche).
@@ -160,7 +161,7 @@ test.describe('Comparaison d’approbation — comportement', () => {
   })
 
   test('demande inconnue : message et lien de retour', async ({ page }) => {
-    await prepApproval(page, { items: [] })
+    await prepApproval(page, { items: [], detail: null, detailStatus: 404 })
     await page.goto(URL)
     await expect(page.getByTestId('approval-diff-missing')).toBeVisible()
     await expect(page.getByRole('link', { name: 'Retour aux approbations' })).toBeVisible()
