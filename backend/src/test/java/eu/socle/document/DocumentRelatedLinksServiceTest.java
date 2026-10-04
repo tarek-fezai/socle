@@ -186,4 +186,16 @@ class DocumentRelatedLinksServiceTest {
         assertThat(links.outgoing()).isEmpty();
         assertThat(links.incoming()).isEmpty();
     }
+
+    @Test
+    void impactedIncoming_visiblePlusHiddenCount_excludesOutgoing() {
+        DocumentRelatedLinksService.ImpactedIncoming impacted = service.impactedIncoming(jwt, DOC);
+
+        assertThat(impacted.visible()).extracting(DocumentRelatedLinksService.LinkedDocument::id)
+                .containsExactly(IN_OK);
+        assertThat(impacted.visible().getFirst().title()).isEqualTo("Source visible");
+        assertThat(impacted.hiddenCount()).isEqualTo(1);
+        assertThat(impacted.visible()).extracting(DocumentRelatedLinksService.LinkedDocument::id)
+                .doesNotContain(OUT_OK, OUT_DENIED, IN_DENIED);
+    }
 }

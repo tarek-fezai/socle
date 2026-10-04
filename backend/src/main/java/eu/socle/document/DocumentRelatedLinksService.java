@@ -48,16 +48,16 @@ public class DocumentRelatedLinksService {
 
     public record RelatedLinks(List<LinkedDocument> outgoing, List<LinkedDocument> incoming) {}
 
+    /**
+     * Documents qui lient <em>vers</em> {@code documentId} (entrants), filtrés viewer.
+     * {@code hiddenCount} = candidats non visibles (jamais d'id/titre exposés pour ceux-là).
+     */
+    public record ImpactedIncoming(List<LinkedDocument> visible, int hiddenCount) {}
+
     @Transactional(readOnly = true)
     public RelatedLinks links(Jwt jwt, UUID documentId) {
         var user = userSyncService.syncFromJwt(jwt);
-        Integer exists = jdbc.queryForObject(
-                "SELECT count(*) FROM documents WHERE id = ? AND deleted_at IS NULL",
-                Integer.class, documentId);
-        if (exists == null || exists == 0
-                || !authorizationService.hasRelation(user.getId(), "document", documentId, "viewer")) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable");
-        }
+        requireDocumentViewer(user.getId(), documentId);
 
         Map<UUID, String> outgoing = candidates("""
                 SELECT DISTINCT t.id, t.title
@@ -67,14 +67,7 @@ public class DocumentRelatedLinksService {
                  ORDER BY t.title, t.id
                  LIMIT ?
                 """, documentId);
-        Map<UUID, String> incoming = candidates("""
-                SELECT DISTINCT s.id, s.title
-                  FROM document_links dl
-                  JOIN documents s ON s.id = dl.source_id AND s.deleted_at IS NULL
-                 WHERE dl.target_id = ?
-                 ORDER BY s.title, s.id
-                 LIMIT ?
-                """, documentId);
+        Map<UUID, String> incoming = incomingCandidates(documentId);
 
         // Un seul BatchCheck sur l'union des candidats (≤ 2 × MAX_CANDIDATES_PER_DIRECTION).
         Set<UUID> all = new HashSet<>(outgoing.keySet());
@@ -84,6 +77,49 @@ public class DocumentRelatedLinksService {
                 authorizationService.filterByDocumentViewer(user.getId(), all, SCOPE_LABEL));
 
         return new RelatedLinks(keep(outgoing, viewable), keep(incoming, viewable));
+    }
+
+    /**
+     * Liens impactés pour une approbation = documents sources pointant vers le document sous revue.
+     * Les sources non lisibles (BatchCheck viewer) ne figurent pas dans {@code visible} ;
+     * seul leur nombre est renvoyé ({@code hiddenCount}).
+     */
+    @Transactional(readOnly = true)
+    public ImpactedIncoming impactedIncoming(Jwt jwt, UUID documentId) {
+        var user = userSyncService.syncFromJwt(jwt);
+        requireDocumentViewer(user.getId(), documentId);
+
+        Map<UUID, String> incoming = incomingCandidates(documentId);
+        incoming.remove(documentId);
+        if (incoming.isEmpty()) {
+            return new ImpactedIncoming(List.of(), 0);
+        }
+        Set<UUID> viewable = new HashSet<>(
+                authorizationService.filterByDocumentViewer(user.getId(), incoming.keySet(), SCOPE_LABEL));
+        List<LinkedDocument> visible = keep(incoming, viewable);
+        int hidden = incoming.size() - visible.size();
+        return new ImpactedIncoming(visible, Math.max(0, hidden));
+    }
+
+    private void requireDocumentViewer(UUID userId, UUID documentId) {
+        Integer exists = jdbc.queryForObject(
+                "SELECT count(*) FROM documents WHERE id = ? AND deleted_at IS NULL",
+                Integer.class, documentId);
+        if (exists == null || exists == 0
+                || !authorizationService.hasRelation(userId, "document", documentId, "viewer")) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable");
+        }
+    }
+
+    private Map<UUID, String> incomingCandidates(UUID documentId) {
+        return candidates("""
+                SELECT DISTINCT s.id, s.title
+                  FROM document_links dl
+                  JOIN documents s ON s.id = dl.source_id AND s.deleted_at IS NULL
+                 WHERE dl.target_id = ?
+                 ORDER BY s.title, s.id
+                 LIMIT ?
+                """, documentId);
     }
 
     private Map<UUID, String> candidates(String sql, UUID documentId) {

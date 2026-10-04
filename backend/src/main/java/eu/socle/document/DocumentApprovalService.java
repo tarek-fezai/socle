@@ -247,7 +247,45 @@ public class DocumentApprovalService {
         if (rows.isEmpty()) {
             return null;
         }
-        return enrichImpactedLinks(jwt, rows.getFirst());
+        // Pas de liens impactés ici : détail = GET /api/v1/approvals/{requestId}.
+        return rows.getFirst();
+    }
+
+    /**
+     * Détail d'une demande pour tout viewer du document : liens impactés (entrants filtrés)
+     * + {@code canDecide} (quatre yeux + rôle d'étape + editor). Non-viewer → 404.
+     */
+    public ApprovalDetailView getApproval(Jwt jwt, UUID requestId) {
+        var user = userSyncService.syncFromJwt(jwt);
+        List<ApprovalView> rows = jdbcTemplate.query(
+                """
+                SELECT ar.id, ar.document_id, d.title AS document_title,
+                       ar.temporal_workflow_id, ar.status, ar.requested_by, ar.created_at,
+                       ar.current_step_order, ar.sla_deadline_at, ar.submitted_version_no,
+                       u.display_name AS requested_by_display_name,
+                       u.avatar_initials AS requested_by_initials,
+                """
+                        + BASELINE_VERSION_SQL
+                        + """
+                  FROM approval_requests ar
+                  JOIN documents d ON d.id = ar.document_id
+                  LEFT JOIN users u ON u.id = ar.requested_by
+                 WHERE ar.id = ?
+                   AND d.deleted_at IS NULL
+                """,
+                (rs, i) -> mapApprovalView(rs),
+                requestId);
+        if (rows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'approbation introuvable");
+        }
+        ApprovalView base = rows.getFirst();
+        if (!authorizationService.hasRelation(user.getId(), "document", base.documentId(), "viewer")) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'approbation introuvable");
+        }
+
+        ApprovalView withLinks = enrichImpactedLinks(jwt, base);
+        DecideAbility ability = resolveDecideAbility(user.getId(), withLinks);
+        return toDetail(withLinks, ability);
     }
 
     /**
@@ -255,6 +293,7 @@ public class DocumentApprovalService {
      * (rôle via {@code approval_workflow_steps.approver_role_id} / {@code approval_role_assignments}),
      * avec portée couvrant le document <strong>et</strong> accès OpenFGA {@code editor}.
      * Si l'étape n'a pas de rôle, fallback sur le rôle global « Éditeur de documents ».
+     * File « à décider » uniquement — pas de calcul de liens impactés (détail à part).
      */
     public List<ApprovalView> listMine(Jwt jwt) {
         var user = userSyncService.syncFromJwt(jwt);
@@ -296,11 +335,52 @@ public class DocumentApprovalService {
                 .filter(c -> approvalRoleResolver.canDecide(user.getId(), c.roleId(), c.view().documentId()))
                 .filter(c -> authorizationService.hasRelation(
                         user.getId(), "document", c.view().documentId(), "editor"))
-                .map(c -> enrichImpactedLinks(jwt, c.view()))
+                .map(Candidate::view)
                 .toList();
     }
 
     private record Candidate(ApprovalView view, UUID roleId) {}
+
+    private record DecideAbility(boolean canDecide, String cannotDecideReason) {}
+
+    private DecideAbility resolveDecideAbility(UUID userId, ApprovalView view) {
+        if (!"en_cours".equals(view.status())) {
+            return new DecideAbility(false, "resolved");
+        }
+        if (userId.equals(view.requestedBy())) {
+            return new DecideAbility(false, "requester");
+        }
+        Set<UUID> contributors = FourEyesPolicy.loadContentContributors(jdbcTemplate, view.documentId());
+        if (contributors.contains(userId)) {
+            return new DecideAbility(false, "contributor");
+        }
+        if (!approvalRoleResolver.canDecideCurrentStep(userId, view.approvalRequestId())
+                || !authorizationService.hasRelation(userId, "document", view.documentId(), "editor")) {
+            return new DecideAbility(false, "not_current_step_approver");
+        }
+        return new DecideAbility(true, null);
+    }
+
+    private static ApprovalDetailView toDetail(ApprovalView v, DecideAbility ability) {
+        return new ApprovalDetailView(
+                v.approvalRequestId(),
+                v.documentId(),
+                v.documentTitle(),
+                v.temporalWorkflowId(),
+                v.status(),
+                v.currentStepOrder(),
+                v.slaDeadlineAt(),
+                v.submittedVersionNo(),
+                v.baselineVersionNo(),
+                v.requestedBy(),
+                v.createdAt(),
+                v.requestedByDisplayName(),
+                v.requestedByInitials(),
+                v.impactedLinks(),
+                v.hiddenImpactedCount(),
+                ability.canDecide(),
+                ability.cannotDecideReason());
+    }
 
     /**
      * Signale une décision Temporal après verrouillage ligne ({@code FOR UPDATE}) et
@@ -429,20 +509,23 @@ public class DocumentApprovalService {
                 created != null ? created.toInstant().toString() : null,
                 rs.getString("requested_by_display_name"),
                 rs.getString("requested_by_initials"),
-                List.of()
+                List.of(),
+                0
         );
     }
 
     /**
-     * Liens sortants visibles (BatchCheck viewer) — jamais de titre/id non lisible.
+     * Liens <em>entrants</em> visibles (documents qui pointent vers le document approuvé),
+     * filtrés BatchCheck viewer — jamais de titre/id non lisible ; {@code hiddenImpactedCount}
+     * pour les sources inaccessibles.
      */
     private ApprovalView enrichImpactedLinks(Jwt jwt, ApprovalView view) {
         if (relatedLinksService == null || view == null) {
             return view;
         }
         try {
-            var links = relatedLinksService.links(jwt, view.documentId());
-            List<ImpactedLink> impacted = links.outgoing().stream()
+            var impacted = relatedLinksService.impactedIncoming(jwt, view.documentId());
+            List<ImpactedLink> links = impacted.visible().stream()
                     .map(l -> new ImpactedLink(l.id(), l.title()))
                     .toList();
             return new ApprovalView(
@@ -459,7 +542,8 @@ public class DocumentApprovalService {
                     view.createdAt(),
                     view.requestedByDisplayName(),
                     view.requestedByInitials(),
-                    impacted);
+                    links,
+                    impacted.hiddenCount());
         } catch (ResponseStatusException e) {
             return view;
         }
@@ -531,9 +615,40 @@ public class DocumentApprovalService {
             String createdAt,
             String requestedByDisplayName,
             String requestedByInitials,
-            List<ImpactedLink> impactedLinks
+            List<ImpactedLink> impactedLinks,
+            int hiddenImpactedCount
     ) {
         public ApprovalView {
+            if (impactedLinks == null) {
+                impactedLinks = List.of();
+            }
+        }
+    }
+
+    /**
+     * Détail lecture/décision : {@code cannotDecideReason} ∈
+     * {@code requester|contributor|not_current_step_approver|resolved} (null si {@code canDecide}).
+     */
+    public record ApprovalDetailView(
+            UUID approvalRequestId,
+            UUID documentId,
+            String documentTitle,
+            String temporalWorkflowId,
+            String status,
+            int currentStepOrder,
+            String slaDeadlineAt,
+            Integer submittedVersionNo,
+            Integer baselineVersionNo,
+            UUID requestedBy,
+            String createdAt,
+            String requestedByDisplayName,
+            String requestedByInitials,
+            List<ImpactedLink> impactedLinks,
+            int hiddenImpactedCount,
+            boolean canDecide,
+            String cannotDecideReason
+    ) {
+        public ApprovalDetailView {
             if (impactedLinks == null) {
                 impactedLinks = List.of();
             }
