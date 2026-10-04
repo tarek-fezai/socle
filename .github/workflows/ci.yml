@@ -300,6 +300,27 @@ jobs:
           echo "OK: helm template failed as expected"
           cat /tmp/helm-err.txt
 
+      - name: helm template must fail when blob local + replicas>1
+        if: github.event_name == 'schedule' || steps.changes.outputs.helm_relevant == 'true'
+        run: |
+          set -euo pipefail
+          if helm template socle deploy/helm/socle \
+            --set storage.provider=relational \
+            --set blob.provider=local \
+            --set backend.replicas=2 \
+            --set idp.issuerUri=http://example/realms/x \
+            --set secrets.postgresPassword=TestPass1! \
+            --set secrets.oidcClientSecret=TestOidc1! \
+            --set postgres.host=pg.example \
+            >/tmp/helm-blob-out.yaml 2>/tmp/helm-blob-err.txt; then
+            echo "expected helm template to fail for blob.local + replicas=2" >&2
+            cat /tmp/helm-blob-out.yaml >&2 || true
+            exit 1
+          fi
+          grep -qi 'blob.provider=local\|local disk is not shared\|replicas=1' /tmp/helm-blob-err.txt
+          echo "OK: helm template failed as expected for blob local"
+          cat /tmp/helm-blob-err.txt
+
       - name: Create kind cluster
         if: github.event_name == 'schedule' || steps.changes.outputs.helm_relevant == 'true'
         uses: helm/kind-action@v1.12.0

@@ -23,6 +23,8 @@
     <temporal.version>1.39.0</temporal.version>
     <springdoc.version>2.8.9</springdoc.version>
     <openfga.version>0.10.1</openfga.version>
+    <aws.sdk.version>2.29.51</aws.sdk.version>
+    <tika.version>3.1.0</tika.version>
   </properties>
 
   <dependencies>
@@ -113,6 +115,18 @@
       <groupId>com.github.librepdf</groupId>
       <artifactId>openpdf</artifactId>
       <version>2.0.3</version>
+    </dependency>
+    <!-- S3-compatible (Garage / SeaweedFS) — Apache-2.0 ; endpoint obligatoire, pas de défaut AWS. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <version>${aws.sdk.version}</version>
+    </dependency>
+    <!-- Détection MIME par octets magiques (pièces jointes). -->
+    <dependency>
+      <groupId>org.apache.tika</groupId>
+      <artifactId>tika-core</artifactId>
+      <version>${tika.version}</version>
     </dependency>
 
     <dependency>

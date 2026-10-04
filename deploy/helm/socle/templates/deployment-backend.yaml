@@ -1,6 +1,9 @@
 {{- if and (eq .Values.storage.provider "git") (gt (int .Values.backend.replicas) 1) }}
 {{- fail "storage.provider=git requires backend.replicas=1 (JVM file lock limit)" }}
 {{- end }}
+{{- if and (eq (default "local" .Values.blob.provider) "local") (gt (int .Values.backend.replicas) 1) }}
+{{- fail "blob.provider=local requires backend.replicas=1 (local disk is not shared)" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -111,6 +114,10 @@ spec:
             - name: git-content
               mountPath: {{ .Values.storage.git.mountPath }}
             {{- end }}
+            {{- if eq (default "local" .Values.blob.provider) "local" }}
+            - name: blob-content
+              mountPath: {{ .Values.blob.local.mountPath }}
+            {{- end }}
             - name: openfga-state
               mountPath: {{ .Values.openfga.stateDir | default "/openfga-config" }}
             - name: tmp
@@ -120,6 +127,11 @@ spec:
         - name: git-content
           persistentVolumeClaim:
             claimName: {{ default (printf "%s-git-content" (include "socle.fullname" .)) .Values.storage.git.existingClaim }}
+        {{- end }}
+        {{- if eq (default "local" .Values.blob.provider) "local" }}
+        - name: blob-content
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-blob-content" (include "socle.fullname" .)) .Values.blob.local.existingClaim }}
         {{- end }}
         - name: openfga-state
           emptyDir: {}

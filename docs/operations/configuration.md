@@ -35,6 +35,23 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SOCLE_STORAGE_GIT_PATH` | `./data/git-content` | when `git` | no | Git repo path (`socle.storage.git-repository-path`) |
 | `SOCLE_STORAGE_GIT_REPOSITORY_PATH` | — | no | no | Compose `.env` alias; mapped to `SOCLE_STORAGE_GIT_PATH` in stack |
 
+## Blob storage (attachments)
+
+| Name | Default | Required | Secret | Description |
+|------|---------|----------|--------|-------------|
+| `SOCLE_BLOB_PROVIDER` | `local` | no | no | Exclusive binary store: `local` or `s3` (S3-compatible: Garage, SeaweedFS…). No AWS default endpoint (`socle.blob.provider`) |
+| `SOCLE_BLOB_LOCAL_DIR` | `./data/blobs` | when `local` | no | Local blob root; atomic temp+rename (`socle.blob.local.dir`). Helm: PVC RWO; `backend.replicas>1` refused |
+| `SOCLE_BLOB_S3_ENDPOINT` | empty | when `s3` | no | S3 API base URL — **required** for `s3` (e.g. `http://garage:3900`) |
+| `SOCLE_BLOB_S3_REGION` | `us-east-1` | no | no | Region string expected by the S3 client |
+| `SOCLE_BLOB_S3_BUCKET` | empty | when `s3` | no | Bucket name |
+| `SOCLE_BLOB_S3_ACCESS_KEY` | empty | when `s3` | **yes** | Access key |
+| `SOCLE_BLOB_S3_SECRET_KEY` | empty | when `s3` | **yes** | Secret key |
+| `SOCLE_BLOB_S3_PATH_STYLE` | `true` | no | no | Path-style addressing (Garage / MinIO) |
+| `SOCLE_BLOB_S3_SSE` | `true` | no | no | Request SSE-S3 (`AES256`) when the service supports it |
+| `SOCLE_ATTACHMENT_MAX_MB` | `25` | no | no | Max upload size (MB); also sets `spring.servlet.multipart.max-*-size` |
+| `SOCLE_ATTACHMENT_ORPHAN_RETENTION_DAYS` | `7` | no | no | Days before unreferenced uploads are purged |
+| `SOCLE_ATTACHMENT_ALLOWED_TYPES` | png/jpeg/webp/gif, pdf, office, txt/csv, zip | no | no | Comma-separated MIME allow-list (Tika-detected). SVG not included |
+
 ## Temporal
 
 | Name | Default | Required | Secret | Description |
