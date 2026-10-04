@@ -22,7 +22,7 @@ import {
 type ModalKind = 'create' | 'rename' | 'delete' | 'merge' | null
 
 function TagPill({ tag, index }: { tag: TagAdminView; index: number }) {
-  const c = tagColors({ id: tag.id, name: tag.name, color: tag.color }, index)
+  const c = tagColors({ id: tag.id, name: tag.name, color: tag.color ?? undefined }, index)
   return (
     <span className="admin-tag-pill" style={{ color: c.fg, background: c.bg }}>
       <span className="admin-tag-pill__dot" style={{ background: c.fg }} aria-hidden />
