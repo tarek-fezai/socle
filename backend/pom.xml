@@ -129,6 +129,12 @@
       <artifactId>tika-core</artifactId>
       <version>${tika.version}</version>
     </dependency>
+    <!-- Parse HTML d'aperçu de lien (sans exécution JS). -->
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>1.18.3</version>
+    </dependency>
     <!-- Lecteur WebP (BSD-3-Clause) — ImageIO JDK ne lit pas WebP nativement. -->
     <dependency>
       <groupId>com.twelvemonkeys.imageio</groupId>

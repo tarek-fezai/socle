@@ -6,6 +6,8 @@ import eu.socle.comment.CommentDtos.PersonalCommentExport;
 import eu.socle.comment.CommentService;
 import eu.socle.document.DocumentDraftService;
 import eu.socle.document.DocumentDraftService.PersonalDraftExport;
+import eu.socle.poll.PollDtos.PersonalPollVoteExport;
+import eu.socle.poll.PollService;
 import eu.socle.user.UserSyncService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -33,6 +35,7 @@ public class PersonalDataExportService {
     private final DocumentDraftService draftService;
     private final UserSyncService userSyncService;
     private AttachmentService attachmentService;
+    private PollService pollService;
 
     public PersonalDataExportService(
             CommentService commentService,
@@ -49,6 +52,11 @@ public class PersonalDataExportService {
         this.attachmentService = attachmentService;
     }
 
+    @Autowired(required = false)
+    void setPollService(PollService pollService) {
+        this.pollService = pollService;
+    }
+
     @Transactional(readOnly = true)
     public Map<String, Object> exportFor(Jwt jwt) {
         var user = userSyncService.syncFromJwt(jwt);
@@ -62,6 +70,10 @@ public class PersonalDataExportService {
         out.put("documentDrafts", drafts);
         if (attachmentService != null) {
             out.put("attachments", attachmentService.exportPersonalMetadata(user.getId()));
+        }
+        if (pollService != null) {
+            List<PersonalPollVoteExport> votes = pollService.exportPersonalVotes(user.getId());
+            out.put("pollVotes", votes);
         }
         return out;
     }

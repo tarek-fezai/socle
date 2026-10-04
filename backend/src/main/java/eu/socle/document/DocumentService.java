@@ -66,6 +66,7 @@ public class DocumentService {
     private final TemplateService templateService;
     private ActivityEventService activityEventService;
     private AttachmentService attachmentService;
+    private eu.socle.poll.PollService pollService;
     private EditLockService editLockService;
     private DiffProperties diffProperties;
     private TipTapContentValidator tipTapContentValidator = new TipTapContentValidator();
@@ -184,6 +185,11 @@ public class DocumentService {
     @Autowired(required = false)
     void setAttachmentService(AttachmentService attachmentService) {
         this.attachmentService = attachmentService;
+    }
+
+    @Autowired(required = false)
+    void setPollService(eu.socle.poll.PollService pollService) {
+        this.pollService = pollService;
     }
 
     /** Verrou d'édition : une restauration ne doit pas écraser le travail d'un autre éditeur actif. */
@@ -991,6 +997,9 @@ public class DocumentService {
             return;
         }
         attachmentService.markReferenced(documentId, tipTapBody);
+        if (pollService != null) {
+            pollService.syncFromBody(documentId, tipTapBody);
+        }
     }
 
     /** Soft-delete (corbeille) — délégué à {@link TrashService}. */
