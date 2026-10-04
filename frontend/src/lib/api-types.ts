@@ -68,6 +68,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/polls/{id}/vote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["vote"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/groups/{id}": {
         parameters: {
             query?: never;
@@ -356,6 +372,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/polls/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/{id}/read": {
         parameters: {
             query?: never;
@@ -366,6 +398,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["markRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/link-previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["fetch"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1316,6 +1364,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/polls/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_13"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ping": {
         parameters: {
             query?: never;
@@ -1835,7 +1899,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_13"];
+        get: operations["get_14"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1851,7 +1915,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_14"];
+        get: operations["get_15"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2046,7 +2110,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["close"];
+        delete: operations["close_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2145,6 +2209,29 @@ export interface components {
             status?: string;
             /** Format: date-time */
             connectedAt?: string;
+        };
+        VoteRequest: {
+            option: string;
+        };
+        PollOptionResult: {
+            option?: string;
+            /** Format: int64 */
+            count?: number;
+        };
+        PollView: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            documentId?: string;
+            question?: string;
+            options?: string[];
+            closed?: boolean;
+            /** Format: date-time */
+            closedAt?: string;
+            myVote?: string;
+            results?: components["schemas"]["PollOptionResult"][];
+            /** Format: int64 */
+            totalVotes?: number;
         };
         UpdateGroupRequest: {
             name: string;
@@ -2417,6 +2504,17 @@ export interface components {
             documentTitle?: string;
             readAt?: string;
             createdAt?: string;
+        };
+        FetchRequest: {
+            url: string;
+        };
+        PreviewView: {
+            url?: string;
+            domain?: string;
+            title?: string;
+            /** Format: uuid */
+            thumbnailAttachmentId?: string;
+            fetched?: boolean;
         };
         CreateGroupRequest: {
             name: string;
@@ -3499,6 +3597,32 @@ export interface operations {
             };
         };
     };
+    vote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PollView"];
+                };
+            };
+        };
+    };
     get_3: {
         parameters: {
             query?: never;
@@ -4356,6 +4480,28 @@ export interface operations {
             };
         };
     };
+    close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PollView"];
+                };
+            };
+        };
+    };
     markRead: {
         parameters: {
             query?: never;
@@ -4374,6 +4520,32 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["NotificationView"];
+                };
+            };
+        };
+    };
+    fetch: {
+        parameters: {
+            query?: {
+                documentId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FetchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PreviewView"];
                 };
             };
         };
@@ -6326,6 +6498,28 @@ export interface operations {
             };
         };
     };
+    get_13: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PollView"];
+                };
+            };
+        };
+    };
     ping: {
         parameters: {
             query?: never;
@@ -7056,7 +7250,7 @@ export interface operations {
             };
         };
     };
-    get_13: {
+    get_14: {
         parameters: {
             query?: never;
             header?: {
@@ -7080,7 +7274,7 @@ export interface operations {
             };
         };
     };
-    get_14: {
+    get_15: {
         parameters: {
             query?: never;
             header?: never;
@@ -7347,7 +7541,7 @@ export interface operations {
             };
         };
     };
-    close: {
+    close_1: {
         parameters: {
             query?: never;
             header?: never;

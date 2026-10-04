@@ -279,6 +279,43 @@
         }
       }
     },
+    "/api/v1/polls/{id}/vote" : {
+      "put" : {
+        "tags" : [ "poll-controller" ],
+        "operationId" : "vote",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VoteRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PollView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/groups/{id}" : {
       "get" : {
         "tags" : [ "group-controller" ],
@@ -1328,6 +1365,33 @@
         }
       }
     },
+    "/api/v1/polls/{id}/close" : {
+      "post" : {
+        "tags" : [ "poll-controller" ],
+        "operationId" : "close",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PollView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications/{id}/read" : {
       "post" : {
         "tags" : [ "notification-controller" ],
@@ -1348,6 +1412,43 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/NotificationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/link-previews" : {
+      "post" : {
+        "tags" : [ "link-preview-controller" ],
+        "operationId" : "fetch",
+        "parameters" : [ {
+          "name" : "documentId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/FetchRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PreviewView"
                 }
               }
             }
@@ -3922,6 +4023,33 @@
         }
       }
     },
+    "/api/v1/polls/{id}" : {
+      "get" : {
+        "tags" : [ "poll-controller" ],
+        "operationId" : "get_13",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PollView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ping" : {
       "get" : {
         "tags" : [ "health-info-controller" ],
@@ -4981,7 +5109,7 @@
     "/api/v1/attachments/{id}" : {
       "get" : {
         "tags" : [ "attachment-controller" ],
-        "operationId" : "get_13",
+        "operationId" : "get_14",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5016,7 +5144,7 @@
     "/api/v1/approvals/{requestId}" : {
       "get" : {
         "tags" : [ "approval-controller" ],
-        "operationId" : "get_14",
+        "operationId" : "get_15",
         "parameters" : [ {
           "name" : "requestId",
           "in" : "path",
@@ -5321,7 +5449,7 @@
     "/api/v1/documents/{id}/attestations/{campaignId}" : {
       "delete" : {
         "tags" : [ "attestation-controller" ],
-        "operationId" : "close",
+        "operationId" : "close_1",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5552,6 +5680,70 @@
           "connectedAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "VoteRequest" : {
+        "type" : "object",
+        "properties" : {
+          "option" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "option" ]
+      },
+      "PollOptionResult" : {
+        "type" : "object",
+        "properties" : {
+          "option" : {
+            "type" : "string"
+          },
+          "count" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PollView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "documentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "question" : {
+            "type" : "string"
+          },
+          "options" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "closed" : {
+            "type" : "boolean"
+          },
+          "closedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "myVote" : {
+            "type" : "string"
+          },
+          "results" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PollOptionResult"
+            }
+          },
+          "totalVotes" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -6233,6 +6425,37 @@
           },
           "createdAt" : {
             "type" : "string"
+          }
+        }
+      },
+      "FetchRequest" : {
+        "type" : "object",
+        "properties" : {
+          "url" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "url" ]
+      },
+      "PreviewView" : {
+        "type" : "object",
+        "properties" : {
+          "url" : {
+            "type" : "string"
+          },
+          "domain" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "thumbnailAttachmentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "fetched" : {
+            "type" : "boolean"
           }
         }
       },
