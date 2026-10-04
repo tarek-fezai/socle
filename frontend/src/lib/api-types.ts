@@ -3061,6 +3061,14 @@ export interface components {
             /** Format: uuid */
             requestedBy?: string;
             createdAt?: string;
+            requestedByDisplayName?: string;
+            requestedByInitials?: string;
+            impactedLinks?: components["schemas"]["ImpactedLink"][];
+        };
+        ImpactedLink: {
+            /** Format: uuid */
+            id?: string;
+            title?: string;
         };
         ApplicableView: {
             /** Format: uuid */

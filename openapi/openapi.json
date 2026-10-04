@@ -7857,6 +7857,30 @@
           },
           "createdAt" : {
             "type" : "string"
+          },
+          "requestedByDisplayName" : {
+            "type" : "string"
+          },
+          "requestedByInitials" : {
+            "type" : "string"
+          },
+          "impactedLinks" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImpactedLink"
+            }
+          }
+        }
+      },
+      "ImpactedLink" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
           }
         }
       },

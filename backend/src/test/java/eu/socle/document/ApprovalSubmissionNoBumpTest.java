@@ -157,44 +157,64 @@ class ApprovalSubmissionNoBumpTest {
     }
 
     @Test
-    void baseline_newSchema_submittedEqualsCurrent() {
+    void baseline_neverApproved_isNull_newAndLegacy() {
         insertDoc(3, "edit", null, ALICE);
         archive(1, ALICE);
         archive(2, BOB);
-        UUID req = UUID.randomUUID();
+        UUID reqNew = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO approval_requests
                   (id, document_id, status, requested_by, submitted_version_no,
                    submitted_content_version_no, created_at)
                 VALUES (?, ?, 'en_cours', ?, 3, 3, now())
-                """, req, DOC, ALICE);
+                """, reqNew, DOC, ALICE);
 
-        Integer baseline = jdbc.queryForObject(
+        Integer baselineNew = jdbc.queryForObject(
                 "SELECT " + DocumentApprovalService.BASELINE_VERSION_SQL.replace(" AS baseline_version_no", "")
                         + " FROM approval_requests ar WHERE ar.id = ?",
-                Integer.class, req);
-        assertThat(baseline).isEqualTo(2);
-    }
+                Integer.class, reqNew);
+        assertThat(baselineNew).isNull();
 
-    @Test
-    void baseline_legacySchema_submittedIsArchivedBeforeEmptyBump() {
-        // Ancien schéma : contenu réel archivé en v3, courant v4 « Soumission… »
-        insertDoc(4, "Soumission pour approbation", "newsha", ALICE);
-        archive(1, ALICE);
-        archive(2, BOB);
-        archive(3, ALICE);
-        UUID req = UUID.randomUUID();
+        // Ancien schéma sans approbation antérieure → également NULL.
+        UUID reqLegacy = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO approval_requests
                   (id, document_id, status, requested_by, submitted_version_no, created_at)
                 VALUES (?, ?, 'en_cours', ?, 3, now())
-                """, req, DOC, ALICE);
+                """, reqLegacy, DOC, BOB);
+        Integer baselineLegacy = jdbc.queryForObject(
+                "SELECT " + DocumentApprovalService.BASELINE_VERSION_SQL.replace(" AS baseline_version_no", "")
+                        + " FROM approval_requests ar WHERE ar.id = ?",
+                Integer.class, reqLegacy);
+        assertThat(baselineLegacy).isNull();
+    }
+
+    @Test
+    void baseline_isLastApprovedSubmittedVersion() {
+        insertDoc(5, "edit", null, ALICE);
+        archive(1, ALICE);
+        archive(2, BOB);
+        archive(3, ALICE);
+        archive(4, BOB);
+        jdbc.update("""
+                INSERT INTO approval_requests
+                  (id, document_id, status, requested_by, submitted_version_no,
+                   resolved_at, created_at)
+                VALUES (?, ?, 'approuve', ?, 3, now() - interval '1 day', now() - interval '2 day')
+                """, UUID.randomUUID(), DOC, ALICE);
+        UUID current = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO approval_requests
+                  (id, document_id, status, requested_by, submitted_version_no,
+                   submitted_content_version_no, created_at)
+                VALUES (?, ?, 'en_cours', ?, 5, 5, now())
+                """, current, DOC, BOB);
 
         Integer baseline = jdbc.queryForObject(
                 "SELECT " + DocumentApprovalService.BASELINE_VERSION_SQL.replace(" AS baseline_version_no", "")
                         + " FROM approval_requests ar WHERE ar.id = ?",
-                Integer.class, req);
-        assertThat(baseline).isEqualTo(2);
+                Integer.class, current);
+        assertThat(baseline).isEqualTo(3);
     }
 
     @Test
