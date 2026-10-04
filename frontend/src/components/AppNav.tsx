@@ -53,9 +53,17 @@ export function AppNav() {
               Workflows
             </Link>
             {me?.roles?.includes(SocleRole.ADMINISTRATEUR_SYSTEME) && (
-              <Link to="/admin/templates" className="text-socle-muted hover:text-socle-ink">
-                Modèles
-              </Link>
+              <>
+                <Link to="/admin/tags" className="text-socle-muted hover:text-socle-ink">
+                  Tags
+                </Link>
+                <Link to="/admin/custom-fields" className="text-socle-muted hover:text-socle-ink">
+                  Champs
+                </Link>
+                <Link to="/admin/templates" className="text-socle-muted hover:text-socle-ink">
+                  Modèles
+                </Link>
+              </>
             )}
             {me?.roles?.includes(SocleRole.INTEGRATEUR) && (
               <Link to="/integrations" className="text-socle-muted hover:text-socle-ink">

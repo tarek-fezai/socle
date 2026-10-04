@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { apiErrorCode, apiErrorDetail, apiErrorMessage, apiProblem } from './apiError'
+import {
+  apiErrorCode,
+  apiErrorDetail,
+  apiErrorMessage,
+  apiProblem,
+  apiRequiredFieldRefs,
+} from './apiError'
 
 function axiosErr(status: number, data: Record<string, unknown>) {
   return { response: { status, data } }
@@ -48,6 +54,19 @@ describe('apiError (problem+json)', () => {
 
   it('fallback sans corps', () => {
     expect(apiErrorMessage(new Error('network'), 'Échec')).toBe('Échec')
+  })
+
+  it('required_field_missing préfère detail et expose fields', () => {
+    const err = axiosErr(409, {
+      status: 409,
+      code: 'required_field_missing',
+      detail: 'Champs obligatoires manquants pour l\'envoi en révision',
+      fields: [{ id: 'f1', name: 'Criticité', slug: 'criticite' }],
+    })
+    expect(apiErrorMessage(err, 'x')).toContain('Champs obligatoires')
+    expect(apiRequiredFieldRefs(err)).toEqual([
+      { id: 'f1', name: 'Criticité', slug: 'criticite' },
+    ])
   })
 
   it('content_invalid conserve le chemin JSON du détail', () => {

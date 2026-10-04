@@ -1312,6 +1312,16 @@ a.edit-crumb:hover {
   padding: 6px 8px;
 }
 
+.edit-field--missing .edit-field-label {
+  color: #b54708;
+}
+
+.edit-field--missing .edit-field-input,
+.edit-field--missing select.edit-field-input {
+  border-color: #b54708;
+  box-shadow: 0 0 0 1px #b54708;
+}
+
 .edit-field-input:disabled {
   background: #fafafb;
   color: #75757c;

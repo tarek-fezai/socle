@@ -92,6 +92,11 @@ const TAG_BG: Record<string, string> = {
   '#3730E0': '#F0EFFC',
   '#B7791F': '#FDF3E3',
   '#B54708': '#FCEEEA',
+  '#7C3AED': '#F3EEFD',
+  '#1E8E5A': '#E7F5EC',
+  '#0D8A7C': '#E4F4F2',
+  '#9B9BA1': '#F1EFEA',
+  '#6B6862': '#F1EFEA',
 }
 const TAG_PALETTE = ['#3730E0', '#B7791F', '#B54708'] as const
 

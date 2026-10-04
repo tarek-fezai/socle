@@ -45,13 +45,22 @@ export function isApprovalsPath(pathname: string): boolean {
   return /^\/approvals(?:\/[^/]+(?:\/diff)?)?\/?$/.test(pathname)
 }
 
-/** Pages qui portent leur propre chrome (lecture, modification, historique, approbation). */
+/**
+ * Pages admin Tags / Champs personnalisés — layout plein écran (TagsAdmin.dc.html),
+ * sans sidebar shell ni barre haute globale.
+ */
+export function isAdminWorkspacePath(pathname: string): boolean {
+  return /^\/admin\/(?:tags|custom-fields)\/?$/.test(pathname)
+}
+
+/** Pages qui portent leur propre chrome (lecture, modification, historique, approbation, admin). */
 export function hasOwnDocumentChrome(pathname: string): boolean {
   return (
     isDocumentReadPath(pathname) ||
     isDocumentEditPath(pathname) ||
     isDocumentHistoryPath(pathname) ||
-    isApprovalsPath(pathname)
+    isApprovalsPath(pathname) ||
+    isAdminWorkspacePath(pathname)
   )
 }
 

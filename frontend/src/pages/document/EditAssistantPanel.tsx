@@ -2,7 +2,9 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
+import { SocleRole } from '../../lib/auth'
 import {
   fieldInputValue,
   fieldOptions,
@@ -19,7 +21,6 @@ import {
 } from '../../lib/writingAssistant'
 import { tagCloseColor } from './documentEditUtils'
 import { tagColors } from './documentPageUtils'
-import { SOON_TITLE } from './EditToolbar'
 
 /* ------------------------------------------------------------------ */
 /* Cartes de l'assistant                                                */
@@ -377,6 +378,7 @@ function FieldInput({
   error,
   saving,
   mockId,
+  highlightMissing,
 }: {
   field: CustomFieldView
   disabled: boolean
@@ -384,6 +386,7 @@ function FieldInput({
   error: string | null
   saving: boolean
   mockId?: string
+  highlightMissing?: boolean
 }) {
   const id = useId()
   const server = fieldInputValue(field)
@@ -468,7 +471,10 @@ function FieldInput({
   }
 
   return (
-    <div className="edit-field" data-testid="custom-field">
+    <div
+      className={`edit-field${highlightMissing ? ' edit-field--missing' : ''}`}
+      data-testid="custom-field"
+    >
       <label htmlFor={id} className="edit-field-label">
         {field.name}
         {field.required ? ' *' : ''}
@@ -504,9 +510,14 @@ export type EditAssistantPanelProps = AssistantHintsProps & {
   fieldErrors: Record<string, string>
   savingFields: Record<string, boolean>
   onSaveField: (field: CustomFieldView, value: unknown) => void
+  /** IDs de champs obligatoires manquants (`required_field_missing`). */
+  missingRequiredFieldIds?: Set<string>
 }
 
 export function EditAssistantPanel(p: EditAssistantPanelProps) {
+  const { me } = useAuth()
+  const isSystemAdmin = Boolean(me?.roles?.includes(SocleRole.ADMINISTRATEUR_SYSTEME))
+
   return (
     <aside className="edit-assistant" aria-label="Assistant de rédaction" data-mock-id="edit-assistant" data-testid="edit-assistant">
       <div className="edit-panel-label" data-mock-id="edit-assistant-label">
@@ -556,9 +567,15 @@ export function EditAssistantPanel(p: EditAssistantPanelProps) {
               <span className="edit-meta-sublabel edit-meta-sublabel--inline" data-mock-id="edit-meta-custom-label">
                 Champs personnalisés
               </span>
-              <span className="edit-meta-manage" aria-disabled="true" title={SOON_TITLE} data-mock-id="edit-meta-custom-manage">
-                Gérer →
-              </span>
+              {isSystemAdmin ? (
+                <Link
+                  to="/admin/custom-fields"
+                  className="edit-meta-manage"
+                  data-mock-id="edit-meta-custom-manage"
+                >
+                  Gérer →
+                </Link>
+              ) : null}
             </div>
             <div className="edit-fields">
               {p.customFields.map((f, i) => (
@@ -569,19 +586,19 @@ export function EditAssistantPanel(p: EditAssistantPanelProps) {
                   saving={Boolean(p.savingFields[f.id])}
                   error={p.fieldErrors[f.id] ?? null}
                   mockId={`edit-meta-custom-field-${i + 1}`}
+                  highlightMissing={Boolean(p.missingRequiredFieldIds?.has(f.id))}
                   onSave={(v) => p.onSaveField(f, v)}
                 />
               ))}
-              <button
-                type="button"
-                className="edit-add edit-add--block"
-                aria-disabled="true"
-                title={SOON_TITLE}
-                data-mock-id="edit-meta-add-field"
-                onClick={(e) => e.preventDefault()}
-              >
-                + Champ
-              </button>
+              {isSystemAdmin ? (
+                <Link
+                  to="/admin/custom-fields?create=1"
+                  className="edit-add edit-add--block"
+                  data-mock-id="edit-meta-add-field"
+                >
+                  + Champ
+                </Link>
+              ) : null}
             </div>
           </div>
         )}

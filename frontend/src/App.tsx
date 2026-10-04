@@ -9,6 +9,8 @@ import { DocumentHistoryPage } from './pages/DocumentHistoryPage'
 import { DocumentComparePage } from './pages/DocumentComparePage'
 import { NewDocumentPage } from './pages/NewDocumentPage'
 import { TemplatesAdminPage } from './pages/TemplatesAdminPage'
+import { TagsAdminPage } from './pages/TagsAdminPage'
+import { CustomFieldsAdminPage } from './pages/CustomFieldsAdminPage'
 import { AccessPage } from './pages/AccessPage'
 import { ApprovalsPage } from './pages/ApprovalsPage'
 import { ApprovalDiffPage } from './pages/approvals/ApprovalDiffPage'
@@ -59,6 +61,8 @@ export default function App() {
           <Route path="/docs" element={<DocumentsPage />} />
           <Route path="/docs/new" element={<NewDocumentPage />} />
           <Route path="/admin/templates" element={<TemplatesAdminPage />} />
+          <Route path="/admin/tags" element={<TagsAdminPage />} />
+          <Route path="/admin/custom-fields" element={<CustomFieldsAdminPage />} />
           <Route path="/docs/:id" element={<DocumentReadPage />} />
           <Route path="/docs/:id/edit" element={<DocumentEditPage />} />
           <Route path="/docs/:id/view" element={<DocumentViewRedirect />} />

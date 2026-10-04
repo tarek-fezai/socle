@@ -188,6 +188,34 @@ export const EDIT_DESKTOP_IDS = [
   'edit-meta-add-field',
 ]
 
+/** Tags admin — TagsAdmin.dc.html @ 1440×900 (layout admin plein écran). */
+export const TAGS_ADMIN_DESKTOP_IDS = [
+  'admin-breadcrumb',
+  'admin-subnav',
+  'admin-nav-tags',
+  'tags-title',
+  'tags-cta',
+  'tags-stats',
+  'tags-table',
+  'tags-merge-callout',
+  'tags-rail',
+  'tags-rail-count',
+  'tags-rail-tagged',
+  'tags-rail-policy',
+]
+
+/** Champs personnalisés admin — CustomFields.dc.html (liste ; constructeur comparé séparément si ouvert). */
+export const CUSTOM_FIELDS_ADMIN_DESKTOP_IDS = [
+  'admin-breadcrumb',
+  'admin-subnav',
+  'admin-nav-custom-fields',
+  'custom-fields-title',
+  'custom-fields-cta',
+  'custom-fields-stats',
+  'custom-fields-table',
+  'custom-fields-rail',
+]
+
 /** Historique — History.dc.html (colonne principale ; v12 courante, v11 / v10 / v9 restaurables). */
 export const HISTORY_DESKTOP_IDS = [
   'hist-topbar',
@@ -652,6 +680,66 @@ export async function annotateEditMockup(page) {
     set(fields?.children[0]?.querySelector('input'), 'edit-meta-custom-field-1')
     set(fields?.children[1]?.querySelector('input'), 'edit-meta-custom-field-2')
     set(fields?.children[2], 'edit-meta-add-field')
+  })
+}
+
+/** Annotate TagsAdmin.dc.html with data-mock-id. */
+export async function annotateTagsAdminMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const [breadcrumb, body] = [...root.children]
+    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
+    const subnav = body?.children[0]
+    subnav?.setAttribute('data-mock-id', 'admin-subnav')
+    subnav?.querySelector('a[href="TagsAdmin.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-tags')
+    const main = body?.children[1]
+    const rail = body?.children[2]
+    main?.querySelector('h1')?.setAttribute('data-mock-id', 'tags-title')
+    main?.querySelector('a.cta')?.setAttribute('data-mock-id', 'tags-cta')
+    main?.querySelector('p')?.setAttribute('data-mock-id', 'tags-stats')
+    main?.querySelector('div[style*="border: 1px solid"]')?.setAttribute('data-mock-id', 'tags-table')
+    const callout = main?.querySelector('div[style*="border-left: 3px"]')
+    ;(callout?.querySelector('p') || callout)?.setAttribute('data-mock-id', 'tags-merge-callout')
+    if (rail) {
+      rail.setAttribute('data-mock-id', 'tags-rail')
+      const blocks = rail.children
+      blocks[0]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-count')
+      blocks[1]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-tagged')
+      blocks[2]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-policy')
+    }
+  })
+}
+
+/** Annotate CustomFields.dc.html (liste + rail) with data-mock-id. */
+export async function annotateCustomFieldsAdminMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const [breadcrumb, body] = [...root.children]
+    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
+    const subnav = body?.children[0]
+    subnav?.setAttribute('data-mock-id', 'admin-subnav')
+    subnav?.querySelector('a[href="CustomFields.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-custom-fields')
+    const split = body?.children[1]
+    const main = split?.children[0]
+    const rail = split?.children[1]
+    main?.querySelector('h1')?.setAttribute('data-mock-id', 'custom-fields-title')
+    // CTA d'en-tête « Nouveau champ » (pas le bouton « Créer le champ » du constructeur).
+    const titleRow = main?.querySelector('h1')?.parentElement
+    const headerCta = [...(titleRow?.querySelectorAll('span') ?? [])].find((s) =>
+      (s.textContent || '').includes('Nouveau champ'),
+    )
+    headerCta?.setAttribute('data-mock-id', 'custom-fields-cta')
+    main?.querySelector('p')?.setAttribute('data-mock-id', 'custom-fields-stats')
+    const table = main?.querySelector('div[style*="border: 1px solid"]')
+    table?.setAttribute('data-mock-id', 'custom-fields-table')
+    rail?.setAttribute('data-mock-id', 'custom-fields-rail')
+    // Masquer le constructeur pour la comparaison liste (hors viewport maquette).
+    const builder = [...(main?.querySelectorAll('div') ?? [])].find((d) =>
+      (d.textContent || '').includes('Aperçu du constructeur'),
+    )
+    if (builder) builder.style.display = 'none'
   })
 }
 

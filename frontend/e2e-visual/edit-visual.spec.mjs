@@ -54,7 +54,8 @@
  *  E4. Carte « Paragraphe long » : message calculé (« Ce paragraphe dépasse N mots (M) — … ») au lieu
  *      du texte statique « Le paragraphe édité dépasse 60 mots — … » ; bouton « Aller au paragraphe »
  *      ajouté dans l'en-tête de la carte (absent de la maquette).
- *  E5. « Gérer → » et « + Champ » désactivés (« Bientôt disponible ») : la gestion des définitions de
+ *  E5. (retiré) « Gérer → » et « + Champ » mènent à /admin/custom-fields pour ADMINISTRATEUR_SYSTEME.
+ *  Ancien commentaire — définitions de
  *      champs n'est pas dans le périmètre de l'écran.
  *  E6. Champs personnalisés : le premier champ de la maquette est en IBM Plex Mono ; l'app utilise
  *      IBM Plex Sans pour tous les champs (type `texte` générique).
@@ -335,7 +336,6 @@ test.describe('document edit structural', () => {
       skip: ['fontFamily'],
       reason: 'E6 : champ en IBM Plex Mono dans la maquette ; IBM Plex Sans dans l’app',
     },
-    'edit-meta-custom-manage': { skip: ['color'], reason: 'E5 : « Gérer → » désactivé (« Bientôt disponible »)' },
     'edit-breadcrumb-current': {
       skip: ['box'],
       reason: 'E11 : fil d’Ariane compressé par le bouton « Enregistrer la version » (absent de la maquette)',
