@@ -1052,6 +1052,133 @@
         }
       }
     },
+    "/api/v1/admin/tags/{id}/name" : {
+      "put" : {
+        "tags" : [ "tag-admin-controller" ],
+        "operationId" : "rename",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RenameTagRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagAdminView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/tags/creation-policy" : {
+      "put" : {
+        "tags" : [ "tag-admin-controller" ],
+        "operationId" : "updateCreationPolicy",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagCreationPolicyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagAdminSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/custom-fields/{id}" : {
+      "put" : {
+        "tags" : [ "custom-field-admin-controller" ],
+        "operationId" : "update_7",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateFieldRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FieldAdminView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "custom-field-admin-controller" ],
+        "operationId" : "delete_7",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FieldAdminView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/webhook-endpoints" : {
       "get" : {
         "tags" : [ "webhook-endpoint-controller" ],
@@ -3008,10 +3135,91 @@
         }
       }
     },
+    "/api/v1/admin/tags" : {
+      "get" : {
+        "tags" : [ "tag-admin-controller" ],
+        "operationId" : "list_11",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "tag-admin-controller" ],
+        "operationId" : "create_12",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateTagRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagAdminView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/tags/{id}/merge" : {
+      "post" : {
+        "tags" : [ "tag-admin-controller" ],
+        "operationId" : "merge",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MergeTagRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagAdminView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/platform-roles" : {
       "get" : {
         "tags" : [ "platform-role-controller" ],
-        "operationId" : "list_11",
+        "operationId" : "list_12",
         "parameters" : [ {
           "name" : "userId",
           "in" : "query",
@@ -3057,6 +3265,50 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PlatformRoleView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/custom-fields" : {
+      "get" : {
+        "tags" : [ "custom-field-admin-controller" ],
+        "operationId" : "list_13",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FieldListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "custom-field-admin-controller" ],
+        "operationId" : "create_13",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateFieldRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FieldAdminView"
                 }
               }
             }
@@ -3170,7 +3422,7 @@
     "/api/v1/access/{objectType}/{objectId}" : {
       "get" : {
         "tags" : [ "access-controller" ],
-        "operationId" : "list_12",
+        "operationId" : "list_14",
         "parameters" : [ {
           "name" : "objectType",
           "in" : "path",
@@ -3299,7 +3551,7 @@
       },
       "delete" : {
         "tags" : [ "template-controller" ],
-        "operationId" : "delete_7",
+        "operationId" : "delete_8",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3317,7 +3569,7 @@
       },
       "patch" : {
         "tags" : [ "template-controller" ],
-        "operationId" : "update_7",
+        "operationId" : "update_8",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3355,94 +3607,6 @@
       "get" : {
         "tags" : [ "folder-controller" ],
         "operationId" : "get_11",
-        "parameters" : [ {
-          "name" : "id",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/FolderView"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete" : {
-        "tags" : [ "folder-controller" ],
-        "operationId" : "delete_8",
-        "parameters" : [ {
-          "name" : "id",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "object",
-                  "additionalProperties" : { }
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch" : {
-        "tags" : [ "folder-controller" ],
-        "operationId" : "update_8",
-        "parameters" : [ {
-          "name" : "id",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/UpdateFolderRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/FolderView"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/folders/{id}" : {
-      "get" : {
-        "tags" : [ "folder-controller" ],
-        "operationId" : "get_12",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3527,10 +3691,98 @@
         }
       }
     },
+    "/api/folders/{id}" : {
+      "get" : {
+        "tags" : [ "folder-controller" ],
+        "operationId" : "get_12",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FolderView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "folder-controller" ],
+        "operationId" : "delete_10",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : { }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "folder-controller" ],
+        "operationId" : "update_10",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateFolderRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FolderView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/comments/{id}" : {
       "delete" : {
         "tags" : [ "comment-controller" ],
-        "operationId" : "delete_10",
+        "operationId" : "delete_11",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3555,7 +3807,7 @@
       },
       "patch" : {
         "tags" : [ "comment-controller" ],
-        "operationId" : "update_10",
+        "operationId" : "update_11",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3592,7 +3844,7 @@
     "/api/v1/webhooks/deliveries" : {
       "get" : {
         "tags" : [ "webhook-delivery-controller" ],
-        "operationId" : "list_13",
+        "operationId" : "list_15",
         "parameters" : [ {
           "name" : "endpointId",
           "in" : "query",
@@ -3644,7 +3896,7 @@
     "/api/v1/trash" : {
       "get" : {
         "tags" : [ "trash-controller" ],
-        "operationId" : "list_14",
+        "operationId" : "list_16",
         "parameters" : [ {
           "name" : "resourceType",
           "in" : "query",
@@ -4074,7 +4326,7 @@
     "/api/v1/notifications" : {
       "get" : {
         "tags" : [ "notification-controller" ],
-        "operationId" : "list_15",
+        "operationId" : "list_17",
         "parameters" : [ {
           "name" : "unreadOnly",
           "in" : "query",
@@ -4175,7 +4427,7 @@
     "/api/v1/global-roles" : {
       "get" : {
         "tags" : [ "global-role-controller" ],
-        "operationId" : "list_16",
+        "operationId" : "list_18",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -4252,7 +4504,7 @@
     "/api/v1/favorites" : {
       "get" : {
         "tags" : [ "favorite-controller" ],
-        "operationId" : "list_17",
+        "operationId" : "list_19",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -4785,7 +5037,7 @@
     "/api/v1/documents/{id}/custom-fields" : {
       "get" : {
         "tags" : [ "document-custom-field-controller" ],
-        "operationId" : "list_18",
+        "operationId" : "list_20",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5026,7 +5278,7 @@
     "/api/v1/audit" : {
       "get" : {
         "tags" : [ "audit-controller" ],
-        "operationId" : "list_19",
+        "operationId" : "list_21",
         "parameters" : [ {
           "name" : "resourceType",
           "in" : "query",
@@ -5182,6 +5434,24 @@
                   "items" : {
                     "$ref" : "#/components/schemas/ApprovalView"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/tags/summary" : {
+      "get" : {
+        "tags" : [ "tag-admin-controller" ],
+        "operationId" : "summary",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagAdminSummary"
                 }
               }
             }
@@ -5478,6 +5748,26 @@
       "delete" : {
         "tags" : [ "approval-role-assignment-controller" ],
         "operationId" : "unassign",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/tags/{id}" : {
+      "delete" : {
+        "tags" : [ "tag-admin-controller" ],
+        "operationId" : "delete_12",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6081,6 +6371,9 @@
           },
           "value" : {
             "$ref" : "#/components/schemas/JsonNode"
+          },
+          "helpText" : {
+            "type" : "string"
           }
         }
       },
@@ -6218,6 +6511,152 @@
           "escalatesToStepOrder" : {
             "type" : "integer",
             "format" : "int32"
+          }
+        }
+      },
+      "RenameTagRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "TagAdminView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "color" : {
+            "type" : "string"
+          },
+          "documentCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdByDisplayName" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "governed" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "TagCreationPolicyRequest" : {
+        "type" : "object",
+        "properties" : {
+          "tagCreationPolicy" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "tagCreationPolicy" ]
+      },
+      "TagAdminSummary" : {
+        "type" : "object",
+        "properties" : {
+          "tagCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "taggedDocumentCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "totalDocumentCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "tagCreationPolicy" : {
+            "type" : "string"
+          }
+        }
+      },
+      "UpdateFieldRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "helpText" : {
+            "type" : "string"
+          },
+          "fieldType" : {
+            "type" : "string"
+          },
+          "scope" : {
+            "type" : "string"
+          },
+          "required" : {
+            "type" : "boolean"
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/JsonNode"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "archiveRemovedOptions" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "FieldAdminView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "slug" : {
+            "type" : "string"
+          },
+          "helpText" : {
+            "type" : "string"
+          },
+          "fieldType" : {
+            "type" : "string"
+          },
+          "scope" : {
+            "type" : "string"
+          },
+          "scopeSpaceName" : {
+            "type" : "string"
+          },
+          "required" : {
+            "type" : "boolean"
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/JsonNode"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "documentCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
@@ -7126,6 +7565,33 @@
           }
         }
       },
+      "CreateTagRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 0
+          },
+          "color" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "MergeTagRequest" : {
+        "type" : "object",
+        "properties" : {
+          "targetTagId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "transferAssignments" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "targetTagId" ]
+      },
       "GrantRequest" : {
         "type" : "object",
         "properties" : {
@@ -7159,6 +7625,37 @@
             "format" : "date-time"
           }
         }
+      },
+      "CreateFieldRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "helpText" : {
+            "type" : "string"
+          },
+          "fieldType" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "scope" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "required" : {
+            "type" : "boolean"
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/JsonNode"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "fieldType", "name", "scope" ]
       },
       "PermissionRequest" : {
         "type" : "object",
@@ -8546,6 +9043,20 @@
           }
         }
       },
+      "TagListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagAdminView"
+            }
+          },
+          "summary" : {
+            "$ref" : "#/components/schemas/TagAdminSummary"
+          }
+        }
+      },
       "DriftItem" : {
         "type" : "object",
         "properties" : {
@@ -8582,6 +9093,17 @@
           },
           "procedure" : {
             "type" : "string"
+          }
+        }
+      },
+      "FieldListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "fields" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FieldAdminView"
+            }
           }
         }
       },
