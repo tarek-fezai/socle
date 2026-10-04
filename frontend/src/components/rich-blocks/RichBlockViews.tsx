@@ -1,12 +1,49 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useInRouterContext } from 'react-router-dom'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { api } from '../../lib/api'
 import { attachmentObjectUrl } from '../../lib/attachments'
-import { buttonTarget, formatDateFr } from './richBlockUtils'
+import { isSafeHttpUrl } from '../../lib/comments'
+import { AttachmentImage } from '../attachments/AttachmentViews'
+import {
+  buttonTarget,
+  chartAccessibilityLabel,
+  formatDateFr,
+  type ChartSeries,
+  type ChartType,
+  parseChartSeries,
+  parseStringList,
+} from './richBlockUtils'
 
 export const DOCUMENT_INACCESSIBLE_LABEL = 'Document inaccessible'
 export const VIDEO_UNAVAILABLE_LABEL = 'Vidéo indisponible'
+export const POLL_CLOSED_LABEL = 'Sondage fermé'
+
+type PollOptionResult = { option: string; count: number }
+
+type PollApiView = {
+  question: string
+  options: string[]
+  closed: boolean
+  myVote: string | null
+  results: PollOptionResult[]
+  totalVotes: number
+}
 
 /* ------------------------------------------------------------------ */
 /* Date                                                                 */
@@ -112,6 +149,253 @@ export function RichButton({ label, href, documentId }: { label?: unknown; href?
     <div className="doc-cta-wrap" data-testid="doc-button">
       {inner}
     </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Sondage                                                              */
+/* ------------------------------------------------------------------ */
+
+/** Sondage : vote via API, barres de résultats agrégées (jamais de liste nominative). */
+export function PollView({
+  pollId,
+  question,
+  options,
+}: {
+  pollId: string
+  question: string
+  options: string[]
+}) {
+  const [apiState, setApiState] = useState<PollApiView | null>(null)
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [voting, setVoting] = useState(false)
+
+  const load = useCallback(() => {
+    if (!pollId) {
+      setLoadState('error')
+      return
+    }
+    setLoadState('loading')
+    void api.get(`/api/v1/polls/${encodeURIComponent(pollId)}`).then(
+      (r) => {
+        setApiState(r.data as PollApiView)
+        setLoadState('ready')
+      },
+      () => setLoadState('error'),
+    )
+  }, [pollId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const q = apiState?.question ?? question
+  const opts = apiState?.options ?? options
+  const closed = apiState?.closed ?? false
+  const total = apiState?.totalVotes ?? 0
+  const myVote = apiState?.myVote ?? null
+  const results = apiState?.results ?? []
+
+  const countFor = (opt: string) => results.find((r) => r.option === opt)?.count ?? 0
+
+  const vote = (option: string) => {
+    if (closed || voting || !pollId) return
+    setVoting(true)
+    void api
+      .put(`/api/v1/polls/${encodeURIComponent(pollId)}/vote`, { option })
+      .then((r) => {
+        setApiState(r.data as PollApiView)
+        setLoadState('ready')
+      })
+      .finally(() => setVoting(false))
+  }
+
+  const showStats = loadState === 'ready' || loadState === 'error'
+
+  return (
+    <div className="doc-poll" data-testid="doc-poll">
+      <p className="doc-poll-question">{q}</p>
+      {closed ? (
+        <p className="doc-poll-closed" data-testid="doc-poll-closed">
+          {POLL_CLOSED_LABEL}
+        </p>
+      ) : null}
+      <ul className="doc-poll-options">
+        {opts.map((opt) => {
+          const count = showStats ? countFor(opt) : 0
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0
+          const selected = myVote === opt
+          return (
+            <li key={opt}>
+              <button
+                type="button"
+                className={`doc-poll-option${selected ? ' is-voted' : ''}`}
+                disabled={closed || voting || loadState === 'loading'}
+                data-testid={`doc-poll-option-${opt}`}
+                onClick={() => vote(opt)}
+              >
+                <span className="doc-poll-option-label">{opt}</span>
+                {showStats && total > 0 ? (
+                  <>
+                    <span className="doc-poll-bar-wrap" aria-hidden>
+                      <span className="doc-poll-bar" style={{ width: `${pct}%` }} />
+                    </span>
+                    <span className="doc-poll-stat" data-testid="doc-poll-stat">
+                      {count} ({pct}&nbsp;%)
+                    </span>
+                  </>
+                ) : null}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Graphique                                                            */
+/* ------------------------------------------------------------------ */
+
+const CHART_COLORS = ['#3730E0', '#0D8A7C', '#B7791F', '#B54708', '#6B6862']
+
+function ChartInner({
+  chartType,
+  labels,
+  series,
+}: {
+  chartType: ChartType
+  labels: string[]
+  series: ChartSeries[]
+}) {
+  const data = useMemo(() => {
+    return labels.map((label, i) => {
+      const row: Record<string, string | number> = { label }
+      for (const s of series) row[s.name] = s.values[i] ?? 0
+      return row
+    })
+  }, [labels, series])
+
+  if (chartType === 'pie' && series[0]) {
+    const s0 = series[0]
+    const pieData = labels.map((label, i) => ({ name: label, value: s0.values[i] ?? 0 }))
+    return (
+      <PieChart>
+        <Tooltip />
+        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="80%">
+          {pieData.map((_, i) => (
+            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+          ))}
+        </Pie>
+        <Legend />
+      </PieChart>
+    )
+  }
+
+  if (chartType === 'line') {
+    return (
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="label" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        {series.map((s, i) => (
+          <Line key={s.name} type="monotone" dataKey={s.name} stroke={CHART_COLORS[i % CHART_COLORS.length]} />
+        ))}
+      </LineChart>
+    )
+  }
+
+  return (
+    <BarChart data={data}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="label" />
+      <YAxis />
+      <Tooltip />
+      <Legend />
+      {series.map((s, i) => (
+        <Bar key={s.name} dataKey={s.name} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+      ))}
+    </BarChart>
+  )
+}
+
+/** Graphique Recharts (lecture / édition). */
+export function ChartView({
+  chartType,
+  labels,
+  series,
+  title,
+}: {
+  chartType: ChartType
+  labels: string[]
+  series: ChartSeries[]
+  title?: string | null
+}) {
+  const lbls = parseStringList(labels)
+  const ser = parseChartSeries(series)
+  const aria = chartAccessibilityLabel(title, lbls, ser)
+  return (
+    <figure className="doc-chart-wrap" data-testid="doc-chart">
+      {title?.trim() ? <figcaption className="doc-chart-title">{title.trim()}</figcaption> : null}
+      <div className="doc-chart-canvas" role="img" aria-label={aria} data-testid="doc-chart-aria">
+        <ResponsiveContainer width="100%" height={280}>
+          <ChartInner chartType={chartType} labels={lbls.length ? lbls : ['A']} series={ser.length ? ser : [{ name: 'Série', values: [0] }]} />
+        </ResponsiveContainer>
+      </div>
+    </figure>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Aperçu de lien                                                       */
+/* ------------------------------------------------------------------ */
+
+/** Carte d'aperçu : URL + domaine par défaut ; titre / vignette optionnels. */
+export function LinkPreviewCard({
+  url,
+  title,
+  domain,
+  thumbnailId,
+}: {
+  url: string
+  title?: string | null
+  domain?: string | null
+  thumbnailId?: string | null
+}) {
+  const safe = isSafeHttpUrl(url) ? url : null
+  const host = domain?.trim() || (safe ? new URL(safe).hostname.replace(/^www\./i, '') : '')
+  const heading = title?.trim() || safe || url
+  const inner = (
+    <>
+      {thumbnailId ? (
+        <span className="doc-link-preview-thumb">
+          <AttachmentImage id={thumbnailId} alt="" />
+        </span>
+      ) : null}
+      <span className="doc-link-preview-body">
+        <span className="doc-link-preview-title">{heading}</span>
+        {host ? (
+          <span className="doc-link-preview-domain" data-testid="doc-link-preview-domain">
+            {host}
+          </span>
+        ) : null}
+      </span>
+    </>
+  )
+  if (!safe) {
+    return (
+      <div className="doc-link-preview is-inert" data-testid="doc-link-preview">
+        {inner}
+      </div>
+    )
+  }
+  return (
+    <a className="doc-link-preview" href={safe} target="_blank" rel="noopener noreferrer" data-testid="doc-link-preview">
+      {inner}
+    </a>
   )
 }
 

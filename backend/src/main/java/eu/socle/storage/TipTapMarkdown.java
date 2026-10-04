@@ -30,9 +30,11 @@ public final class TipTapMarkdown {
     public static final String DATE_TYPE = "date";
     public static final String BUTTON_TYPE = "button";
     public static final String VIDEO_TYPE = "video";
+    public static final String CHART_TYPE = "chart";
     public static final String ATTR_DOCUMENT_ID = "documentId";
     public static final String ATTR_ATTACHMENT_ID = "id";
     public static final String SOCLE_JSON_FENCE = ":::socle-json";
+    public static final String CHART_FENCE = ":::chart";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Pattern TRANSCLUSION_LINE = Pattern.compile(
@@ -132,7 +134,19 @@ public final class TipTapMarkdown {
             case DATE_TYPE -> appendDate(sb, block);
             case BUTTON_TYPE -> appendButton(sb, block);
             case VIDEO_TYPE -> appendVideo(sb, block);
+            case CHART_TYPE -> appendChart(sb, block);
             default -> appendSocleJson(sb, block);
+        }
+    }
+
+    /** {@code :::chart} + JSON TipTap + {@code :::} — aller-retour sans perte. */
+    private static void appendChart(StringBuilder sb, Map<String, Object> block) {
+        try {
+            sb.append(CHART_FENCE).append('\n')
+                    .append(MAPPER.writeValueAsString(block)).append('\n')
+                    .append(":::\n\n");
+        } catch (JsonProcessingException e) {
+            appendSocleJson(sb, block);
         }
     }
 
@@ -173,9 +187,10 @@ public final class TipTapMarkdown {
         while (i < lines.length) {
             String line = lines[i];
 
-            if (line.trim().equals(SOCLE_JSON_FENCE)) {
+            if (line.trim().equals(SOCLE_JSON_FENCE) || line.trim().equals(CHART_FENCE)) {
                 flushPara.run();
                 flushList.run();
+                boolean chartFence = line.trim().equals(CHART_FENCE);
                 i++;
                 StringBuilder jsonBuf = new StringBuilder();
                 while (i < lines.length && !lines[i].trim().equals(":::")) {
@@ -188,7 +203,11 @@ public final class TipTapMarkdown {
                 if (i < lines.length) {
                     i++;
                 }
-                content.add(parseSocleJson(jsonBuf.toString()));
+                Map<String, Object> parsed = parseSocleJson(jsonBuf.toString());
+                if (chartFence && !CHART_TYPE.equals(parsed.get("type"))) {
+                    parsed.put("type", CHART_TYPE);
+                }
+                content.add(parsed);
                 continue;
             }
 

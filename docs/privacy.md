@@ -42,6 +42,19 @@ Readers can vote yes/no once per document (`document_feedback(document_id, user_
 | Individual votes | Never exposed through any API — no list of who voted what, not even to editors |
 | Deletion | Votes are deleted with the document or the user (`ON DELETE CASCADE`) |
 
+## Embedded polls
+
+TipTap `poll` nodes store a stable `id` in the document body. Votes live in `poll_votes(poll_id, user_id, option)` (one row per user, last vote wins while open).
+
+| What | Detail |
+|------|--------|
+| Vote | `PUT /api/v1/polls/{id}/vote` — document **viewer**; allowed during an in-progress approval (not a content mutation) |
+| Close | `POST /api/v1/polls/{id}/close` — document **editor** |
+| Read | `GET /api/v1/polls/{id}` → question, options, `myVote`, **aggregated** `results` (counts per option) for every viewer |
+| Individual votes | Never exposed — no nominative list, same rule as page feedback |
+| GDPR export | `GET /api/v1/me/export` includes the caller's own `pollVotes` only |
+| Lifecycle | Removing the node archives the poll (`archived_at`); votes kept while the document exists; purge with the document (`ON DELETE CASCADE`) |
+
 ## Read attestations
 
 Attestation campaigns (`attestation_campaigns`, `attestation_acknowledgments`) are a compliance record, so they are **nominative by design**:

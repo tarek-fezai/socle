@@ -4,6 +4,70 @@ import { isSafeHttpUrl } from '../../lib/comments'
 export const DATE_NODE_TYPE = 'date'
 export const BUTTON_NODE_TYPE = 'button'
 export const VIDEO_NODE_TYPE = 'video'
+export const POLL_NODE_TYPE = 'poll'
+export const CHART_NODE_TYPE = 'chart'
+export const LINK_PREVIEW_NODE_TYPE = 'linkPreview'
+
+export const DEFAULT_POLL_QUESTION = 'Votre avis ?'
+export const DEFAULT_POLL_OPTIONS: readonly [string, string] = ['Oui', 'Non']
+export const DEFAULT_LINK_PREVIEW_URL = 'https://example.org'
+
+export type ChartType = 'bar' | 'line' | 'pie'
+export type ChartSeries = { name: string; values: number[] }
+
+/** Hôte affiché sur la carte d'aperçu (sans www.). */
+export function domainFromUrl(raw: string): string {
+  try {
+    return new URL(raw.trim()).hostname.replace(/^www\./i, '')
+  } catch {
+    return ''
+  }
+}
+
+export function parseStringList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+}
+
+export function parseChartSeries(raw: unknown): ChartSeries[] {
+  if (!Array.isArray(raw)) return []
+  const out: ChartSeries[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const o = item as { name?: unknown; values?: unknown }
+    const name = typeof o.name === 'string' && o.name.trim() ? o.name.trim() : 'Série'
+    const values = Array.isArray(o.values) ? o.values.map((v) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0)) : []
+    out.push({ name, values })
+  }
+  return out
+}
+
+/** Libellé accessible pour un graphique (lecture / tests). */
+export function chartAccessibilityLabel(
+  title: string | undefined | null,
+  labels: string[],
+  series: ChartSeries[],
+): string {
+  const head = title?.trim() || 'Graphique'
+  if (labels.length === 0 || series.length === 0) return head
+  const chunks = series.map((s) => {
+    const pts = labels.map((l, i) => `${l} ${s.values[i] ?? 0}`).join(', ')
+    return `${s.name}: ${pts}`
+  })
+  return `${head}. ${chunks.join(' ; ')}`
+}
+
+export const SAMPLE_CHART_ATTRS: {
+  chartType: ChartType
+  labels: string[]
+  series: ChartSeries[]
+  title: string
+} = {
+  chartType: 'bar',
+  labels: ['Janvier', 'Février', 'Mars'],
+  series: [{ name: 'Ventes', values: [12, 19, 8] }],
+  title: 'Exemple',
+}
 
 export const DEFAULT_BUTTON_LABEL = 'Action'
 /** Lien de départ d'un bouton inséré : à remplacer par l'auteur. */

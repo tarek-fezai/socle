@@ -28,7 +28,8 @@ public class TipTapContentValidator {
             "codeBlock", "blockquote", "hardBreak", "horizontalRule",
             "placeholder", "attachment", "image", "figure", "figcaption", "transclusion",
             "table", "tableRow", "tableCell", "tableHeader",
-            "date", "button", "video");
+            "date", "button", "video",
+            "poll", "chart", "linkPreview");
 
     private static final Set<String> MARKS = Set.of(
             "bold", "strong", "italic", "em", "strike", "code", "link", "underline");
@@ -59,7 +60,10 @@ public class TipTapContentValidator {
             Map.entry("tableHeader", Set.of("colspan", "rowspan", "colwidth")),
             Map.entry("date", Set.of("value")),
             Map.entry("button", Set.of("label", "href", "documentId")),
-            Map.entry("video", Set.of("id", "filename", "mediaType", "sizeBytes")));
+            Map.entry("video", Set.of("id", "filename", "mediaType", "sizeBytes")),
+            Map.entry("poll", Set.of("id", "question", "options")),
+            Map.entry("chart", Set.of("chartType", "labels", "series", "title")),
+            Map.entry("linkPreview", Set.of("url", "title", "domain", "thumbnailId")));
 
     private static final Set<String> MARK_ATTRS_LINK = Set.of("href", "target", "rel", "class");
 
@@ -205,6 +209,40 @@ public class TipTapContentValidator {
                 }
             }
             case "transclusion" -> requireUuidAttr(attrs, "documentId", path);
+            case "poll" -> {
+                requireUuidAttr(attrs, "id", path);
+                Object q = attrs.get("question");
+                if (!(q instanceof String qs) || qs.isBlank()) {
+                    throw ApiErrors.contentInvalid(path + ".attrs.question", "question requise");
+                }
+                Object opt = attrs.get("options");
+                if (!(opt instanceof java.util.List<?> list) || list.size() < 2) {
+                    throw ApiErrors.contentInvalid(path + ".attrs.options", "au moins 2 options");
+                }
+                for (Object o : list) {
+                    if (!(o instanceof String s) || s.isBlank()) {
+                        throw ApiErrors.contentInvalid(path + ".attrs.options", "option texte requise");
+                    }
+                }
+            }
+            case "chart" -> {
+                Object ct = attrs.get("chartType");
+                if (!(ct instanceof String t)
+                        || (!"bar".equals(t) && !"line".equals(t) && !"pie".equals(t))) {
+                    throw ApiErrors.contentInvalid(path + ".attrs.chartType", "bar|line|pie requis");
+                }
+            }
+            case "linkPreview" -> {
+                Object url = attrs.get("url");
+                if (url == null) {
+                    throw ApiErrors.contentInvalid(path + ".attrs.url", "url requise");
+                }
+                requireSafeUrl(String.valueOf(url), path + ".attrs.url");
+                Object thumb = attrs.get("thumbnailId");
+                if (thumb != null && !(thumb instanceof String s && UUID.matcher(s).matches())) {
+                    throw ApiErrors.contentInvalid(path + ".attrs.thumbnailId", "UUID requis");
+                }
+            }
             case "tableCell", "tableHeader" -> {
                 // V1 : pas de fusion (colspan/rowspan > 1) — sinon perte Markdown GFM.
                 rejectMerge(attrs, "colspan", path);

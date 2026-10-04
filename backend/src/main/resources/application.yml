@@ -102,6 +102,13 @@ socle:
     max-image-pixels: ${SOCLE_ATTACHMENT_MAX_IMAGE_PIXELS:40000000}
     # Types MIME détectés (Tika) — SVG refusé par défaut. WebP via TwelveMonkeys imageio-webp.
     allowed-media-types: ${SOCLE_ATTACHMENT_ALLOWED_TYPES:image/png,image/jpeg,image/webp,image/gif,application/pdf,video/mp4,video/webm,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/zip}
+  link-preview:
+    # Désactivé par défaut : carte locale (URL + domaine), aucun appel externe.
+    enabled: ${SOCLE_LINK_PREVIEW_ENABLED:false}
+    allowed-domains: ${SOCLE_LINK_PREVIEW_ALLOWED_DOMAINS:}
+    proxy-url: ${SOCLE_LINK_PREVIEW_PROXY_URL:}
+    cache-ttl-hours: ${SOCLE_LINK_PREVIEW_CACHE_TTL_HOURS:168}
+    rate-limit-per-minute: ${SOCLE_LINK_PREVIEW_RATE_LIMIT_PER_MINUTE:10}
   temporal:
     target: ${TEMPORAL_TARGET:localhost:7233}
     namespace: ${TEMPORAL_NAMESPACE:default}

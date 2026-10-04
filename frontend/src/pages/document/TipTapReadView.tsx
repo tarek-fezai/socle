@@ -3,8 +3,13 @@ import { Fragment, useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { AttachmentFile, AttachmentImage } from '../../components/attachments/AttachmentViews'
-import { RichButton, RichVideo } from '../../components/rich-blocks/RichBlockViews'
-import { formatDateFr } from '../../components/rich-blocks/richBlockUtils'
+import { ChartView, LinkPreviewCard, PollView, RichButton, RichVideo } from '../../components/rich-blocks/RichBlockViews'
+import {
+  formatDateFr,
+  parseChartSeries,
+  parseStringList,
+  type ChartType,
+} from '../../components/rich-blocks/richBlockUtils'
 import { highlightAnchorsHtml, isSafeHttpUrl } from '../../lib/comments'
 import type { TipTapNode } from '../../lib/documents'
 import { PLACEHOLDER_NODE_TYPE, DEFAULT_PLACEHOLDER_HINT } from '../../lib/templates'
@@ -467,6 +472,41 @@ function renderBlock(node: TipTapNode, ctx: Ctx): ReactNode {
     case 'button': {
       const attrs = (node.attrs ?? {}) as Record<string, unknown>
       return <RichButton label={attrs.label} href={attrs.href} documentId={attrs.documentId} />
+    }
+    case 'poll': {
+      const attrs = (node.attrs ?? {}) as Record<string, unknown>
+      const id = typeof attrs.id === 'string' ? attrs.id : ''
+      const question = typeof attrs.question === 'string' ? attrs.question : ''
+      const options = parseStringList(attrs.options)
+      if (!id || options.length < 2) return <UnsupportedBlock type={type} />
+      return <PollView pollId={id} question={question} options={options} />
+    }
+    case 'chart': {
+      const attrs = (node.attrs ?? {}) as Record<string, unknown>
+      const chartType = (attrs.chartType === 'line' || attrs.chartType === 'pie' ? attrs.chartType : 'bar') as ChartType
+      const labels = parseStringList(attrs.labels)
+      const series = parseChartSeries(attrs.series)
+      return (
+        <ChartView
+          chartType={chartType}
+          labels={labels}
+          series={series}
+          title={typeof attrs.title === 'string' ? attrs.title : null}
+        />
+      )
+    }
+    case 'linkPreview': {
+      const attrs = (node.attrs ?? {}) as Record<string, unknown>
+      const url = typeof attrs.url === 'string' ? attrs.url : ''
+      if (!url.trim()) return <UnsupportedBlock type={type} />
+      return (
+        <LinkPreviewCard
+          url={url}
+          title={typeof attrs.title === 'string' ? attrs.title : null}
+          domain={typeof attrs.domain === 'string' ? attrs.domain : null}
+          thumbnailId={typeof attrs.thumbnailId === 'string' ? attrs.thumbnailId : null}
+        />
+      )
     }
     case 'video': {
       const attrs = (node.attrs ?? {}) as Record<string, unknown>

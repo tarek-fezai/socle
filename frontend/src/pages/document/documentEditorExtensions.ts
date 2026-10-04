@@ -5,7 +5,10 @@ import StarterKit from '@tiptap/starter-kit'
 import type { Extensions } from '@tiptap/react'
 import { AttachmentImageNode, AttachmentNode } from '../../components/attachments/attachmentExtensions'
 import { ButtonNode } from '../../components/rich-blocks/buttonExtension'
+import { ChartNode } from '../../components/rich-blocks/chartExtension'
 import { DateNode } from '../../components/rich-blocks/dateExtension'
+import { LinkPreviewNode } from '../../components/rich-blocks/linkPreviewExtension'
+import { PollNode } from '../../components/rich-blocks/pollExtension'
 import { tableExtensions } from '../../components/rich-blocks/tableExtensions'
 import { VideoNode } from '../../components/rich-blocks/videoExtension'
 import { Placeholder } from '../../lib/placeholderExtension'
@@ -27,6 +30,9 @@ export function documentEditorExtensions(): Extensions {
     DateNode,
     ButtonNode,
     VideoNode,
+    PollNode,
+    ChartNode,
+    LinkPreviewNode,
     ...tableExtensions,
   ]
 }

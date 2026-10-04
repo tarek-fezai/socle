@@ -114,5 +114,8 @@ public final class AuditActions {
     public static final String ATTESTATION_CAMPAIGN_CLOSED = "attestation.campaign_closed";
     public static final String ATTESTATION_ACKNOWLEDGED = "attestation.acknowledged";
 
+    public static final String POLL_CLOSED = "poll.closed";
+    public static final String LINK_PREVIEW_FETCHED = "link_preview.fetched";
+
     private AuditActions() {}
 }

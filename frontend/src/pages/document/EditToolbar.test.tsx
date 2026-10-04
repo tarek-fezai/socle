@@ -83,10 +83,10 @@ describe('EditToolbar', () => {
     const panel = await screen.findByTestId('edit-insert-panel')
     expect(panel.textContent).toContain('Vidéo')
     const soonItems = panel.querySelectorAll('[data-soon="true"]')
-    expect(soonItems.length).toBeGreaterThanOrEqual(5)
+    expect(soonItems.length).toBeGreaterThanOrEqual(2)
     for (const el of soonItems) expect(el.getAttribute('aria-disabled')).toBe('true')
-    // Vidéo, tableau, date et bouton sont branchés.
-    for (const label of ['Vidéo', 'Tableau', 'Date & heure', 'Bouton']) {
+    // Vidéo, tableau, sondage, graphique, aperçu de lien, date et bouton sont branchés.
+    for (const label of ['Vidéo', 'Tableau', 'Sondage', 'Graphique', 'Aperçu de lien', 'Date & heure', 'Bouton']) {
       const item = screen.getByText(label).closest('button')!
       expect(item.getAttribute('data-soon'), label).toBeNull()
       expect(item.getAttribute('aria-disabled'), label).toBeNull()
@@ -130,6 +130,38 @@ describe('EditToolbar — blocs enrichis', () => {
       expect(json).toContain('"label":"Action"')
       expect(json).toContain('"href":"https://example.org"')
     })
+  })
+
+  it('le menu Insérer ajoute sondage, graphique et aperçu de lien', async () => {
+    const onChange = vi.fn()
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('https://example.org')
+    render(<DocumentEditor variant="document" content={doc} onChange={onChange} />)
+    fireEvent.click(await screen.findByTestId('edit-insert-btn'))
+    fireEvent.click(screen.getByText('Sondage'))
+    await waitFor(() => {
+      const json = JSON.stringify(onChange.mock.calls.at(-1)?.[0])
+      expect(json).toContain('"type":"poll"')
+      expect(json).toContain('"question":"Votre avis ?"')
+      expect(json).toContain('"Oui"')
+      expect(json).toContain('"Non"')
+    })
+    fireEvent.click(screen.getByTestId('edit-insert-btn'))
+    fireEvent.click(screen.getByText('Graphique'))
+    await waitFor(() => {
+      const json = JSON.stringify(onChange.mock.calls.at(-1)?.[0])
+      expect(json).toContain('"type":"chart"')
+      expect(json).toContain('"chartType":"bar"')
+      expect(json).toContain('Janvier')
+    })
+    fireEvent.click(screen.getByTestId('edit-insert-btn'))
+    fireEvent.click(screen.getByText('Aperçu de lien'))
+    await waitFor(() => {
+      const json = JSON.stringify(onChange.mock.calls.at(-1)?.[0])
+      expect(json).toContain('"type":"linkPreview"')
+      expect(json).toContain('"url":"https://example.org"')
+      expect(json).toContain('"domain":"example.org"')
+    })
+    prompt.mockRestore()
   })
 })
 

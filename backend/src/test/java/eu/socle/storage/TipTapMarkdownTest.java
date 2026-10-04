@@ -125,6 +125,23 @@ class TipTapMarkdownTest {
     }
 
     @Test
+    void roundTrip_chartFence() {
+        Map<String, Object> chart = new LinkedHashMap<>();
+        chart.put("type", TipTapMarkdown.CHART_TYPE);
+        Map<String, Object> attrs = new LinkedHashMap<>();
+        attrs.put("chartType", "bar");
+        attrs.put("labels", List.of("A", "B"));
+        attrs.put("series", List.of(Map.of("name", "S1", "values", List.of(1, 2))));
+        chart.put("attrs", attrs);
+        Map<String, Object> body = doc(chart);
+        assertRoundTripEquals(body);
+        assertThat(TipTapMarkdown.toMarkdown(body))
+                .contains(":::chart")
+                .contains("\"chartType\":\"bar\"")
+                .doesNotContain(":::socle-json");
+    }
+
+    @Test
     void roundTrip_simpleGfmTable() {
         Map<String, Object> body = doc(simpleTable(
                 List.of("Rôle", "Revue"),

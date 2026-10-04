@@ -277,6 +277,10 @@ test.describe('document page structural', () => {
       skip: ['text', 'box'],
       reason: 'Propriétaire = « Équipe {nom de l’espace} » (maquette : « Équipe Identité »)',
     },
+    'rail-toc-link': {
+      skip: ['color', 'fontWeight'],
+      reason: 'Entrée TOC active (IntersectionObserver) : #3730e0 / 600 vs maquette inactive #6b6b72 / 400',
+    },
   }
 
   const belowFoldExceptions = {
