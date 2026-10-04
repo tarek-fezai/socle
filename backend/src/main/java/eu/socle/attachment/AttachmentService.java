@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.attachment;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.attachment.AttachmentDtos.AttachmentResponse;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
@@ -9,6 +11,7 @@ import eu.socle.blob.BlobKeys;
 import eu.socle.blob.BlobStore;
 import eu.socle.user.UserSyncService;
 import eu.socle.web.ApiErrors;
+import eu.socle.web.CodedStatusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +54,8 @@ public class AttachmentService {
     private static final Set<String> INLINE_IMAGES = Set.of(
             "image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp");
 
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+
     private final JdbcTemplate jdbc;
     private final BlobStore blobStore;
     private final UserSyncService userSyncService;
@@ -59,6 +64,7 @@ public class AttachmentService {
     private final AttachmentProperties properties;
     private final MediaTypeDetector mediaTypeDetector;
     private final ImageSanitizer imageSanitizer;
+    private final ObjectMapper objectMapper;
     private final Clock clock;
 
     @Autowired
@@ -70,10 +76,11 @@ public class AttachmentService {
             AuditService auditService,
             AttachmentProperties properties,
             MediaTypeDetector mediaTypeDetector,
-            ImageSanitizer imageSanitizer
+            ImageSanitizer imageSanitizer,
+            ObjectMapper objectMapper
     ) {
         this(jdbc, blobStore, userSyncService, authorizationService, auditService,
-                properties, mediaTypeDetector, imageSanitizer, Clock.systemUTC());
+                properties, mediaTypeDetector, imageSanitizer, objectMapper, Clock.systemUTC());
     }
 
     AttachmentService(
@@ -85,6 +92,7 @@ public class AttachmentService {
             AttachmentProperties properties,
             MediaTypeDetector mediaTypeDetector,
             ImageSanitizer imageSanitizer,
+            ObjectMapper objectMapper,
             Clock clock
     ) {
         this.jdbc = jdbc;
@@ -95,6 +103,7 @@ public class AttachmentService {
         this.properties = properties;
         this.mediaTypeDetector = mediaTypeDetector;
         this.imageSanitizer = imageSanitizer;
+        this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
         this.clock = clock;
     }
 
@@ -150,6 +159,8 @@ public class AttachmentService {
                     throw ApiErrors.attachmentTypeRejected(mediaType);
                 }
             }
+        } catch (CodedStatusException e) {
+            throw e;
         } catch (IOException e) {
             throw ApiErrors.attachmentTypeRejected(detected);
         }
@@ -266,7 +277,11 @@ public class AttachmentService {
         return n;
     }
 
-    /** Orphelines (jamais référencées) plus anciennes que N jours — idempotent, auditée. */
+    /**
+     * Orphelines (jamais référencées par une version) plus anciennes que N jours — idempotent, auditée.
+     * Une pièce jointe encore citée dans un {@code document_drafts.body} du même document
+     * n'est <em>pas</em> purgée (contrôle à la purge, pas de marquage permanent).
+     */
     @Transactional
     public int purgeOrphans() {
         Instant cutoff = clock.instant().minusSeconds(Math.max(1, properties.getOrphanRetentionDays()) * 86_400L);
@@ -282,10 +297,35 @@ public class AttachmentService {
                 Timestamp.from(cutoff));
         int n = 0;
         for (AttachmentRow row : rows) {
+            if (referencedInDocumentDraft(row.documentId(), row.id())) {
+                continue;
+            }
             purgeOne(row, null, true, "orphan");
             n++;
         }
         return n;
+    }
+
+    /** true si un brouillon du document cite encore cette pièce (image ou attachment). */
+    boolean referencedInDocumentDraft(UUID documentId, UUID attachmentId) {
+        List<String> bodies = jdbc.query(
+                "SELECT body::text FROM document_drafts WHERE document_id = ?",
+                (rs, i) -> rs.getString(1),
+                documentId);
+        for (String json : bodies) {
+            if (json == null || json.isBlank()) {
+                continue;
+            }
+            try {
+                Map<String, Object> body = objectMapper.readValue(json, MAP_TYPE);
+                if (extractAttachmentIds(body).contains(attachmentId)) {
+                    return true;
+                }
+            } catch (IOException e) {
+                log.warn("Brouillon illisible pour document {} — ignore pour purge orpheline", documentId);
+            }
+        }
+        return false;
     }
 
     @Transactional(readOnly = true)

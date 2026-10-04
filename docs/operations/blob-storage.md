@@ -38,5 +38,7 @@ Voir [backup-restore.md](backup-restore.md).
 - Clés = UUID (jamais le nom de fichier utilisateur).
 - Type MIME détecté par octets magiques (Apache Tika), pas par l'extension ni le `Content-Type` client.
 - SVG refusé par défaut ; liste blanche configurable (`SOCLE_ATTACHMENT_ALLOWED_TYPES`).
-- Images : métadonnées EXIF (dont GPS) retirées avant stockage.
+- Images : métadonnées EXIF (dont GPS) retirées avant stockage (PNG/JPEG/WebP) ; GIF animé conservé tel quel.
+- Dimensions lues via métadonnées ImageReader avant décodage (`SOCLE_ATTACHMENT_MAX_IMAGE_PIXELS`).
+- WebP lu via TwelveMonkeys `imageio-webp` (BSD-3-Clause) — conservé dans la liste blanche.
 - Lecture uniquement via `GET /api/v1/attachments/{id}` (pas d'URL publique ni présignée).

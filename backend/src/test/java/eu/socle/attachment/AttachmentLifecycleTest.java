@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.attachment;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
@@ -112,6 +113,17 @@ class AttachmentLifecycleTest {
                   status TEXT NOT NULL
                 )
                 """);
+        jdbc.execute("""
+                CREATE TABLE IF NOT EXISTS document_drafts (
+                  document_id UUID NOT NULL,
+                  user_id UUID NOT NULL,
+                  body JSONB NOT NULL,
+                  title TEXT,
+                  base_version_no INT NOT NULL DEFAULT 1,
+                  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                  PRIMARY KEY (document_id, user_id)
+                )
+                """);
         Integer att = jdbc.queryForObject(
                 "SELECT count(*) FROM information_schema.tables WHERE table_name = 'attachments'",
                 Integer.class);
@@ -122,6 +134,7 @@ class AttachmentLifecycleTest {
             pop.execute(ds);
         }
         jdbc.update("DELETE FROM attachments");
+        jdbc.update("DELETE FROM document_drafts");
         jdbc.update("DELETE FROM approval_requests");
         jdbc.update("DELETE FROM documents");
         jdbc.update("DELETE FROM users");
@@ -135,7 +148,8 @@ class AttachmentLifecycleTest {
         clock = Clock.fixed(Instant.parse("2026-10-04T12:00:00Z"), ZoneOffset.UTC);
         service = new AttachmentService(
                 jdbc, blobStore, userSyncService, authorizationService, auditService,
-                properties, new MediaTypeDetector(), new ImageSanitizer(), clock);
+                properties, new MediaTypeDetector(), ImageSanitizer.withMaxPixels(40_000_000L),
+                new ObjectMapper(), clock);
 
         UserEntity user = new UserEntity();
         user.setId(USER);
@@ -209,6 +223,34 @@ class AttachmentLifecycleTest {
         verify(auditService, atLeastOnce()).record(
                 isNull(), eq(true), eq(AuditActions.ATTACHMENT_PURGED),
                 eq("attachment"), eq(fresh.id()), anyMap(), isNull());
+    }
+
+    @Test
+    void orphan_referencedOnlyInDraft_isNotPurged_untilDraftRemoved() throws Exception {
+        Jwt jwt = jwt();
+        var uploaded = service.upload(jwt, DOC, txtFile("draft-only.txt", "keep"));
+        // Référence uniquement dans un brouillon — pas de markReferenced (version).
+        String draftJson = new ObjectMapper().writeValueAsString(attachmentBody(uploaded.id()));
+        jdbc.update("""
+                INSERT INTO document_drafts (document_id, user_id, body, title, base_version_no)
+                VALUES (?, ?, ?::jsonb, 'brouillon', 1)
+                """, DOC, USER, draftJson);
+        jdbc.update(
+                "UPDATE attachments SET created_at = ? WHERE id = ?",
+                java.sql.Timestamp.from(Instant.parse("2026-09-01T00:00:00Z")),
+                uploaded.id());
+        String key = jdbc.queryForObject(
+                "SELECT storage_key::text FROM attachments WHERE id = ?", String.class, uploaded.id());
+
+        assertThat(service.purgeOrphans()).isZero();
+        assertThat(blobStore.exists(key)).isTrue();
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM attachments WHERE id = ?", Integer.class, uploaded.id()))
+                .isEqualTo(1);
+
+        jdbc.update("DELETE FROM document_drafts WHERE document_id = ?", DOC);
+        assertThat(service.purgeOrphans()).isEqualTo(1);
+        assertThat(blobStore.exists(key)).isFalse();
     }
 
     private static MockMultipartFile txtFile(String name, String body) {

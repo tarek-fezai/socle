@@ -96,7 +96,9 @@ socle:
   attachment:
     max-mb: ${SOCLE_ATTACHMENT_MAX_MB:25}
     orphan-retention-days: ${SOCLE_ATTACHMENT_ORPHAN_RETENTION_DAYS:7}
-    # Types MIME détectés (Tika) — SVG refusé par défaut.
+    # Anti bombe : largeur×hauteur max lues via métadonnées ImageReader avant décodage.
+    max-image-pixels: ${SOCLE_ATTACHMENT_MAX_IMAGE_PIXELS:40000000}
+    # Types MIME détectés (Tika) — SVG refusé par défaut. WebP via TwelveMonkeys imageio-webp.
     allowed-media-types: ${SOCLE_ATTACHMENT_ALLOWED_TYPES:image/png,image/jpeg,image/webp,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/zip}
   temporal:
     target: ${TEMPORAL_TARGET:localhost:7233}

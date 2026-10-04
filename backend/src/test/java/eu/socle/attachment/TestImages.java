@@ -1,13 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.attachment;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageTypeSpecifier;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.stream.ImageOutputStream;
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
 
 /** Images minuscules générées en mémoire pour les tests pièces jointes. */
 final class TestImages {
@@ -33,6 +45,137 @@ final class TestImages {
 
     static byte[] jpeg(int w, int h) {
         return encode(rgb(w, h), "jpg");
+    }
+
+    /**
+     * PNG minuscule dont l'IHDR déclare {@code width}×{@code height} (bombe de décompression).
+     * Les métadonnées ImageReader exposent ces dimensions sans décoder les pixels.
+     */
+    static byte[] pngDeclaringDimensions(int width, int height) {
+        byte[] signature = new byte[] {
+                (byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A
+        };
+        ByteBuffer ihdr = ByteBuffer.allocate(13).order(ByteOrder.BIG_ENDIAN);
+        ihdr.putInt(width).putInt(height);
+        ihdr.put((byte) 8).put((byte) 2).put((byte) 0).put((byte) 0).put((byte) 0);
+        byte[] ihdrChunk = pngChunk("IHDR", ihdr.array());
+        // Une ligne filtrée 0 + RGB noir pour 1×1 — IDAT valide mais dimensions IHDR mensongères.
+        byte[] rawScan = new byte[] {0, 0, 0, 0};
+        byte[] compressed = deflate(rawScan);
+        byte[] idatChunk = pngChunk("IDAT", compressed);
+        byte[] iendChunk = pngChunk("IEND", new byte[0]);
+        ByteArrayOutputStream out = new ByteArrayOutputStream(
+                signature.length + ihdrChunk.length + idatChunk.length + iendChunk.length);
+        try {
+            out.write(signature);
+            out.write(ihdrChunk);
+            out.write(idatChunk);
+            out.write(iendChunk);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return out.toByteArray();
+    }
+
+    /** GIF animé à exactement 2 trames (8×8). */
+    static byte[] animatedGifTwoFrames() {
+        try {
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("gif");
+            if (!writers.hasNext()) {
+                throw new IllegalStateException("pas de writer GIF");
+            }
+            ImageWriter writer = writers.next();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
+                writer.setOutput(ios);
+                ImageWriteParam param = writer.getDefaultWriteParam();
+                IIOMetadata streamMeta = writer.getDefaultStreamMetadata(param);
+                writer.prepareWriteSequence(streamMeta);
+                for (int i = 0; i < 2; i++) {
+                    BufferedImage frame = new BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB);
+                    Graphics2D g = frame.createGraphics();
+                    g.setColor(i == 0 ? Color.RED : Color.BLUE);
+                    g.fillRect(0, 0, 8, 8);
+                    g.dispose();
+                    IIOMetadata imageMeta = writer.getDefaultImageMetadata(
+                            ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.TYPE_INT_RGB),
+                            param);
+                    writer.writeToSequence(new IIOImage(frame, null, imageMeta), param);
+                }
+                writer.endWriteSequence();
+            } finally {
+                writer.dispose();
+            }
+            return baos.toByteArray();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** WebP réel (lossy) via ImageIO + TwelveMonkeys si un writer est présent, sinon fixture RIFF minimale. */
+    static byte[] webp(int w, int h) {
+        try {
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByMIMEType("image/webp");
+            if (!writers.hasNext()) {
+                writers = ImageIO.getImageWritersByFormatName("webp");
+            }
+            if (writers.hasNext()) {
+                ImageWriter writer = writers.next();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                try (ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
+                    writer.setOutput(ios);
+                    writer.write(null, new IIOImage(rgb(w, h), null, null), null);
+                } finally {
+                    writer.dispose();
+                }
+                byte[] bytes = baos.toByteArray();
+                if (bytes.length > 0) {
+                    return bytes;
+                }
+            }
+        } catch (IOException ignored) {
+            // fallback ci-dessous
+        }
+        // VP8L lossless 1×1 opaque noir — RIFF/WEBP valide (lu par TwelveMonkeys / libwebp).
+        return hexToBytes(
+                "5249464620000000574542505650384C130000002F000000100710117118080200"
+        );
+    }
+
+    private static byte[] pngChunk(String type, byte[] data) {
+        ByteBuffer buf = ByteBuffer.allocate(8 + data.length + 4).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(data.length);
+        byte[] typeBytes = type.getBytes(StandardCharsets.US_ASCII);
+        buf.put(typeBytes);
+        buf.put(data);
+        CRC32 crc = new CRC32();
+        crc.update(typeBytes);
+        crc.update(data);
+        buf.putInt((int) crc.getValue());
+        return buf.array();
+    }
+
+    private static byte[] deflate(byte[] raw) {
+        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION);
+        deflater.setInput(raw);
+        deflater.finish();
+        byte[] buf = new byte[64];
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        while (!deflater.finished()) {
+            int n = deflater.deflate(buf);
+            out.write(buf, 0, n);
+        }
+        deflater.end();
+        return out.toByteArray();
+    }
+
+    private static byte[] hexToBytes(String hex) {
+        int n = hex.length();
+        byte[] out = new byte[n / 2];
+        for (int i = 0; i < n; i += 2) {
+            out[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
+        }
+        return out;
     }
 
     /** JPEG valide avec un segment APP1/Exif contenant un IFD GPS (latitude + {@link #GPS_MARKER}). */

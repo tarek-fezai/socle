@@ -17,6 +17,8 @@ public final class ApiErrors {
     public static final String PAYLOAD_TOO_LARGE = "payload_too_large";
     /** Type MIME détecté hors liste blanche (ou SVG). */
     public static final String ATTACHMENT_TYPE_REJECTED = "attachment_type_rejected";
+    /** Dimensions image (largeur×hauteur) au-delà de {@code SOCLE_ATTACHMENT_MAX_IMAGE_PIXELS}. */
+    public static final String IMAGE_TOO_LARGE = "image_too_large";
 
     private ApiErrors() {}
 
@@ -32,6 +34,14 @@ public final class ApiErrors {
                 HttpStatus.PAYLOAD_TOO_LARGE,
                 PAYLOAD_TOO_LARGE,
                 "Fichier trop volumineux");
+    }
+
+    public static CodedStatusException imageTooLarge(int width, int height, long maxPixels) {
+        return new CodedStatusException(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                IMAGE_TOO_LARGE,
+                "Image trop volumineuse (" + width + "×" + height
+                        + ", maximum " + maxPixels + " pixels)");
     }
 
     public static CodedStatusException approvalInProgress() {

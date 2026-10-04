@@ -16,6 +16,8 @@ public class AttachmentProperties {
 
     private int maxMb = 25;
     private int orphanRetentionDays = 7;
+    /** Plafond largeur×hauteur avant décodage pixel (anti bombe de décompression). */
+    private long maxImagePixels = 40_000_000L;
     private String allowedMediaTypes =
             "image/png,image/jpeg,image/webp,image/gif,application/pdf,"
                     + "application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,"
@@ -41,6 +43,18 @@ public class AttachmentProperties {
 
     public void setOrphanRetentionDays(int orphanRetentionDays) {
         this.orphanRetentionDays = orphanRetentionDays;
+    }
+
+    public long getMaxImagePixels() {
+        return maxImagePixels;
+    }
+
+    public void setMaxImagePixels(long maxImagePixels) {
+        this.maxImagePixels = maxImagePixels;
+    }
+
+    public long maxImagePixels() {
+        return Math.max(1L, maxImagePixels);
     }
 
     public String getAllowedMediaTypes() {
