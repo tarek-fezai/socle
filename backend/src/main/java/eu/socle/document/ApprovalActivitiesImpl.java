@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package eu.socle.document;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.activity.ActivityEventService;
 import eu.socle.activity.ActivityEventTypes;
@@ -15,7 +14,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,7 +28,10 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
     private final JdbcTemplate jdbcTemplate;
     private final AuditService auditService;
     private final ReliabilityScoreService reliabilityScoreService;
+    /** Conservé pour compatibilité DI / tests ; la soumission n'écrit plus via le store. */
+    @SuppressWarnings("unused")
     private final DocumentStore documentStore;
+    @SuppressWarnings("unused")
     private final ObjectMapper objectMapper;
     private final ApprovalRoleResolver approvalRoleResolver;
     private ActivityEventService activityEventService;
@@ -92,8 +93,7 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
                 documentId, approvalRequestId, temporalWorkflowId, firstStepOrder);
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT current_version_no, body, git_head_sha, updated_by, created_by,
-                       current_change_summary
+                SELECT current_version_no, git_head_sha
                   FROM documents
                  WHERE id = ? AND deleted_at IS NULL
                 """, documentId);
@@ -102,56 +102,33 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         }
         Map<String, Object> docRow = rows.getFirst();
         int submittedVersionNo = ((Number) docRow.get("current_version_no")).intValue();
-        Map<String, Object> body = parseBody(docRow.get("body"));
-        String expectedHead = docRow.get("git_head_sha") == null
+        String contentHeadSha = docRow.get("git_head_sha") == null
                 ? null
                 : String.valueOf(docRow.get("git_head_sha"));
-        UUID contentAuthorId = toUuid(docRow.get("updated_by"));
-        if (contentAuthorId == null) {
-            contentAuthorId = toUuid(docRow.get("created_by"));
-        }
-        Object rawSummary = docRow.get("current_change_summary");
-        String archivedSummary = rawSummary == null ? null : String.valueOf(rawSummary);
-        String submissionSummary = "Soumission pour approbation";
 
-        // Archive + bump via DocumentStore — contenu identique : author = auteur du contenu,
-        // archived_by / committer = demandeur. updated_by inchangé (pas de mutation de contenu).
-        // Résumé archivé = résumé du contenu ; résumé courant = motif de soumission.
-        documentStore.archiveVersion(
-                documentId,
-                submittedVersionNo,
-                body,
-                contentAuthorId,
-                requesterId,
-                archivedSummary);
-        String newHead = documentStore.writeCurrentContent(
-                documentId,
-                body,
-                contentAuthorId,
-                requesterId,
-                submissionSummary,
-                expectedHead);
-
+        // Pas de version dupliquée : le contenu courant est soumis tel quel.
+        // submitted_version_no = current_version_no ; current_change_summary inchangé ;
+        // aucune écriture DocumentStore (ni commit git).
         jdbcTemplate.update("""
                 UPDATE documents
                    SET status = 'en_revue',
-                       current_version_no = current_version_no + 1,
-                       current_change_summary = ?,
-                       git_head_sha = COALESCE(?, git_head_sha),
                        updated_at = now()
                  WHERE id = ? AND deleted_at IS NULL
                 """,
-                submissionSummary, newHead, documentId);
+                documentId);
 
+        // Empreinte = contenu sous revue (égal à current_* au moment de la soumission).
         jdbcTemplate.update("""
                 INSERT INTO approval_requests
                   (id, document_id, workflow_id, temporal_workflow_id, requested_by,
-                   current_step_order, status, sla_deadline_at, created_at, submitted_version_no)
-                VALUES (?, ?, ?, ?, ?, ?, 'en_cours', now() + make_interval(hours => ?), now(), ?)
+                   current_step_order, status, sla_deadline_at, created_at, submitted_version_no,
+                   submitted_content_version_no, submitted_git_head_sha)
+                VALUES (?, ?, ?, ?, ?, ?, 'en_cours', now() + make_interval(hours => ?), now(), ?, ?, ?)
                 ON CONFLICT (id) DO NOTHING
                 """,
                 approvalRequestId, documentId, workflowDefId, temporalWorkflowId, requesterId,
-                firstStepOrder, firstStepSlaHours, submittedVersionNo);
+                firstStepOrder, firstStepSlaHours, submittedVersionNo,
+                submittedVersionNo, contentHeadSha);
 
         auditService.recordSync(
                 requesterId,
@@ -495,6 +472,12 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         log.info("Temporal recordFinalDecision request={} decision={} step={}",
                 approvalRequestId, decision, stepOrder);
 
+        // Défense : ne jamais publier comme approuvé un contenu muté pendant la revue.
+        if ("approuve".equals(decision)
+                && !submittedContentMatchesCurrent(documentId, approvalRequestId)) {
+            return invalidateApprovalForContentDrift(documentId, approvalRequestId, stepOrder, actorId);
+        }
+
         String requestStatus = "approuve".equals(decision) ? "approuve" : "rejete";
         String documentStatus = "approuve".equals(decision) ? "valide" : "brouillon";
 
@@ -555,6 +538,117 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
         return requestStatus;
     }
 
+    /**
+     * True si le contenu courant est encore celui soumis (empreinte V38), ou si
+     * l'empreinte est absente (demandes pré-V38 : pas de gate rétroactif).
+     */
+    private boolean submittedContentMatchesCurrent(UUID documentId, UUID approvalRequestId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT ar.submitted_content_version_no AS submitted_ver,
+                       ar.submitted_git_head_sha AS submitted_sha,
+                       d.current_version_no AS current_ver,
+                       d.git_head_sha AS current_sha
+                  FROM approval_requests ar
+                  JOIN documents d ON d.id = ar.document_id
+                 WHERE ar.id = ? AND ar.document_id = ?
+                """,
+                approvalRequestId, documentId);
+        if (rows.isEmpty()) {
+            return true;
+        }
+        Map<String, Object> row = rows.getFirst();
+        Object submittedVer = row.get("submitted_ver");
+        if (submittedVer == null) {
+            // Demande créée avant V38 — pas d'empreinte, laisse le chemin nominal.
+            return true;
+        }
+        int submittedVersion = ((Number) submittedVer).intValue();
+        int currentVersion = ((Number) row.get("current_ver")).intValue();
+        if (submittedVersion != currentVersion) {
+            return false;
+        }
+        String submittedSha = row.get("submitted_sha") == null
+                ? null
+                : String.valueOf(row.get("submitted_sha"));
+        String currentSha = row.get("current_sha") == null
+                ? null
+                : String.valueOf(row.get("current_sha"));
+        if (submittedSha == null && currentSha == null) {
+            return true;
+        }
+        return submittedSha != null && submittedSha.equals(currentSha);
+    }
+
+    /**
+     * Contenu divergé pendant la revue → demande annulée, document remis en brouillon,
+     * audit + notification au demandeur. Ne publie jamais {@code valide}.
+     */
+    private String invalidateApprovalForContentDrift(
+            UUID documentId,
+            UUID approvalRequestId,
+            int stepOrder,
+            UUID actorId
+    ) {
+        log.warn("Approbation invalidée (contenu ≠ soumis) request={} document={}",
+                approvalRequestId, documentId);
+
+        jdbcTemplate.update("""
+                UPDATE approval_requests
+                   SET status = 'annule', resolved_at = now(), sla_deadline_at = NULL
+                 WHERE id = ? AND status = 'en_cours'
+                """,
+                approvalRequestId);
+
+        jdbcTemplate.update(
+                "UPDATE documents SET status = 'brouillon', updated_at = now() WHERE id = ?",
+                documentId);
+
+        UUID requesterId = jdbcTemplate.queryForObject(
+                "SELECT requested_by FROM approval_requests WHERE id = ?",
+                UUID.class,
+                approvalRequestId);
+
+        Map<String, Object> auditMeta = new java.util.LinkedHashMap<>();
+        auditMeta.put("approvalRequestId", approvalRequestId.toString());
+        auditMeta.put("stepOrder", stepOrder);
+        auditMeta.put("reason", "submitted_content_mismatch");
+        auditMeta.put("previousStatus", "en_revue");
+        auditMeta.put("newStatus", "brouillon");
+        if (actorId != null) {
+            auditMeta.put("attemptedBy", actorId.toString());
+        }
+
+        auditService.recordSync(
+                actorId,
+                false,
+                AuditActions.DOCUMENT_APPROVAL_INVALIDATED,
+                "document",
+                documentId,
+                auditMeta,
+                null
+        );
+
+        if (requesterId != null) {
+            String payloadJson = """
+                    {"document_id":"%s","approval_request_id":"%s","message":"La demande d'approbation a été annulée : le contenu a été modifié pendant la revue."}
+                    """.formatted(documentId, approvalRequestId).trim();
+            try {
+                jdbcTemplate.update("""
+                        INSERT INTO notifications (id, user_id, type, payload, created_at)
+                        VALUES (?, ?, 'approval_invalidated', CAST(? AS jsonb), now())
+                        """,
+                        UUID.randomUUID(), requesterId, payloadJson);
+            } catch (Exception e) {
+                log.error("Échec INSERT notification approval_invalidated user={} request={}",
+                        requesterId, approvalRequestId, e);
+                throw e;
+            }
+        }
+
+        reliabilityScoreService.clearScoreInDb(documentId);
+        return "annule";
+    }
+
     @Override
     @Transactional
     public UUID ensureSystemActor() {
@@ -581,21 +675,5 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
             return u;
         }
         return UUID.fromString(String.valueOf(raw));
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseBody(Object raw) {
-        if (raw == null) {
-            return Map.of();
-        }
-        if (raw instanceof Map<?, ?> map) {
-            return new HashMap<>((Map<String, Object>) map);
-        }
-        try {
-            String json = raw.toString();
-            return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (Exception e) {
-            throw new IllegalStateException("body document illisible pour soumission", e);
-        }
     }
 }

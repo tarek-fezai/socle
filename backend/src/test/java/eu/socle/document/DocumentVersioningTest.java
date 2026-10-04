@@ -71,6 +71,35 @@ class DocumentVersioningTest {
     }
 
     @Test
+    void update_keepsProvidedChangeSummaryAsIs() {
+        DocumentEntity entity = document(DOC, VersionTestSupport.docOf(List.of(VersionTestSupport.p("old"))), 1);
+        when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
+        doNothing().when(authorizationService).requireDocumentRelation(USER, DOC, "editor");
+
+        Map<String, Object> newBody = VersionTestSupport.docOf(List.of(VersionTestSupport.p("new")));
+        service.update(jwt(), DOC, new UpdateDocumentRequest("Titre", newBody, "fix manuel"));
+
+        assertThat(entity.getCurrentChangeSummary()).isEqualTo("fix manuel");
+    }
+
+    @Test
+    void update_emptyChangeSummary_generatesAutoSummary() {
+        DocumentEntity entity = document(DOC, VersionTestSupport.docOf(List.of(
+                VersionTestSupport.h(2, "Intro"),
+                VersionTestSupport.p("ancien"))), 2);
+        when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
+        doNothing().when(authorizationService).requireDocumentRelation(USER, DOC, "editor");
+
+        Map<String, Object> newBody = VersionTestSupport.docOf(List.of(
+                VersionTestSupport.h(2, "Intro"),
+                VersionTestSupport.p("nouveau")));
+        service.update(jwt(), DOC, new UpdateDocumentRequest("Titre", newBody, null));
+
+        assertThat(entity.getCurrentChangeSummary()).startsWith("Modifié : Intro ");
+        assertThat(entity.getCurrentChangeSummary()).contains("(+");
+    }
+
+    @Test
     void update_archivesOldBodyThenIncrementsVersion() {
         DocumentEntity entity = document(DOC, Map.of("blocks", List.of("old")), 1);
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));

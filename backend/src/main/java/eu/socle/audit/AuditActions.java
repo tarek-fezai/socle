@@ -16,6 +16,11 @@ public final class AuditActions {
     public static final String DOCUMENT_SUBMITTED = "document.submitted_for_approval";
     public static final String DOCUMENT_APPROVED = "document.approved";
     public static final String DOCUMENT_REJECTED = "document.rejected";
+    /**
+     * Approbation annulée : le contenu courant n'est plus celui soumis
+     * (mutation pendant la revue). Document remis en {@code brouillon}.
+     */
+    public static final String DOCUMENT_APPROVAL_INVALIDATED = "document.approval_invalidated";
     public static final String APPROVAL_ESCALATED = "approval.escalated";
     public static final String APPROVAL_CHAIN_EXHAUSTED = "approval.chain_exhausted";
     public static final String DOCUMENT_TRASHED = "document.trashed";

@@ -207,12 +207,14 @@ export async function updateDocument(
   body: Record<string, unknown>,
   docType?: string | null,
   expectedVersionNo?: number | null,
+  changeSummary?: string | null,
 ) {
   const { data } = await api.put<DocumentDetail>(`/api/v1/documents/${id}`, {
     title,
     body,
     docType: docType ?? null,
     expectedVersionNo: expectedVersionNo ?? null,
+    changeSummary: changeSummary?.trim() ? changeSummary.trim() : null,
   })
   return data
 }

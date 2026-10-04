@@ -1796,6 +1796,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/approvals/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_13"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/approvals/mine": {
         parameters: {
             query?: never;
@@ -3061,6 +3077,16 @@ export interface components {
             /** Format: uuid */
             requestedBy?: string;
             createdAt?: string;
+            requestedByDisplayName?: string;
+            requestedByInitials?: string;
+            impactedLinks?: components["schemas"]["ImpactedLink"][];
+            /** Format: int32 */
+            hiddenImpactedCount?: number;
+        };
+        ImpactedLink: {
+            /** Format: uuid */
+            id?: string;
+            title?: string;
         };
         ApplicableView: {
             /** Format: uuid */
@@ -3130,6 +3156,32 @@ export interface components {
             limit?: number;
             /** Format: int64 */
             total?: number;
+        };
+        ApprovalDetailView: {
+            /** Format: uuid */
+            approvalRequestId?: string;
+            /** Format: uuid */
+            documentId?: string;
+            documentTitle?: string;
+            temporalWorkflowId?: string;
+            status?: string;
+            /** Format: int32 */
+            currentStepOrder?: number;
+            slaDeadlineAt?: string;
+            /** Format: int32 */
+            submittedVersionNo?: number;
+            /** Format: int32 */
+            baselineVersionNo?: number;
+            /** Format: uuid */
+            requestedBy?: string;
+            createdAt?: string;
+            requestedByDisplayName?: string;
+            requestedByInitials?: string;
+            impactedLinks?: components["schemas"]["ImpactedLink"][];
+            /** Format: int32 */
+            hiddenImpactedCount?: number;
+            canDecide?: boolean;
+            cannotDecideReason?: string;
         };
         DriftItem: {
             /** Format: uuid */
@@ -6877,6 +6929,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AuditPage"];
+                };
+            };
+        };
+    };
+    get_13: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApprovalDetailView"];
                 };
             };
         };

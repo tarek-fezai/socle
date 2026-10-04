@@ -58,6 +58,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -263,26 +264,22 @@ class CrossDomainJunctionAuditTest {
     }
 
     /**
-     * Point 4 — Soumission workflow archive via DocumentStore (pas INSERT JDBC versions).
+     * Point 4 — Soumission sans version dupliquée : pas d'écriture DocumentStore.
      */
     @Test
-    void point4_recordSubmission_usesDocumentStore_notDirectVersionInsert() {
+    void point4_recordSubmission_doesNotTouchDocumentStore() {
         DocumentStore store = mock(DocumentStore.class);
-        when(store.writeCurrentContent(any(), any(), any(), any(), any(), any())).thenReturn("newsha");
 
         JdbcTemplate mockJdbc = mock(JdbcTemplate.class);
         Map<String, Object> docRow = new java.util.HashMap<>();
         docRow.put("current_version_no", 3);
-        docRow.put("body", tipTap("submitted"));
         docRow.put("git_head_sha", "oldsha");
-        docRow.put("updated_by", USER);
-        docRow.put("created_by", USER);
-        docRow.put("current_change_summary", "résumé v3");
         when(mockJdbc.queryForList(org.mockito.ArgumentMatchers.contains("current_version_no"), eq(DOC_VISIBLE)))
                 .thenReturn(List.of(docRow));
-        when(mockJdbc.update(any(String.class), any(), any())).thenReturn(1);
-        when(mockJdbc.update(any(String.class), any(), any(), any())).thenReturn(1);
-        when(mockJdbc.update(any(String.class), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(mockJdbc.update(any(String.class), any(Object.class))).thenReturn(1);
+        when(mockJdbc.update(any(String.class), any(Object.class), any(Object.class), any(Object.class),
+                any(Object.class), any(Object.class), any(Object.class), any(Object.class), any(Object.class),
+                any(Object.class), any(Object.class)))
                 .thenReturn(1);
 
         var activities = new eu.socle.document.ApprovalActivitiesImpl(
@@ -293,10 +290,8 @@ class CrossDomainJunctionAuditTest {
         activities.recordSubmission(
                 DOC_VISIBLE, USER, UUID.randomUUID(), UUID.randomUUID(), "wf", 1, 24);
 
-        verify(store).archiveVersion(
-                eq(DOC_VISIBLE), eq(3), any(), eq(USER), eq(USER), eq("résumé v3"));
-        verify(store).writeCurrentContent(
-                eq(DOC_VISIBLE), any(), eq(USER), eq(USER), eq("Soumission pour approbation"), eq("oldsha"));
+        verify(store, never()).archiveVersion(any(), any(Integer.class), any(), any(), any(), any());
+        verify(store, never()).writeCurrentContent(any(), any(), any(), any(), any(), any());
     }
 
     /**

@@ -140,7 +140,7 @@ export function HomeDashboardPage() {
             return (
               <Link
                 key={item.requestId}
-                to={`/approvals`}
+                to={`/approvals/${item.requestId}`}
                 className="home-card home-card--block"
                 data-mock-id={i === 0 ? 'home-approval-card' : undefined}
               >

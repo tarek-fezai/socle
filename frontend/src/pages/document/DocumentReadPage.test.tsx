@@ -129,6 +129,11 @@ function route(url: string) {
       : { status: 204, data: '' }
   }
   if (url === `/api/v1/documents/${DOC}/links`) return { data: scenario.related }
+  if (url === `/api/v1/documents/${DOC}/approvals/current`) {
+    return scenario.status === 'en_revue'
+      ? { status: 200, data: { approvalRequestId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' } }
+      : { status: 204, data: undefined }
+  }
   if (url.startsWith('/api/v1/favorites/')) return { data: { favorited: false } }
   throw new Error(`unmocked GET ${url}`)
 }
@@ -314,6 +319,14 @@ describe('DocumentReadPage — permissions', () => {
       expect(postMock).toHaveBeenCalledWith(`/api/v1/documents/${DOC}/approvals`),
     )
     expect(await screen.findByTestId('doc-publish-msg')).toBeTruthy()
+  })
+
+  it('en_revue : bannière « Voir la demande » vers /approvals/:id', async () => {
+    scenario.status = 'en_revue'
+    renderPage()
+    const link = await screen.findByTestId('doc-view-approval')
+    expect(link.getAttribute('href')).toBe('/approvals/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
+    expect(screen.getByTestId('doc-approval-banner').textContent).toMatch(/en revue/i)
   })
 })
 

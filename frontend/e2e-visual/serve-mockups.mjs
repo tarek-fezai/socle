@@ -32,7 +32,7 @@ function resolveTemplates(html) {
  * blocs, numéros de ligne…). Les autres maquettes n'utilisent que du style inline : leurs règles
  * de <helmet> (survols) restent écartées pour ne pas déplacer les références visuelles existantes.
  */
-const KEEP_HELMET_STYLES = new Set(['Diff.dc.html'])
+const KEEP_HELMET_STYLES = new Set(['Diff.dc.html', 'DiffApproval.dc.html'])
 
 function helmetStyles(rawHtml) {
   const blocks = [...rawHtml.matchAll(/<helmet>([\s\S]*?)<\/helmet>/g)].flatMap((m) =>

@@ -58,6 +58,10 @@
  *  E10. Fonctionnalités de la maquette absentes : poignées de bloc, glisser-déposer, blocs réduits,
  *       puces inline, callout, liste de tâches, bulle de formatage (voir N4–N9) — listées comme écarts
  *       restants dans le compte rendu.
+ *  E11. Barre haute : bouton « Enregistrer la version » (ChangeSummaryPopover, résumé facultatif) absent
+ *       de Edit.dc.html — décale présence / Aperçu (~153 px) et agrandit le déclencheur « Envoyer en
+ *       révision » (popover). Boîtes des contrôles de la barre haute non comparées ; le pixel-diff
+ *       (≤ 1 %, glyphes masqués) couvre le rendu.
  *  Les espaces de mise en forme du source de la maquette (textContent des onglets / de la carte
  *  « Lien cassé ») sont ignorés dans la comparaison structurelle (libellés identiques).
  */
@@ -323,6 +327,31 @@ test.describe('document edit structural', () => {
       reason: 'E6 : champ en IBM Plex Mono dans la maquette ; IBM Plex Sans dans l’app',
     },
     'edit-meta-custom-manage': { skip: ['color'], reason: 'E5 : « Gérer → » désactivé (« Bientôt disponible »)' },
+    'edit-breadcrumb-current': {
+      skip: ['box'],
+      reason: 'E11 : fil d’Ariane compressé par le bouton « Enregistrer la version » (absent de la maquette)',
+    },
+    'edit-save-status': {
+      skip: ['box'],
+      reason: 'E11 : statut décalé par « Enregistrer la version » (absent de Edit.dc.html)',
+    },
+    'edit-word-count': {
+      skip: ['box'],
+      reason: 'E11 : compteur décalé par « Enregistrer la version » (absent de Edit.dc.html)',
+    },
+    'edit-presence': {
+      skip: ['box'],
+      reason: 'E11 : présence décalée (~153 px) par « Enregistrer la version »',
+    },
+    'edit-preview': {
+      skip: ['box'],
+      reason: 'E11 : Aperçu décalé par « Enregistrer la version »',
+    },
+    'edit-send-review': {
+      skip: ['box'],
+      reason:
+        'E11 : déclencheur ChangeSummaryPopover (hauteur/largeur) vs lien plat « Envoyer en révision » de la maquette',
+    },
   }
 
   test('desktop Edit structural match', async ({ page }, testInfo) => {

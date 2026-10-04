@@ -108,16 +108,16 @@ class DocumentVersionChangeSummaryParityTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"relational", "git"})
-    void updateWithoutSummary_currentSummaryIsNull_neverTechnicalGitMessage(String provider) {
+    void updateWithoutSummary_autoSummary_neverTechnicalGitMessage(String provider) {
         setUp(provider);
         update("S2", "v2");
         update(null, "v3");
 
-        assertThat(entity.getCurrentChangeSummary()).isNull();
+        assertThat(entity.getCurrentChangeSummary()).startsWith("Modifié : ");
         VersionPage page = service.listVersions(jwt(), DOC, 0, 50);
         VersionSummary current = page.items().getFirst();
         assertThat(current.current()).isTrue();
-        assertThat(current.changeSummary()).isNull();
+        assertThat(current.changeSummary()).startsWith("Modifié : ");
         assertThat(current.changeSummary()).isNotEqualTo("update " + DOC);
         assertThat(String.valueOf(current.changeSummary())).doesNotContain(DOC.toString());
     }

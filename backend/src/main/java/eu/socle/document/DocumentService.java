@@ -341,7 +341,8 @@ public class DocumentService {
         }
         entity.setStatus("brouillon");
         entity.setCurrentVersionNo(1);
-        entity.setCurrentChangeSummary(blankToNull(request.changeSummary()));
+        entity.setCurrentChangeSummary(resolveChangeSummary(
+                request.changeSummary(), 1, Map.of(), body));
         entity.setVisibility(visibility);
         entity.setCreatedBy(user.getId());
         entity.setUpdatedBy(user.getId());
@@ -482,6 +483,7 @@ public class DocumentService {
         DocumentEntity entity = repository.findActiveByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document introuvable"));
         assertExpectedVersion(entity, request.expectedVersionNo());
+        assertNoApprovalInProgress(id);
         String previousTitle = entity.getTitle();
         Map<String, Object> previousBody = copyBody(
                 documentStore.readCurrentContent(entity.getId(), entity.getBody()));
@@ -492,7 +494,9 @@ public class DocumentService {
 
         UUID contentAuthorId = contentAuthorOf(entity);
         String archivedSummary = entity.getCurrentChangeSummary();
-        String newSummary = blankToNull(request.changeSummary());
+        Map<String, Object> newBody = transclusionResolver.normalizeForStorage(copyBody(request.body()));
+        String newSummary = resolveChangeSummary(
+                request.changeSummary(), archivedVersionNo + 1, previousBody, newBody);
         documentStore.archiveVersion(
                 entity.getId(),
                 archivedVersionNo,
@@ -502,7 +506,6 @@ public class DocumentService {
                 archivedSummary
         );
 
-        Map<String, Object> newBody = transclusionResolver.normalizeForStorage(copyBody(request.body()));
         entity.setTitle(request.title().trim());
         if (request.docType() != null) {
             entity.setDocType(blankToNull(request.docType()));
@@ -929,13 +932,22 @@ public class DocumentService {
                         "Document en cours d'édition par " + holder + " : restauration impossible");
             });
         }
-        if (jdbc != null) {
-            Integer pending = jdbc.queryForObject(
-                    "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
-                    Integer.class, documentId);
-            if (pending != null && pending > 0) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
-            }
+        assertNoApprovalInProgress(documentId);
+    }
+
+    /**
+     * Mutation de body (update / restore) interdite pendant une demande {@code en_cours}.
+     * Même message que les étiquettes gouvernées. Les brouillons autosave restent permis.
+     */
+    private void assertNoApprovalInProgress(UUID documentId) {
+        if (jdbc == null) {
+            return;
+        }
+        Integer pending = jdbc.queryForObject(
+                "SELECT count(*) FROM approval_requests WHERE document_id = ? AND status = 'en_cours'",
+                Integer.class, documentId);
+        if (pending != null && pending > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Demande d'approbation en cours");
         }
     }
 
@@ -1204,6 +1216,29 @@ public class DocumentService {
             return entity.getUpdatedBy();
         }
         return entity.getCreatedBy();
+    }
+
+    /**
+     * Résumé de version : saisie client conservée telle quelle ; sinon déterministe
+     * ({@link MarkdownLineDiff#CREATION_SUMMARY} pour v1, sinon auto diff).
+     * La restauration fixe son propre libellé en amont.
+     */
+    private static String resolveChangeSummary(
+            String requested,
+            int newVersionNo,
+            Map<String, Object> previousBody,
+            Map<String, Object> newBody
+    ) {
+        String provided = blankToNull(requested);
+        if (provided != null) {
+            return provided;
+        }
+        if (newVersionNo <= 1) {
+            return MarkdownLineDiff.CREATION_SUMMARY;
+        }
+        return MarkdownLineDiff.autoChangeSummary(
+                previousBody != null ? previousBody : Map.of(),
+                newBody != null ? newBody : Map.of());
     }
 
     private static String blankToNull(String value) {

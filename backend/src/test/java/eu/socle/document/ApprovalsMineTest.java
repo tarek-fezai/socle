@@ -117,6 +117,8 @@ class ApprovalsMineTest {
                     when(rs.getObject("submitted_version_no")).thenReturn(2);
                     when(rs.getObject("baseline_version_no")).thenReturn(1);
                     when(rs.getObject("requested_by")).thenReturn(REQUESTER);
+                    when(rs.getString("requested_by_display_name")).thenReturn("Claire Dubois");
+                    when(rs.getString("requested_by_initials")).thenReturn("CD");
                     when(rs.getTimestamp("created_at"))
                             .thenReturn(Timestamp.from(Instant.parse("2026-09-28T10:00:00Z")));
                     when(rs.getObject("approver_role_id")).thenReturn(ROLE);
@@ -200,6 +202,8 @@ class ApprovalsMineTest {
                     when(rs.getObject("submitted_version_no")).thenReturn(2);
                     when(rs.getObject("baseline_version_no")).thenReturn(1);
                     when(rs.getObject("requested_by")).thenReturn(REQUESTER);
+                    when(rs.getString("requested_by_display_name")).thenReturn("Claire Dubois");
+                    when(rs.getString("requested_by_initials")).thenReturn("CD");
                     when(rs.getTimestamp("created_at")).thenReturn(null);
                     when(rs.getObject("approver_role_id")).thenReturn(ROLE);
                     return List.of(mapper.mapRow(rs, 0));
@@ -294,6 +298,8 @@ class ApprovalsMineTest {
                     when(rs.getObject("submitted_version_no")).thenReturn(null);
                     when(rs.getObject("baseline_version_no")).thenReturn(null);
                     when(rs.getObject("requested_by")).thenReturn(REQUESTER);
+                    when(rs.getString("requested_by_display_name")).thenReturn("Claire Dubois");
+                    when(rs.getString("requested_by_initials")).thenReturn("CD");
                     when(rs.getTimestamp("created_at")).thenReturn(null);
                     when(rs.getObject("approver_role_id")).thenReturn(ROLE);
                     return List.of(mapper.mapRow(rs, 0));

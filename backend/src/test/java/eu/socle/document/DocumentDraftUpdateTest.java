@@ -81,6 +81,9 @@ class DocumentDraftUpdateTest {
         entity.setCreatedBy(USER);
         entity.setUpdatedBy(USER);
         when(documentRepository.findActiveById(DOC)).thenReturn(Optional.of(entity));
+        // Pas de demande en cours → update autorisé.
+        when(jdbc.queryForObject(org.mockito.ArgumentMatchers.contains("approval_requests"),
+                eq(Integer.class), eq(DOC))).thenReturn(0);
     }
 
     @Test

@@ -11,6 +11,7 @@ import { NewDocumentPage } from './pages/NewDocumentPage'
 import { TemplatesAdminPage } from './pages/TemplatesAdminPage'
 import { AccessPage } from './pages/AccessPage'
 import { ApprovalsPage } from './pages/ApprovalsPage'
+import { ApprovalDiffPage } from './pages/approvals/ApprovalDiffPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { AuditPage } from './pages/AuditPage'
 import { TrashPage } from './pages/TrashPage'
@@ -68,6 +69,8 @@ export default function App() {
           <Route path="/tags/:id/export" element={<TagExportPage />} />
           <Route path="/documents/:id/history" element={<DocumentHistoryPage />} />
           <Route path="/approvals" element={<ApprovalsPage />} />
+          <Route path="/approvals/:requestId" element={<ApprovalsPage />} />
+          <Route path="/approvals/:requestId/diff" element={<ApprovalDiffPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/audit" element={<AuditPage />} />
           <Route path="/trash" element={<TrashPage />} />

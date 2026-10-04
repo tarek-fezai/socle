@@ -20,6 +20,11 @@ public final class FourEyesPolicy {
      * Contributeurs = auteurs de contenu distincts des versions avec
      * {@code version_no > dernière submitted_version_no approuvée}, plus
      * {@code documents.updated_by}. Sans version approuvée : toutes les versions.
+     *
+     * <p>Schéma actuel : {@code submitted_version_no} = n° du contenu approuvé (pas de
+     * version « Soumission » dupliquée). Ancien schéma : {@code submitted_version_no} =
+     * contenu archivé avant le bump vide — le seuil {@code > submitted} reste correct
+     * (la version vide N+1 n'est pas encore archivée tant qu'aucune édition n'a lieu).
      */
     public static Set<UUID> loadContentContributors(JdbcTemplate jdbc, UUID documentId) {
         Integer lastApproved = jdbc.query("""

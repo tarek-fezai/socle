@@ -184,6 +184,62 @@ a.edit-crumb:hover {
   cursor: not-allowed;
 }
 
+/* Exception visuelle : popover résumé facultatif (hors maquette). */
+.edit-summary-wrap {
+  position: relative;
+}
+
+.edit-summary-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(280px, 70vw);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ececee;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(20, 20, 30, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #43434a;
+}
+
+.edit-summary-input {
+  resize: vertical;
+  min-height: 52px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e2e6;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #1c1c1f;
+}
+
+.edit-summary-input:focus {
+  outline: 2px solid #3730e0;
+  outline-offset: 1px;
+}
+
+.edit-summary-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.edit-summary-count {
+  font-size: 11px;
+  color: #8a8a93;
+}
+
 /* —— Bandeaux —— */
 
 .edit-banner {

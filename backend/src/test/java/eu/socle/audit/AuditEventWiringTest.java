@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -173,6 +174,15 @@ class AuditEventWiringTest {
                         any(org.springframework.jdbc.core.RowMapper.class),
                         any()))
                 .thenReturn(List.of(USER));
+        // Empreinte = current (pas de bump) : v1 / "abc" encore alignée.
+        org.mockito.Mockito.lenient().when(jdbcTemplate.queryForList(
+                        contains("submitted_content_version_no"),
+                        any(Object.class), any(Object.class)))
+                .thenReturn(List.of(Map.of(
+                        "submitted_ver", 1,
+                        "submitted_sha", "abc",
+                        "current_ver", 1,
+                        "current_sha", "abc")));
         ApprovalActivitiesImpl activities = new ApprovalActivitiesImpl(
                 jdbcTemplate, auditService,
                 mock(eu.socle.document.ReliabilityScoreService.class),
@@ -182,10 +192,9 @@ class AuditEventWiringTest {
         UUID requestId = UUID.randomUUID();
 
         activities.recordSubmission(DOC, USER, requestId, UUID.randomUUID(), "wf-1", 1, 24);
-        // Archive : résumé du contenu courant (null ici) ; write : motif de soumission.
-        verify(documentStore).archiveVersion(eq(DOC), eq(1), any(), eq(USER), eq(USER), isNull());
-        verify(documentStore).writeCurrentContent(
-                eq(DOC), any(), eq(USER), eq(USER), eq("Soumission pour approbation"), any());
+        // Soumission sans version dupliquée : pas d'écriture DocumentStore.
+        verify(documentStore, never()).archiveVersion(any(), any(Integer.class), any(), any(), any(), any());
+        verify(documentStore, never()).writeCurrentContent(any(), any(), any(), any(), any(), any());
         verify(auditService).recordSync(
                 eq(USER), eq(false), eq(AuditActions.DOCUMENT_SUBMITTED),
                 eq("document"), eq(DOC), anyMap(), isNull());

@@ -21,7 +21,7 @@ export function HistoryTopBar({
   children,
 }: {
   crumbs: Crumb[]
-  mockPrefix: 'hist' | 'diff'
+  mockPrefix: 'hist' | 'diff' | 'appr' | 'adiff'
   children?: ReactNode
 }) {
   return (
@@ -36,9 +36,17 @@ export function HistoryTopBar({
 /* Barre haute mobile (56 px) — MobileHistory.dc.html                   */
 /* ------------------------------------------------------------------ */
 
-export function HistoryMobileTop({ title, backTo }: { title: string; backTo: string }) {
+export function HistoryMobileTop({
+  title,
+  backTo,
+  mockPrefix = 'hist',
+}: {
+  title: string
+  backTo: string
+  mockPrefix?: string
+}) {
   return (
-    <div className="hist-mobile-top" data-mock-id="hist-mobile-top">
+    <div className="hist-mobile-top" data-mock-id={`${mockPrefix}-mobile-top`}>
       <Link to={backTo} className="hist-mobile-back" aria-label="Retour">
         <svg
           width="18"
@@ -54,7 +62,7 @@ export function HistoryMobileTop({ title, backTo }: { title: string; backTo: str
           <polyline points="15 18 9 12 15 6" />
         </svg>
       </Link>
-      <div className="hist-mobile-title" data-mock-id="hist-mobile-title">
+      <div className="hist-mobile-title" data-mock-id={`${mockPrefix}-mobile-title`}>
         {title}
       </div>
     </div>

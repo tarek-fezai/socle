@@ -334,12 +334,20 @@ describe('DocumentEditPage — brouillon et version explicite', () => {
   })
 })
 
+async function confirmSendReview(summary = '') {
+  const btn = (await screen.findByTestId('edit-send-review')) as HTMLButtonElement
+  await waitFor(() => expect(btn.disabled).toBe(false))
+  fireEvent.click(btn)
+  if (summary) {
+    fireEvent.change(screen.getByTestId('edit-send-review-input'), { target: { value: summary } })
+  }
+  fireEvent.click(screen.getByTestId('edit-send-review-confirm'))
+}
+
 describe('DocumentEditPage — envoi en révision', () => {
   it('POST /approvals puis confirme', async () => {
     render(wrap(<DocumentEditPage />))
-    const btn = (await screen.findByTestId('edit-send-review')) as HTMLButtonElement
-    await waitFor(() => expect(btn.disabled).toBe(false))
-    fireEvent.click(btn)
+    await confirmSendReview()
     await waitFor(() => expect(postMock).toHaveBeenCalledWith(`/api/v1/documents/${DOC_ID}/approvals`))
     expect(await screen.findByTestId('edit-approval-msg')).toBeTruthy()
     // Contenu inchangé : pas de nouvelle version inutile.
@@ -350,9 +358,7 @@ describe('DocumentEditPage — envoi en révision', () => {
     render(wrap(<DocumentEditPage />))
     await waitFor(() => expect(screen.getByTestId('editor').getAttribute('data-editable')).toBe('true'))
     fireEvent.click(await screen.findByText('taper'))
-    const btn = screen.getByTestId('edit-send-review') as HTMLButtonElement
-    await waitFor(() => expect(btn.disabled).toBe(false))
-    fireEvent.click(btn)
+    await confirmSendReview()
     await waitFor(() => expect(postMock).toHaveBeenCalledWith(`/api/v1/documents/${DOC_ID}/approvals`))
     expect(draftPutCalls().length).toBeGreaterThanOrEqual(1)
     expect(updateCalls()).toHaveLength(1)
@@ -389,9 +395,7 @@ describe('DocumentEditPage — envoi en révision', () => {
       })
     })
     render(wrap(<DocumentEditPage />))
-    const btn = (await screen.findByTestId('edit-send-review')) as HTMLButtonElement
-    await waitFor(() => expect(btn.disabled).toBe(false))
-    fireEvent.click(btn)
+    await confirmSendReview()
     const alert = await screen.findByTestId('edit-approval-error')
     expect(alert.textContent).toContain('quatre yeux')
   })
@@ -406,9 +410,7 @@ describe('DocumentEditPage — envoi en révision', () => {
     })
     render(wrap(<DocumentEditPage />))
     expect((await screen.findByTestId('placeholder-banner')).textContent).toContain('2 zones à compléter')
-    const btn = screen.getByTestId('edit-send-review') as HTMLButtonElement
-    await waitFor(() => expect(btn.disabled).toBe(false))
-    fireEvent.click(btn)
+    await confirmSendReview()
     await waitFor(() => expect(screen.getByTestId('edit-approval-error').textContent).toContain('2 zones à compléter subsistent.'))
   })
 })

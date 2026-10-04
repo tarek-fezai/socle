@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -161,5 +162,41 @@ class MarkdownLineDiffTest {
         assertThat(MarkdownLineDiff.splitLines("a\n\nb\n")).containsExactly("a", "", "b");
         assertThat(MarkdownLineDiff.splitLines("")).isEmpty();
         assertThat(MarkdownLineDiff.splitLines(null)).isEmpty();
+    }
+
+    @Test
+    void autoChangeSummary_includesSectionTitlesAndStats() {
+        Map<String, Object> before = VersionTestSupport.docOf(List.of(
+                VersionTestSupport.h(2, "Intro"),
+                VersionTestSupport.p("ancien"),
+                VersionTestSupport.h(2, "Suite"),
+                VersionTestSupport.p("stable")));
+        Map<String, Object> after = VersionTestSupport.docOf(List.of(
+                VersionTestSupport.h(2, "Intro"),
+                VersionTestSupport.p("nouveau texte"),
+                VersionTestSupport.h(2, "Suite"),
+                VersionTestSupport.p("stable")));
+
+        String summary = MarkdownLineDiff.autoChangeSummary(before, after);
+
+        assertThat(summary).startsWith("Modifié : Intro ");
+        assertThat(summary).contains("(+");
+        assertThat(summary).contains("\u2212");
+        assertThat(summary).endsWith(")");
+        assertThat(summary.length()).isLessThanOrEqualTo(MarkdownLineDiff.MAX_SUMMARY_LENGTH);
+    }
+
+    @Test
+    void autoChangeSummary_truncatesTo200() {
+        String longTitle = "T".repeat(220);
+        Map<String, Object> before = VersionTestSupport.docOf(List.of(
+                VersionTestSupport.h(2, longTitle),
+                VersionTestSupport.p("a")));
+        Map<String, Object> after = VersionTestSupport.docOf(List.of(
+                VersionTestSupport.h(2, longTitle),
+                VersionTestSupport.p("b")));
+
+        assertThat(MarkdownLineDiff.autoChangeSummary(before, after))
+                .hasSize(MarkdownLineDiff.MAX_SUMMARY_LENGTH);
     }
 }

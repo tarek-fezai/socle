@@ -36,9 +36,23 @@ export function isDocumentHistoryPath(pathname: string): boolean {
   return /^\/(?:docs|documents)\/(?!new\/?$)[^/]+\/history(?:\/compare)?\/?$/.test(pathname)
 }
 
-/** Pages documentaires qui portent leur propre chrome (lecture, modification, historique). */
+/**
+ * `/approvals`, `/approvals/:requestId` (Approval.dc.html / MobileApproval.dc.html) et
+ * `/approvals/:requestId/diff` (DiffApproval.dc.html) — barre haute (ou barre mobile 56 px)
+ * fournie par la page ; pas de barre d'onglets du bas (la maquette mobile n'en a pas).
+ */
+export function isApprovalsPath(pathname: string): boolean {
+  return /^\/approvals(?:\/[^/]+(?:\/diff)?)?\/?$/.test(pathname)
+}
+
+/** Pages qui portent leur propre chrome (lecture, modification, historique, approbation). */
 export function hasOwnDocumentChrome(pathname: string): boolean {
-  return isDocumentReadPath(pathname) || isDocumentEditPath(pathname) || isDocumentHistoryPath(pathname)
+  return (
+    isDocumentReadPath(pathname) ||
+    isDocumentEditPath(pathname) ||
+    isDocumentHistoryPath(pathname) ||
+    isApprovalsPath(pathname)
+  )
 }
 
 /** Actions du shell exposées aux pages qui remplacent la barre mobile (via `<Outlet context>`). */
