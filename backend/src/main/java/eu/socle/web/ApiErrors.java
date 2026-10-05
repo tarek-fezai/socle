@@ -46,13 +46,26 @@ public final class ApiErrors {
     private ApiErrors() {}
 
     public static CodedStatusException licenceUserLimit(int maxUsers, long activeUsers, String reason) {
+        boolean noValidLicence = maxUsers <= 0
+                || "aucune licence".equals(reason)
+                || "licence expirée".equals(reason)
+                || "licence invalide".equals(reason)
+                || (reason != null && reason.startsWith("aucune licence"));
+        String detail = noValidLicence
+                ? "Aucune licence valide installée : contactez l'administrateur"
+                : "Limite d'utilisateurs atteinte (" + activeUsers + "/" + maxUsers
+                        + "). Motif : " + reason
+                        + ". Les comptes existants restent accessibles.";
         return new CodedStatusException(
                 HttpStatus.FORBIDDEN,
                 LICENCE_USER_LIMIT,
-                "Limite d'utilisateurs atteinte (" + activeUsers + "/" + maxUsers
-                        + "). Motif : " + reason
-                        + ". Les comptes existants restent accessibles.",
-                Map.of("maxUsers", maxUsers, "activeUsers", activeUsers, "reason", reason));
+                detail,
+                Map.of("maxUsers", maxUsers, "activeUsers", activeUsers, "reason", reason == null ? "" : reason));
+    }
+
+    /** Raccourci : aucune licence valide (évaluation = 0). */
+    public static CodedStatusException licenceUserLimitNoLicence() {
+        return licenceUserLimit(0, 0, "aucune licence");
     }
 
     public static CodedStatusException licenceRejected(String detail) {

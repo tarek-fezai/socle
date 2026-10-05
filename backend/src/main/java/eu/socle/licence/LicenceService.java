@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.identity.IdentityFacade;
+import eu.socle.identity.IdentityProperties;
 import eu.socle.licence.LicenceDtos.ImportLicenceRequest;
 import eu.socle.licence.LicenceDtos.LicenceView;
 import eu.socle.user.UserEntity;
@@ -36,15 +37,20 @@ import java.util.UUID;
  * Licence d'instance : vérification Ed25519 hors ligne, limite de sièges à la création
  * d'utilisateurs (jamais de blocage des comptes existants).
  *
- * <p>Sans licence : mode évaluation {@link #EVALUATION_MAX_USERS} utilisateurs actifs.
+ * <p>Sans licence valide (absente, invalide ou expirée) : {@link #EVALUATION_MAX_USERS} = 0.
+ * Les sujets {@code SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS} peuvent toujours être provisionnés
+ * (pour importer la licence) et ne consomment pas de place d'évaluation.
  */
 @Service
 public class LicenceService {
 
     private static final Logger log = LoggerFactory.getLogger(LicenceService.class);
 
-    /** Limite d'évaluation sans fichier de licence (utilisateurs {@code status = 'active'}). */
-    public static final int EVALUATION_MAX_USERS = 5;
+    /**
+     * Limite sans licence valide (absente / invalide / expirée).
+     * Les bootstrap admins sont exemptés.
+     */
+    public static final int EVALUATION_MAX_USERS = 0;
 
     public static final String STATUS_VALIDE = "valide";
     public static final String STATUS_EXPIRE_BIENTOT = "expire_bientot";
@@ -55,6 +61,7 @@ public class LicenceService {
 
     private final JdbcTemplate jdbc;
     private final IdentityFacade identityFacade;
+    private final IdentityProperties identityProperties;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
@@ -64,6 +71,7 @@ public class LicenceService {
     public LicenceService(
             JdbcTemplate jdbc,
             IdentityFacade identityFacade,
+            IdentityProperties identityProperties,
             AuditService auditService,
             ObjectMapper objectMapper,
             Clock clock,
@@ -71,22 +79,24 @@ public class LicenceService {
     ) {
         this.jdbc = jdbc;
         this.identityFacade = identityFacade;
+        this.identityProperties = identityProperties;
         this.auditService = auditService;
         this.objectMapper = objectMapper;
         this.clock = clock;
         try {
-            String b64 = publicKeyResource.getContentAsString(StandardCharsets.UTF_8);
-            this.publicKey = LicenceCrypto.publicKeyFromRawBase64(b64);
+            String encoded = publicKeyResource.getContentAsString(StandardCharsets.UTF_8);
+            this.publicKey = LicenceCrypto.publicKeyFromEncoded(encoded);
         } catch (Exception e) {
             throw new IllegalStateException("Impossible de charger la clé publique de licence", e);
         }
         log.info("Licence : clé publique Ed25519 chargée (vérification hors ligne)");
     }
 
-    /** Constructeur tests (clé fournie). */
+    /** Constructeur tests (clé de TEST fournie — jamais la clé de production). */
     LicenceService(
             JdbcTemplate jdbc,
             IdentityFacade identityFacade,
+            IdentityProperties identityProperties,
             AuditService auditService,
             ObjectMapper objectMapper,
             Clock clock,
@@ -94,6 +104,7 @@ public class LicenceService {
     ) {
         this.jdbc = jdbc;
         this.identityFacade = identityFacade;
+        this.identityProperties = identityProperties;
         this.auditService = auditService;
         this.objectMapper = objectMapper;
         this.clock = clock;
@@ -106,7 +117,6 @@ public class LicenceService {
         return view();
     }
 
-    /** Vue interne (bandeau admin) — admin uniquement. */
     @Transactional(readOnly = true)
     public LicenceView adminBanner(Jwt jwt) {
         if (!identityFacade.isSystemAdmin(jwt)) {
@@ -153,16 +163,32 @@ public class LicenceService {
     }
 
     /**
-     * Refuse la création d'un nouvel utilisateur si la limite de sièges est atteinte
-     * (licence absente / invalide / expirée / maxUsers). Les comptes existants ne sont jamais bloqués.
+     * Refuse la création d'un nouvel utilisateur si aucune licence valide ou si la limite
+     * de sièges est atteinte. Les bootstrap admins sont toujours autorisés.
+     * Les comptes existants ne sont jamais bloqués.
+     *
+     * @param oidcSubject claim {@code sub} du JWT (peut être {@code null})
      */
     @Transactional(readOnly = true)
-    public void assertCanCreateUser() {
+    public void assertCanCreateUser(String oidcSubject) {
+        if (isBootstrapAdminSubject(oidcSubject)) {
+            return;
+        }
         SeatPolicy policy = seatPolicy();
+        if (!policy.validLicence()) {
+            throw ApiErrors.licenceUserLimitNoLicence();
+        }
         long active = countActiveUsers();
         if (active >= policy.maxUsers()) {
-            throw ApiErrors.licenceUserLimit(policy.maxUsers(), active, policy.reason());
+            throw ApiErrors.licenceUserLimit(policy.maxUsers(), active, "limite de sièges");
         }
+    }
+
+    /** @deprecated préférer {@link #assertCanCreateUser(String)} */
+    @Deprecated
+    @Transactional(readOnly = true)
+    public void assertCanCreateUser() {
+        assertCanCreateUser(null);
     }
 
     @Transactional(readOnly = true)
@@ -174,42 +200,59 @@ public class LicenceService {
             return new LicenceView(
                     STATUS_ABSENTE, null, null, null, null, null, null,
                     active, EVALUATION_MAX_USERS, true,
-                    "Mode évaluation : " + EVALUATION_MAX_USERS
-                            + " utilisateurs actifs maximum. Importez une licence.");
+                    "Aucune licence. Importez un fichier de licence pour autoriser de nouveaux utilisateurs.");
         }
         String status;
         String banner = null;
         if (!now.isBefore(stored.expiresAt())) {
             status = STATUS_EXPIREE;
             banner = "Licence expirée le " + stored.expiresAt()
-                    + ". Création de nouveaux utilisateurs refusée (limite d'évaluation "
-                    + EVALUATION_MAX_USERS + ").";
+                    + ". Création de nouveaux utilisateurs refusée "
+                    + "(sauf administrateurs bootstrap).";
         } else if (!now.isBefore(stored.expiresAt().minus(EXPIRING_SOON))) {
             status = STATUS_EXPIRE_BIENTOT;
             banner = "Licence expire bientôt (" + stored.expiresAt() + ").";
         } else {
             status = STATUS_VALIDE;
         }
-        if (active >= stored.maxUsers() && STATUS_VALIDE.equals(status)) {
+        SeatPolicy seats = seatPolicy();
+        if (seats.validLicence() && active >= stored.maxUsers()) {
             banner = "Limite de sièges atteinte (" + active + "/" + stored.maxUsers()
                     + "). Création de nouveaux utilisateurs refusée.";
         }
         return new LicenceView(
                 status, stored.licenseId(), stored.licensee(), stored.edition(),
                 stored.issuedAt(), stored.expiresAt(), stored.maxUsers(),
-                active, seatPolicy().maxUsers(), false, banner);
+                active, seats.maxUsers(), !seats.validLicence(), banner);
+    }
+
+    boolean isBootstrapAdminSubject(String subject) {
+        if (subject == null || subject.isBlank() || identityProperties == null) {
+            return false;
+        }
+        String needle = subject.trim();
+        List<String> list = identityProperties.getBootstrapAdminSubjects();
+        if (list == null || list.isEmpty()) {
+            return false;
+        }
+        for (String s : list) {
+            if (s != null && needle.equals(s.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private SeatPolicy seatPolicy() {
         Stored stored = loadStored();
         Instant now = clock.instant();
         if (stored == null) {
-            return new SeatPolicy(EVALUATION_MAX_USERS, "aucune licence (évaluation)");
+            return SeatPolicy.none("aucune licence");
         }
         if (!now.isBefore(stored.expiresAt())) {
-            return new SeatPolicy(EVALUATION_MAX_USERS, "licence expirée");
+            return SeatPolicy.none("licence expirée");
         }
-        return new SeatPolicy(stored.maxUsers(), "licence");
+        return new SeatPolicy(stored.maxUsers(), "licence", true);
     }
 
     private long countActiveUsers() {
@@ -236,7 +279,6 @@ public class LicenceService {
             return null;
         }
         Stored s = rows.getFirst();
-        // Re-vérifie la signature au chargement (démarrage / lecture).
         try {
             parseAndVerify(s.payloadJson());
             return s;
@@ -306,7 +348,11 @@ public class LicenceService {
             String licenseId, String licensee, String edition,
             Instant issuedAt, Instant expiresAt, int maxUsers) {}
 
-    private record SeatPolicy(int maxUsers, String reason) {}
+    private record SeatPolicy(int maxUsers, String reason, boolean validLicence) {
+        static SeatPolicy none(String reason) {
+            return new SeatPolicy(EVALUATION_MAX_USERS, reason, false);
+        }
+    }
 
     private static final class CodedReject extends Exception {
         final String reason;

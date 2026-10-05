@@ -34,7 +34,7 @@ function statusLabel(s: LicenceStatus): string {
     case 'expiree':
       return 'Expirée'
     case 'absente':
-      return 'Absente'
+      return 'Aucune licence'
     default:
       return s
   }
@@ -160,12 +160,14 @@ export function LicenceAdminPage() {
           Édition
         </div>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#0E0E10' }}>
-          {lic?.edition ?? (lic?.status === 'absente' ? 'Évaluation' : '…')}
+          {lic?.status === 'absente'
+            ? 'Aucune licence'
+            : (lic?.edition ?? '…')}
         </div>
         {lic && (
           <div style={{ fontSize: 12, color: statusColor(lic.status), marginTop: 8, fontWeight: 600 }}>
-            {statusLabel(lic.status)}
-            {lic.evaluationMode ? ' · mode évaluation' : ''}
+            {lic.status === 'absente' ? 'Aucune licence' : statusLabel(lic.status)}
+            {lic.evaluationMode && lic.status !== 'absente' ? ' · sans licence valide' : ''}
           </div>
         )}
       </div>

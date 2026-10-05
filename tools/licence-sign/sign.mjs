@@ -4,16 +4,21 @@
  * Signe un fichier de licence Socle (Ed25519, hors ligne).
  *
  * Usage :
- *   node sign.mjs --key /chemin/prive.ed25519.b64 --in licence.json [--out licence.signed.json]
+ *   node sign.mjs --key /chemin/secret/private.pem --in licence.json [--out licence.signed.json]
  *
- * Le fichier --key contient la graine privée Ed25519 (32 octets) en Base64.
- * Ne jamais committer cette clé. Aucun appel réseau.
+ * `--key` : chemin local (hors dépôt) vers une clé privée Ed25519 au format PEM PKCS#8,
+ * produit typiquement par :
+ *   openssl genpkey -algorithm ed25519 -out private.pem
+ *
+ * Ne jamais committer cette clé. Aucun appel réseau. Aucune lecture depuis le dépôt.
  */
 import { createPrivateKey, sign } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 function usage() {
-  console.error(`Usage: node sign.mjs --key <private.b64> --in <licence.json> [--out <out.json>]`)
+  console.error(`Usage: node sign.mjs --key <private.pem> --in <licence.json> [--out <out.json>]`)
+  console.error(`  --key  chemin absolu ou relatif vers une clé PEM PKCS#8 Ed25519 (hors dépôt)`)
   process.exit(2)
 }
 
@@ -50,24 +55,26 @@ export function canonicalPayload(obj) {
   return Buffer.from(JSON.stringify(ordered), 'utf8')
 }
 
-function privateKeyFromSeedB64(b64) {
-  const seed = Buffer.from(String(b64).trim(), 'base64')
-  if (seed.length !== 32) {
-    throw new Error(`clé privée : 32 octets attendus, obtenu ${seed.length}`)
+/**
+ * Charge une clé privée depuis un fichier local uniquement.
+ * Accepte PEM PKCS#8 (`-----BEGIN PRIVATE KEY-----`, openssl genpkey -algorithm ed25519).
+ */
+function loadPrivateKeyFromFile(keyPath) {
+  const abs = resolve(keyPath)
+  const pem = readFileSync(abs, 'utf8')
+  if (!pem.includes('BEGIN PRIVATE KEY') && !pem.includes('BEGIN ED25519 PRIVATE KEY')) {
+    throw new Error(
+      `Le fichier ${abs} doit être une clé PEM PKCS#8 Ed25519 ` +
+        `(openssl genpkey -algorithm ed25519 -out private.pem)`,
+    )
   }
-  // PKCS8 Ed25519 encapsulating the 32-byte seed
-  const pkcs8 = Buffer.concat([
-    Buffer.from('302e020100300506032b657004220420', 'hex'),
-    seed,
-  ])
-  return createPrivateKey({ key: pkcs8, format: 'der', type: 'pkcs8' })
+  return createPrivateKey(pem)
 }
 
 const args = parseArgs(process.argv)
-const seedB64 = readFileSync(args.key, 'utf8')
 const raw = JSON.parse(readFileSync(args.inn, 'utf8'))
 const payload = canonicalPayload(raw)
-const key = privateKeyFromSeedB64(seedB64)
+const key = loadPrivateKeyFromFile(args.key)
 const signature = sign(null, payload, key).toString('base64')
 const signed = {
   licenseId: raw.licenseId,

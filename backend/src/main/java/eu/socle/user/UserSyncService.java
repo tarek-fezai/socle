@@ -100,7 +100,7 @@ public class UserSyncService {
                 // Aucune création avant décision de la politique d'accès + limite de sièges.
                 requireGranted(accessPolicyService.evaluate(jwt, null));
                 if (licenceService != null) {
-                    licenceService.assertCanCreateUser();
+                    licenceService.assertCanCreateUser(subject);
                 }
                 newAccount = true;
                 user = new UserEntity();

@@ -22,26 +22,53 @@ import java.util.TreeMap;
 public final class LicenceCrypto {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final byte[] ED25519_SPKI_PREFIX = hex("302a300506032b6570032100");
 
     private LicenceCrypto() {}
 
-    public static PublicKey publicKeyFromRawBase64(String rawB64) {
+    /**
+     * Accepte : raw 32 octets Base64 ; DER SPKI Base64 (44 octets) ; PEM
+     * {@code BEGIN PUBLIC KEY} (openssl pkey -pubout).
+     */
+    public static PublicKey publicKeyFromEncoded(String encoded) {
         try {
-            byte[] raw = Base64.getDecoder().decode(rawB64.trim());
-            if (raw.length != 32) {
-                throw new IllegalArgumentException("clé publique Ed25519 : 32 octets attendus");
+            String trimmed = encoded == null ? "" : encoded.trim();
+            if (trimmed.isEmpty()) {
+                throw new IllegalArgumentException("clé publique vide");
             }
-            // X.509 SubjectPublicKeyInfo pour Ed25519
-            byte[] prefix = hex("302a300506032b6570032100");
-            byte[] spki = new byte[prefix.length + raw.length];
-            System.arraycopy(prefix, 0, spki, 0, prefix.length);
-            System.arraycopy(raw, 0, spki, prefix.length, raw.length);
-            return KeyFactory.getInstance("Ed25519").generatePublic(new X509EncodedKeySpec(spki));
+            byte[] der;
+            if (trimmed.contains("BEGIN PUBLIC KEY")) {
+                String b64 = trimmed
+                        .replace("-----BEGIN PUBLIC KEY-----", "")
+                        .replace("-----END PUBLIC KEY-----", "")
+                        .replaceAll("\\s", "");
+                der = Base64.getDecoder().decode(b64);
+            } else {
+                byte[] raw = Base64.getDecoder().decode(trimmed.replaceAll("\\s", ""));
+                if (raw.length == 32) {
+                    der = new byte[ED25519_SPKI_PREFIX.length + 32];
+                    System.arraycopy(ED25519_SPKI_PREFIX, 0, der, 0, ED25519_SPKI_PREFIX.length);
+                    System.arraycopy(raw, 0, der, ED25519_SPKI_PREFIX.length, 32);
+                } else if (raw.length == 44) {
+                    der = raw;
+                } else {
+                    throw new IllegalArgumentException(
+                            "clé publique Ed25519 : raw 32 octets, SPKI 44 octets ou PEM attendus (obtenu "
+                                    + raw.length + ")");
+                }
+            }
+            return KeyFactory.getInstance("Ed25519").generatePublic(new X509EncodedKeySpec(der));
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
             throw new IllegalStateException("Clé publique licence invalide", e);
         }
+    }
+
+    /** @deprecated préférer {@link #publicKeyFromEncoded(String)} */
+    @Deprecated
+    public static PublicKey publicKeyFromRawBase64(String rawB64) {
+        return publicKeyFromEncoded(rawB64);
     }
 
     public static byte[] canonicalPayload(JsonNode root) {
@@ -52,7 +79,6 @@ public final class LicenceCrypto {
         ordered.put("licenseId", requireText(root, "licenseId"));
         ordered.put("licensee", requireText(root, "licensee"));
         ordered.put("maxUsers", requireInt(root, "maxUsers"));
-        // TreeMap pour stabiliser si évolution ; ici l'ordre ObjectNode Jackson suit l'insertion.
         try {
             Map<String, Object> map = new TreeMap<>();
             Iterator<Map.Entry<String, JsonNode>> it = ordered.fields();
@@ -107,7 +133,6 @@ public final class LicenceCrypto {
         return out;
     }
 
-    /** Exposition test : même sérialisation que le signeur Node ({@code JSON.stringify} ordonné). */
     public static String canonicalJsonUtf8(JsonNode root) {
         return new String(canonicalPayload(root), StandardCharsets.UTF_8);
     }
