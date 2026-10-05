@@ -17,9 +17,32 @@ public record SocleProperties(
      * Identité d'affichage de l'instance. Jamais hardcodée côté produit —
      * configurable via {@code socle.instance.display-name}.
      */
-    public record Instance(String displayName) {
+    public record Instance(String displayName, String dataResidenceLabel, String publicBaseUrl) {
         public String effectiveDisplayName() {
             return displayName == null || displayName.isBlank() ? "Socle" : displayName;
+        }
+
+        /**
+         * Libellé de résidence des données (ex. « Paris, France — hébergement client »),
+         * {@code SOCLE_DATA_RESIDENCE_LABEL}. Jamais déduit ni codé en dur : {@code null} si non configuré.
+         */
+        public String effectiveDataResidenceLabel() {
+            return dataResidenceLabel == null || dataResidenceLabel.isBlank() ? null : dataResidenceLabel.trim();
+        }
+
+        /**
+         * URL publique de l'application ({@code SOCLE_PUBLIC_BASE_URL}), sans « / » final ;
+         * lecture seule côté API admin. {@code null} si non configurée.
+         */
+        public String effectivePublicBaseUrl() {
+            if (publicBaseUrl == null || publicBaseUrl.isBlank()) {
+                return null;
+            }
+            String trimmed = publicBaseUrl.trim();
+            while (trimmed.endsWith("/")) {
+                trimmed = trimmed.substring(0, trimmed.length() - 1);
+            }
+            return trimmed.isEmpty() ? null : trimmed;
         }
     }
 

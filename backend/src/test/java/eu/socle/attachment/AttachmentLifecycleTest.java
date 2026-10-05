@@ -204,6 +204,41 @@ class AttachmentLifecycleTest {
     }
 
     @Test
+    void documentPurge_underLegalHold_isRefused_andBlobKept() throws Exception {
+        var holds = org.mockito.Mockito.mock(eu.socle.retention.LegalHoldService.class);
+        org.mockito.Mockito.doThrow(eu.socle.web.ApiErrors.legalHoldActive("document", DOC))
+                .when(holds).assertDocumentNotHeld(DOC);
+        service.setLegalHoldService(holds);
+        var uploaded = service.upload(jwt(), DOC, txtFile("held.txt", "keep"));
+        String key = jdbc.queryForObject(
+                "SELECT storage_key::text FROM attachments WHERE id = ?", String.class, uploaded.id());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.purgeForDocument(DOC, null, true))
+                .isInstanceOf(eu.socle.web.CodedStatusException.class)
+                .extracting(e -> ((eu.socle.web.CodedStatusException) e).getCode())
+                .isEqualTo(eu.socle.web.ApiErrors.LEGAL_HOLD_ACTIVE);
+
+        assertThat(blobStore.exists(key)).isTrue();
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM attachments WHERE id = ?", Integer.class, uploaded.id())).isEqualTo(1);
+    }
+
+    @Test
+    void orphanPurge_skipsDocumentsUnderLegalHold() throws Exception {
+        var holds = org.mockito.Mockito.mock(eu.socle.retention.LegalHoldService.class);
+        when(holds.heldDocumentIds(any())).thenReturn(java.util.Set.of(DOC));
+        service.setLegalHoldService(holds);
+        var fresh = service.upload(jwt(), DOC, txtFile("orphan-held.txt", "f"));
+        jdbc.update("UPDATE attachments SET created_at = ? WHERE id = ?",
+                java.sql.Timestamp.from(Instant.parse("2026-09-01T00:00:00Z")), fresh.id());
+        String key = jdbc.queryForObject(
+                "SELECT storage_key::text FROM attachments WHERE id = ?", String.class, fresh.id());
+
+        assertThat(service.purgeOrphans()).isZero();
+        assertThat(blobStore.exists(key)).isTrue();
+    }
+
+    @Test
     void orphan_purgedAfterRetention() throws Exception {
         Jwt jwt = jwt();
         // Upload at "now" — not yet purgeable

@@ -31,6 +31,8 @@ class ConfigurationDocumentationParityTest {
     /** Env names tied to {@link SocleProperties} and nested records (via application.yml). */
     private static final Set<String> SOCLE_PROPERTIES_ENV = Set.of(
             "SOCLE_INSTANCE_DISPLAY_NAME",
+            "SOCLE_DATA_RESIDENCE_LABEL",
+            "SOCLE_PUBLIC_BASE_URL",
             "TEMPORAL_TARGET",
             "TEMPORAL_NAMESPACE",
             "OPENFGA_API_URL",

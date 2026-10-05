@@ -7,6 +7,10 @@ import eu.socle.attachment.AttachmentService;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
+import eu.socle.retention.LegalHoldService;
+import eu.socle.storage.DocumentHistoryPurgeService;
+import eu.socle.web.ApiErrors;
+import eu.socle.web.CodedStatusException;
 import eu.socle.user.UserSyncService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +51,8 @@ public class TrashService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private AttachmentService attachmentService;
+    private LegalHoldService legalHoldService;
+    private DocumentHistoryPurgeService historyPurgeService;
 
     @Autowired
     public TrashService(
@@ -79,6 +85,16 @@ public class TrashService {
     @Autowired(required = false)
     void setAttachmentService(AttachmentService attachmentService) {
         this.attachmentService = attachmentService;
+    }
+
+    @Autowired(required = false)
+    void setLegalHoldService(LegalHoldService legalHoldService) {
+        this.legalHoldService = legalHoldService;
+    }
+
+    @Autowired(required = false)
+    void setHistoryPurgeService(DocumentHistoryPurgeService historyPurgeService) {
+        this.historyPurgeService = historyPurgeService;
     }
 
     private static final int MAX_LIST_LIMIT = 200;
@@ -147,6 +163,9 @@ public class TrashService {
         var user = userSyncService.syncFromJwt(jwt);
         authorizationService.requireDocumentRelation(user.getId(), documentId, "editor");
         DocRow doc = requireActiveDocument(documentId);
+        if (legalHoldService != null) {
+            legalHoldService.assertDocumentNotHeld(documentId);
+        }
         Instant now = clock.instant();
         softDeleteDocumentRow(doc, user.getId(), now);
         auditService.record(user.getId(), false, AuditActions.DOCUMENT_TRASHED,
@@ -171,6 +190,9 @@ public class TrashService {
         }
         for (DocRow d : docsToTrash) {
             authorizationService.requireDocumentRelation(user.getId(), d.id(), "editor");
+        }
+        if (legalHoldService != null) {
+            legalHoldService.assertDocumentsNotHeld(docsToTrash.stream().map(DocRow::id).toList());
         }
 
         Instant now = clock.instant();
@@ -208,6 +230,9 @@ public class TrashService {
         }
         for (DocRow d : docsToTrash) {
             authorizationService.requireDocumentRelation(user.getId(), d.id(), "editor");
+        }
+        if (legalHoldService != null) {
+            legalHoldService.assertSpaceNotHeld(spaceId);
         }
 
         Instant now = clock.instant();
@@ -326,7 +351,8 @@ public class TrashService {
         var user = userSyncService.syncFromJwt(jwt);
         TrashRow item = requireTrashItem(trashItemId);
         requireEdit(user.getId(), item.resourceType(), item.resourceId());
-        hardDeleteResource(item.resourceType(), item.resourceId());
+        assertResourceNotHeld(item.resourceType(), item.resourceId());
+        hardDeleteResource(item.resourceType(), item.resourceId(), user.getId());
         jdbcTemplate.update("DELETE FROM trash_items WHERE id = ?", trashItemId);
         cleanupOrphanTrashItems();
         auditService.record(user.getId(), false, purgedAction(item.resourceType()),
@@ -358,7 +384,13 @@ public class TrashService {
         int count = 0;
         for (TrashRow item : due) {
             try {
-                hardDeleteResource(item.resourceType(), item.resourceId());
+                if (isResourceHeld(item.resourceType(), item.resourceId())) {
+                    // Legal hold : l'élément reste en corbeille (réessayé après levée du gel).
+                    log.info("Purge corbeille ignorée (legal hold actif) type={} resource={}",
+                            item.resourceType(), item.resourceId());
+                    continue;
+                }
+                hardDeleteResource(item.resourceType(), item.resourceId(), null);
                 jdbcTemplate.update("DELETE FROM trash_items WHERE id = ?", item.id());
                 auditService.record(null, true, purgedAction(item.resourceType()),
                         item.resourceType(), item.resourceId(),
@@ -563,14 +595,14 @@ public class TrashService {
 
     // ── hard delete / purge ──────────────────────────────────────────
 
-    private void hardDeleteResource(String type, UUID id) {
+    private void hardDeleteResource(String type, UUID id, UUID actorId) {
         switch (type) {
-            case "document" -> hardDeleteDocument(id);
+            case "document" -> hardDeleteDocument(id, actorId);
             case "folder" -> {
                 // Children soft-deleted first (docs then subfolders) to avoid FK surprises
                 for (UUID child : descendantFolderIds(id)) {
                     for (UUID docId : softDeletedDocumentsInFolder(child)) {
-                        hardDeleteDocument(docId);
+                        hardDeleteDocument(docId, actorId);
                         jdbcTemplate.update(
                                 "DELETE FROM trash_items WHERE resource_type = 'document' AND resource_id = ?",
                                 docId);
@@ -581,7 +613,7 @@ public class TrashService {
                             child);
                 }
                 for (UUID docId : softDeletedDocumentsInFolder(id)) {
-                    hardDeleteDocument(docId);
+                    hardDeleteDocument(docId, actorId);
                     jdbcTemplate.update(
                             "DELETE FROM trash_items WHERE resource_type = 'document' AND resource_id = ?",
                             docId);
@@ -590,7 +622,7 @@ public class TrashService {
             }
             case "space" -> {
                 for (UUID docId : softDeletedDocumentsInSpace(id)) {
-                    hardDeleteDocument(docId);
+                    hardDeleteDocument(docId, actorId);
                     jdbcTemplate.update(
                             "DELETE FROM trash_items WHERE resource_type = 'document' AND resource_id = ?",
                             docId);
@@ -607,14 +639,66 @@ public class TrashService {
         }
     }
 
-    private void hardDeleteDocument(UUID documentId) {
+    private void hardDeleteDocument(UUID documentId, UUID actorId) {
+        // Garde-fou même si l'appelant a déjà vérifié (défense en profondeur) : 409 legal_hold_active.
+        if (legalHoldService != null) {
+            legalHoldService.assertDocumentNotHeld(documentId);
+        }
         if (attachmentService != null) {
-            attachmentService.purgeForDocument(documentId, null, true);
+            attachmentService.purgeForDocument(documentId, actorId, actorId == null);
         } else {
             jdbcTemplate.update("DELETE FROM attachments WHERE document_id = ?", documentId);
         }
-        jdbcTemplate.update(
+        int deleted = jdbcTemplate.update(
                 "DELETE FROM documents WHERE id = ? AND deleted_at IS NOT NULL", documentId);
+        if (deleted > 0 && historyPurgeService != null) {
+            // Après commit : réécriture de l'historique Git (documents/{uuid}.md retiré de toutes les révisions).
+            historyPurgeService.purgeAfterCommit(actorId, documentId);
+        }
+    }
+
+    // ── legal hold ───────────────────────────────────────────────────
+
+    /** 409 {@code legal_hold_active} si un gel couvre la ressource (document, dossier ou espace). */
+    private void assertResourceNotHeld(String type, UUID id) {
+        if (legalHoldService == null) {
+            return;
+        }
+        switch (type) {
+            case "document" -> legalHoldService.assertDocumentNotHeld(id);
+            case "folder" -> legalHoldService.assertDocumentsNotHeld(allDocumentIdsInFolderTree(id));
+            case "space" -> legalHoldService.assertSpaceNotHeld(id);
+            default -> { }
+        }
+    }
+
+    private boolean isResourceHeld(String type, UUID id) {
+        if (legalHoldService == null) {
+            return false;
+        }
+        try {
+            assertResourceNotHeld(type, id);
+            return false;
+        } catch (CodedStatusException e) {
+            if (ApiErrors.LEGAL_HOLD_ACTIVE.equals(e.getCode())) {
+                return true;
+            }
+            throw e;
+        }
+    }
+
+    /** Tous les documents (actifs ou en corbeille) du dossier et de ses sous-dossiers. */
+    private List<UUID> allDocumentIdsInFolderTree(UUID folderId) {
+        return jdbcTemplate.query("""
+                WITH RECURSIVE tree AS (
+                  SELECT id FROM folders WHERE id = ?
+                  UNION ALL
+                  SELECT f.id FROM folders f JOIN tree t ON f.parent_folder_id = t.id
+                )
+                SELECT d.id FROM documents d WHERE d.folder_id IN (SELECT id FROM tree)
+                """,
+                (rs, i) -> (UUID) rs.getObject("id"),
+                folderId);
     }
 
     private void cleanupOrphanTrashItems() {

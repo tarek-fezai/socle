@@ -31,6 +31,8 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | Name | Default | Required | Secret | Description |
 |------|---------|----------|--------|-------------|
 | `SOCLE_INSTANCE_DISPLAY_NAME` | `Socle` | no | no | Product name in UI (`socle.instance.display-name`) |
+| `SOCLE_DATA_RESIDENCE_LABEL` | *(empty)* | no | no | Data-residence label shown in Admin › Retention & compliance (`socle.instance.data-residence-label`); never hardcoded |
+| `SOCLE_PUBLIC_BASE_URL` | *(empty)* | no | no | Public application URL (`socle.instance.public-base-url`); read-only in the admin branding API (`publicBaseUrl`) |
 | `SOCLE_STORAGE_PROVIDER` | `relational` (local yml); Compose example `git` | **yes** | no | `relational` or `git` — no silent default at runtime |
 | `SOCLE_STORAGE_GIT_PATH` | `./data/git-content` | when `git` | no | Git repo path (`socle.storage.git-repository-path`) |
 | `SOCLE_STORAGE_GIT_REPOSITORY_PATH` | — | no | no | Compose `.env` alias; mapped to `SOCLE_STORAGE_GIT_PATH` in stack |

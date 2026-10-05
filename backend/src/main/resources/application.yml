@@ -77,6 +77,10 @@ socle:
   instance:
     # Nom d'affichage de l'instance (jamais hardcodé côté produit).
     display-name: ${SOCLE_INSTANCE_DISPLAY_NAME:Socle}
+    # Libellé de résidence des données affiché dans Rétention & conformité (vide = non renseigné).
+    data-residence-label: ${SOCLE_DATA_RESIDENCE_LABEL:}
+    # URL publique de l'application (liens e-mail, logo absolu). Lecture seule côté admin.
+    public-base-url: ${SOCLE_PUBLIC_BASE_URL:}
   storage:
     # Choix d'instance exclusif — obligatoire (pas de défaut silencieux côté code).
     provider: ${SOCLE_STORAGE_PROVIDER:relational}

@@ -64,6 +64,32 @@ class LocalBlobStoreTest {
     }
 
     @Test
+    void reservedBrandingKeys_areAccepted_butArbitraryPrefixesAreNot() throws Exception {
+        assertThat(BlobKeys.requireValid(BlobKeys.BRANDING_LOGO)).isEqualTo("branding/logo");
+        assertThat(BlobKeys.requireValid(BlobKeys.BRANDING_FAVICON)).isEqualTo("branding/favicon");
+        assertThatThrownBy(() -> BlobKeys.requireValid("branding/other"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BlobKeys.requireValid("branding/../logo"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        byte[] data = "png".getBytes(StandardCharsets.UTF_8);
+        store.put(BlobKeys.BRANDING_LOGO, new ByteArrayInputStream(data), data.length, "image/png");
+        assertThat(store.exists(BlobKeys.BRANDING_LOGO)).isTrue();
+        assertThat(Files.readAllBytes(store.root().resolve("branding").resolve("logo"))).isEqualTo(data);
+        // Remplacement : une seule version, pas de fichier temporaire résiduel.
+        byte[] data2 = "png2".getBytes(StandardCharsets.UTF_8);
+        store.put(BlobKeys.BRANDING_LOGO, new ByteArrayInputStream(data2), data2.length, "image/png");
+        try (BlobStore.BlobObject obj = store.get(BlobKeys.BRANDING_LOGO, Optional.empty()).orElseThrow()) {
+            assertThat(obj.content().readAllBytes()).isEqualTo(data2);
+        }
+        try (var files = Files.list(store.root().resolve("branding"))) {
+            assertThat(files.map(p -> p.getFileName().toString()).toList()).containsExactly("logo");
+        }
+        store.delete(BlobKeys.BRANDING_LOGO);
+        assertThat(store.exists(BlobKeys.BRANDING_LOGO)).isFalse();
+    }
+
+    @Test
     void range_returnsPartialBytes() throws Exception {
         String key = BlobKeys.newKey();
         byte[] data = "0123456789".getBytes(StandardCharsets.UTF_8);

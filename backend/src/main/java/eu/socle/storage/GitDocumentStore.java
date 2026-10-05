@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Provider Git (JGit) : un commit = une version de contenu.
@@ -48,6 +49,13 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
     private final Git git;
     private final GitRepositoryLock instanceLock;
     private final ConcurrentHashMap<UUID, Object> documentLocks = new ConcurrentHashMap<>();
+    /**
+     * Verrou processus : écritures / lectures Git partagent le verrou de lecture (le verrou par
+     * document sérialise toujours les écritures d'un même document) ; la purge d'historique
+     * prend le verrou d'écriture — plus aucune écriture ni lecture Git pendant la réécriture + GC.
+     * Le verrou fichier {@link GitRepositoryLock} interdit déjà une 2e instance backend.
+     */
+    private final ReentrantReadWriteLock repoLock = new ReentrantReadWriteLock(true);
 
     public GitDocumentStore(DocumentVersionRepository versionRepository, Path repoPath) {
         this.versionRepository = versionRepository;
@@ -103,6 +111,7 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
 
     @Override
     public Map<String, Object> readCurrentContent(UUID documentId, Map<String, Object> dbProjection) {
+        repoLock.readLock().lock();
         try {
             String sha = resolveHeadSha();
             if (sha == null) {
@@ -115,6 +124,8 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
             return TipTapMarkdown.fromMarkdown(md);
         } catch (IOException e) {
             return fallbackProjection(dbProjection);
+        } finally {
+            repoLock.readLock().unlock();
         }
     }
 
@@ -129,7 +140,13 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
     ) {
         // Le commit précédent (HEAD avant writeCurrent) est l'archive.
         // On enregistre la métadonnée API + SHA du HEAD actuel (encore l'ancien contenu).
-        String sha = resolveHeadSha();
+        String sha;
+        repoLock.readLock().lock();
+        try {
+            sha = resolveHeadSha();
+        } finally {
+            repoLock.readLock().unlock();
+        }
         DocumentVersionEntity version = new DocumentVersionEntity();
         version.setDocumentId(documentId);
         version.setVersionNo(archivedVersionNo);
@@ -186,6 +203,7 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
 
     @Override
     public Instant lastContentModifiedAt(UUID documentId, Instant documentCreatedAt) {
+        repoLock.readLock().lock();
         try {
             var commits = git.log()
                     .addPath(relativePath(documentId))
@@ -196,6 +214,8 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
             }
         } catch (GitAPIException e) {
             // fallback below
+        } finally {
+            repoLock.readLock().unlock();
         }
         Page<StoredVersion> latest = listVersions(documentId, 0, 1);
         if (!latest.isEmpty()) {
@@ -215,6 +235,7 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Versions sans commit Git — diff Git impossible");
         }
+        repoLock.readLock().lock();
         try {
             String path = relativePath(documentId);
             String beforeMd = readBlobAtCommit(from.getGitCommitSha(), path);
@@ -233,6 +254,8 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
             return new VersionDiffResult(versionA, versionB, List.copyOf(changes));
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Diff Git impossible", e);
+        } finally {
+            repoLock.readLock().unlock();
         }
     }
 
@@ -240,6 +263,7 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
     public Map<String, Object> loadVersionBody(UUID documentId, int versionNo) {
         DocumentVersionEntity v = requireEntity(documentId, versionNo);
         if (v.getGitCommitSha() != null) {
+            repoLock.readLock().lock();
             try {
                 String md = readBlobAtCommit(v.getGitCommitSha(), relativePath(documentId));
                 if (!md.isBlank() || v.getBodySnapshot() == null) {
@@ -247,9 +271,56 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
                 }
             } catch (IOException e) {
                 // fallback projection
+            } finally {
+                repoLock.readLock().unlock();
             }
         }
         return v.getBodySnapshot() == null ? Map.of() : new HashMap<>(v.getBodySnapshot());
+    }
+
+    /**
+     * Réécrit l'historique Git sans {@code documents/{uuid}.md} (toutes révisions), GC compris.
+     * Verrou d'écriture exclusif : plus aucune écriture ni lecture Git pendant l'opération.
+     * Voir {@code docs/git-purge.md} (les SHA changent ; les clones doivent être refaits).
+     */
+    @Override
+    public Optional<HistoryPurgeResult> purgeDocumentsHistory(java.util.Collection<UUID> documentIds) {
+        if (documentIds == null || documentIds.isEmpty()) {
+            return Optional.empty();
+        }
+        java.util.Set<UUID> ids = new java.util.LinkedHashSet<>(documentIds);
+        java.util.Set<String> fileNames = new java.util.LinkedHashSet<>();
+        for (UUID id : ids) {
+            fileNames.add(id + ".md");
+        }
+        // Verrous par document (en ordre stable) + verrou processus exclusif.
+        List<UUID> ordered = new ArrayList<>(ids);
+        ordered.sort(UUID::compareTo);
+        repoLock.writeLock().lock();
+        try {
+            return Optional.of(purgeWithDocumentLocks(ordered, 0, ids, fileNames));
+        } finally {
+            repoLock.writeLock().unlock();
+            ids.forEach(documentLocks::remove);
+        }
+    }
+
+    private HistoryPurgeResult purgeWithDocumentLocks(
+            List<UUID> ordered, int index, java.util.Set<UUID> ids, java.util.Set<String> fileNames) {
+        if (index == ordered.size()) {
+            try {
+                GitHistoryPurger.Outcome o = new GitHistoryPurger(git, repoPath).purge(fileNames);
+                return new HistoryPurgeResult(
+                        java.util.Set.copyOf(ids), o.commitsRewritten(), o.commitsDropped(),
+                        o.oldHead(), o.newHead(), o.commitMapping(), o.backupRef());
+            } catch (IOException | GitAPIException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Purge Git impossible", e);
+            }
+        }
+        Object lock = documentLocks.computeIfAbsent(ordered.get(index), id -> new Object());
+        synchronized (lock) {
+            return purgeWithDocumentLocks(ordered, index + 1, ids, fileNames);
+        }
     }
 
     @Override
@@ -270,6 +341,23 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
             String expectedGitHeadSha
     ) {
         Object lock = documentLocks.computeIfAbsent(documentId, id -> new Object());
+        repoLock.readLock().lock();
+        try {
+            commitFileLocked(documentId, body, contentAuthorId, committerId, message, expectedGitHeadSha, lock);
+        } finally {
+            repoLock.readLock().unlock();
+        }
+    }
+
+    private void commitFileLocked(
+            UUID documentId,
+            Map<String, Object> body,
+            UUID contentAuthorId,
+            UUID committerId,
+            String message,
+            String expectedGitHeadSha,
+            Object lock
+    ) {
         synchronized (lock) {
             String head = resolveHeadSha();
             if (expectedGitHeadSha != null && head != null && !expectedGitHeadSha.equals(head)) {

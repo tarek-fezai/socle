@@ -129,6 +129,23 @@ public final class AuditActions {
     public static final String ATTESTATION_CAMPAIGN_CLOSED = "attestation.campaign_closed";
     public static final String ATTESTATION_ACKNOWLEDGED = "attestation.acknowledged";
 
+    /** Rétention & conformité (admin système). */
+    public static final String RETENTION_SETTINGS_UPDATED = "retention.settings_updated";
+    public static final String RETENTION_PROCESSING_REGISTER_REVIEWED = "retention.processing_register_reviewed";
+    public static final String RETENTION_PURGE_RAN = "retention.purge_ran";
+    public static final String LEGAL_HOLD_PLACED = "legal_hold.placed";
+    public static final String LEGAL_HOLD_RELEASED = "legal_hold.released";
+    /** Réécriture de l'historique Git (purge réelle d'un document). */
+    public static final String DOCUMENT_GIT_HISTORY_PURGED = "document.git_history_purged";
+
+    /** Personnalisation de l'instance (marque blanche, admin système). */
+    public static final String BRANDING_UPDATED = "branding.updated";
+    public static final String BRANDING_LOGO_UPLOADED = "branding.logo_uploaded";
+    public static final String BRANDING_LOGO_REMOVED = "branding.logo_removed";
+    public static final String BRANDING_FAVICON_UPLOADED = "branding.favicon_uploaded";
+    public static final String BRANDING_FAVICON_REMOVED = "branding.favicon_removed";
+    public static final String BRANDING_TEST_EMAIL_SENT = "branding.test_email_sent";
+
     public static final String POLL_CLOSED = "poll.closed";
     public static final String LINK_PREVIEW_FETCHED = "link_preview.fetched";
 

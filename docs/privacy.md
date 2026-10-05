@@ -74,3 +74,18 @@ Campaign creation, closure and each acknowledgment are written to the audit log 
 ## Favorites
 
 Favorites are stored per user (`favorites`). Listing filters out targets the user can no longer view; inaccessible rows are kept until the user removes them explicitly.
+
+## Retention, legal hold and data residence (system administrators)
+
+`GET/PUT /api/v1/admin/retention` (role `administrateur-systeme`, every change audited as `retention.settings_updated`) edits the instance policy stored in `instance_settings` (migration V43):
+
+| Setting | Default | Effect of the daily purge (`RetentionPurgeScheduler`, 03:30) |
+|---|---|---|
+| `auditRetentionMonths` | 24 | `audit_log_events` older than the window are deleted (only path allowed to delete: a DB trigger accepts `DELETE` only inside the purge transaction and only for rows older than the window) |
+| `versionRetentionMode` / `versionRetentionValue` | `unlimited` | `months` / `count`: old `document_versions` rows are removed (documents under hold or with a pending approval are skipped) |
+| `archivedDocsRetentionYears` | 7 | archived documents (and fully archived spaces) untouched for longer are hard-deleted, attachments and Git history included (`docs/git-purge.md`) |
+| `processingRegisterReviewedAt` | — | date the processing register was last reviewed (`retention.processing_register_reviewed`) |
+
+Each run is idempotent and audited as `retention.purge_ran` with counters (`auditEventsDeleted`, `versionsDeleted`, `archivedDocumentsPurged`, `archivedSpacesPurged`, `skippedLegalHold`, `failures`). The data residence label shown in the admin UI comes from `SOCLE_DATA_RESIDENCE_LABEL` (read-only).
+
+**Legal hold** (`/api/v1/admin/legal-holds`, reason mandatory to place *and* release, audited as `legal_hold.placed` / `legal_hold.released`) freezes a document or a whole space. While a hold covers a document (its own hold or its space's), every destructive path answers `409 legal_hold_active`: moving it or its folder/space to the trash, manual and automatic trash purge, retention purge, attachment purge, and GDPR erasure/anonymisation of an author's comments or drafts on it. One active hold per scope; released holds are kept as history.

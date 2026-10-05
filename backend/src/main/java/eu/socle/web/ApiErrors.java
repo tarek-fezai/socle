@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Codes d'erreur API stables (Problem Detail {@code code}) — l'UI réagit au code, pas au texte.
@@ -31,6 +32,13 @@ public final class ApiErrors {
     public static final String FIELD_TYPE_LOCKED = "field_type_locked";
     public static final String FIELD_OPTION_IN_USE = "field_option_in_use";
     public static final String REQUIRED_FIELD_MISSING = "required_field_missing";
+    public static final String LEGAL_HOLD_ACTIVE = "legal_hold_active";
+    public static final String LEGAL_HOLD_ALREADY_ACTIVE = "legal_hold_already_active";
+    public static final String LEGAL_HOLD_REASON_REQUIRED = "legal_hold_reason_required";
+    public static final String ACCENT_CONTRAST_INSUFFICIENT = "accent_contrast_insufficient";
+    public static final String BRANDING_IMAGE_TYPE_REJECTED = "branding_image_type_rejected";
+    public static final String BRANDING_SENDER_NOT_CONFIGURED = "branding_sender_not_configured";
+    public static final String GIT_PURGE_FAILED = "git_purge_failed";
 
     private ApiErrors() {}
 
@@ -148,5 +156,60 @@ public final class ApiErrors {
                 REQUIRED_FIELD_MISSING,
                 "Champs obligatoires manquants pour l'envoi en révision",
                 Map.of("fields", fields));
+    }
+
+    /** Opération destructive refusée : un legal hold couvre le document ou son espace. */
+    public static CodedStatusException legalHoldActive(String scopeType, UUID scopeId) {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                LEGAL_HOLD_ACTIVE,
+                "Opération refusée : un legal hold est actif (" + scopeType + " " + scopeId + ")",
+                Map.of("scopeType", scopeType, "scopeId", scopeId.toString()));
+    }
+
+    public static CodedStatusException legalHoldAlreadyActive(String scopeType, UUID scopeId) {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                LEGAL_HOLD_ALREADY_ACTIVE,
+                "Un legal hold est déjà actif sur ce périmètre",
+                Map.of("scopeType", scopeType, "scopeId", scopeId.toString()));
+    }
+
+    public static CodedStatusException legalHoldReasonRequired() {
+        return new CodedStatusException(
+                HttpStatus.BAD_REQUEST,
+                LEGAL_HOLD_REASON_REQUIRED,
+                "Motif obligatoire pour poser ou lever un legal hold");
+    }
+
+    public static CodedStatusException accentContrastInsufficient(String color, double ratio) {
+        return new CodedStatusException(
+                HttpStatus.BAD_REQUEST,
+                ACCENT_CONTRAST_INSUFFICIENT,
+                "Couleur d'accent " + color + " : contraste insuffisant sur fond blanc (WCAG AA ≥ 4.5, obtenu "
+                        + String.format(java.util.Locale.ROOT, "%.2f", ratio) + ")",
+                Map.of("color", color, "contrastRatio", Math.round(ratio * 100.0) / 100.0, "minimum", 4.5));
+    }
+
+    public static CodedStatusException brandingImageTypeRejected(String mediaType) {
+        String detail = mediaType == null || mediaType.isBlank()
+                ? "Image refusée : PNG ou WebP uniquement (SVG interdit)"
+                : "Image refusée (" + mediaType + ") : PNG ou WebP uniquement (SVG interdit)";
+        return new CodedStatusException(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE, BRANDING_IMAGE_TYPE_REJECTED, detail);
+    }
+
+    public static CodedStatusException brandingSenderNotConfigured() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                BRANDING_SENDER_NOT_CONFIGURED,
+                "Adresse d'expédition non configurée");
+    }
+
+    public static CodedStatusException gitPurgeFailed(UUID documentId) {
+        return new CodedStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                GIT_PURGE_FAILED,
+                "Purge de l'historique Git impossible pour le document " + documentId);
     }
 }
