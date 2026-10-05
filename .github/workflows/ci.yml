@@ -214,6 +214,7 @@ jobs:
             --env-file .env.ci --profile demo-idp up -d --build
           cd ../..
           bash e2e/scripts/wait-stack.sh .env.ci
+          bash e2e/scripts/import-ci-licence.sh .env.ci
           cd e2e
           npm install
           npx playwright install chromium --with-deps

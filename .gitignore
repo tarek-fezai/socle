@@ -54,3 +54,7 @@ infra/minio-data/
 *.tmp
 *.swp
 .turbo/
+
+# E2E licence de TEST (éphémère, générée par generate-ci-env.sh)
+e2e/.ci-licence-keys/
+deploy/compose/.env.ci

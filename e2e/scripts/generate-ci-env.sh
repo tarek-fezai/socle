@@ -1,11 +1,39 @@
 #!/usr/bin/env bash
 # Writes deploy/compose/.env.ci for GitHub Actions / local E2E.
+# Génère une paire Ed25519 de TEST (jamais la clé de production) et signe une licence CI.
 set -euo pipefail
 
 OUT="${1:-deploy/compose/.env.ci}"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PG_PASS="$(openssl rand -hex 16)"
 OIDC_SECRET="$(openssl rand -hex 24)"
 KC_PASS="$(openssl rand -hex 12)"
+
+KEYS_DIR="${ROOT}/e2e/.ci-licence-keys"
+mkdir -p "${KEYS_DIR}"
+chmod 700 "${KEYS_DIR}"
+PRIV="${KEYS_DIR}/ed25519-private.pem"
+LIC_IN="${KEYS_DIR}/licence.json"
+LIC_OUT="${KEYS_DIR}/licence.signed.json"
+
+openssl genpkey -algorithm ed25519 -out "${PRIV}"
+chmod 600 "${PRIV}"
+# SPKI DER Base64 (accepté par LicenceCrypto)
+PUB_B64="$(openssl pkey -in "${PRIV}" -pubout -outform DER | openssl base64 -A)"
+
+cat > "${LIC_IN}" <<'JSON'
+{
+  "licenseId": "LIC-E2E-CI",
+  "licensee": "Socle E2E CI",
+  "edition": "Entreprise",
+  "issuedAt": "2026-01-01T00:00:00Z",
+  "expiresAt": "2099-01-01T00:00:00Z",
+  "maxUsers": 100
+}
+JSON
+
+node "${ROOT}/tools/licence-sign/sign.mjs" --key "${PRIV}" --in "${LIC_IN}" --out "${LIC_OUT}"
+rm -f "${PRIV}"
 
 cat > "$OUT" <<EOF
 DOMAIN=http://127.0.0.1
@@ -50,6 +78,9 @@ KEYCLOAK_HTTP_PORT=8081
 
 SOCLE_IDENTITY_ROLE_SOURCE=BOTH
 SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS=11111111-1111-1111-1111-111111111111
+
+# Clé publique de TEST (paire éphémère CI — jamais la clé de production).
+SOCLE_LICENCE_PUBLIC_KEY_B64=${PUB_B64}
 EOF
 
-echo "Wrote ${OUT}"
+echo "Wrote ${OUT} (licence de test signée → ${LIC_OUT})"
