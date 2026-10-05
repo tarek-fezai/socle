@@ -9,6 +9,7 @@ import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.blob.BlobKeys;
 import eu.socle.blob.BlobStore;
+import eu.socle.retention.LegalHoldService;
 import eu.socle.user.UserSyncService;
 import eu.socle.web.ApiErrors;
 import eu.socle.web.CodedStatusException;
@@ -66,6 +67,7 @@ public class AttachmentService {
     private final ImageSanitizer imageSanitizer;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private LegalHoldService legalHoldService;
 
     @Autowired
     public AttachmentService(
@@ -105,6 +107,11 @@ public class AttachmentService {
         this.imageSanitizer = imageSanitizer;
         this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
         this.clock = clock;
+    }
+
+    @Autowired(required = false)
+    void setLegalHoldService(LegalHoldService legalHoldService) {
+        this.legalHoldService = legalHoldService;
     }
 
     @Transactional
@@ -266,6 +273,10 @@ public class AttachmentService {
     /** Purge physique de toutes les pièces d'un document (corbeille définitive) — idempotent. */
     @Transactional
     public int purgeForDocument(UUID documentId, UUID actorId, boolean actorIsSystem) {
+        // Legal hold (document ou espace) : 409 legal_hold_active, aucun blob supprimé.
+        if (legalHoldService != null) {
+            legalHoldService.assertDocumentNotHeld(documentId);
+        }
         List<AttachmentRow> rows = jdbc.query("""
                 SELECT id, document_id, uploaded_by, original_filename, media_type, size_bytes,
                        sha256, storage_key, width, height, created_at, deleted_at, referenced_at
@@ -301,7 +312,13 @@ public class AttachmentService {
                 (rs, i) -> mapRow(rs),
                 Timestamp.from(cutoff));
         int n = 0;
+        Set<UUID> held = legalHoldService == null
+                ? Set.of()
+                : legalHoldService.heldDocumentIds(rows.stream().map(AttachmentRow::documentId).toList());
         for (AttachmentRow row : rows) {
+            if (held.contains(row.documentId())) {
+                continue; // legal hold : jamais de purge, même orpheline
+            }
             if (referencedInDocumentDraft(row.documentId(), row.id())) {
                 continue;
             }

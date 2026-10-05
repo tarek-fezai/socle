@@ -11,6 +11,8 @@ import { NewDocumentPage } from './pages/NewDocumentPage'
 import { TemplatesAdminPage } from './pages/TemplatesAdminPage'
 import { TagsAdminPage } from './pages/TagsAdminPage'
 import { CustomFieldsAdminPage } from './pages/CustomFieldsAdminPage'
+import { RetentionAdminPage } from './pages/RetentionAdminPage'
+import { BrandingAdminPage } from './pages/BrandingAdminPage'
 import { AccessPage } from './pages/AccessPage'
 import { ApprovalsPage } from './pages/ApprovalsPage'
 import { ApprovalDiffPage } from './pages/approvals/ApprovalDiffPage'
@@ -63,6 +65,8 @@ export default function App() {
           <Route path="/admin/templates" element={<TemplatesAdminPage />} />
           <Route path="/admin/tags" element={<TagsAdminPage />} />
           <Route path="/admin/custom-fields" element={<CustomFieldsAdminPage />} />
+          <Route path="/admin/retention" element={<RetentionAdminPage />} />
+          <Route path="/admin/branding" element={<BrandingAdminPage />} />
           <Route path="/docs/:id" element={<DocumentReadPage />} />
           <Route path="/docs/:id/edit" element={<DocumentEditPage />} />
           <Route path="/docs/:id/view" element={<DocumentViewRedirect />} />

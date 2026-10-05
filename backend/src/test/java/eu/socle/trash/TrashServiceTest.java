@@ -5,8 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
+import eu.socle.retention.LegalHoldService;
 import eu.socle.user.UserEntity;
 import eu.socle.user.UserSyncService;
+import eu.socle.web.ApiErrors;
+import eu.socle.web.CodedStatusException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -307,6 +310,71 @@ class TrashServiceTest {
         verify(jdbc).update(contains("DELETE FROM documents"), eq(DOC));
         verify(auditService).record(isNull(), eq(true), eq(AuditActions.DOCUMENT_PURGED),
                 eq("document"), eq(DOC), anyMap(), isNull());
+    }
+
+    @Test
+    void softDeleteDocument_underLegalHold_conflict_noWrite() throws Exception {
+        LegalHoldService holds = mock(LegalHoldService.class);
+        doThrow(ApiErrors.legalHoldActive("document", DOC)).when(holds).assertDocumentNotHeld(DOC);
+        service.setLegalHoldService(holds);
+        stubDocumentLookup(DOC, "Doc", SPACE, null, false);
+
+        assertThatThrownBy(() -> service.softDeleteDocument(jwt, DOC))
+                .isInstanceOf(CodedStatusException.class)
+                .satisfies(ex -> {
+                    CodedStatusException c = (CodedStatusException) ex;
+                    assertThat(c.getCode()).isEqualTo(ApiErrors.LEGAL_HOLD_ACTIVE);
+                    assertThat(c.getStatusCode().value()).isEqualTo(409);
+                });
+        verify(jdbc, never()).update(contains("UPDATE documents"), any(), any(), any());
+        verify(jdbc, never()).update(contains("INSERT INTO trash_items"),
+                any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void softDeleteSpace_underLegalHold_conflict_noWrite() throws Exception {
+        LegalHoldService holds = mock(LegalHoldService.class);
+        doThrow(ApiErrors.legalHoldActive("space", SPACE)).when(holds).assertSpaceNotHeld(SPACE);
+        service.setLegalHoldService(holds);
+        stubSpaceLookup(SPACE, false);
+
+        assertThatThrownBy(() -> service.softDeleteSpace(jwt, SPACE))
+                .isInstanceOf(CodedStatusException.class)
+                .extracting(ex -> ((CodedStatusException) ex).getCode())
+                .isEqualTo(ApiErrors.LEGAL_HOLD_ACTIVE);
+        verify(jdbc, never()).update(contains("UPDATE spaces"), any(), any(), any());
+        verify(jdbc, never()).update(contains("INSERT INTO trash_items"),
+                any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void purgeExpired_skipsResourceUnderLegalHold() throws Exception {
+        LegalHoldService holds = mock(LegalHoldService.class);
+        doThrow(ApiErrors.legalHoldActive("document", DOC)).when(holds).assertDocumentNotHeld(DOC);
+        service.setLegalHoldService(holds);
+        UUID trashId = UUID.randomUUID();
+        Instant past = NOW.minus(TrashService.RETENTION).minusSeconds(60);
+        when(jdbc.query(contains("purge_at <="), any(RowMapper.class), any()))
+                .thenAnswer(inv -> {
+                    @SuppressWarnings("unchecked")
+                    RowMapper<Object> mapper = inv.getArgument(1);
+                    ResultSet rs = mock(ResultSet.class);
+                    when(rs.getObject("id")).thenReturn(trashId);
+                    when(rs.getString("resource_type")).thenReturn("document");
+                    when(rs.getObject("resource_id")).thenReturn(DOC);
+                    when(rs.getString("snapshot")).thenReturn("{}");
+                    when(rs.getObject("deleted_by")).thenReturn(USER);
+                    when(rs.getTimestamp("deleted_at")).thenReturn(Timestamp.from(past));
+                    when(rs.getTimestamp("purge_at")).thenReturn(Timestamp.from(past.plus(TrashService.RETENTION)));
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+
+        int n = service.purgeExpired();
+
+        assertThat(n).isZero();
+        verify(jdbc, never()).update(contains("DELETE FROM documents"), any(Object.class));
+        verify(auditService, never()).record(any(), eq(true), eq(AuditActions.DOCUMENT_PURGED),
+                any(), any(), anyMap(), any());
     }
 
     @Test

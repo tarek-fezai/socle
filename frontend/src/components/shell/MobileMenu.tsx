@@ -13,6 +13,11 @@ import {
 } from '../../lib/folders'
 import { listSpaces } from '../../lib/spaces'
 import { initialsFromName, loadExpandedSpaces, saveExpandedSpaces } from './shellUtils'
+import {
+  useBrandingAccent,
+  useBrandingInstanceName,
+  useBrandingLogoUrl,
+} from '../../lib/publicBranding'
 
 type Props = {
   open: boolean
@@ -25,6 +30,9 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
   const location = useLocation()
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set())
+  const logoUrl = useBrandingLogoUrl()
+  const accent = useBrandingAccent()
+  const brandName = useBrandingInstanceName() || 'Socle'
 
   const spaces = useQuery({
     queryKey: ['spaces'],
@@ -107,8 +115,19 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
       <div className="shell-drawer" role="dialog" aria-modal="true" aria-label="Menu">
         <div className="shell-drawer-head">
           <div className="shell-drawer-logo">
-            <span className="shell-drawer-logo-mark" aria-hidden />
-            <span className="shell-drawer-logo-name">Socle</span>
+            {logoUrl ? (
+              <img
+                className="shell-drawer-logo-mark shell-logo-mark--img"
+                src={logoUrl}
+                alt=""
+                width={24}
+                height={24}
+                aria-hidden
+              />
+            ) : (
+              <span className="shell-drawer-logo-mark" style={{ background: accent }} aria-hidden />
+            )}
+            <span className="shell-drawer-logo-name">{brandName}</span>
           </div>
           <button type="button" className="shell-drawer-close" aria-label="Fermer le menu" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#43434A" strokeWidth="2" strokeLinecap="round" aria-hidden>

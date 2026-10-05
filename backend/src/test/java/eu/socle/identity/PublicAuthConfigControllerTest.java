@@ -26,7 +26,7 @@ class PublicAuthConfigControllerTest {
         properties.getAccessPolicy().setAllowedGroups(List.of("top-secret-group"));
         properties.getAccessPolicy().setAllowedEmailDomains(List.of("confidential-domain.example"));
         controller = new PublicAuthConfigController(
-                properties, new SocleProperties(null, null, null, new SocleProperties.Instance("Acme Docs"), null));
+                properties, new SocleProperties(null, null, null, new SocleProperties.Instance("Acme Docs", null, null), null));
     }
 
     @Test

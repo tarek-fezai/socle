@@ -15,12 +15,15 @@ public class StorageConfig {
     @ConditionalOnProperty(name = "socle.storage.provider", havingValue = "git")
     DocumentStore gitDocumentStore(
             DocumentVersionRepository versionRepository,
-            StorageProperties properties
+            StorageProperties properties,
+            org.springframework.beans.factory.ObjectProvider<GitShaRemappingService> shaRemapping
     ) {
-        return new GitDocumentStore(
+        GitDocumentStore store = new GitDocumentStore(
                 versionRepository,
                 Path.of(properties.getGitRepositoryPath()).toAbsolutePath().normalize()
         );
+        shaRemapping.ifAvailable(store::setShaRemappingService);
+        return store;
     }
 
     @Bean

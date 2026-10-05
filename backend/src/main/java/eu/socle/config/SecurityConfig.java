@@ -60,6 +60,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/auth-config").permitAll()
+                        // Branding public minimal (page de connexion avant authentification).
+                        .requestMatchers(HttpMethod.GET, "/api/v1/public/branding", "/api/v1/public/branding/*")
+                                .permitAll()
                         .requestMatchers("/api/v1/audit", "/api/v1/audit/**")
                                 .hasRole(SocleRole.AUDITEUR.springRole())
                         .requestMatchers("/api/v1/admin/**")

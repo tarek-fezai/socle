@@ -41,8 +41,10 @@ public class LocalBlobStore implements BlobStore {
     @Override
     public void put(String key, InputStream content, long size, String mediaType) {
         Path target = resolve(key);
-        Path tmp = root.resolve(key + ".tmp-" + Thread.currentThread().threadId());
+        Path tmp = target.resolveSibling(target.getFileName() + ".tmp-" + Thread.currentThread().threadId());
         try {
+            // Clés réservées (branding/…) : sous-répertoire créé à la demande.
+            Files.createDirectories(target.getParent());
             try (OutputStream out = Files.newOutputStream(tmp,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
                 long copied = content.transferTo(out);

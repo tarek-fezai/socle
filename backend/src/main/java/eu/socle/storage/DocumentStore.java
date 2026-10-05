@@ -93,6 +93,44 @@ public interface DocumentStore {
      */
     java.time.Instant lastContentModifiedAt(UUID documentId, java.time.Instant documentCreatedAt);
 
+    /**
+     * Purge <strong>réelle</strong> de l'historique de contenu des documents (suppression définitive) :
+     * Git réécrit toutes les révisions sans leur fichier (les SHA changent) ; relational : no-op
+     * (les lignes {@code document_versions} partent avec le document, cascade SQL).
+     *
+     * @return {@code Optional.empty()} si le provider n'a rien à réécrire
+     */
+    default Optional<HistoryPurgeResult> purgeDocumentsHistory(java.util.Collection<UUID> documentIds) {
+        return Optional.empty();
+    }
+
+    /**
+     * Comme {@link #purgeDocumentsHistory(java.util.Collection)} ; le provider Git appelle
+     * {@code remapBeforeWriteLockReleased} <strong>avant</strong> de libérer le verrou d'écriture
+     * (aucune fenêtre où une écriture voit un SHA périmé).
+     */
+    default Optional<HistoryPurgeResult> purgeDocumentsHistory(
+            java.util.Collection<UUID> documentIds,
+            java.util.function.Consumer<Map<String, String>> remapBeforeWriteLockReleased
+    ) {
+        return purgeDocumentsHistory(documentIds);
+    }
+
+    /**
+     * @param commitsRewritten commits dont le SHA a changé ou qui ont disparu (devenus vides)
+     * @param commitMapping    ancien SHA → nouveau SHA (commits supprimés : ancêtre survivant le plus proche) ;
+     *                         sert à resynchroniser les SHA persistés ({@link GitShaRemappingService})
+     */
+    record HistoryPurgeResult(
+            java.util.Set<UUID> documentIds,
+            int commitsRewritten,
+            int commitsDropped,
+            String oldHead,
+            String newHead,
+            Map<String, String> commitMapping,
+            String backupRef
+    ) {}
+
     record StoredVersion(
             UUID documentId,
             int versionNo,

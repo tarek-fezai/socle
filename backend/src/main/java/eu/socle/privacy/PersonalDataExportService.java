@@ -8,6 +8,7 @@ import eu.socle.document.DocumentDraftService;
 import eu.socle.document.DocumentDraftService.PersonalDraftExport;
 import eu.socle.poll.PollDtos.PersonalPollVoteExport;
 import eu.socle.poll.PollService;
+import eu.socle.retention.LegalHoldService;
 import eu.socle.user.UserSyncService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -36,6 +37,7 @@ public class PersonalDataExportService {
     private final UserSyncService userSyncService;
     private AttachmentService attachmentService;
     private PollService pollService;
+    private LegalHoldService legalHoldService;
 
     public PersonalDataExportService(
             CommentService commentService,
@@ -55,6 +57,11 @@ public class PersonalDataExportService {
     @Autowired(required = false)
     void setPollService(PollService pollService) {
         this.pollService = pollService;
+    }
+
+    @Autowired(required = false)
+    void setLegalHoldService(LegalHoldService legalHoldService) {
+        this.legalHoldService = legalHoldService;
     }
 
     @Transactional(readOnly = true)
@@ -81,12 +88,24 @@ public class PersonalDataExportService {
     /** Point d'entrée testable pour anonymisation (suppression de compte future). */
     @Transactional
     public int anonymizeUserComments(UUID userId) {
+        assertNoLegalHold(userId);
         return commentService.anonymizeAuthor(userId);
     }
 
     /** Point d'entrée pour la suppression de compte future : efface les brouillons non versionnés. */
     @Transactional
     public int erasePersonalDrafts(UUID userId) {
+        assertNoLegalHold(userId);
         return draftService.deleteAllForUser(userId);
+    }
+
+    /**
+     * Effacement RGPD refusé ({@code 409 legal_hold_active}) tant que les données de l'utilisateur
+     * portent sur un document couvert par un legal hold (document ou espace).
+     */
+    private void assertNoLegalHold(UUID userId) {
+        if (legalHoldService != null) {
+            legalHoldService.assertUserDataNotHeld(userId);
+        }
     }
 }

@@ -49,7 +49,7 @@ class OpenFgaBootstrapTest {
                         500
                 ),
                 new SocleProperties.Cors("*"),
-                new SocleProperties.Instance("test"),
+                new SocleProperties.Instance("test", null, null),
                 new SocleProperties.Folders(5)
         );
     }

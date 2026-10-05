@@ -68,8 +68,13 @@
   width: 24px;
   height: 24px;
   border-radius: 7px;
-  background: #3730e0;
+  background: var(--socle-accent, #3730e0);
   flex-shrink: 0;
+}
+
+.shell-logo-mark--img {
+  object-fit: contain;
+  background: transparent;
 }
 
 .shell-logo-name {
@@ -190,6 +195,13 @@
   color: #0e0e10;
   width: 100%;
   text-align: left;
+}
+
+.shell-powered {
+  margin: 0 2px 8px;
+  font-size: 11px;
+  color: #9b9ba1;
+  font-weight: 500;
 }
 
 .shell-user:hover {
@@ -418,7 +430,7 @@
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  background: #3730e0;
+  background: var(--socle-accent, #3730e0);
 }
 
 .shell-drawer-logo-name {

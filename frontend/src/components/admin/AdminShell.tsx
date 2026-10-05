@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import './admin-page.css'
 
-export type AdminNavKey = 'tags' | 'custom-fields' | 'templates'
+export type AdminNavKey = 'tags' | 'custom-fields' | 'templates' | 'retention' | 'branding'
 
 type NavItem =
   | { kind: 'link'; key?: AdminNavKey; label: string; to: string; mockId?: string }
@@ -12,7 +12,13 @@ type NavItem =
 
 const NAV_ITEMS: NavItem[] = [
   { kind: 'placeholder', label: 'Identité & SSO' },
-  { kind: 'placeholder', label: 'Personnalisation de marque' },
+  {
+    kind: 'link',
+    key: 'branding',
+    label: 'Personnalisation de marque',
+    to: '/admin/branding',
+    mockId: 'admin-nav-branding',
+  },
   { kind: 'placeholder', label: 'Membres & équipes' },
   { kind: 'placeholder', label: 'Identités utilisateurs' },
   { kind: 'placeholder', label: 'Rôles globaux' },
@@ -29,7 +35,13 @@ const NAV_ITEMS: NavItem[] = [
   },
   { kind: 'link', key: 'templates', label: 'Modèles', to: '/admin/templates' },
   { kind: 'placeholder', label: "Workflows d'approbation" },
-  { kind: 'placeholder', label: 'Rétention & conformité' },
+  {
+    kind: 'link',
+    key: 'retention',
+    label: 'Rétention & conformité',
+    to: '/admin/retention',
+    mockId: 'admin-nav-retention',
+  },
   { kind: 'placeholder', label: 'Attestations' },
   { kind: 'placeholder', label: "Journal d'audit" },
   { kind: 'placeholder', label: 'Licence' },
@@ -43,6 +55,8 @@ export type AdminShellProps = {
   rightRail?: ReactNode
   mainClassName?: string
   innerWide?: boolean
+  /** Extra class on the inner content wrapper (ex. max-width 700 pour Retention). */
+  innerClassName?: string
 }
 
 /** Layout admin (TagsAdmin / CustomFields) — fil d'Ariane 60px, sous-nav 240px, contenu, rail optionnel. */
@@ -53,6 +67,7 @@ export function AdminShell({
   rightRail,
   mainClassName = '',
   innerWide = false,
+  innerClassName = '',
 }: AdminShellProps) {
   const { organizationName } = useAuth()
 
@@ -109,7 +124,11 @@ export function AdminShell({
 
         <div className={`admin-fields-split${rightRail ? '' : ' admin-fields-split--solo'}`}>
           <main className={`admin-main ${mainClassName}`.trim()}>
-            <div className={innerWide ? 'admin-main__inner--wide' : 'admin-main__inner'}>{children}</div>
+            <div
+              className={`${innerWide ? 'admin-main__inner--wide' : 'admin-main__inner'}${innerClassName ? ` ${innerClassName}` : ''}`.trim()}
+            >
+              {children}
+            </div>
           </main>
           {rightRail}
         </div>
