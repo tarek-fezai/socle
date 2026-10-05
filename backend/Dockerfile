@@ -14,6 +14,15 @@ COPY pom.xml .
 RUN mvn -B -DskipTests dependency:go-offline
 
 COPY src ./src
+
+# Clé publique de licence : au BUILD uniquement.
+# ARG optionnel — s'il est fourni (CI/e2e), remplace ed25519-public.b64 avant le package.
+# Release : ne pas passer l'ARG → clé du dépôt embarquée.
+ARG LICENCE_PUBLIC_KEY_B64=
+RUN if [ -n "$LICENCE_PUBLIC_KEY_B64" ]; then \
+      printf '%s' "$LICENCE_PUBLIC_KEY_B64" > src/main/resources/licence/ed25519-public.b64 ; \
+    fi
+
 RUN mvn -B -DskipTests package \
     && cp target/socle-backend-*.jar /build/app.jar
 

@@ -95,6 +95,17 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: false
+          # Pas de build-arg LICENCE_PUBLIC_KEY_B64 → clé publique du dépôt uniquement.
+
+      - name: Verify licence public key matches repository
+        if: matrix.name == 'backend'
+        run: |
+          set -euo pipefail
+          chmod +x e2e/scripts/verify-embedded-licence-key.sh
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}"
+          docker pull --platform linux/amd64 "$IMAGE"
+          bash e2e/scripts/verify-embedded-licence-key.sh "$IMAGE" \
+            backend/src/main/resources/licence/ed25519-public.b64
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0

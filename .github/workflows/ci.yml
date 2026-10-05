@@ -214,6 +214,13 @@ jobs:
             --env-file .env.ci --profile demo-idp up -d --build
           cd ../..
           bash e2e/scripts/wait-stack.sh .env.ci
+          # Preuve : image e2e embarque la clé de TEST (build-arg), pas celle du dépôt
+          REPO_KEY="$(tr -d '\n\r ' < backend/src/main/resources/licence/ed25519-public.b64)"
+          CI_KEY="$(tr -d '\n\r ' < e2e/.ci-licence-keys/public.b64)"
+          test -n "$CI_KEY"
+          test "$REPO_KEY" != "$CI_KEY"
+          BACKEND_CID="$(cd deploy/compose && docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml --env-file .env.ci --profile demo-idp ps -q backend)"
+          bash e2e/scripts/verify-embedded-licence-key.sh "$BACKEND_CID" e2e/.ci-licence-keys/public.b64
           bash e2e/scripts/import-ci-licence.sh .env.ci
           cd e2e
           npm install

@@ -75,7 +75,6 @@ public class LicenceService {
             AuditService auditService,
             ObjectMapper objectMapper,
             Clock clock,
-            @Value("${socle.licence.public-key-b64:}") String publicKeyOverride,
             @Value("classpath:licence/ed25519-public.b64") Resource publicKeyResource
     ) {
         this.jdbc = jdbc;
@@ -85,18 +84,12 @@ public class LicenceService {
         this.objectMapper = objectMapper;
         this.clock = clock;
         try {
-            String encoded = publicKeyOverride != null && !publicKeyOverride.isBlank()
-                    ? publicKeyOverride
-                    : publicKeyResource.getContentAsString(StandardCharsets.UTF_8);
+            String encoded = publicKeyResource.getContentAsString(StandardCharsets.UTF_8);
             this.publicKey = LicenceCrypto.publicKeyFromEncoded(encoded);
-            if (publicKeyOverride != null && !publicKeyOverride.isBlank()) {
-                log.info("Licence : clé publique Ed25519 chargée depuis socle.licence.public-key-b64 (hors classpath)");
-            } else {
-                log.info("Licence : clé publique Ed25519 chargée (vérification hors ligne)");
-            }
         } catch (Exception e) {
             throw new IllegalStateException("Impossible de charger la clé publique de licence", e);
         }
+        log.info("Licence : clé publique Ed25519 embarquée chargée (vérification hors ligne)");
     }
 
     /** Constructeur tests (clé de TEST fournie — jamais la clé de production). */

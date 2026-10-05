@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Writes deploy/compose/.env.ci for GitHub Actions / local E2E.
 # Génère une paire Ed25519 de TEST (jamais la clé de production) et signe une licence CI.
+# La clé publique de TEST est injectée au BUILD via LICENCE_PUBLIC_KEY_B64 (pas à l'exécution).
 set -euo pipefail
 
 OUT="${1:-deploy/compose/.env.ci}"
@@ -13,13 +14,17 @@ KEYS_DIR="${ROOT}/e2e/.ci-licence-keys"
 mkdir -p "${KEYS_DIR}"
 chmod 700 "${KEYS_DIR}"
 PRIV="${KEYS_DIR}/ed25519-private.pem"
+PUB_FILE="${KEYS_DIR}/public.b64"
 LIC_IN="${KEYS_DIR}/licence.json"
 LIC_OUT="${KEYS_DIR}/licence.signed.json"
 
 openssl genpkey -algorithm ed25519 -out "${PRIV}"
 chmod 600 "${PRIV}"
-# SPKI DER Base64 (accepté par LicenceCrypto)
-PUB_B64="$(openssl pkey -in "${PRIV}" -pubout -outform DER | openssl base64 -A)"
+# SPKI DER Base64 (accepté par LicenceCrypto) — écriture fichier (évite corruption pipe)
+openssl pkey -in "${PRIV}" -pubout -outform DER -out "${KEYS_DIR}/public.der"
+openssl base64 -A -in "${KEYS_DIR}/public.der" -out "${PUB_FILE}"
+PUB_B64="$(tr -d '\n\r ' < "${PUB_FILE}")"
+printf '%s' "${PUB_B64}" > "${PUB_FILE}"
 
 cat > "${LIC_IN}" <<'JSON'
 {
@@ -33,7 +38,7 @@ cat > "${LIC_IN}" <<'JSON'
 JSON
 
 node "${ROOT}/tools/licence-sign/sign.mjs" --key "${PRIV}" --in "${LIC_IN}" --out "${LIC_OUT}"
-rm -f "${PRIV}"
+rm -f "${PRIV}" "${KEYS_DIR}/public.der"
 
 cat > "$OUT" <<EOF
 DOMAIN=http://127.0.0.1
@@ -79,8 +84,8 @@ KEYCLOAK_HTTP_PORT=8081
 SOCLE_IDENTITY_ROLE_SOURCE=BOTH
 SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS=11111111-1111-1111-1111-111111111111
 
-# Clé publique de TEST (paire éphémère CI — jamais la clé de production).
-SOCLE_LICENCE_PUBLIC_KEY_B64=${PUB_B64}
+# Build-arg Docker backend uniquement (jamais d'override runtime).
+LICENCE_PUBLIC_KEY_B64=${PUB_B64}
 EOF
 
-echo "Wrote ${OUT} (licence de test signée → ${LIC_OUT})"
+echo "Wrote ${OUT} (licence de test signée → ${LIC_OUT}, pub → ${PUB_FILE})"
