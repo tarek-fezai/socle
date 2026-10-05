@@ -165,47 +165,41 @@ test.describe('custom fields admin structural', () => {
 
     await page.goto('http://127.0.0.1:4174/CustomFields.dc.html')
     await annotateCustomFieldsAdminMockup(page)
+    await assertFontsLoaded(page)
+    const layout = await page.evaluate(() => {
+      const sub = document.querySelector('[data-mock-id="admin-subnav"]')
+      const title = document.querySelector('[data-mock-id="custom-fields-title"]')
+      const cs = sub ? getComputedStyle(sub) : null
+      const r = sub?.getBoundingClientRect()
+      const t = title?.getBoundingClientRect()
+      return {
+        boxSizing: cs?.boxSizing,
+        subnavWidth: r?.width,
+        mainContentX: t?.x,
+      }
+    })
+    console.log('custom-fields maquette layout', JSON.stringify(layout))
     const mockMetrics = await collectMetrics(page, CUSTOM_FIELDS_ADMIN_DESKTOP_IDS)
 
     await page.goto('/admin/custom-fields')
     await page.waitForSelector('[data-mock-id="custom-fields-table"]')
+    await assertFontsLoaded(page)
+    const appLayout = await page.evaluate(() => {
+      const sub = document.querySelector('[data-mock-id="admin-subnav"]')
+      const title = document.querySelector('[data-mock-id="custom-fields-title"]')
+      const cs = sub ? getComputedStyle(sub) : null
+      const r = sub?.getBoundingClientRect()
+      const t = title?.getBoundingClientRect()
+      return {
+        boxSizing: cs?.boxSizing,
+        subnavWidth: r?.width,
+        mainContentX: t?.x,
+      }
+    })
+    console.log('custom-fields app layout', JSON.stringify(appLayout))
     const appMetrics = await collectMetrics(page, CUSTOM_FIELDS_ADMIN_DESKTOP_IDS)
 
-    const pageExceptions = {
-      'admin-subnav': {
-        skip: ['text', 'box'],
-        reason: 'Sous-nav : largeur scrollbar maquette vs 240px app ; espaces texte',
-      },
-      'admin-nav-custom-fields': {
-        skip: ['color', 'fontWeight', 'box'],
-        reason:
-          'Maquette : couleur inline #4B4B52 sur .on ; largeur lien 240 vs contenu — E1',
-      },
-      'admin-breadcrumb': {
-        skip: ['text'],
-        reason: 'Fil Compte → Administration (app) vs maquette ; espaces séparateurs',
-      },
-      'custom-fields-title': {
-        skip: ['box'],
-        reason: 'E2 : décalage X (sous-nav maquette ~273px scrollbar vs 240px)',
-      },
-      'custom-fields-cta': {
-        skip: ['box', 'lineHeight'],
-        reason: 'E2 : décalage X scrollbar ; line-height span CTA (1.00em vs 1.20em)',
-      },
-      'custom-fields-stats': {
-        skip: ['box'],
-        reason: 'E2 : décalage X scrollbar maquette',
-      },
-      'custom-fields-table': {
-        skip: ['text', 'box'],
-        reason: 'Lignes champs depuis API ; E2 décalage X scrollbar',
-      },
-      'custom-fields-rail': {
-        skip: ['box', 'text'],
-        reason: 'Rail info : texte long + padding',
-      },
-    }
+    const pageExceptions = {}
     const results = compareMetrics(mockMetrics, appMetrics, CUSTOM_FIELDS_ADMIN_DESKTOP_IDS, {
       pageExceptions,
     })

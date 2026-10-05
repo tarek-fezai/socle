@@ -157,63 +157,45 @@ test.describe('tags admin structural', () => {
 
     await page.goto('http://127.0.0.1:4174/TagsAdmin.dc.html')
     await annotateTagsAdminMockup(page)
+    await settleFonts(page)
+    // Mesures de diagnostic (cause racine content-box vs border-box).
+    const layout = await page.evaluate(() => {
+      const sub = document.querySelector('[data-mock-id="admin-subnav"]')
+      const title = document.querySelector('[data-mock-id="tags-title"]')
+      const cs = sub ? getComputedStyle(sub) : null
+      const r = sub?.getBoundingClientRect()
+      const t = title?.getBoundingClientRect()
+      return {
+        boxSizing: cs?.boxSizing,
+        subnavWidth: r?.width,
+        subnavClientWidth: sub?.clientWidth,
+        mainContentX: t?.x,
+      }
+    })
+    console.log('tags-admin maquette layout', JSON.stringify(layout))
     const mockMetrics = await collectMetrics(page, TAGS_ADMIN_DESKTOP_IDS)
 
     await page.goto('/admin/tags')
     await page.waitForSelector('[data-mock-id="tags-table"]')
+    await settleFonts(page)
+    const appLayout = await page.evaluate(() => {
+      const sub = document.querySelector('[data-mock-id="admin-subnav"]')
+      const title = document.querySelector('[data-mock-id="tags-title"]')
+      const cs = sub ? getComputedStyle(sub) : null
+      const r = sub?.getBoundingClientRect()
+      const t = title?.getBoundingClientRect()
+      return {
+        boxSizing: cs?.boxSizing,
+        subnavWidth: r?.width,
+        subnavClientWidth: sub?.clientWidth,
+        mainContentX: t?.x,
+      }
+    })
+    console.log('tags-admin app layout', JSON.stringify(appLayout))
     const appMetrics = await collectMetrics(page, TAGS_ADMIN_DESKTOP_IDS)
 
-    const pageExceptions = {
-      'admin-subnav': {
-        skip: ['text', 'box'],
-        reason: 'Sous-nav : largeur scrollbar maquette vs 240px app ; espaces texte',
-      },
-      'admin-breadcrumb': {
-        skip: ['text'],
-        reason: 'Espaces autour des séparateurs breadcrumb (maquette vs app)',
-      },
-      'admin-nav-tags': {
-        skip: ['color', 'fontWeight', 'box'],
-        reason:
-          'Maquette : .on sans font-weight effectif (inline) ; largeur lien 240 vs contenu',
-      },
-      'tags-title': {
-        skip: ['box'],
-        reason: 'E2 : décalage X (sous-nav maquette ~273px avec scrollbar vs 240px)',
-      },
-      'tags-cta': {
-        skip: ['box'],
-        reason: 'E2 : décalage X sous-nav scrollbar maquette',
-      },
-      'tags-stats': {
-        skip: ['text', 'box'],
-        reason: 'Compteur dynamique ; E2 décalage X scrollbar',
-      },
-      'tags-table': {
-        skip: ['text', 'box'],
-        reason: 'Lignes API ; E2 décalage X scrollbar maquette',
-      },
-      'tags-merge-callout': {
-        skip: ['box'],
-        reason: 'E2 : décalage X sous-nav scrollbar maquette — mock-id sur <p> 13px',
-      },
-      'tags-rail': {
-        skip: ['box', 'text'],
-        reason: 'Rail entier : padding / contenu dynamique',
-      },
-      'tags-rail-count': {
-        skip: ['box'],
-        reason: 'Bloc rail : largeur contenu app (padding) vs annotation maquette pleine largeur',
-      },
-      'tags-rail-tagged': {
-        skip: ['text', 'box'],
-        reason: 'Ratio documents étiquetés / total dynamique ; box rail padding',
-      },
-      'tags-rail-policy': {
-        skip: ['box', 'lineHeight'],
-        reason: 'Bouton politique : largeur contenu vs bloc 280px maquette ; line-height bouton UA',
-      },
-    }
+    // Aucune exception box/text. Comparaison complète titre / CTA / compteurs / tableau / callout / rail.
+    const pageExceptions = {}
     const results = compareMetrics(mockMetrics, appMetrics, TAGS_ADMIN_DESKTOP_IDS, {
       pageExceptions,
     })

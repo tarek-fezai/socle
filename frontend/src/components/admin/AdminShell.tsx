@@ -64,7 +64,7 @@ export function AdminShell({
             const last = i === breadcrumb.length - 1
             return (
               <span key={`${seg.label}-${i}`} style={{ display: 'contents' }}>
-                {i > 0 && <span style={{ color: '#dedee1' }}>→</span>}
+                {i > 0 && <span style={{ color: '#dedee1' }}> → </span>}
                 {last ? (
                   <span className="admin-page__breadcrumb-current">{seg.label}</span>
                 ) : seg.to ? (

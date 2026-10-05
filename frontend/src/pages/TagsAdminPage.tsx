@@ -181,8 +181,9 @@ export function TagsAdminPage() {
             </div>
             <div>
               <div className="admin-rail__label">Qui peut créer un tag</div>
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 className="admin-rail__text admin-policy-btn"
                 data-mock-id="tags-rail-policy"
                 onClick={() =>
@@ -190,10 +191,18 @@ export function TagsAdminPage() {
                     summary.tagCreationPolicy === 'any_editor' ? 'admins_only' : 'any_editor',
                   )
                 }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    policyMut.mutate(
+                      summary.tagCreationPolicy === 'any_editor' ? 'admins_only' : 'any_editor',
+                    )
+                  }
+                }}
                 title="Cliquer pour alterner la politique"
               >
                 {tagCreationPolicyLabel(summary.tagCreationPolicy)}
-              </button>
+              </div>
             </div>
           </aside>
         ) : null
@@ -272,9 +281,11 @@ export function TagsAdminPage() {
         ))}
       </div>
 
-      <div className="admin-callout" data-mock-id="tags-merge-callout">
-        « Fusionner » réattribue tous les documents d&apos;un tag vers un autre et supprime le doublon
-        — utile pour unifier des variantes comme « obsolète » et « à archiver ».
+      <div className="admin-callout">
+        <p style={{ margin: 0 }} data-mock-id="tags-merge-callout">
+          « Fusionner » réattribue tous les documents d&apos;un tag vers un autre et supprime le
+          doublon — utile pour unifier des variantes comme « obsolète » et « à archiver ».
+        </p>
       </div>
 
       {modal && (

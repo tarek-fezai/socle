@@ -698,7 +698,30 @@ export async function annotateTagsAdminMockup(page) {
     main?.querySelector('h1')?.setAttribute('data-mock-id', 'tags-title')
     main?.querySelector('a.cta')?.setAttribute('data-mock-id', 'tags-cta')
     main?.querySelector('p')?.setAttribute('data-mock-id', 'tags-stats')
-    main?.querySelector('div[style*="border: 1px solid"]')?.setAttribute('data-mock-id', 'tags-table')
+    const table = main?.querySelector('div[style*="border: 1px solid"]')
+    table?.setAttribute('data-mock-id', 'tags-table')
+    // Maquette n'illustre « Exporter » que sur IAM ; l'app l'offre dès qu'il y a des docs.
+    // Normaliser pour que la comparaison textuelle reflète le comportement produit.
+    table?.querySelectorAll('.row').forEach((row) => {
+      const cells = row.children
+      if (!cells || cells.length < 4) return
+      const docs = Number.parseInt((cells[1].textContent || '').trim(), 10)
+      const actions = cells[3]
+      if (!Number.isFinite(docs) || docs <= 0 || !actions) return
+      const hasExport = [...actions.querySelectorAll('a')].some((a) =>
+        (a.textContent || '').includes('Exporter'),
+      )
+      if (hasExport) return
+      const exportLink = document.createElement('a')
+      exportLink.className = 'action'
+      exportLink.href = 'ExportTag.dc.html'
+      exportLink.textContent = 'Exporter'
+      exportLink.setAttribute(
+        'style',
+        'font-size: 12.5px; font-weight: 600; color: #6B6B72;',
+      )
+      actions.insertBefore(exportLink, actions.firstChild)
+    })
     const callout = main?.querySelector('div[style*="border-left: 3px"]')
     ;(callout?.querySelector('p') || callout)?.setAttribute('data-mock-id', 'tags-merge-callout')
     if (rail) {
@@ -1094,6 +1117,7 @@ export async function collectMetrics(page, ids) {
           el.matches('button, a.cta, a.ghost, .login-cta, .login-cta--error') ||
           id.startsWith('cta-') ||
           id.startsWith('sso-') ||
+          id.endsWith('-cta') ||
           id.startsWith('edit-meta-add-') ||
           id === 'mobile-sso' ||
           re.test(id)
@@ -1120,6 +1144,23 @@ export async function collectMetrics(page, ids) {
     function normText(t) {
       return (t || '').replace(/\s+/g, ' ').trim()
     }
+    /** Texte avec espaces entre nœuds (React omet les whitespace text nodes des maquettes HTML). */
+    function spacedText(el) {
+      const parts = []
+      const walk = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const t = normText(node.textContent)
+          if (t) parts.push(t)
+          return
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return
+        const tag = node.tagName
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG') return
+        for (const c of node.childNodes) walk(c)
+      }
+      walk(el)
+      return parts.join(' ')
+    }
     function normWeight(w) {
       const map = { normal: '400', bold: '700' }
       return map[w] || String(w)
@@ -1143,7 +1184,7 @@ export async function collectMetrics(page, ids) {
       const r = el.getBoundingClientRect()
       const isSvgText = el.tagName.toLowerCase() === 'text'
       out[id] = {
-        text: normText(el.textContent),
+        text: spacedText(el),
         fontFamily: firstFamily(cs.fontFamily),
         fontSize: cs.fontSize,
         fontWeight: normWeight(cs.fontWeight),

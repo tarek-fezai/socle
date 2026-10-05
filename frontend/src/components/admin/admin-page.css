@@ -1,5 +1,11 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-/* TagsAdmin.dc.html / CustomFields.dc.html — workspace admin (hors shell sidebar). */
+/*
+ * TagsAdmin.dc.html / CustomFields.dc.html — workspace admin (hors shell sidebar).
+ * Les maquettes n'ont pas de reset box-sizing (content-box) alors que Tailwind preflight
+ * impose border-box : les colonnes à largeur fixe + padding (sous-nav 240, rail 280) sont
+ * donc explicitement en content-box, sinon le contenu principal démarre à x=240 au lieu de
+ * x=273 (= 240 + padding 16×2 + border 1).
+ */
 
 .admin-page {
   box-sizing: border-box;
@@ -70,6 +76,7 @@
 }
 
 .admin-subnav {
+  box-sizing: content-box;
   width: 240px;
   flex-shrink: 0;
   border-right: 1px solid #ececee;
@@ -77,7 +84,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .admin-subnav__org {
@@ -102,7 +109,7 @@
 }
 
 .admin-nav-item--on {
-  /* Aligné maquette : fond actif + graisse ; couleur inline mockup reste #4B4B52. */
+  /* Maquette : .nav-item.on → fond + graisse ; color inline #4B4B52 gagne sur le #3730E0 du helmet. */
   background: #f0effc;
   color: #4b4b52;
   font-weight: 600;
@@ -118,14 +125,28 @@
 }
 
 .admin-main {
+  box-sizing: content-box;
   flex-grow: 1;
-  overflow: auto;
+  overflow: hidden;
   padding: 40px 48px 0;
   min-width: 0;
 }
 
 .admin-main--fields {
   padding: 36px 40px 0;
+}
+
+.admin-main--fields .admin-cta {
+  /* CustomFields.dc.html : padding 9px 16px (TagsAdmin = 8px). */
+  padding: 9px 16px;
+}
+
+.admin-main--fields .admin-title {
+  margin: 0 0 6px;
+}
+
+.admin-main--fields .admin-lead {
+  margin: 0 0 26px;
 }
 
 .admin-main__inner {
@@ -149,6 +170,7 @@
   font-size: 34px;
   margin: 0;
   color: #0e0e10;
+  flex-shrink: 0;
 }
 
 .admin-lead {
@@ -303,6 +325,7 @@
 }
 
 .admin-rail {
+  box-sizing: content-box;
   width: 280px;
   flex-shrink: 0;
   border-left: 1px solid #ececee;
@@ -310,7 +333,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .admin-rail--fields {
@@ -380,6 +403,7 @@
 .admin-policy-btn {
   display: block;
   width: 100%;
+  box-sizing: border-box;
   background: none;
   border: none;
   padding: 0;
