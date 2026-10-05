@@ -10,10 +10,68 @@ import {
   sanitizeReturnTo,
   type PublicAuthConfig,
 } from '../../lib/auth'
+import {
+  useBrandingAccent,
+  useBrandingInstanceName,
+  useBrandingLogoUrl,
+  useHidePoweredBy,
+} from '../../lib/publicBranding'
 import { AlertIcon, LockIcon, LoginErrorVisualSvg, LoginVisualSvg, PasskeyIcon } from './LoginVisuals'
 import './login.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function BrandMark({ size = 26, className = 'login-mark' }: { size?: number; className?: string }) {
+  const logoUrl = useBrandingLogoUrl()
+  const accent = useBrandingAccent()
+  if (logoUrl) {
+    return (
+      <img
+        className={`${className} login-mark--img`}
+        src={logoUrl}
+        alt=""
+        width={size}
+        height={size}
+        aria-hidden="true"
+      />
+    )
+  }
+  return <div className={className} style={{ background: accent }} aria-hidden="true" />
+}
+
+function BrandName({ mockId, className = 'login-brand-name' }: { mockId?: string; className?: string }) {
+  const instance = useBrandingInstanceName()
+  return (
+    <div className={className} data-mock-id={mockId}>
+      {instance || 'Socle'}
+    </div>
+  )
+}
+
+function PoweredBy() {
+  const hide = useHidePoweredBy()
+  if (hide) return null
+  return (
+    <p className="login-powered" data-mock-id="powered-by">
+      Propulsé par Socle
+    </p>
+  )
+}
+
+function MobileBrand() {
+  const logoUrl = useBrandingLogoUrl()
+  const accent = useBrandingAccent()
+  return (
+    <div className="login-mobile-brand">
+      {logoUrl ? (
+        <img className="login-mobile-mark login-mark--img" src={logoUrl} alt="" width={28} height={28} aria-hidden="true" />
+      ) : (
+        <div className="login-mobile-mark" style={{ background: accent }} aria-hidden="true" />
+      )}
+      <BrandName className="login-serif login-mobile-name" mockId="mobile-brand-name" />
+    </div>
+  )
+}
 
 function supportMailto(config: PublicAuthConfig | null): string | null {
   const mail = config?.supportContact?.trim()
@@ -39,15 +97,14 @@ export function LoginLoadingLayout({ message }: { message: string }) {
       <div className="login-shell login-desktop">
         <div className="login-form-col">
           <div className="login-brand">
-            <div className="login-mark" aria-hidden="true" />
-            <div className="login-brand-name" data-mock-id="brand-name">
-              Socle
-            </div>
+            <BrandMark />
+            <BrandName mockId="brand-name" />
           </div>
           <h1 className="login-serif login-title" data-mock-id="title">
             Se connecter
           </h1>
           <p className="login-loading-msg">{message}</p>
+          <PoweredBy />
         </div>
         <div className="login-visual">
           <LoginVisualSvg />
@@ -60,12 +117,7 @@ export function LoginLoadingLayout({ message }: { message: string }) {
       </div>
       <div className="login-mobile">
         <div className="login-mobile-body">
-          <div className="login-mobile-brand">
-            <div className="login-mobile-mark" aria-hidden="true" />
-            <div className="login-serif login-mobile-name" data-mock-id="mobile-brand-name">
-              Socle
-            </div>
-          </div>
+          <MobileBrand />
           <p className="login-mobile-note">{message}</p>
         </div>
       </div>
@@ -120,10 +172,8 @@ export function LoginPage() {
       <div className="login-shell login-desktop">
         <div className="login-form-col">
           <div className="login-brand">
-            <div className="login-mark" aria-hidden="true" />
-            <div className="login-brand-name" data-mock-id="brand-name">
-              Socle
-            </div>
+            <BrandMark />
+            <BrandName mockId="brand-name" />
           </div>
 
           <h1 className="login-serif login-title" data-mock-id="title">
@@ -202,6 +252,7 @@ export function LoginPage() {
             Réservé aux comptes provisionnés par votre organisation. Un problème d&apos;accès ? Contactez{' '}
             <IdentityTeamLabel config={config} />.
           </p>
+          <PoweredBy />
         </div>
 
         <div className="login-visual">
@@ -218,10 +269,8 @@ export function LoginPage() {
       <div className="login-mobile">
         <div className="login-mobile-body">
           <div className="login-mobile-brand">
-            <div className="login-mobile-mark" aria-hidden="true" />
-            <div className="login-serif login-mobile-name" data-mock-id="mobile-brand-name">
-              Socle
-            </div>
+            <BrandMark size={44} className="login-mobile-mark" />
+            <BrandName className="login-serif login-mobile-name" mockId="mobile-brand-name" />
             {orgName ? (
               <div className="login-mobile-org" data-mock-id="mobile-org">
                 {orgName}
@@ -317,10 +366,8 @@ export function LoginErrorPage() {
       <div className="login-shell login-desktop">
         <div className="login-form-col">
           <div className="login-brand login-brand--error">
-            <div className="login-mark" aria-hidden="true" />
-            <div className="login-brand-name" data-mock-id="brand-name">
-              Socle
-            </div>
+            <BrandMark />
+            <BrandName mockId="brand-name" />
           </div>
 
           <div className="login-alert-icon">
@@ -362,6 +409,7 @@ export function LoginErrorPage() {
             Un problème persiste ? Contactez <IdentityTeamLabel config={config} />
             {org ? <> de {org}</> : null}.
           </p>
+          <PoweredBy />
         </div>
 
         <div className="login-visual login-visual--error">
@@ -378,10 +426,7 @@ export function LoginErrorPage() {
       {/* Mobile fallback: same messaging, stacked */}
       <div className="login-mobile">
         <div className="login-mobile-body">
-          <div className="login-mobile-brand">
-            <div className="login-mobile-mark" aria-hidden="true" />
-            <div className="login-serif login-mobile-name">Socle</div>
-          </div>
+          <MobileBrand />
           <h1 className="login-serif" style={{ fontSize: 26, fontWeight: 400, margin: '0 0 12px', textAlign: 'center' }}>
             Connexion refusée
           </h1>

@@ -46,11 +46,11 @@ export function isApprovalsPath(pathname: string): boolean {
 }
 
 /**
- * Pages admin Tags / Champs personnalisés — layout plein écran (TagsAdmin.dc.html),
+ * Pages admin Tags / Champs / Rétention / Branding — layout plein écran (maquettes admin),
  * sans sidebar shell ni barre haute globale.
  */
 export function isAdminWorkspacePath(pathname: string): boolean {
-  return /^\/admin\/(?:tags|custom-fields)\/?$/.test(pathname)
+  return /^\/admin\/(?:tags|custom-fields|retention|branding)\/?$/.test(pathname)
 }
 
 /** Pages qui portent leur propre chrome (lecture, modification, historique, approbation, admin). */

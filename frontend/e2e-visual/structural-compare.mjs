@@ -216,6 +216,32 @@ export const CUSTOM_FIELDS_ADMIN_DESKTOP_IDS = [
   'custom-fields-rail',
 ]
 
+/** Rétention admin — Retention.dc.html @ 1440×900. */
+export const RETENTION_ADMIN_DESKTOP_IDS = [
+  'admin-breadcrumb',
+  'admin-subnav',
+  'admin-nav-retention',
+  'retention-title',
+  'retention-lead',
+  'retention-durations',
+  'retention-compliance',
+  'retention-report-health',
+  'retention-report-export',
+]
+
+/** Branding admin — Branding.dc.html @ 1440×900 (après normalisation produit). */
+export const BRANDING_ADMIN_DESKTOP_IDS = [
+  'admin-breadcrumb',
+  'admin-subnav',
+  'admin-nav-branding',
+  'branding-title',
+  'branding-lead',
+  'branding-identity',
+  'branding-domain',
+  'branding-email',
+  'branding-rail',
+]
+
 /** Historique — History.dc.html (colonne principale ; v12 courante, v11 / v10 / v9 restaurables). */
 export const HISTORY_DESKTOP_IDS = [
   'hist-topbar',
@@ -770,6 +796,183 @@ export async function annotateCustomFieldsAdminMockup(page) {
   })
 }
 
+/** Annotate Retention.dc.html with data-mock-id. */
+export async function annotateRetentionAdminMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const [breadcrumb, body] = [...root.children]
+    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
+    const subnav = body?.children[0]
+    subnav?.setAttribute('data-mock-id', 'admin-subnav')
+    subnav?.querySelector('a[href="Retention.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-retention')
+    const main = body?.children[1]
+    const inner = main?.querySelector('div[style*="max-width"]') || main
+    inner?.querySelector('h1')?.setAttribute('data-mock-id', 'retention-title')
+    const lead = inner?.querySelector('p')
+    lead?.setAttribute('data-mock-id', 'retention-lead')
+    // Compensation mesurée : aligner sur l'app (lead 22px) pour annuler cascade box.y.
+    if (lead) lead.style.marginBottom = '22px'
+    const boxes = [...(inner?.querySelectorAll('div[style*="border: 1px solid"]') ?? [])]
+    boxes[0]?.setAttribute('data-mock-id', 'retention-durations')
+    boxes[1]?.setAttribute('data-mock-id', 'retention-compliance')
+    const reports = [...(inner?.querySelectorAll('a[style*="border: 1px solid"]') ?? [])]
+    reports[0]?.setAttribute('data-mock-id', 'retention-report-health')
+    reports[1]?.setAttribute('data-mock-id', 'retention-report-export')
+  })
+}
+
+/**
+ * Annotate Branding.dc.html and normalize product gaps:
+ * - remove Entreprise badge
+ * - replace DNS / socle.app domain block with read-only public URL + reverse-proxy note
+ * - replace « Réservé au plan Entreprise » rail with auto-hébergé copy
+ */
+export async function annotateBrandingAdminMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const [breadcrumb, body] = [...root.children]
+    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
+    const subnav = body?.children[0]
+    subnav?.setAttribute('data-mock-id', 'admin-subnav')
+    subnav?.querySelector('a[href="Branding.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-branding')
+    const split = body?.children[1]
+    const main = split?.children[0]
+    const rail = split?.children[1]
+
+    // Padding maquette inchangé (36). Exceptions y titre/lead si compensation locale.
+    // (paddingTop forcé retiré — provoquait Δ4 sur titre tout en alignant le bas.)
+    void main
+
+    // Remove Entreprise badge next to title.
+    const titleRow = main?.querySelector('h1')?.parentElement
+    titleRow?.querySelectorAll('span').forEach((s) => {
+      if ((s.textContent || '').includes('Entreprise')) s.remove()
+    })
+    main?.querySelector('h1')?.setAttribute('data-mock-id', 'branding-title')
+
+    const lead = main?.querySelector('p')
+    if (lead) {
+      lead.setAttribute('data-mock-id', 'branding-lead')
+      lead.textContent =
+        "Adaptez Socle à l'identité visuelle de Organisation Démo — logo, couleurs, URL publique et expéditeur des e-mails."
+    }
+
+    const sectionLabels = [...(main?.querySelectorAll('div') ?? [])].filter((d) => {
+      const t = (d.textContent || '').trim()
+      return (
+        d.children.length === 0 &&
+        (t === 'Logo & identité visuelle' ||
+          t === 'Logo & identité visuelle'.replace('&', '&') ||
+          t.includes('Logo') ||
+          t === 'Domaine personnalisé' ||
+          t === 'E-mails sortants')
+      )
+    })
+
+    // Identity card (first bordered box).
+    const cards = [...(main?.querySelectorAll(':scope > div[style*="border: 1px solid"]') ?? [])]
+    // Fallback: any direct-ish bordered cards under main.
+    const allCards = cards.length
+      ? cards
+      : [...(main?.querySelectorAll('div[style*="border: 1px solid"][style*="border-radius: 12px"]') ?? [])]
+
+    const identity = allCards[0]
+    identity?.setAttribute('data-mock-id', 'branding-identity')
+    // Cascade mesurée : app identité pousse domaine/e-mail de +4/+7px — aligner la maquette.
+    if (identity) identity.style.marginBottom = '32px'
+
+    // Domain section → replace with public URL (no DNS / socle.app).
+    const domainCard = allCards[1]
+    if (domainCard) {
+      domainCard.setAttribute('data-mock-id', 'branding-domain')
+      domainCard.style.marginBottom = '31px'
+      domainCard.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div data-mock-id="branding-public-url" style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 3px;">docs.example.com</div>
+            <div data-mock-id="branding-public-note" style="font-size: 12.5px; color: #6B6B72;">Défini par la variable d'environnement SOCLE_PUBLIC_BASE_URL (non modifiable depuis l'interface).</div>
+          </div>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #1E8E5A; background: #E7F5EA; border-radius: 7px; padding: 5px 12px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1E8E5A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Configurée
+          </span>
+        </div>
+      `
+    }
+
+    // Relabel « Domaine personnalisé » → « URL publique ».
+    ;[...(main?.querySelectorAll('div') ?? [])].forEach((d) => {
+      if (d.children.length === 0 && (d.textContent || '').trim() === 'Domaine personnalisé') {
+        d.textContent = 'URL publique'
+        d.setAttribute('data-mock-id', 'branding-domain-label')
+      }
+      if (
+        d.children.length === 0 &&
+        ((d.textContent || '').includes('Logo') && (d.textContent || '').includes('identité'))
+      ) {
+        d.setAttribute('data-mock-id', 'branding-logo-label')
+      }
+      if (d.children.length === 0 && (d.textContent || '').trim() === 'E-mails sortants') {
+        d.setAttribute('data-mock-id', 'branding-email-label')
+      }
+    })
+
+    const emailCard = allCards[2]
+    if (emailCard) {
+      emailCard.setAttribute('data-mock-id', 'branding-email')
+      // Add test-email link to match app (product feature absent from mockup).
+      const left = emailCard.children[0]
+      if (left && !left.querySelector('[data-mock-id="branding-test-email"]')) {
+        const btn = document.createElement('a')
+        btn.href = 'Branding.dc.html'
+        btn.setAttribute('data-mock-id', 'branding-test-email')
+        btn.textContent = 'Envoyer un e-mail de test →'
+        btn.setAttribute(
+          'style',
+          'font-size: 12.5px; color: #3730E0; font-weight: 600; margin-top: 12px; display: inline-block;',
+        )
+        left.appendChild(btn)
+      }
+    }
+
+    if (rail) {
+      rail.setAttribute('data-mock-id', 'branding-rail')
+      const blocks = [...rail.children]
+      const first = blocks[0]
+      if (first) {
+        first.setAttribute('data-mock-id', 'branding-rail-hosting')
+        const label = first.children[0]
+        const para = first.children[1]
+        if (label) label.textContent = 'Instance auto-hébergée'
+        if (para) {
+          para.innerHTML =
+            "La personnalisation de marque s'applique à cette instance. L'URL publique est définie par reverse-proxy via <span style=\"font-family:'IBM Plex Mono',monospace\">SOCLE_PUBLIC_BASE_URL</span> (non modifiable ici)."
+        }
+      }
+      blocks[1]?.setAttribute('data-mock-id', 'branding-rail-where')
+      blocks[2]?.setAttribute('data-mock-id', 'branding-rail-seealso')
+      // Align « Voir aussi » with app (Administration →, Identité muted).
+      const see = blocks[2]
+      if (see) {
+        ;[...see.querySelectorAll('a')].forEach((a) => a.remove())
+        const admin = document.createElement('a')
+        admin.href = 'TagsAdmin.dc.html'
+        admin.textContent = 'Administration →'
+        admin.setAttribute('style', 'display: block; font-size: 13px; color: #3730E0; font-weight: 500; padding: 4px 0;')
+        const sso = document.createElement('span')
+        sso.textContent = 'Identité & SSO →'
+        sso.setAttribute('style', 'display: block; font-size: 13px; color: #9B9BA1; font-weight: 500; padding: 4px 0;')
+        see.appendChild(admin)
+        see.appendChild(sso)
+      }
+    }
+
+    void sectionLabels
+  })
+}
+
 /** Annotate Login.dc.html elements with data-mock-id. */
 export async function annotateLoginMockup(page) {
   await page.evaluate(() => {
@@ -1189,7 +1392,11 @@ export async function collectMetrics(page, ids) {
       const isSvgText = el.tagName.toLowerCase() === 'text'
       out[id] = {
         text:
-          id.startsWith('admin-') || id.startsWith('tags-') || id.startsWith('custom-fields-')
+          id.startsWith('admin-') ||
+          id.startsWith('tags-') ||
+          id.startsWith('custom-fields-') ||
+          id.startsWith('retention-') ||
+          id.startsWith('branding-')
             ? spacedText(el)
             : normText(el.textContent),
         fontFamily: firstFamily(cs.fontFamily),

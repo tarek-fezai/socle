@@ -59,8 +59,13 @@
   width: 26px;
   height: 26px;
   border-radius: 7px;
-  background: #3730e0;
+  background: var(--socle-accent, #3730e0);
   flex-shrink: 0;
+}
+
+.login-mark--img {
+  object-fit: contain;
+  background: transparent;
 }
 
 .login-brand-name {
@@ -233,6 +238,13 @@
   line-height: 1.6;
 }
 
+.login-powered {
+  font-size: 11.5px;
+  color: #9b9ba1;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
 .login-footer a {
   color: #3730e0;
   font-weight: 500;
@@ -399,7 +411,7 @@
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    background: #3730e0;
+    background: var(--socle-accent, #3730e0);
     margin-bottom: 14px;
   }
 

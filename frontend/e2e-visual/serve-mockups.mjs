@@ -38,6 +38,8 @@ const KEEP_HELMET_STYLES = new Set([
   // .nav-item.on { background; font-weight } — sinon l'état actif n'existe pas (inline color seule)
   'TagsAdmin.dc.html',
   'CustomFields.dc.html',
+  'Retention.dc.html',
+  'Branding.dc.html',
 ])
 
 function helmetStyles(rawHtml) {

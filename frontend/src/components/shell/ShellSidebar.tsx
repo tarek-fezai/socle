@@ -12,6 +12,12 @@ import {
   saveExpandedSpaces,
   searchShortcutLabel,
 } from './shellUtils'
+import {
+  useBrandingAccent,
+  useBrandingInstanceName,
+  useBrandingLogoUrl,
+  useHidePoweredBy,
+} from '../../lib/publicBranding'
 
 type Props = {
   onOpenSearch: () => void
@@ -103,12 +109,20 @@ export function ShellSidebar({ onOpenSearch }: Props) {
   const path = location.pathname
   const displayName = me?.displayName ?? 'Compte'
   const initials = me?.avatarInitials || initialsFromName(displayName)
+  const logoUrl = useBrandingLogoUrl()
+  const accent = useBrandingAccent()
+  const brandName = useBrandingInstanceName() || 'Socle'
+  const hidePoweredBy = useHidePoweredBy()
 
   return (
     <aside className="shell-sidebar shell-desktop-only" data-mock-id="shell-sidebar" aria-label="Navigation">
       <Link to="/" className="shell-logo" data-mock-id="shell-logo">
-        <span className="shell-logo-mark" aria-hidden />
-        <span className="shell-logo-name">Socle</span>
+        {logoUrl ? (
+          <img className="shell-logo-mark shell-logo-mark--img" src={logoUrl} alt="" width={24} height={24} aria-hidden />
+        ) : (
+          <span className="shell-logo-mark" style={{ background: accent }} aria-hidden />
+        )}
+        <span className="shell-logo-name">{brandName}</span>
       </Link>
 
       <button
@@ -192,6 +206,12 @@ export function ShellSidebar({ onOpenSearch }: Props) {
           )
         })}
       </div>
+
+      {!hidePoweredBy && (
+        <p className="shell-powered" data-mock-id="shell-powered-by">
+          Propulsé par Socle
+        </p>
+      )}
 
       <button
         type="button"
