@@ -455,18 +455,24 @@ export function BrandingAdminPage() {
               SPF &amp; DKIM vérifiés
             </div>
           ) : null}
-          <a
-            href="#branding-test-email"
+          <button
+            type="button"
             className="admin-link-action"
-            style={{ marginTop: 12, display: 'inline-block' }}
-            data-mock-id="branding-test-email"
-            onClick={(e) => {
-              e.preventDefault()
-              if (!testMut.isPending && b) testMut.mutate()
+            style={{
+              marginTop: 12,
+              display: 'inline-block',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              font: 'inherit',
             }}
+            data-mock-id="branding-test-email"
+            disabled={testMut.isPending || !b}
+            onClick={() => testMut.mutate()}
           >
             Envoyer un e-mail de test →
-          </a>
+          </button>
         </div>
         <div style={{ flex: 1, borderLeft: '1px solid #ECECEE', paddingLeft: 32 }}>
           <div
