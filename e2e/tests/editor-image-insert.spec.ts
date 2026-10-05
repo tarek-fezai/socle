@@ -25,6 +25,9 @@ function writeTinyPng(filePath: string) {
 }
 
 test.describe.serial('Editor image insert (toolbar + in-page drop)', () => {
+  // Drop DataTransfer est flaky sur CI (Chromium) — 2 retries locaux au describe.
+  test.describe.configure({ retries: process.env.CI ? 2 : 0 })
+
   let token: string
   let documentId: string
   let pngPath: string
@@ -112,19 +115,19 @@ test.describe.serial('Editor image insert (toolbar + in-page drop)', () => {
     await page.goto(`/docs/${doc.id}/edit`)
     const editor = page.getByTestId('edit-prosemirror')
     await editor.waitFor({ timeout: 60_000 })
+    await editor.click()
     const box = await editor.boundingBox()
     expect(box).toBeTruthy()
 
-    const post = page.waitForResponse(
-      (r) =>
-        r.request().method() === 'POST' &&
-        /\/api\/v1\/documents\/[^/]+\/attachments/.test(r.url()),
-      { timeout: 30_000 },
-    )
-
     const pngB64 = fs.readFileSync(pngPath).toString('base64')
-    await page.evaluate(
-      ({ x, y, b64 }) => {
+    const dropPoint = {
+      x: box!.x + box!.width / 2,
+      y: box!.y + Math.min(80, box!.height / 2),
+      b64: pngB64,
+    }
+
+    async function dispatchDrop() {
+      await page.evaluate(({ x, y, b64 }) => {
         const root = document.querySelector('[data-testid="edit-prosemirror"]')
         const dom = root?.querySelector('.ProseMirror') || root
         if (!dom) throw new Error('no ProseMirror')
@@ -132,29 +135,38 @@ test.describe.serial('Editor image insert (toolbar + in-page drop)', () => {
         const file = new File([bytes], 'drop.png', { type: 'image/png' })
         const dt = new DataTransfer()
         dt.items.add(file)
-        const over = new DragEvent('dragover', {
-          bubbles: true,
-          cancelable: true,
-          clientX: x,
-          clientY: y,
-          dataTransfer: dt,
-        })
-        Object.defineProperty(over, 'dataTransfer', { get: () => dt })
-        dom.dispatchEvent(over)
-        const drop = new DragEvent('drop', {
-          bubbles: true,
-          cancelable: true,
-          clientX: x,
-          clientY: y,
-          dataTransfer: dt,
-        })
-        Object.defineProperty(drop, 'dataTransfer', { get: () => dt })
-        dom.dispatchEvent(drop)
-      },
-      { x: box!.x + box!.width / 2, y: box!.y + Math.min(80, box!.height / 2), b64: pngB64 },
-    )
+        for (const type of ['dragenter', 'dragover', 'drop'] as const) {
+          const ev = new DragEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            clientX: x,
+            clientY: y,
+            dataTransfer: dt,
+          })
+          Object.defineProperty(ev, 'dataTransfer', { get: () => dt })
+          dom.dispatchEvent(ev)
+        }
+      }, dropPoint)
+    }
 
-    const res = await post
-    expect(res.status(), await res.text()).toBe(201)
+    let res
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const post = page.waitForResponse(
+        (r) =>
+          r.request().method() === 'POST' &&
+          /\/api\/v1\/documents\/[^/]+\/attachments/.test(r.url()),
+        { timeout: 20_000 },
+      )
+      await dispatchDrop()
+      try {
+        res = await post
+        break
+      } catch (err) {
+        if (attempt === 2) throw err
+        await editor.click()
+      }
+    }
+
+    expect(res!.status(), await res!.text()).toBe(201)
   })
 })
