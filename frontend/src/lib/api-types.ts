@@ -260,6 +260,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/tags/{id}/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["rename"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tags/creation-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateCreationPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/custom-fields/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update_7"];
+        post?: never;
+        delete: operations["delete_7"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/webhook-endpoints": {
         parameters: {
             query?: never;
@@ -1012,7 +1060,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform-roles": {
+    "/api/v1/admin/tags": {
         parameters: {
             query?: never;
             header?: never;
@@ -1021,7 +1069,55 @@ export interface paths {
         };
         get: operations["list_11"];
         put?: never;
+        post: operations["create_12"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tags/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["merge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_12"];
+        put?: never;
         post: operations["grant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/custom-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_13"];
+        put?: never;
+        post: operations["create_13"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1099,7 +1195,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_12"];
+        get: operations["list_14"];
         put?: never;
         post: operations["grant_1"];
         delete: operations["revoke"];
@@ -1118,10 +1214,10 @@ export interface paths {
         get: operations["get_10"];
         put?: never;
         post?: never;
-        delete: operations["delete_7"];
+        delete: operations["delete_8"];
         options?: never;
         head?: never;
-        patch: operations["update_7"];
+        patch: operations["update_8"];
         trace?: never;
     };
     "/api/v1/folders/{id}": {
@@ -1134,10 +1230,10 @@ export interface paths {
         get: operations["get_11"];
         put?: never;
         post?: never;
-        delete: operations["delete_8"];
+        delete: operations["delete_9"];
         options?: never;
         head?: never;
-        patch: operations["update_8"];
+        patch: operations["update_9"];
         trace?: never;
     };
     "/api/folders/{id}": {
@@ -1150,10 +1246,10 @@ export interface paths {
         get: operations["get_12"];
         put?: never;
         post?: never;
-        delete: operations["delete_9"];
+        delete: operations["delete_10"];
         options?: never;
         head?: never;
-        patch: operations["update_9"];
+        patch: operations["update_10"];
         trace?: never;
     };
     "/api/v1/comments/{id}": {
@@ -1166,10 +1262,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["delete_10"];
+        delete: operations["delete_11"];
         options?: never;
         head?: never;
-        patch: operations["update_10"];
+        patch: operations["update_11"];
         trace?: never;
     };
     "/api/v1/webhooks/deliveries": {
@@ -1179,7 +1275,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_13"];
+        get: operations["list_15"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1195,7 +1291,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_14"];
+        get: operations["list_16"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1403,7 +1499,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_15"];
+        get: operations["list_17"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1467,7 +1563,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_16"];
+        get: operations["list_18"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1515,7 +1611,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_17"];
+        get: operations["list_19"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1755,7 +1851,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_18"];
+        get: operations["list_20"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1883,7 +1979,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_19"];
+        get: operations["list_21"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1932,6 +2028,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["mine"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tags/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["summary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2127,6 +2239,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["unassign"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tags/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_12"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2369,6 +2497,7 @@ export interface components {
             required?: boolean;
             options?: components["schemas"]["JsonNode"];
             value?: components["schemas"]["JsonNode"];
+            helpText?: string;
         };
         UpdateDocumentRequest: {
             title: string;
@@ -2423,6 +2552,60 @@ export interface components {
             approverRoleName?: string;
             /** Format: int32 */
             escalatesToStepOrder?: number;
+        };
+        RenameTagRequest: {
+            name: string;
+        };
+        TagAdminView: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            color?: string;
+            /** Format: int64 */
+            documentCount?: number;
+            createdByDisplayName?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            governed?: boolean;
+        };
+        TagCreationPolicyRequest: {
+            tagCreationPolicy: string;
+        };
+        TagAdminSummary: {
+            /** Format: int64 */
+            tagCount?: number;
+            /** Format: int64 */
+            taggedDocumentCount?: number;
+            /** Format: int64 */
+            totalDocumentCount?: number;
+            tagCreationPolicy?: string;
+        };
+        UpdateFieldRequest: {
+            name: string;
+            helpText?: string;
+            fieldType?: string;
+            scope?: string;
+            required?: boolean;
+            options?: components["schemas"]["JsonNode"];
+            status?: string;
+            archiveRemovedOptions?: boolean;
+        };
+        FieldAdminView: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            slug?: string;
+            helpText?: string;
+            fieldType?: string;
+            scope?: string;
+            scopeSpaceName?: string;
+            required?: boolean;
+            options?: components["schemas"]["JsonNode"];
+            status?: string;
+            /** Format: int64 */
+            documentCount?: number;
+            /** Format: date-time */
+            createdAt?: string;
         };
         CreateRequest: {
             url?: string;
@@ -2788,6 +2971,15 @@ export interface components {
             /** Format: uuid */
             linkedBy?: string;
         };
+        CreateTagRequest: {
+            name: string;
+            color?: string;
+        };
+        MergeTagRequest: {
+            /** Format: uuid */
+            targetTagId: string;
+            transferAssignments?: boolean;
+        };
         GrantRequest: {
             /** Format: uuid */
             userId: string;
@@ -2801,6 +2993,15 @@ export interface components {
             grantedBy?: string;
             /** Format: date-time */
             grantedAt?: string;
+        };
+        CreateFieldRequest: {
+            name: string;
+            helpText?: string;
+            fieldType: string;
+            scope: string;
+            required?: boolean;
+            options?: components["schemas"]["JsonNode"];
+            status?: string;
         };
         PermissionRequest: {
             relation: string;
@@ -3346,6 +3547,10 @@ export interface components {
             canDecide?: boolean;
             cannotDecideReason?: string;
         };
+        TagListResponse: {
+            tags?: components["schemas"]["TagAdminView"][];
+            summary?: components["schemas"]["TagAdminSummary"];
+        };
         DriftItem: {
             /** Format: uuid */
             documentId?: string;
@@ -3357,6 +3562,9 @@ export interface components {
             storageProvider?: string;
             items?: components["schemas"]["DriftItem"][];
             procedure?: string;
+        };
+        FieldListResponse: {
+            fields?: components["schemas"]["FieldAdminView"][];
         };
         AccessEntry: {
             subject?: string;
@@ -4207,6 +4415,104 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameTagRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TagAdminView"];
+                };
+            };
+        };
+    };
+    updateCreationPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagCreationPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TagAdminSummary"];
+                };
+            };
+        };
+    };
+    update_7: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFieldRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FieldAdminView"];
+                };
+            };
+        };
+    };
+    delete_7: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FieldAdminView"];
+                };
             };
         };
     };
@@ -5729,6 +6035,76 @@ export interface operations {
     };
     list_11: {
         parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TagListResponse"];
+                };
+            };
+        };
+    };
+    create_12: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TagAdminView"];
+                };
+            };
+        };
+    };
+    merge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeTagRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TagAdminView"];
+                };
+            };
+        };
+    };
+    list_12: {
+        parameters: {
             query?: {
                 userId?: string;
             };
@@ -5769,6 +6145,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PlatformRoleView"];
+                };
+            };
+        };
+    };
+    list_13: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FieldListResponse"];
+                };
+            };
+        };
+    };
+    create_13: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateFieldRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FieldAdminView"];
                 };
             };
         };
@@ -5867,7 +6287,7 @@ export interface operations {
             };
         };
     };
-    list_12: {
+    list_14: {
         parameters: {
             query?: never;
             header?: never;
@@ -5962,7 +6382,7 @@ export interface operations {
             };
         };
     };
-    delete_7: {
+    delete_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -5982,7 +6402,7 @@ export interface operations {
             };
         };
     };
-    update_7: {
+    update_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -6009,78 +6429,6 @@ export interface operations {
         };
     };
     get_11: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["FolderView"];
-                };
-            };
-        };
-    };
-    delete_8: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    update_8: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateFolderRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["FolderView"];
-                };
-            };
-        };
-    };
-    get_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -6152,7 +6500,79 @@ export interface operations {
             };
         };
     };
+    get_12: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FolderView"];
+                };
+            };
+        };
+    };
     delete_10: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    update_10: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFolderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FolderView"];
+                };
+            };
+        };
+    };
+    delete_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -6174,7 +6594,7 @@ export interface operations {
             };
         };
     };
-    update_10: {
+    update_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -6200,7 +6620,7 @@ export interface operations {
             };
         };
     };
-    list_13: {
+    list_15: {
         parameters: {
             query?: {
                 endpointId?: string;
@@ -6225,7 +6645,7 @@ export interface operations {
             };
         };
     };
-    list_14: {
+    list_16: {
         parameters: {
             query?: {
                 resourceType?: string;
@@ -6542,7 +6962,7 @@ export interface operations {
             };
         };
     };
-    list_15: {
+    list_17: {
         parameters: {
             query?: {
                 unreadOnly?: boolean;
@@ -6630,7 +7050,7 @@ export interface operations {
             };
         };
     };
-    list_16: {
+    list_18: {
         parameters: {
             query?: never;
             header?: never;
@@ -6694,7 +7114,7 @@ export interface operations {
             };
         };
     };
-    list_17: {
+    list_19: {
         parameters: {
             query?: never;
             header?: never;
@@ -7042,7 +7462,7 @@ export interface operations {
             };
         };
     };
-    list_18: {
+    list_20: {
         parameters: {
             query?: never;
             header?: never;
@@ -7221,7 +7641,7 @@ export interface operations {
             };
         };
     };
-    list_19: {
+    list_21: {
         parameters: {
             query?: {
                 resourceType?: string;
@@ -7312,6 +7732,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApprovalView"][];
+                };
+            };
+        };
+    };
+    summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TagAdminSummary"];
                 };
             };
         };
@@ -7563,6 +8003,26 @@ export interface operations {
         };
     };
     unassign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_12: {
         parameters: {
             query?: never;
             header?: never;

@@ -98,6 +98,7 @@ class DocumentCustomFieldServiceTest {
                   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                   name TEXT NOT NULL,
                   slug TEXT NOT NULL UNIQUE,
+                  help_text TEXT,
                   field_type TEXT NOT NULL CHECK (field_type IN
                     ('texte','liste','multi_selection','date','nombre','lien','personne','case_a_cocher')),
                   scope TEXT NOT NULL DEFAULT 'all_spaces',

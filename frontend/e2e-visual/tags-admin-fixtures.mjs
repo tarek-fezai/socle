@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/** Données alignées sur TagsAdmin.dc.html (7 tags, 60 / 214). */
+
+export const TAGS_ADMIN_LIST = {
+  summary: {
+    tagCount: 7,
+    taggedDocumentCount: 60,
+    totalDocumentCount: 214,
+    tagCreationPolicy: 'any_editor',
+  },
+  tags: [
+    {
+      id: 't0000001-0000-4000-8000-000000000001',
+      name: 'IAM',
+      color: '#3730E0',
+      documentCount: 24,
+      createdByDisplayName: 'Tarek Fezai',
+      createdAt: '2026-01-01T00:00:00Z',
+      governed: false,
+    },
+    {
+      id: 't0000002-0000-4000-8000-000000000002',
+      name: 'RGPD',
+      color: '#B7791F',
+      documentCount: 12,
+      createdByDisplayName: 'Yanis M.',
+      createdAt: '2026-01-02T00:00:00Z',
+      governed: false,
+    },
+    {
+      id: 't0000003-0000-4000-8000-000000000003',
+      name: 'SSO',
+      color: '#7C3AED',
+      documentCount: 8,
+      createdByDisplayName: 'Rania Lefèvre',
+      createdAt: '2026-01-03T00:00:00Z',
+      governed: false,
+    },
+    {
+      id: 't0000004-0000-4000-8000-000000000004',
+      name: 'Critique',
+      color: '#B54708',
+      documentCount: 5,
+      createdByDisplayName: 'Tarek Fezai',
+      createdAt: '2026-01-04T00:00:00Z',
+      governed: false,
+    },
+    {
+      id: 't0000005-0000-4000-8000-000000000005',
+      name: 'Revue Q3 2026',
+      color: '#1E8E5A',
+      documentCount: 6,
+      createdByDisplayName: 'Claire Dubois',
+      createdAt: '2026-01-05T00:00:00Z',
+      governed: false,
+    },
+    {
+      id: 't0000006-0000-4000-8000-000000000006',
+      name: 'Fournisseur externe',
+      color: '#0D8A7C',
+      documentCount: 3,
+      createdByDisplayName: 'Sami Lahlou',
+      createdAt: '2026-01-06T00:00:00Z',
+      governed: false,
+    },
+    {
+      id: 't0000007-0000-4000-8000-000000000007',
+      name: 'Obsolète',
+      color: '#6B6862',
+      documentCount: 2,
+      createdByDisplayName: 'Nora Benali',
+      createdAt: '2026-01-07T00:00:00Z',
+      governed: true,
+    },
+  ],
+}

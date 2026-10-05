@@ -3,6 +3,9 @@ package eu.socle.web;
 
 import org.springframework.http.HttpStatus;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Codes d'erreur API stables (Problem Detail {@code code}) — l'UI réagit au code, pas au texte.
  */
@@ -21,6 +24,13 @@ public final class ApiErrors {
     public static final String IMAGE_TOO_LARGE = "image_too_large";
     /** Corps TipTap hors liste blanche (type / marque / attribut / URL). */
     public static final String CONTENT_INVALID = "content_invalid";
+
+    public static final String TAG_NAME_CONFLICT = "tag_name_conflict";
+    public static final String GOVERNED_TAG_IN_USE = "governed_tag_in_use";
+    public static final String TAG_CREATION_RESTRICTED = "tag_creation_restricted";
+    public static final String FIELD_TYPE_LOCKED = "field_type_locked";
+    public static final String FIELD_OPTION_IN_USE = "field_option_in_use";
+    public static final String REQUIRED_FIELD_MISSING = "required_field_missing";
 
     private ApiErrors() {}
 
@@ -93,5 +103,50 @@ public final class ApiErrors {
                 DIFF_TOO_LARGE,
                 "Version " + versionNo + " trop volumineuse pour la comparaison ("
                         + lineCount + " lignes, maximum " + maxLines + ")");
+    }
+
+    public static CodedStatusException tagNameConflict(String name) {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                TAG_NAME_CONFLICT,
+                "Un tag nommé « " + name + " » existe déjà");
+    }
+
+    public static CodedStatusException governedTagInUse(List<?> assignments) {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                GOVERNED_TAG_IN_USE,
+                "Tag référencé par des attributions de rôle d'approbation",
+                Map.of("assignments", assignments));
+    }
+
+    public static CodedStatusException tagCreationRestricted() {
+        return new CodedStatusException(
+                HttpStatus.FORBIDDEN,
+                TAG_CREATION_RESTRICTED,
+                "La création de nouveaux tags est réservée aux administrateurs");
+    }
+
+    public static CodedStatusException fieldTypeLocked() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                FIELD_TYPE_LOCKED,
+                "Le type ne peut plus être modifié : des valeurs existent déjà");
+    }
+
+    public static CodedStatusException fieldOptionInUse(String option, long documentCount) {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                FIELD_OPTION_IN_USE,
+                "La valeur « " + option + " » est utilisée par " + documentCount + " document(s)",
+                Map.of("option", option, "documentCount", documentCount));
+    }
+
+    public static CodedStatusException requiredFieldMissing(List<?> fields) {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                REQUIRED_FIELD_MISSING,
+                "Champs obligatoires manquants pour l'envoi en révision",
+                Map.of("fields", fields));
     }
 }

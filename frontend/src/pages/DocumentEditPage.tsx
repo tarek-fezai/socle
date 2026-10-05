@@ -8,7 +8,7 @@ import { CommentSelectionButton, CommentsPanel } from '../components/CommentsPan
 import { PlaceholderBanner } from '../components/PlaceholderBanner'
 import type { ShellOutletContext } from '../components/shell/shellUtils'
 import { api } from '../lib/api'
-import { apiErrorMessage } from '../lib/apiError'
+import { apiErrorCode, apiErrorMessage, apiRequiredFieldRefs } from '../lib/apiError'
 import {
   deleteDocumentDraft,
   documentDraftKey,
@@ -213,6 +213,7 @@ function EditSurface({
   const [approvalError, setApprovalError] = useState<string | null>(null)
   const [tagError, setTagError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [missingRequiredFieldIds, setMissingRequiredFieldIds] = useState<Set<string>>(new Set())
   const [savingFields, setSavingFields] = useState<Record<string, boolean>>({})
   const editorRef = useRef<Editor | null>(null)
   const previewingRef = useRef(false)
@@ -414,6 +415,7 @@ function EditSurface({
     },
     onSuccess: () => {
       setApprovalError(null)
+      setMissingRequiredFieldIds(new Set())
       setApprovalMsg('Document envoyé en révision.')
       void qc.invalidateQueries({ queryKey: ['document', id] })
       void qc.invalidateQueries({ queryKey: ['document-resolved', id] })
@@ -423,6 +425,9 @@ function EditSurface({
     },
     onError: (err) => {
       setApprovalMsg(null)
+      if (apiErrorCode(err) === 'required_field_missing') {
+        setMissingRequiredFieldIds(new Set(apiRequiredFieldRefs(err).map((f) => f.id)))
+      }
       setApprovalError(
         err instanceof Error && !('response' in err)
           ? err.message
@@ -801,6 +806,7 @@ function EditSurface({
             fieldErrors={fieldErrors}
             savingFields={savingFields}
             onSaveField={(f, v) => void saveField(f, v)}
+            missingRequiredFieldIds={missingRequiredFieldIds}
           />
         )}
       </div>

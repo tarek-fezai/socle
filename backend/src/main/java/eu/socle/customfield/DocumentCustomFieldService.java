@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
+import eu.socle.customfield.CustomFieldAdminDtos.RequiredFieldRef;
 import eu.socle.user.UserSyncService;
+import eu.socle.web.ApiErrors;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -63,11 +65,18 @@ public class DocumentCustomFieldService {
             String fieldType,
             boolean required,
             JsonNode options,
-            JsonNode value
+            JsonNode value,
+            String helpText
     ) {}
 
     private record Definition(
-            UUID id, String name, String slug, String fieldType, boolean required, JsonNode options
+            UUID id,
+            String name,
+            String slug,
+            String fieldType,
+            boolean required,
+            JsonNode options,
+            String helpText
     ) {}
 
     @Transactional(readOnly = true)
@@ -76,21 +85,36 @@ public class DocumentCustomFieldService {
         UUID spaceId = requireDocumentSpace(documentId);
         authorizationService.requireDocumentRelation(user.getId(), documentId, "viewer");
 
-        Map<UUID, JsonNode> values = new LinkedHashMap<>();
-        jdbc.query("SELECT field_id, value::text AS value FROM document_custom_field_values WHERE document_id = ?",
-                (rs, i) -> {
-                    values.put((UUID) rs.getObject("field_id"), parse(rs.getString("value")));
-                    return null;
-                },
-                documentId);
+        Map<UUID, JsonNode> values = loadValues(documentId);
 
         List<CustomFieldView> out = new ArrayList<>();
         for (Definition d : applicableDefinitions(spaceId, null)) {
-            out.add(new CustomFieldView(
-                    d.id(), d.name(), d.slug(), d.fieldType(), d.required(), d.options(),
-                    values.get(d.id())));
+            out.add(toView(d, values.get(d.id())));
         }
         return List.copyOf(out);
+    }
+
+    /**
+     * Vérifie les champs obligatoires applicables avant envoi en révision.
+     * @throws eu.socle.web.CodedStatusException {@code required_field_missing} si manquants
+     */
+    @Transactional(readOnly = true)
+    public void requireRequiredFieldsFilled(UUID documentId) {
+        UUID spaceId = requireDocumentSpace(documentId);
+        Map<UUID, JsonNode> values = loadValues(documentId);
+        List<RequiredFieldRef> missing = new ArrayList<>();
+        for (Definition d : applicableDefinitions(spaceId, null)) {
+            if (!d.required()) {
+                continue;
+            }
+            JsonNode v = values.get(d.id());
+            if (isEmptyValue(v)) {
+                missing.add(new RequiredFieldRef(d.id(), d.name(), d.slug()));
+            }
+        }
+        if (!missing.isEmpty()) {
+            throw ApiErrors.requiredFieldMissing(missing);
+        }
     }
 
     /**
@@ -131,8 +155,7 @@ public class DocumentCustomFieldService {
                 user.getId(), false, AuditActions.DOCUMENT_CUSTOM_FIELD_UPDATED,
                 "document", documentId, meta, null);
 
-        return new CustomFieldView(
-                def.id(), def.name(), def.slug(), def.fieldType(), def.required(), def.options(), normalized);
+        return toView(def, normalized);
     }
 
     /** Document actif → espace ; sinon 404. */
@@ -146,9 +169,55 @@ public class DocumentCustomFieldService {
         return rows.getFirst();
     }
 
+    private Map<UUID, JsonNode> loadValues(UUID documentId) {
+        Map<UUID, JsonNode> values = new LinkedHashMap<>();
+        jdbc.query(
+                "SELECT field_id, value::text AS value FROM document_custom_field_values WHERE document_id = ?",
+                (rs, i) -> {
+                    values.put((UUID) rs.getObject("field_id"), parse(rs.getString("value")));
+                    return null;
+                },
+                documentId);
+        return values;
+    }
+
+    private CustomFieldView toView(Definition d, JsonNode value) {
+        return new CustomFieldView(
+                d.id(), d.name(), d.slug(), d.fieldType(), d.required(),
+                filterOptionsForEditor(d.options()), value, d.helpText());
+    }
+
+    /** Options proposées à l'édition : exclut les valeurs archivées. */
+    private JsonNode filterOptionsForEditor(JsonNode options) {
+        if (options == null || !options.isArray()) {
+            return options;
+        }
+        var arr = objectMapper.createArrayNode();
+        for (JsonNode o : options) {
+            if (o.isObject() && o.has("archived") && o.get("archived").asBoolean(false)) {
+                continue;
+            }
+            arr.add(o);
+        }
+        return arr;
+    }
+
+    private static boolean isEmptyValue(JsonNode v) {
+        if (v == null || v.isNull()) {
+            return true;
+        }
+        if (v.isTextual()) {
+            return v.asText().isBlank();
+        }
+        if (v.isArray()) {
+            return v.isEmpty();
+        }
+        return false;
+    }
+
     private List<Definition> applicableDefinitions(UUID spaceId, UUID onlyFieldId) {
         return jdbc.query("""
-                SELECT id, name, slug, field_type, is_required, options::text AS options
+                SELECT id, name, slug, field_type, is_required, options::text AS options, help_text
                   FROM custom_field_definitions
                  WHERE status = 'active'
                    AND (scope = ? OR scope = ?)
@@ -161,7 +230,8 @@ public class DocumentCustomFieldService {
                         rs.getString("slug"),
                         rs.getString("field_type"),
                         rs.getBoolean("is_required"),
-                        parse(rs.getString("options"))),
+                        parse(rs.getString("options")),
+                        rs.getString("help_text")),
                 SCOPE_ALL_SPACES, spaceId.toString(), onlyFieldId, onlyFieldId);
     }
 
@@ -268,6 +338,7 @@ public class DocumentCustomFieldService {
         return value.asText();
     }
 
+    /** Toutes les options (y compris archivées) — une valeur déjà posée reste valide. */
     private static Set<String> allowedOptions(Definition def) {
         Set<String> out = new HashSet<>();
         JsonNode options = def.options();

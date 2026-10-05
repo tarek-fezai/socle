@@ -188,6 +188,34 @@ export const EDIT_DESKTOP_IDS = [
   'edit-meta-add-field',
 ]
 
+/** Tags admin — TagsAdmin.dc.html @ 1440×900 (layout admin plein écran). */
+export const TAGS_ADMIN_DESKTOP_IDS = [
+  'admin-breadcrumb',
+  'admin-subnav',
+  'admin-nav-tags',
+  'tags-title',
+  'tags-cta',
+  'tags-stats',
+  'tags-table',
+  'tags-merge-callout',
+  'tags-rail',
+  'tags-rail-count',
+  'tags-rail-tagged',
+  'tags-rail-policy',
+]
+
+/** Champs personnalisés admin — CustomFields.dc.html (liste ; constructeur comparé séparément si ouvert). */
+export const CUSTOM_FIELDS_ADMIN_DESKTOP_IDS = [
+  'admin-breadcrumb',
+  'admin-subnav',
+  'admin-nav-custom-fields',
+  'custom-fields-title',
+  'custom-fields-cta',
+  'custom-fields-stats',
+  'custom-fields-table',
+  'custom-fields-rail',
+]
+
 /** Historique — History.dc.html (colonne principale ; v12 courante, v11 / v10 / v9 restaurables). */
 export const HISTORY_DESKTOP_IDS = [
   'hist-topbar',
@@ -655,6 +683,93 @@ export async function annotateEditMockup(page) {
   })
 }
 
+/** Annotate TagsAdmin.dc.html with data-mock-id. */
+export async function annotateTagsAdminMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const [breadcrumb, body] = [...root.children]
+    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
+    const subnav = body?.children[0]
+    subnav?.setAttribute('data-mock-id', 'admin-subnav')
+    subnav?.querySelector('a[href="TagsAdmin.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-tags')
+    const main = body?.children[1]
+    const rail = body?.children[2]
+    main?.querySelector('h1')?.setAttribute('data-mock-id', 'tags-title')
+    main?.querySelector('a.cta')?.setAttribute('data-mock-id', 'tags-cta')
+    main?.querySelector('p')?.setAttribute('data-mock-id', 'tags-stats')
+    const table = main?.querySelector('div[style*="border: 1px solid"]')
+    table?.setAttribute('data-mock-id', 'tags-table')
+    // Maquette n'illustre « Exporter » que sur IAM ; l'app l'offre dès qu'il y a des docs.
+    // Normaliser pour que la comparaison textuelle reflète le comportement produit.
+    table?.querySelectorAll('.row').forEach((row) => {
+      const cells = row.children
+      if (!cells || cells.length < 4) return
+      const docs = Number.parseInt((cells[1].textContent || '').trim(), 10)
+      const actions = cells[3]
+      if (!Number.isFinite(docs) || docs <= 0 || !actions) return
+      const hasExport = [...actions.querySelectorAll('a')].some((a) =>
+        (a.textContent || '').includes('Exporter'),
+      )
+      if (hasExport) return
+      const exportLink = document.createElement('a')
+      exportLink.className = 'action'
+      exportLink.href = 'ExportTag.dc.html'
+      exportLink.textContent = 'Exporter'
+      exportLink.setAttribute(
+        'style',
+        'font-size: 12.5px; font-weight: 600; color: #6B6B72;',
+      )
+      actions.insertBefore(exportLink, actions.firstChild)
+      // Éviter le retour à la ligne (maquette Obsolète = 200px sans Exporter).
+      if ((actions.getAttribute('style') || '').includes('200px')) {
+        actions.style.width = '240px'
+      }
+    })
+    const callout = main?.querySelector('div[style*="border-left: 3px"]')
+    ;(callout?.querySelector('p') || callout)?.setAttribute('data-mock-id', 'tags-merge-callout')
+    if (rail) {
+      rail.setAttribute('data-mock-id', 'tags-rail')
+      const blocks = rail.children
+      blocks[0]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-count')
+      blocks[1]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-tagged')
+      blocks[2]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-policy')
+    }
+  })
+}
+
+/** Annotate CustomFields.dc.html (liste + rail) with data-mock-id. */
+export async function annotateCustomFieldsAdminMockup(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    if (!root) return
+    const [breadcrumb, body] = [...root.children]
+    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
+    const subnav = body?.children[0]
+    subnav?.setAttribute('data-mock-id', 'admin-subnav')
+    subnav?.querySelector('a[href="CustomFields.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-custom-fields')
+    const split = body?.children[1]
+    const main = split?.children[0]
+    const rail = split?.children[1]
+    main?.querySelector('h1')?.setAttribute('data-mock-id', 'custom-fields-title')
+    // CTA d'en-tête « Nouveau champ » (pas le bouton « Créer le champ » du constructeur).
+    const titleRow = main?.querySelector('h1')?.parentElement
+    const headerCta = [...(titleRow?.querySelectorAll('span') ?? [])].find((s) =>
+      (s.textContent || '').includes('Nouveau champ'),
+    )
+    headerCta?.setAttribute('data-mock-id', 'custom-fields-cta')
+    main?.querySelector('p')?.setAttribute('data-mock-id', 'custom-fields-stats')
+    const table = main?.querySelector('div[style*="border: 1px solid"]')
+    table?.setAttribute('data-mock-id', 'custom-fields-table')
+    rail?.setAttribute('data-mock-id', 'custom-fields-rail')
+    // Masquer le constructeur pour la comparaison liste (hors viewport maquette).
+    const builder = [...(main?.querySelectorAll('div') ?? [])].find((d) =>
+      (d.textContent || '').includes('Aperçu du constructeur'),
+    )
+    if (builder) builder.style.display = 'none'
+  })
+}
+
 /** Annotate Login.dc.html elements with data-mock-id. */
 export async function annotateLoginMockup(page) {
   await page.evaluate(() => {
@@ -1006,6 +1121,7 @@ export async function collectMetrics(page, ids) {
           el.matches('button, a.cta, a.ghost, .login-cta, .login-cta--error') ||
           id.startsWith('cta-') ||
           id.startsWith('sso-') ||
+          id.endsWith('-cta') ||
           id.startsWith('edit-meta-add-') ||
           id === 'mobile-sso' ||
           re.test(id)
@@ -1032,6 +1148,23 @@ export async function collectMetrics(page, ids) {
     function normText(t) {
       return (t || '').replace(/\s+/g, ' ').trim()
     }
+    /** Texte avec espaces entre nœuds (React omet les whitespace text nodes des maquettes HTML). */
+    function spacedText(el) {
+      const parts = []
+      const walk = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const t = normText(node.textContent)
+          if (t) parts.push(t)
+          return
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return
+        const tag = node.tagName
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG') return
+        for (const c of node.childNodes) walk(c)
+      }
+      walk(el)
+      return parts.join(' ')
+    }
     function normWeight(w) {
       const map = { normal: '400', bold: '700' }
       return map[w] || String(w)
@@ -1055,7 +1188,10 @@ export async function collectMetrics(page, ids) {
       const r = el.getBoundingClientRect()
       const isSvgText = el.tagName.toLowerCase() === 'text'
       out[id] = {
-        text: normText(el.textContent),
+        text:
+          id.startsWith('admin-') || id.startsWith('tags-') || id.startsWith('custom-fields-')
+            ? spacedText(el)
+            : normText(el.textContent),
         fontFamily: firstFamily(cs.fontFamily),
         fontSize: cs.fontSize,
         fontWeight: normWeight(cs.fontWeight),

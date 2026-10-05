@@ -7,7 +7,12 @@ import { MobileTabBar } from './MobileTabBar'
 import { MobileTopBar } from './MobileTopBar'
 import { ShellHeader } from './ShellHeader'
 import { ShellSidebar } from './ShellSidebar'
-import { hasOwnDocumentChrome, isApplePlatform, type ShellOutletContext } from './shellUtils'
+import {
+  hasOwnDocumentChrome,
+  isAdminWorkspacePath,
+  isApplePlatform,
+  type ShellOutletContext,
+} from './shellUtils'
 import './appshell.css'
 
 /** Shell authentifié : sidebar + header (desktop), top bar + drawer + tabs (mobile). */
@@ -17,6 +22,7 @@ export function AppShellLayout() {
   const { pathname } = useLocation()
   // Page de lecture : barre haute + onglets fournis par la page (Main.dc.html / MobilePage.dc.html).
   const ownChrome = hasOwnDocumentChrome(pathname)
+  const adminWorkspace = isAdminWorkspacePath(pathname)
 
   const openSearch = useCallback(() => {
     setMenuOpen(false)
@@ -44,16 +50,21 @@ export function AppShellLayout() {
   }, [])
 
   return (
-    <div className="shell-root" data-mock-id="shell-root">
+    <div
+      className={`shell-root${adminWorkspace ? ' shell-root--admin-workspace' : ''}`}
+      data-mock-id="shell-root"
+    >
       <div className="shell-desktop" data-mock-id="shell-frame">
-        <ShellSidebar onOpenSearch={openSearch} />
+        {!adminWorkspace && <ShellSidebar onOpenSearch={openSearch} />}
         <div className="shell-main-col">
-          {!ownChrome && <MobileTopBar onOpenMenu={() => setMenuOpen(true)} />}
-          {!ownChrome && <ShellHeader />}
+          {!ownChrome && !adminWorkspace && (
+            <MobileTopBar onOpenMenu={() => setMenuOpen(true)} />
+          )}
+          {!ownChrome && !adminWorkspace && <ShellHeader />}
           <div className="shell-outlet" data-mock-id="shell-outlet">
             <Outlet context={outletContext} />
           </div>
-          {!ownChrome && <MobileTabBar />}
+          {!ownChrome && !adminWorkspace && <MobileTabBar />}
         </div>
       </div>
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onOpenSearch={openSearch} />

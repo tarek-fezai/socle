@@ -11,6 +11,19 @@
   min-height: 100vh;
 }
 
+.shell-root--admin-workspace .shell-desktop {
+  min-height: 100vh;
+}
+
+.shell-root--admin-workspace .shell-main-col {
+  width: 100%;
+  max-width: none;
+}
+
+.shell-root--admin-workspace .shell-outlet {
+  overflow: hidden;
+}
+
 .shell-root a {
   text-decoration: none;
 }

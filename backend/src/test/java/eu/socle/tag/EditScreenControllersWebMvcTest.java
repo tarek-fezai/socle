@@ -126,7 +126,8 @@ class EditScreenControllersWebMvcTest {
         when(customFieldService.setValue(any(), eq(DOC), eq(FIELD), any()))
                 .thenReturn(new DocumentCustomFieldService.CustomFieldView(
                         FIELD, "Réf", "ref", "texte", false, null,
-                        new com.fasterxml.jackson.databind.ObjectMapper().readTree("\"abc\"")));
+                        new com.fasterxml.jackson.databind.ObjectMapper().readTree("\"abc\""),
+                        null));
         mockMvc.perform(put("/api/v1/documents/{id}/custom-fields/{f}", DOC, FIELD).with(jwt())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"abc\"}"))
                 .andExpect(status().isOk())
