@@ -721,6 +721,10 @@ export async function annotateTagsAdminMockup(page) {
         'font-size: 12.5px; font-weight: 600; color: #6B6B72;',
       )
       actions.insertBefore(exportLink, actions.firstChild)
+      // Éviter le retour à la ligne (maquette Obsolète = 200px sans Exporter).
+      if ((actions.getAttribute('style') || '').includes('200px')) {
+        actions.style.width = '240px'
+      }
     })
     const callout = main?.querySelector('div[style*="border-left: 3px"]')
     ;(callout?.querySelector('p') || callout)?.setAttribute('data-mock-id', 'tags-merge-callout')
@@ -1184,7 +1188,10 @@ export async function collectMetrics(page, ids) {
       const r = el.getBoundingClientRect()
       const isSvgText = el.tagName.toLowerCase() === 'text'
       out[id] = {
-        text: spacedText(el),
+        text:
+          id.startsWith('admin-') || id.startsWith('tags-') || id.startsWith('custom-fields-')
+            ? spacedText(el)
+            : normText(el.textContent),
         fontFamily: firstFamily(cs.fontFamily),
         fontSize: cs.fontSize,
         fontWeight: normWeight(cs.fontWeight),

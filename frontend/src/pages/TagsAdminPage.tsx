@@ -241,7 +241,7 @@ export function TagsAdminPage() {
             </div>
             <div style={{ flex: 1, color: '#43434A' }}>{tag.documentCount}</div>
             <div style={{ flex: 1.6, color: '#6B6B72' }}>{tag.createdByDisplayName ?? '—'}</div>
-            <div className="admin-actions" style={{ width: tag.governed ? 200 : 240 }}>
+            <div className="admin-actions" style={{ width: 240 }}>
               {tag.documentCount > 0 && (
                 <Link
                   to={`/tags/${tag.id}/export`}
