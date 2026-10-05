@@ -1117,10 +1117,54 @@
         }
       }
     },
+    "/api/v1/admin/retention" : {
+      "get" : {
+        "tags" : [ "retention-admin-controller" ],
+        "operationId" : "get_10",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RetentionSettingsView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "retention-admin-controller" ],
+        "operationId" : "update_7",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateRetentionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RetentionSettingsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/custom-fields/{id}" : {
       "put" : {
         "tags" : [ "custom-field-admin-controller" ],
-        "operationId" : "update_7",
+        "operationId" : "update_8",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -1172,6 +1216,50 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/FieldAdminView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/branding" : {
+      "get" : {
+        "tags" : [ "branding-admin-controller" ],
+        "operationId" : "get_11",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrandingAdminView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "branding-admin-controller" ],
+        "operationId" : "update_9",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateBrandingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrandingAdminView"
                 }
               }
             }
@@ -3272,10 +3360,100 @@
         }
       }
     },
+    "/api/v1/admin/legal-holds" : {
+      "get" : {
+        "tags" : [ "legal-hold-admin-controller" ],
+        "operationId" : "list_13",
+        "parameters" : [ {
+          "name" : "activeOnly",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LegalHoldListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "legal-hold-admin-controller" ],
+        "operationId" : "place",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlaceLegalHoldRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LegalHoldView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/legal-holds/{id}/release" : {
+      "post" : {
+        "tags" : [ "legal-hold-admin-controller" ],
+        "operationId" : "release_2",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReleaseLegalHoldRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LegalHoldView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/custom-fields" : {
       "get" : {
         "tags" : [ "custom-field-admin-controller" ],
-        "operationId" : "list_13",
+        "operationId" : "list_14",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -3309,6 +3487,133 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/FieldAdminView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/branding/test-email" : {
+      "post" : {
+        "tags" : [ "branding-admin-controller" ],
+        "operationId" : "testEmail",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TestEmailRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TestEmailResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/branding/logo" : {
+      "post" : {
+        "tags" : [ "branding-admin-controller" ],
+        "operationId" : "uploadLogo",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrandingAdminView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "branding-admin-controller" ],
+        "operationId" : "removeLogo",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrandingAdminView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/branding/favicon" : {
+      "post" : {
+        "tags" : [ "branding-admin-controller" ],
+        "operationId" : "uploadFavicon",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrandingAdminView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "branding-admin-controller" ],
+        "operationId" : "removeFavicon",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrandingAdminView"
                 }
               }
             }
@@ -3422,7 +3727,7 @@
     "/api/v1/access/{objectType}/{objectId}" : {
       "get" : {
         "tags" : [ "access-controller" ],
-        "operationId" : "list_14",
+        "operationId" : "list_15",
         "parameters" : [ {
           "name" : "objectType",
           "in" : "path",
@@ -3526,7 +3831,7 @@
     "/api/v1/templates/{id}" : {
       "get" : {
         "tags" : [ "template-controller" ],
-        "operationId" : "get_10",
+        "operationId" : "get_12",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3569,7 +3874,7 @@
       },
       "patch" : {
         "tags" : [ "template-controller" ],
-        "operationId" : "update_8",
+        "operationId" : "update_10",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3606,7 +3911,7 @@
     "/api/v1/folders/{id}" : {
       "get" : {
         "tags" : [ "folder-controller" ],
-        "operationId" : "get_11",
+        "operationId" : "get_13",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3657,7 +3962,7 @@
       },
       "patch" : {
         "tags" : [ "folder-controller" ],
-        "operationId" : "update_9",
+        "operationId" : "update_11",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3694,7 +3999,7 @@
     "/api/folders/{id}" : {
       "get" : {
         "tags" : [ "folder-controller" ],
-        "operationId" : "get_12",
+        "operationId" : "get_14",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3745,7 +4050,7 @@
       },
       "patch" : {
         "tags" : [ "folder-controller" ],
-        "operationId" : "update_10",
+        "operationId" : "update_12",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3807,7 +4112,7 @@
       },
       "patch" : {
         "tags" : [ "comment-controller" ],
-        "operationId" : "update_11",
+        "operationId" : "update_13",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3844,7 +4149,7 @@
     "/api/v1/webhooks/deliveries" : {
       "get" : {
         "tags" : [ "webhook-delivery-controller" ],
-        "operationId" : "list_15",
+        "operationId" : "list_16",
         "parameters" : [ {
           "name" : "endpointId",
           "in" : "query",
@@ -3896,7 +4201,7 @@
     "/api/v1/trash" : {
       "get" : {
         "tags" : [ "trash-controller" ],
-        "operationId" : "list_16",
+        "operationId" : "list_17",
         "parameters" : [ {
           "name" : "resourceType",
           "in" : "query",
@@ -4256,6 +4561,78 @@
         }
       }
     },
+    "/api/v1/public/branding" : {
+      "get" : {
+        "tags" : [ "public-branding-controller" ],
+        "operationId" : "get_15",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicBrandingView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/branding/logo" : {
+      "get" : {
+        "tags" : [ "public-branding-controller" ],
+        "operationId" : "logo",
+        "parameters" : [ {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "byte"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/branding/favicon" : {
+      "get" : {
+        "tags" : [ "public-branding-controller" ],
+        "operationId" : "favicon",
+        "parameters" : [ {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "byte"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/public/auth-config" : {
       "get" : {
         "tags" : [ "public-auth-config-controller" ],
@@ -4278,7 +4655,7 @@
     "/api/v1/polls/{id}" : {
       "get" : {
         "tags" : [ "poll-controller" ],
-        "operationId" : "get_13",
+        "operationId" : "get_16",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -4326,7 +4703,7 @@
     "/api/v1/notifications" : {
       "get" : {
         "tags" : [ "notification-controller" ],
-        "operationId" : "list_17",
+        "operationId" : "list_18",
         "parameters" : [ {
           "name" : "unreadOnly",
           "in" : "query",
@@ -4427,7 +4804,7 @@
     "/api/v1/global-roles" : {
       "get" : {
         "tags" : [ "global-role-controller" ],
-        "operationId" : "list_18",
+        "operationId" : "list_19",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -4504,7 +4881,7 @@
     "/api/v1/favorites" : {
       "get" : {
         "tags" : [ "favorite-controller" ],
-        "operationId" : "list_19",
+        "operationId" : "list_20",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -5037,7 +5414,7 @@
     "/api/v1/documents/{id}/custom-fields" : {
       "get" : {
         "tags" : [ "document-custom-field-controller" ],
-        "operationId" : "list_20",
+        "operationId" : "list_21",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5278,7 +5655,7 @@
     "/api/v1/audit" : {
       "get" : {
         "tags" : [ "audit-controller" ],
-        "operationId" : "list_21",
+        "operationId" : "list_22",
         "parameters" : [ {
           "name" : "resourceType",
           "in" : "query",
@@ -5361,7 +5738,7 @@
     "/api/v1/attachments/{id}" : {
       "get" : {
         "tags" : [ "attachment-controller" ],
-        "operationId" : "get_14",
+        "operationId" : "get_17",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5396,7 +5773,7 @@
     "/api/v1/approvals/{requestId}" : {
       "get" : {
         "tags" : [ "approval-controller" ],
-        "operationId" : "get_15",
+        "operationId" : "get_18",
         "parameters" : [ {
           "name" : "requestId",
           "in" : "path",
@@ -6584,6 +6961,69 @@
           }
         }
       },
+      "UpdateRetentionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "auditRetentionMonths" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "versionRetentionMode" : {
+            "type" : "string"
+          },
+          "versionRetentionValue" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "archivedDocsRetentionYears" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "processingRegisterReviewedAt" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }
+      },
+      "RetentionSettingsView" : {
+        "type" : "object",
+        "properties" : {
+          "auditRetentionMonths" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "versionRetentionMode" : {
+            "type" : "string"
+          },
+          "versionRetentionValue" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "archivedDocsRetentionYears" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "processingRegisterReviewedAt" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "dataResidenceLabel" : {
+            "type" : "string"
+          },
+          "activeLegalHolds" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lastPurgeRanAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "UpdateFieldRequest" : {
         "type" : "object",
         "properties" : {
@@ -6655,6 +7095,65 @@
             "format" : "int64"
           },
           "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "UpdateBrandingRequest" : {
+        "type" : "object",
+        "properties" : {
+          "accentColor" : {
+            "type" : "string"
+          },
+          "hidePoweredBy" : {
+            "type" : "boolean"
+          },
+          "senderName" : {
+            "type" : "string"
+          },
+          "senderEmail" : {
+            "type" : "string"
+          }
+        }
+      },
+      "BrandingAdminView" : {
+        "type" : "object",
+        "properties" : {
+          "instanceName" : {
+            "type" : "string"
+          },
+          "accentColor" : {
+            "type" : "string"
+          },
+          "hidePoweredBy" : {
+            "type" : "boolean"
+          },
+          "senderName" : {
+            "type" : "string"
+          },
+          "senderEmail" : {
+            "type" : "string"
+          },
+          "hasLogo" : {
+            "type" : "boolean"
+          },
+          "hasFavicon" : {
+            "type" : "boolean"
+          },
+          "logoUrl" : {
+            "type" : "string"
+          },
+          "faviconUrl" : {
+            "type" : "string"
+          },
+          "publicBaseUrl" : {
+            "type" : "string"
+          },
+          "publicBaseUrlNote" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
           }
@@ -7626,6 +8125,79 @@
           }
         }
       },
+      "PlaceLegalHoldRequest" : {
+        "type" : "object",
+        "properties" : {
+          "scopeType" : {
+            "type" : "string"
+          },
+          "scopeId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LegalHoldView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "scopeType" : {
+            "type" : "string"
+          },
+          "scopeId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "scopeLabel" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "createdByDisplayName" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "releasedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "releasedByDisplayName" : {
+            "type" : "string"
+          },
+          "releasedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "releaseReason" : {
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ReleaseLegalHoldRequest" : {
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        }
+      },
       "CreateFieldRequest" : {
         "type" : "object",
         "properties" : {
@@ -7656,6 +8228,31 @@
           }
         },
         "required" : [ "fieldType", "name", "scope" ]
+      },
+      "TestEmailRequest" : {
+        "type" : "object",
+        "properties" : {
+          "to" : {
+            "type" : "string"
+          }
+        }
+      },
+      "TestEmailResponse" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "from" : {
+            "type" : "string"
+          },
+          "channel" : {
+            "type" : "string"
+          }
+        }
       },
       "PermissionRequest" : {
         "type" : "object",
@@ -8206,6 +8803,26 @@
           },
           "warning" : {
             "type" : "string"
+          }
+        }
+      },
+      "PublicBrandingView" : {
+        "type" : "object",
+        "properties" : {
+          "instanceName" : {
+            "type" : "string"
+          },
+          "accentColor" : {
+            "type" : "string"
+          },
+          "logoUrl" : {
+            "type" : "string"
+          },
+          "faviconUrl" : {
+            "type" : "string"
+          },
+          "hidePoweredBy" : {
+            "type" : "boolean"
           }
         }
       },
@@ -9093,6 +9710,21 @@
           },
           "procedure" : {
             "type" : "string"
+          }
+        }
+      },
+      "LegalHoldListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "holds" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LegalHoldView"
+            }
+          },
+          "activeCount" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },

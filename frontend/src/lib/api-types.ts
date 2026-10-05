@@ -292,6 +292,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_10"];
+        put: operations["update_7"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/custom-fields/{id}": {
         parameters: {
             query?: never;
@@ -300,9 +316,25 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["update_7"];
+        put: operations["update_8"];
         post?: never;
         delete: operations["delete_7"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_11"];
+        put: operations["update_9"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1108,7 +1140,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/custom-fields": {
+    "/api/v1/admin/legal-holds": {
         parameters: {
             query?: never;
             header?: never;
@@ -1117,8 +1149,88 @@ export interface paths {
         };
         get: operations["list_13"];
         put?: never;
+        post: operations["place"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/legal-holds/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["release_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/custom-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_14"];
+        put?: never;
         post: operations["create_13"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/branding/test-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["testEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/branding/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadLogo"];
+        delete: operations["removeLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/branding/favicon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadFavicon"];
+        delete: operations["removeFavicon"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1195,7 +1307,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_14"];
+        get: operations["list_15"];
         put?: never;
         post: operations["grant_1"];
         delete: operations["revoke"];
@@ -1211,13 +1323,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_10"];
+        get: operations["get_12"];
         put?: never;
         post?: never;
         delete: operations["delete_8"];
         options?: never;
         head?: never;
-        patch: operations["update_8"];
+        patch: operations["update_10"];
         trace?: never;
     };
     "/api/v1/folders/{id}": {
@@ -1227,13 +1339,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_11"];
+        get: operations["get_13"];
         put?: never;
         post?: never;
         delete: operations["delete_9"];
         options?: never;
         head?: never;
-        patch: operations["update_9"];
+        patch: operations["update_11"];
         trace?: never;
     };
     "/api/folders/{id}": {
@@ -1243,13 +1355,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_12"];
+        get: operations["get_14"];
         put?: never;
         post?: never;
         delete: operations["delete_10"];
         options?: never;
         head?: never;
-        patch: operations["update_10"];
+        patch: operations["update_12"];
         trace?: never;
     };
     "/api/v1/comments/{id}": {
@@ -1265,7 +1377,7 @@ export interface paths {
         delete: operations["delete_11"];
         options?: never;
         head?: never;
-        patch: operations["update_11"];
+        patch: operations["update_13"];
         trace?: never;
     };
     "/api/v1/webhooks/deliveries": {
@@ -1275,7 +1387,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_15"];
+        get: operations["list_16"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1291,7 +1403,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_16"];
+        get: operations["list_17"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1444,6 +1556,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_15"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/branding/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["logo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/branding/favicon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["favicon"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/auth-config": {
         parameters: {
             query?: never;
@@ -1467,7 +1627,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_13"];
+        get: operations["get_16"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1499,7 +1659,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_17"];
+        get: operations["list_18"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1563,7 +1723,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_18"];
+        get: operations["list_19"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1611,7 +1771,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_19"];
+        get: operations["list_20"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1851,7 +2011,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_20"];
+        get: operations["list_21"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1979,7 +2139,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_21"];
+        get: operations["list_22"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1995,7 +2155,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_14"];
+        get: operations["get_17"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2011,7 +2171,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_15"];
+        get: operations["get_18"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2580,6 +2740,35 @@ export interface components {
             totalDocumentCount?: number;
             tagCreationPolicy?: string;
         };
+        UpdateRetentionRequest: {
+            /** Format: int32 */
+            auditRetentionMonths?: number;
+            versionRetentionMode?: string;
+            /** Format: int32 */
+            versionRetentionValue?: number;
+            /** Format: int32 */
+            archivedDocsRetentionYears?: number;
+            /** Format: date */
+            processingRegisterReviewedAt?: string;
+        };
+        RetentionSettingsView: {
+            /** Format: int32 */
+            auditRetentionMonths?: number;
+            versionRetentionMode?: string;
+            /** Format: int32 */
+            versionRetentionValue?: number;
+            /** Format: int32 */
+            archivedDocsRetentionYears?: number;
+            /** Format: date */
+            processingRegisterReviewedAt?: string;
+            dataResidenceLabel?: string;
+            /** Format: int64 */
+            activeLegalHolds?: number;
+            /** Format: date-time */
+            lastPurgeRanAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         UpdateFieldRequest: {
             name: string;
             helpText?: string;
@@ -2606,6 +2795,27 @@ export interface components {
             documentCount?: number;
             /** Format: date-time */
             createdAt?: string;
+        };
+        UpdateBrandingRequest: {
+            accentColor?: string;
+            hidePoweredBy?: boolean;
+            senderName?: string;
+            senderEmail?: string;
+        };
+        BrandingAdminView: {
+            instanceName?: string;
+            accentColor?: string;
+            hidePoweredBy?: boolean;
+            senderName?: string;
+            senderEmail?: string;
+            hasLogo?: boolean;
+            hasFavicon?: boolean;
+            logoUrl?: string;
+            faviconUrl?: string;
+            publicBaseUrl?: string;
+            publicBaseUrlNote?: string;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         CreateRequest: {
             url?: string;
@@ -2994,6 +3204,36 @@ export interface components {
             /** Format: date-time */
             grantedAt?: string;
         };
+        PlaceLegalHoldRequest: {
+            scopeType?: string;
+            /** Format: uuid */
+            scopeId?: string;
+            reason?: string;
+        };
+        LegalHoldView: {
+            /** Format: uuid */
+            id?: string;
+            scopeType?: string;
+            /** Format: uuid */
+            scopeId?: string;
+            scopeLabel?: string;
+            reason?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            createdByDisplayName?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: uuid */
+            releasedBy?: string;
+            releasedByDisplayName?: string;
+            /** Format: date-time */
+            releasedAt?: string;
+            releaseReason?: string;
+            active?: boolean;
+        };
+        ReleaseLegalHoldRequest: {
+            reason?: string;
+        };
         CreateFieldRequest: {
             name: string;
             helpText?: string;
@@ -3002,6 +3242,15 @@ export interface components {
             required?: boolean;
             options?: components["schemas"]["JsonNode"];
             status?: string;
+        };
+        TestEmailRequest: {
+            to?: string;
+        };
+        TestEmailResponse: {
+            status?: string;
+            to?: string;
+            from?: string;
+            channel?: string;
         };
         PermissionRequest: {
             relation: string;
@@ -3221,6 +3470,13 @@ export interface components {
             total?: number;
             totalIsEstimate?: boolean;
             warning?: string;
+        };
+        PublicBrandingView: {
+            instanceName?: string;
+            accentColor?: string;
+            logoUrl?: string;
+            faviconUrl?: string;
+            hidePoweredBy?: boolean;
         };
         NotificationPage: {
             items?: components["schemas"]["NotificationView"][];
@@ -3562,6 +3818,11 @@ export interface components {
             storageProvider?: string;
             items?: components["schemas"]["DriftItem"][];
             procedure?: string;
+        };
+        LegalHoldListResponse: {
+            holds?: components["schemas"]["LegalHoldView"][];
+            /** Format: int64 */
+            activeCount?: number;
         };
         FieldListResponse: {
             fields?: components["schemas"]["FieldAdminView"][];
@@ -4468,7 +4729,51 @@ export interface operations {
             };
         };
     };
+    get_10: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RetentionSettingsView"];
+                };
+            };
+        };
+    };
     update_7: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRetentionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RetentionSettingsView"];
+                };
+            };
+        };
+    };
+    update_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -4512,6 +4817,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["FieldAdminView"];
+                };
+            };
+        };
+    };
+    get_11: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BrandingAdminView"];
+                };
+            };
+        };
+    };
+    update_9: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBrandingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BrandingAdminView"];
                 };
             };
         };
@@ -6151,6 +6500,78 @@ export interface operations {
     };
     list_13: {
         parameters: {
+            query?: {
+                activeOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LegalHoldListResponse"];
+                };
+            };
+        };
+    };
+    place: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceLegalHoldRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LegalHoldView"];
+                };
+            };
+        };
+    };
+    release_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseLegalHoldRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LegalHoldView"];
+                };
+            };
+        };
+    };
+    list_14: {
+        parameters: {
             query?: never;
             header?: never;
             path?: never;
@@ -6189,6 +6610,124 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["FieldAdminView"];
+                };
+            };
+        };
+    };
+    testEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TestEmailRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TestEmailResponse"];
+                };
+            };
+        };
+    };
+    uploadLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BrandingAdminView"];
+                };
+            };
+        };
+    };
+    removeLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BrandingAdminView"];
+                };
+            };
+        };
+    };
+    uploadFavicon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BrandingAdminView"];
+                };
+            };
+        };
+    };
+    removeFavicon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BrandingAdminView"];
                 };
             };
         };
@@ -6287,7 +6826,7 @@ export interface operations {
             };
         };
     };
-    list_14: {
+    list_15: {
         parameters: {
             query?: never;
             header?: never;
@@ -6360,7 +6899,7 @@ export interface operations {
             };
         };
     };
-    get_10: {
+    get_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -6402,7 +6941,7 @@ export interface operations {
             };
         };
     };
-    update_8: {
+    update_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -6428,7 +6967,7 @@ export interface operations {
             };
         };
     };
-    get_11: {
+    get_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -6474,7 +7013,7 @@ export interface operations {
             };
         };
     };
-    update_9: {
+    update_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -6500,7 +7039,7 @@ export interface operations {
             };
         };
     };
-    get_12: {
+    get_14: {
         parameters: {
             query?: never;
             header?: never;
@@ -6546,7 +7085,7 @@ export interface operations {
             };
         };
     };
-    update_10: {
+    update_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -6594,7 +7133,7 @@ export interface operations {
             };
         };
     };
-    update_11: {
+    update_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -6620,7 +7159,7 @@ export interface operations {
             };
         };
     };
-    list_15: {
+    list_16: {
         parameters: {
             query?: {
                 endpointId?: string;
@@ -6645,7 +7184,7 @@ export interface operations {
             };
         };
     };
-    list_16: {
+    list_17: {
         parameters: {
             query?: {
                 resourceType?: string;
@@ -6896,6 +7435,70 @@ export interface operations {
             };
         };
     };
+    get_15: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PublicBrandingView"];
+                };
+            };
+        };
+    };
+    logo: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-None-Match"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    favicon: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-None-Match"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
     authConfig: {
         parameters: {
             query?: never;
@@ -6918,7 +7521,7 @@ export interface operations {
             };
         };
     };
-    get_13: {
+    get_16: {
         parameters: {
             query?: never;
             header?: never;
@@ -6962,7 +7565,7 @@ export interface operations {
             };
         };
     };
-    list_17: {
+    list_18: {
         parameters: {
             query?: {
                 unreadOnly?: boolean;
@@ -7050,7 +7653,7 @@ export interface operations {
             };
         };
     };
-    list_18: {
+    list_19: {
         parameters: {
             query?: never;
             header?: never;
@@ -7114,7 +7717,7 @@ export interface operations {
             };
         };
     };
-    list_19: {
+    list_20: {
         parameters: {
             query?: never;
             header?: never;
@@ -7462,7 +8065,7 @@ export interface operations {
             };
         };
     };
-    list_20: {
+    list_21: {
         parameters: {
             query?: never;
             header?: never;
@@ -7641,7 +8244,7 @@ export interface operations {
             };
         };
     };
-    list_21: {
+    list_22: {
         parameters: {
             query?: {
                 resourceType?: string;
@@ -7670,7 +8273,7 @@ export interface operations {
             };
         };
     };
-    get_14: {
+    get_17: {
         parameters: {
             query?: never;
             header?: {
@@ -7694,7 +8297,7 @@ export interface operations {
             };
         };
     };
-    get_15: {
+    get_18: {
         parameters: {
             query?: never;
             header?: never;
