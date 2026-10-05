@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 type Api = {
   get: <T>(url: string) => Promise<{ data: T }>
   post: <T>(url: string, body: unknown) => Promise<{ data: T }>

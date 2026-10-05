@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { Fragment, useState } from 'react'
 import type { CompareHunk, CompareLine, VersionCompare } from '../../lib/documents'
 import {

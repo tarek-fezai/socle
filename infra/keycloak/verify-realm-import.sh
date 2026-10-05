@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 #
 # Vérifie que chaque fichier realm du dépôt s'importe avec la même image Keycloak
 # et la même commande que deploy/compose (start --import-realm + Postgres).

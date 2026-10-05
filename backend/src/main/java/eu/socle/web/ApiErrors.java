@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.web;
 
 import org.springframework.http.HttpStatus;
@@ -39,8 +39,28 @@ public final class ApiErrors {
     public static final String BRANDING_IMAGE_TYPE_REJECTED = "branding_image_type_rejected";
     public static final String BRANDING_SENDER_NOT_CONFIGURED = "branding_sender_not_configured";
     public static final String GIT_PURGE_FAILED = "git_purge_failed";
+    /** Création d'utilisateur refusée (limite de sièges / licence). */
+    public static final String LICENCE_USER_LIMIT = "licence_user_limit";
+    public static final String LICENCE_REJECTED = "licence_rejected";
 
     private ApiErrors() {}
+
+    public static CodedStatusException licenceUserLimit(int maxUsers, long activeUsers, String reason) {
+        return new CodedStatusException(
+                HttpStatus.FORBIDDEN,
+                LICENCE_USER_LIMIT,
+                "Limite d'utilisateurs atteinte (" + activeUsers + "/" + maxUsers
+                        + "). Motif : " + reason
+                        + ". Les comptes existants restent accessibles.",
+                Map.of("maxUsers", maxUsers, "activeUsers", activeUsers, "reason", reason));
+    }
+
+    public static CodedStatusException licenceRejected(String detail) {
+        return new CodedStatusException(
+                HttpStatus.BAD_REQUEST,
+                LICENCE_REJECTED,
+                detail == null || detail.isBlank() ? "Fichier de licence rejeté" : detail);
+    }
 
     /** {@code detail} doit inclure le chemin JSON du nœud fautif (ex. {@code $.content[0]}). */
     public static CodedStatusException contentInvalid(String path, String reason) {

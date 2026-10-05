@@ -36,7 +36,14 @@ Schéma SQL : Flyway dans `backend/src/main/resources/db/migration/` uniquement.
 
 ## Licence
 
-Socle est distribué sous **GNU Affero General Public License v3.0 or later**
-([AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0.html)).
-Voir [`LICENSE`](LICENSE). Contributions : [`CONTRIBUTING.md`](CONTRIBUTING.md).
-Vulnérabilités : [`SECURITY.md`](SECURITY.md).
+Copyright (c) 2026 Tarek Fezai. Tous droits réservés.
+
+Le code source est rendu visible à titre informatif. Aucune licence d'utilisation, de copie,
+de modification ou de distribution n'est accordée sans accord écrit préalable du titulaire.
+Voir [`LICENSE`](LICENSE) et [`NOTICE`](NOTICE).
+
+Les versions publiées jusqu'au tag git [`last-agpl`](https://github.com/tarek-fezai/socle/releases/tag/last-agpl)
+inclus restent régies par l'AGPL-3.0-or-later.
+
+Dépendances et services tiers : [`docs/licences-tierces.md`](docs/licences-tierces.md).
+Contributions : [`CONTRIBUTING.md`](CONTRIBUTING.md). Vulnérabilités : [`SECURITY.md`](SECURITY.md).

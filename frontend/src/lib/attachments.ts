@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { api } from './api'
 
 /** Types de nœuds TipTap portés par une pièce jointe (JSON du corps). */

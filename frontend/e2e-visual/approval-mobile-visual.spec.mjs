@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Approbation mobile (/approvals @ 390×844) vs MobileApproval.dc.html.
  * Même schéma que history-mobile-visual : pixel-diff plein écran (glyphes masqués, ≤ 1 %) +

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Branding admin (/admin/branding) vs Branding.dc.html @ 1440×900
  * (maquette annotée : sans badge Entreprise / DNS / socle.app).

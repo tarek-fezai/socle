@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /** Données alignées sur CustomFields.dc.html (liste des 5 champs). */
 
 export const SPACE_CONFORMITE = {

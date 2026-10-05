@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 # Éphémère : prouve qu'un fichier realm s'importe avec la même image / commande
 # que deploy/compose (start --import-realm). REALM_FILE = chemin absolu du JSON.
 services:

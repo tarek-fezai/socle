@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { useEffect, useState } from 'react'
 import { apiErrorMessage } from '../../lib/apiError'
 import { attachmentObjectUrl, downloadAttachment, formatBytes } from '../../lib/attachments'

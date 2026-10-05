@@ -4,3 +4,6 @@ description: Socle document platform — production Helm chart
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+annotations:
+  # SPDX / OCI — pas AGPL (voir LICENSE et tag last-agpl pour l'historique)
+  org.opencontainers.image.licenses: LicenseRef-Socle-Proprietary

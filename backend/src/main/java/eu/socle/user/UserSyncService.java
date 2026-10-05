@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.user;
 
 import eu.socle.identity.AccessAuditService;
@@ -8,8 +8,11 @@ import eu.socle.identity.AccessPolicyService;
 import eu.socle.identity.IdentityClaimsMapper;
 import eu.socle.identity.IdentityProperties;
 import eu.socle.identity.PlatformRoleService;
+import eu.socle.licence.LicenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,7 @@ public class UserSyncService {
     private final PlatformRoleService platformRoleService;
     private final AccessPolicyService accessPolicyService;
     private final AccessAuditService accessAuditService;
+    private final LicenceService licenceService;
 
     public UserSyncService(
             UserRepository userRepository,
@@ -46,7 +50,8 @@ public class UserSyncService {
             IdentityProperties identityProperties,
             PlatformRoleService platformRoleService,
             AccessPolicyService accessPolicyService,
-            AccessAuditService accessAuditService
+            AccessAuditService accessAuditService,
+            @Lazy @Autowired(required = false) LicenceService licenceService
     ) {
         this.accessPolicyService = accessPolicyService;
         this.accessAuditService = accessAuditService;
@@ -56,6 +61,7 @@ public class UserSyncService {
         this.claimsMapper = claimsMapper;
         this.identityProperties = identityProperties;
         this.platformRoleService = platformRoleService;
+        this.licenceService = licenceService;
     }
 
     @Transactional
@@ -91,8 +97,11 @@ public class UserSyncService {
                 // Compte existant rattaché à cette identité : désactivé / domaine / groupe.
                 requireGranted(accessPolicyService.evaluate(jwt, user));
             } else {
-                // Aucune création avant décision de la politique d'accès.
+                // Aucune création avant décision de la politique d'accès + limite de sièges.
                 requireGranted(accessPolicyService.evaluate(jwt, null));
+                if (licenceService != null) {
+                    licenceService.assertCanCreateUser();
+                }
                 newAccount = true;
                 user = new UserEntity();
                 user.setId(allocateId(subject));

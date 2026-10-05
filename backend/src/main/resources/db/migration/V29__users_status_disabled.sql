@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 -- Politique d'accès : un compte peut être désactivé par un administrateur (status = 'disabled').
 -- Les statuts historiques (invited, suspended, deactivated) restent autorisés pour les lignes existantes.
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;

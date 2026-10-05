@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Fixtures Historique / Comparaison / Restauration — alignées sur History.dc.html, Diff.dc.html,
  * RestoreVersion.dc.html et MobileHistory.dc.html. Dates en UTC : le navigateur de test est en

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import { RequireAuth } from './auth/RequireAuth'
@@ -13,6 +13,7 @@ import { TagsAdminPage } from './pages/TagsAdminPage'
 import { CustomFieldsAdminPage } from './pages/CustomFieldsAdminPage'
 import { RetentionAdminPage } from './pages/RetentionAdminPage'
 import { BrandingAdminPage } from './pages/BrandingAdminPage'
+import { LicenceAdminPage } from './pages/LicenceAdminPage'
 import { AccessPage } from './pages/AccessPage'
 import { ApprovalsPage } from './pages/ApprovalsPage'
 import { ApprovalDiffPage } from './pages/approvals/ApprovalDiffPage'
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/admin/custom-fields" element={<CustomFieldsAdminPage />} />
           <Route path="/admin/retention" element={<RetentionAdminPage />} />
           <Route path="/admin/branding" element={<BrandingAdminPage />} />
+          <Route path="/admin/licence" element={<LicenceAdminPage />} />
           <Route path="/docs/:id" element={<DocumentReadPage />} />
           <Route path="/docs/:id/edit" element={<DocumentEditPage />} />
           <Route path="/docs/:id/view" element={<DocumentViewRedirect />} />

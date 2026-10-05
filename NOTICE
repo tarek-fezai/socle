@@ -1,0 +1,12 @@
+Socle
+Copyright (c) 2026 Tarek Fezai. Tous droits réservés.
+
+Le code source de Socle est rendu visible à titre informatif. Aucune licence
+d'utilisation, de copie, de modification ou de distribution n'est accordée sans
+accord écrit préalable du titulaire.
+
+Les versions publiées jusqu'au tag git `last-agpl` inclus restent régies par
+l'AGPL-3.0-or-later.
+
+Les dépendances et services tiers sont documentés dans docs/licences-tierces.md.
+Leur utilisation reste soumise à leurs licences respectives.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 # syntax=docker/dockerfile:1
 
 # eclipse-temurin:21-jdk-jammy (build — Maven + JDK)
@@ -30,6 +30,8 @@ RUN jlink \
 
 # alpine:3.20.3 (runtime OS) + Temurin 21 JRE (jlink, non-root UID 10001)
 FROM alpine@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a AS runtime
+
+LABEL org.opencontainers.image.licenses="LicenseRef-Socle-Proprietary"
 
 RUN apk add --no-cache ca-certificates \
     && adduser -D -u 10001 -H -s /sbin/nologin appuser \

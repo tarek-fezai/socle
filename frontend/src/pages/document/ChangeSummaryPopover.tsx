@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
 export const CHANGE_SUMMARY_MAX = 200

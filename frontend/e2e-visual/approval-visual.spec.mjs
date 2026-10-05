@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Écran Approbation (/approvals) vs Approval.dc.html @ 1440×900 — colonne principale (x ≥ 268).
  * Même méthode que history-visual : pixel-diff (glyphes masqués, ≤ 1 %) + comparaison structurelle

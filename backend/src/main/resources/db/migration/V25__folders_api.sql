@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 -- Folders API : name/position/created_by, unicité frères, position documents.
 
 -- folders.title → name (API / produit)

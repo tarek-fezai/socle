@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 
 /** Corps d'erreur API (RFC 9457 problem+json, avec compat. legacy). */
 export type ApiProblemBody = {

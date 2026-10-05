@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 #
 # Publish multi-arch container images on version tags (v*).
 #
@@ -9,6 +9,9 @@
 #   done
 # Or: skopeo copy docker://ghcr.io/tarek-fezai/socle-backend:${VERSION} docker://registry.example.com/socle/socle-backend:${VERSION}
 # Pin by digest after mirroring: ghcr.io/tarek-fezai/socle-backend@sha256:...
+#
+# Note : les images GHCR sont publiques par défaut ; leur visibilité se règle manuellement
+# dans GitHub Packages (Packages → Package settings → Change visibility).
 
 name: Release
 
@@ -72,6 +75,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image }}
+          labels: |
+            org.opencontainers.image.licenses=LicenseRef-Socle-Proprietary
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

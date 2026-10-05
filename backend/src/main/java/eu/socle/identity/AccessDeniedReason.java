@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.identity;
 
 /** Motifs de refus de la politique d'accès (valeur publique = {@link #code()}). */

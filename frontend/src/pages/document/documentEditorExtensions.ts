@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import StarterKit from '@tiptap/starter-kit'

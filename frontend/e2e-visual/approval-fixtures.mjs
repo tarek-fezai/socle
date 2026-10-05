@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Fixtures Approbation / Comparaison d'approbation / Mobile — alignées sur Approval.dc.html,
  * DiffApproval.dc.html et MobileApproval.dc.html.

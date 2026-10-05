@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { Node, mergeAttributes } from '@tiptap/react'
 import { DEFAULT_PLACEHOLDER_HINT, PLACEHOLDER_NODE_TYPE } from './templates'
 

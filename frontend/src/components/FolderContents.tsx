@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { Link } from 'react-router-dom'
 import { documentHref, folderHref, type TreeDocument, type TreeFolder } from '../lib/folders'
 import type { MoveTarget } from './MoveDialog'

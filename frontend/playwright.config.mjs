@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { defineConfig, devices } from '@playwright/test'
 
 /** Visual + auth UX checks for /login pages. */

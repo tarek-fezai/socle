@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /** Données alignées sur TagsAdmin.dc.html (7 tags, 60 / 214). */
 
 export const TAGS_ADMIN_LIST = {

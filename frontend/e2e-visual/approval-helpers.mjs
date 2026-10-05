@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Utilitaires des specs Approbation / Comparaison d'approbation / Mobile : session OIDC injectée
  * (horloge figée à APPR_NOW), API mockée. Pixel-diff et glyphes masqués : voir history-helpers.mjs.

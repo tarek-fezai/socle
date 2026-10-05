@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 -- Empreinte du contenu soumis pour approbation (défense : ne pas publier une
 -- version mutée pendant la revue). Rempli à recordSubmission ; comparé à
 -- recordFinalDecision avant de passer le document en 'valide'.
