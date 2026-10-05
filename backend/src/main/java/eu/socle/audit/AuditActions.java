@@ -137,6 +137,8 @@ public final class AuditActions {
     public static final String LEGAL_HOLD_RELEASED = "legal_hold.released";
     /** Réécriture de l'historique Git (purge réelle d'un document). */
     public static final String DOCUMENT_GIT_HISTORY_PURGED = "document.git_history_purged";
+    /** Tentative de purge Git (file durable {@code git_purge_queue}). */
+    public static final String DOCUMENT_GIT_PURGE_ATTEMPT = "document.git_purge_attempt";
 
     /** Personnalisation de l'instance (marque blanche, admin système). */
     public static final String BRANDING_UPDATED = "branding.updated";

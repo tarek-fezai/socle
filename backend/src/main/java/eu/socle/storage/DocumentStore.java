@@ -105,9 +105,21 @@ public interface DocumentStore {
     }
 
     /**
+     * Comme {@link #purgeDocumentsHistory(java.util.Collection)} ; le provider Git appelle
+     * {@code remapBeforeWriteLockReleased} <strong>avant</strong> de libérer le verrou d'écriture
+     * (aucune fenêtre où une écriture voit un SHA périmé).
+     */
+    default Optional<HistoryPurgeResult> purgeDocumentsHistory(
+            java.util.Collection<UUID> documentIds,
+            java.util.function.Consumer<Map<String, String>> remapBeforeWriteLockReleased
+    ) {
+        return purgeDocumentsHistory(documentIds);
+    }
+
+    /**
      * @param commitsRewritten commits dont le SHA a changé ou qui ont disparu (devenus vides)
      * @param commitMapping    ancien SHA → nouveau SHA (commits supprimés : ancêtre survivant le plus proche) ;
-     *                         sert à resynchroniser {@code document_versions.git_commit_sha} / {@code documents.git_head_sha}
+     *                         sert à resynchroniser les SHA persistés ({@link GitShaRemappingService})
      */
     record HistoryPurgeResult(
             java.util.Set<UUID> documentIds,

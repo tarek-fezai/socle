@@ -7,6 +7,7 @@ import eu.socle.audit.AuditService;
 import eu.socle.retention.RetentionDtos.RetentionPolicy;
 import eu.socle.retention.RetentionDtos.RetentionPurgeResult;
 import eu.socle.storage.DocumentHistoryPurgeService;
+import eu.socle.storage.GitPurgeMotif;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -253,7 +254,7 @@ public class RetentionPurgeService {
         jdbc.update("DELETE FROM trash_items WHERE resource_type = 'document' AND resource_id = ?", documentId);
         jdbc.update("DELETE FROM documents WHERE id = ?", documentId);
         if (historyPurgeService != null) {
-            historyPurgeService.purgeAfterCommit(null, documentId);
+            historyPurgeService.purgeAfterCommit(null, documentId, GitPurgeMotif.RETENTION);
         }
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("mode", mode);

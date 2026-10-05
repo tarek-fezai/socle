@@ -122,7 +122,11 @@ class RetentionDbTest {
         holds = new LegalHoldService(jdbc, identityFacade, auditService);
         SocleProperties props = new SocleProperties(null, null, null,
                 new SocleProperties.Instance("Test", "UE – Paris", null), null);
-        settings = new RetentionSettingsService(jdbc, identityFacade, auditService, props, CLOCK);
+        @SuppressWarnings("unchecked")
+        org.springframework.beans.factory.ObjectProvider<eu.socle.storage.GitPurgeQueueService> queueProvider =
+                org.mockito.Mockito.mock(org.springframework.beans.factory.ObjectProvider.class);
+        org.mockito.Mockito.when(queueProvider.getIfAvailable()).thenReturn(null);
+        settings = new RetentionSettingsService(jdbc, identityFacade, auditService, props, CLOCK, queueProvider);
         purge = new RetentionPurgeService(jdbc, settings, holds, auditService, CLOCK,
                 new DataSourceTransactionManager(jdbc.getDataSource()));
 

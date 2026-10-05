@@ -9,19 +9,28 @@ lisible dans l'historique (`git log -p`, `git grep`, objets pendouillants). La s
 
 ## Quand la purge s'exécute
 
-| Déclencheur | Acteur audité |
-|---|---|
-| Purge manuelle depuis la corbeille (`TrashService.purgeNow`) | l'utilisateur |
-| Purge automatique de la corbeille (`TrashService.purgeExpired`, 30 j) | système |
-| Rétention des documents / espaces archivés (`RetentionPurgeScheduler`, quotidien) | système |
+| Déclencheur | Motif file (`git_purge_queue`) | Acteur audité |
+|---|---|---|
+| Purge manuelle depuis la corbeille (`TrashService.purgeNow`) | `corbeille` | l'utilisateur |
+| Purge automatique de la corbeille (`TrashService.purgeExpired`, 30 j) | `corbeille` | système |
+| Rétention des documents / espaces archivés (`RetentionPurgeScheduler`, quotidien) | `retention` | système |
+| Effacement RGPD (si suppression document) | `rgpd` | selon flux |
 
 Elle est **bloquée** (`409 legal_hold_active`) tant qu'un *legal hold* couvre le document (gel du document
 ou de son espace) ; voir `docs/privacy.md`. Les pièces jointes du document sont purgées dans la même
 transaction (`BlobStore` local ou S3) et sont donc aussi protégées par le gel.
 
-La réécriture a lieu **après le commit SQL** (`DocumentHistoryPurgeService.purgeAfterCommit`) : une
-suppression annulée ne touche jamais à Git. Les documents supprimés dans une même transaction sont purgés en
-un seul passage (une réécriture + un GC).
+## File durable (`git_purge_queue`, V44)
+
+1. **Inscription** dans la **même transaction SQL** que la suppression du document (table
+   `git_purge_queue` : identifiants, demandeur, motif, état, tentatives, dernière erreur, horodatages).
+2. **Traitement après commit** : réécriture Git + remappage SHA ; les documents d'une même transaction sont
+   regroupés en un seul passage (une réécriture + un GC).
+3. **Échec** : entrée `failed`, audit à chaque tentative (`document.git_purge_attempt`), nouvelles tentatives
+   avec backoff via le scheduler jusqu'au succès (`done`).
+4. **Reprise au démarrage** : entrées `running` repassent en `pending` puis sont traitées — **plus de reprise
+   manuelle opérateur** en fonctionnement normal.
+5. **Admin rétention** : compteurs purges Git en attente / en échec et dernière erreur.
 
 ## Procédure (`GitHistoryPurger`, JGit — aucun binaire `git` requis)
 
@@ -44,16 +53,19 @@ suivi de `git reflog expire --expire=now --all` et `git gc --aggressive --prune=
 7. **GC agressif avec prune immédiat** (`expire` et `packExpire` = maintenant), puis suppression explicite des
    objets *loose* inatteignables restants (JGit peut en conserver). Un contrôle d'intégrité (test) vérifie
    qu'aucun objet, joignable ou non, ne contient plus le contenu.
-8. **Resynchronisation SQL** (transaction dédiée) : les SHA changent, donc
-   `document_versions.git_commit_sha` et `documents.git_head_sha` sont remappés (ancien → nouveau ; un commit
-   supprimé est remappé sur son plus proche ancêtre conservé).
+8. **Resynchronisation SQL** (toujours **avant** libération du verrou d'écriture Git) : les SHA changent ;
+   colonnes remappées (ancien → nouveau ; commit supprimé → ancêtre conservé le plus proche) :
+   - `documents.git_head_sha`
+   - `document_versions.git_commit_sha`
+   - `approval_requests.submitted_git_head_sha` (V38 — empreinte d'approbation)
+   Aucun autre stockage SQL de SHA Git (exports, attestations, webhooks, caches).
 9. **Audit** `document.git_history_purged` (un événement par document) : `documentId`, `commitsRewritten`,
    `commitsDropped`, `oldHead`, `newHead`, `batchSize`.
 
 ## Conséquences opérationnelles
 
 - **Les SHA de tous les commits postérieurs au plus ancien commit du document changent.** Les identifiants
-  de commits mémorisés hors de Socle (tickets, notes, exports) ne sont plus valides.
+  de commits mémorisés hors de Socle (tickets, notes) ne sont plus valides.
 - **Tout clone ou miroir du dépôt doit être re-cloné** (`git clone`), pas simplement `git pull` : un `pull`
   réintroduirait l'ancien historique — et le contenu supprimé — depuis le clone.
 - Les sauvegardes du volume Git antérieures à la purge **contiennent encore le contenu** : leur durée de
@@ -66,30 +78,14 @@ suivi de `git reflog expire --expire=now --all` et `git gc --aggressive --prune=
 - **Rétention des versions** (`version_retention_mode` = `months` / `count`) : supprime les lignes
   `document_versions` mais **pas** les révisions Git correspondantes (celles-ci ne disparaissent qu'à la
   suppression définitive du document). L'historique Git d'un document vivant n'est pas réécrit.
-- **Échec après le commit SQL** : la ligne SQL est déjà supprimée ; l'échec est journalisé
-  (`Purge de l'historique Git en échec …`) sans casser la requête. Le document n'apparaît plus dans Socle
-  mais son contenu reste dans Git — voir « Reprise » ci-dessous.
 - Un archivage de version concurrent pendant la purge d'un *autre* document peut laisser un SHA obsolète dans
   `document_versions` ; la lecture d'une version retombe alors sur `body_snapshot`.
 - Mode Git mono-instance (dépôt local verrouillé).
 
-## Reprise manuelle (purge échouée)
+## Dépannage (cas exceptionnels)
 
-1. Identifier les documents concernés dans les journaux (UUID dans le message d'erreur) ou via l'audit
-   (événement `document.purged` sans `document.git_history_purged` correspondant).
-2. Si un rollback a eu lieu, le dépôt est intact (la réf. `refs/backup/pre-purge-*` a été supprimée après
-   rollback). Si le processus s'est arrêté en cours de route, une réf. `refs/backup/pre-purge-*` peut subsister :
-   la supprimer (`git update-ref -d refs/backup/pre-purge-…`) *après* avoir vérifié l'état du dépôt, sinon elle
-   maintient les anciens objets.
-3. Relancer la réécriture, Socle arrêté (verrou d'instance), par exemple :
-
-   ```bash
-   cd /var/lib/socle/git   # répertoire du dépôt (SOCLE_STORAGE_GIT_PATH)
-   git filter-branch --index-filter 'git rm --cached --ignore-unmatch documents/<uuid>.md' --prune-empty -- --all
-   git for-each-ref --format='%(refname)' refs/original | xargs -n1 git update-ref -d
-   git reflog expire --expire=now --all
-   git gc --aggressive --prune=now
-   ```
-
-4. Au redémarrage, resynchroniser `document_versions.git_commit_sha` / `documents.git_head_sha` : les versions
-   dont le SHA n'existe plus sont lues depuis `body_snapshot` (aucune perte pour les documents restants).
+Si la file durable reste bloquée après plusieurs tentatives, consulter l'écran **Rétention** (dernière erreur)
+et les audits `document.git_purge_attempt`. Une réf. `refs/backup/pre-purge-*` résiduelle peut subsister
+après crash en cours de réécriture — la supprimer seulement après diagnostic du dépôt (voir procédure JGit
+ci-dessus). En dernier recours, relancer le traitement après correction : au redémarrage Socle reprend les
+entrées `pending` / `failed` éligibles.

@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -56,6 +57,12 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
      * Le verrou fichier {@link GitRepositoryLock} interdit déjà une 2e instance backend.
      */
     private final ReentrantReadWriteLock repoLock = new ReentrantReadWriteLock(true);
+
+    private volatile GitShaRemappingService shaRemappingService;
+
+    public void setShaRemappingService(GitShaRemappingService shaRemappingService) {
+        this.shaRemappingService = shaRemappingService;
+    }
 
     public GitDocumentStore(DocumentVersionRepository versionRepository, Path repoPath) {
         this.versionRepository = versionRepository;
@@ -285,6 +292,14 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
      */
     @Override
     public Optional<HistoryPurgeResult> purgeDocumentsHistory(java.util.Collection<UUID> documentIds) {
+        return purgeDocumentsHistory(documentIds, null);
+    }
+
+    @Override
+    public Optional<HistoryPurgeResult> purgeDocumentsHistory(
+            java.util.Collection<UUID> documentIds,
+            Consumer<Map<String, String>> remapBeforeWriteLockReleased
+    ) {
         if (documentIds == null || documentIds.isEmpty()) {
             return Optional.empty();
         }
@@ -293,12 +308,18 @@ public class GitDocumentStore implements DocumentStore, AutoCloseable {
         for (UUID id : ids) {
             fileNames.add(id + ".md");
         }
-        // Verrous par document (en ordre stable) + verrou processus exclusif.
         List<UUID> ordered = new ArrayList<>(ids);
         ordered.sort(UUID::compareTo);
         repoLock.writeLock().lock();
         try {
-            return Optional.of(purgeWithDocumentLocks(ordered, 0, ids, fileNames));
+            HistoryPurgeResult result = purgeWithDocumentLocks(ordered, 0, ids, fileNames);
+            Map<String, String> mapping = result.commitMapping();
+            if (remapBeforeWriteLockReleased != null && mapping != null && !mapping.isEmpty()) {
+                remapBeforeWriteLockReleased.accept(mapping);
+            } else if (shaRemappingService != null && mapping != null && !mapping.isEmpty()) {
+                shaRemappingService.remap(mapping);
+            }
+            return Optional.of(result);
         } finally {
             repoLock.writeLock().unlock();
             ids.forEach(documentLocks::remove);

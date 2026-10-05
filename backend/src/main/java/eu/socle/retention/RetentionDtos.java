@@ -30,7 +30,10 @@ public final class RetentionDtos {
             String dataResidenceLabel,
             long activeLegalHolds,
             Instant lastPurgeRanAt,
-            Instant updatedAt
+            Instant updatedAt,
+            long gitPurgePendingCount,
+            long gitPurgeFailedCount,
+            String gitPurgeLastError
     ) {}
 
     /** PUT = remplacement complet ; {@code processingRegisterReviewedAt = null} efface la date. */

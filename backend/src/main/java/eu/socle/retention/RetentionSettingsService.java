@@ -8,6 +8,7 @@ import eu.socle.identity.IdentityFacade;
 import eu.socle.retention.RetentionDtos.RetentionPolicy;
 import eu.socle.retention.RetentionDtos.RetentionSettingsView;
 import eu.socle.retention.RetentionDtos.UpdateRetentionRequest;
+import eu.socle.storage.GitPurgeQueueService;
 import eu.socle.user.UserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -49,6 +50,7 @@ public class RetentionSettingsService {
     private final AuditService auditService;
     private final SocleProperties properties;
     private final Clock clock;
+    private final GitPurgeQueueService gitPurgeQueue;
 
     @Autowired
     public RetentionSettingsService(
@@ -56,13 +58,15 @@ public class RetentionSettingsService {
             IdentityFacade identityFacade,
             AuditService auditService,
             SocleProperties properties,
-            Clock clock
+            Clock clock,
+            org.springframework.beans.factory.ObjectProvider<GitPurgeQueueService> gitPurgeQueue
     ) {
         this.jdbc = jdbc;
         this.identityFacade = identityFacade;
         this.auditService = auditService;
         this.properties = properties;
         this.clock = clock;
+        this.gitPurgeQueue = gitPurgeQueue.getIfAvailable();
     }
 
     @Transactional(readOnly = true)
@@ -150,6 +154,9 @@ public class RetentionSettingsService {
         Long holds = jdbc.queryForObject(
                 "SELECT count(*) FROM legal_holds WHERE released_at IS NULL", Long.class);
         SocleProperties.Instance instance = properties == null ? null : properties.instance();
+        GitPurgeQueueService.GitPurgeQueueStats gitStats = gitPurgeQueue == null
+                ? new GitPurgeQueueService.GitPurgeQueueStats(0, 0, null)
+                : gitPurgeQueue.stats();
         return new RetentionSettingsView(
                 p.auditRetentionMonths(),
                 p.versionRetentionMode(),
@@ -159,7 +166,10 @@ public class RetentionSettingsService {
                 instance == null ? null : instance.effectiveDataResidenceLabel(),
                 holds == null ? 0 : holds,
                 lastPurge == null ? null : lastPurge.toInstant(),
-                updated == null ? null : updated.toInstant());
+                updated == null ? null : updated.toInstant(),
+                gitStats.pendingCount(),
+                gitStats.failedCount(),
+                gitStats.lastError());
     }
 
     private RetentionPolicy validate(UpdateRetentionRequest r) {
