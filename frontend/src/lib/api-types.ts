@@ -2772,7 +2772,7 @@ export interface components {
             gitPurgePendingCount?: number;
             /** Format: int64 */
             gitPurgeFailedCount?: number;
-            gitPurgeLastError?: string | null;
+            gitPurgeLastError?: string;
         };
         UpdateFieldRequest: {
             name: string;
