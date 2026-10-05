@@ -13,6 +13,9 @@ export type RetentionSettingsView = {
   activeLegalHolds: number
   lastPurgeRanAt: string | null
   updatedAt: string | null
+  gitPurgePendingCount: number
+  gitPurgeFailedCount: number
+  gitPurgeLastError: string | null
 }
 
 export type UpdateRetentionRequest = {

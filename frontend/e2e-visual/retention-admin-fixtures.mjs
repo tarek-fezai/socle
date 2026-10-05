@@ -11,6 +11,9 @@ export const RETENTION_ADMIN_SETTINGS = {
   activeLegalHolds: 0,
   lastPurgeRanAt: null,
   updatedAt: '2026-09-01T10:00:00.000Z',
+  gitPurgePendingCount: 0,
+  gitPurgeFailedCount: 0,
+  gitPurgeLastError: null,
 }
 
 export const RETENTION_LEGAL_HOLDS = {

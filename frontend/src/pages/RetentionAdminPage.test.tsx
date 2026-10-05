@@ -32,6 +32,9 @@ const RETENTION = {
   activeLegalHolds: 0,
   lastPurgeRanAt: null,
   updatedAt: '2026-09-01T00:00:00Z',
+  gitPurgePendingCount: 0,
+  gitPurgeFailedCount: 0,
+  gitPurgeLastError: null,
 }
 
 const HOLDS = { holds: [], activeCount: 0 }

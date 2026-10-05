@@ -321,6 +321,23 @@ export function RetentionAdminPage() {
       >
         Conformité réglementaire
       </div>
+      {(settings?.gitPurgePendingCount ?? 0) > 0 || (settings?.gitPurgeFailedCount ?? 0) > 0 ? (
+        <div
+          className="admin-alert admin-alert--error"
+          role="alert"
+          data-mock-id="retention-git-purge-alert"
+          style={{ marginBottom: 16 }}
+        >
+          Purge Git : {settings?.gitPurgePendingCount ?? 0} en attente,{' '}
+          {settings?.gitPurgeFailedCount ?? 0} en échec.
+          {settings?.gitPurgeLastError ? (
+            <>
+              {' '}
+              Dernière erreur : {settings.gitPurgeLastError}
+            </>
+          ) : null}
+        </div>
+      ) : null}
       <div
         className="admin-table-wrap"
         data-mock-id="retention-compliance"

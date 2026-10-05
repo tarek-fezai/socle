@@ -2768,6 +2768,11 @@ export interface components {
             lastPurgeRanAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            gitPurgePendingCount?: number;
+            /** Format: int64 */
+            gitPurgeFailedCount?: number;
+            gitPurgeLastError?: string | null;
         };
         UpdateFieldRequest: {
             name: string;
