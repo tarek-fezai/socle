@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /** Données alignées sur Retention.dc.html (24 mois / Illimitée / 7 ans / revue 30 août 2026). */
 
 export const RETENTION_ADMIN_SETTINGS = {

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import type { ChainedCommands, Editor } from '@tiptap/react'
 import type { UploadKind } from '../../components/attachments/useAttachmentUploads'

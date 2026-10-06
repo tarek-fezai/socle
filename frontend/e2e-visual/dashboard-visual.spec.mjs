@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'

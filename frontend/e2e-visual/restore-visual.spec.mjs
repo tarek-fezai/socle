@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Modale « Restaurer la v11 ? » (ouverte depuis l'Historique) vs RestoreVersion.dc.html @ 1440×900.
  * Pixel-diff limité à la carte de la modale (≤ 1 %, glyphes masqués) + comparaison structurelle.

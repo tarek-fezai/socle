@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Écran Historique (/docs/:id/history) vs History.dc.html @ 1440×900 — colonne principale.
  * Même méthode que edit-visual / page-visual : pixel-diff (glyphes masqués, ≤ 1 %) + comparaison

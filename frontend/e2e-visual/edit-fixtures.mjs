@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Seed data for the document EDIT screen visual tests — aligns with Edit.dc.html
  * ("Politique de gestion des accès", 14:22, « 1 240 mots · 6 min de lecture »).

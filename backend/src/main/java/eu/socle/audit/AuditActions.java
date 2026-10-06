@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.audit;
 
 /** Actions d'audit connues (AuditLog.dc.html). */
@@ -147,6 +147,10 @@ public final class AuditActions {
     public static final String BRANDING_FAVICON_UPLOADED = "branding.favicon_uploaded";
     public static final String BRANDING_FAVICON_REMOVED = "branding.favicon_removed";
     public static final String BRANDING_TEST_EMAIL_SENT = "branding.test_email_sent";
+
+    /** Licence d'instance. */
+    public static final String LICENCE_IMPORTED = "licence.imported";
+    public static final String LICENCE_REJECTED = "licence.rejected";
 
     public static final String POLL_CLOSED = "poll.closed";
     public static final String LINK_PREVIEW_FETCHED = "link_preview.fetched";

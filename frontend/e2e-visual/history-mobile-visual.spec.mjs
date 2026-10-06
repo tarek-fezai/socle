@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Historique mobile (/docs/:id/history @ 390×844) vs MobileHistory.dc.html.
  * Même schéma que page-visual (PAGE_MOBILE_IDS) : pixel-diff plein écran (glyphes masqués, ≤ 1 %)

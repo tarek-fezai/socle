@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Vue de comparaison vs Diff.dc.html @ 1440x900.
  * Exceptions D1-D10 (voir commentaire historique / PR).

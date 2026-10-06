@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Utilitaires partagés par les specs Historique / Comparaison / Restauration / Mobile
  * (mêmes principes que page-visual.spec.mjs : session OIDC injectée, API mockée, pixel-diff sans glyphes).

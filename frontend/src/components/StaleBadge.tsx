@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import type { ReliabilityTone } from '../lib/reliability'
 
 /** Badge fraîcheur — dérivé serveur (`stale`), indépendant du score de fiabilité. */

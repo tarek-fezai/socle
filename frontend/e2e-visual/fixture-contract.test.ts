@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Valide les fixtures e2e-visual contre les schémas OpenAPI commités.
  * Une fixture non conforme doit faire échouer la CI.

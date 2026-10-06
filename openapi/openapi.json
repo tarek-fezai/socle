@@ -3360,6 +3360,34 @@
         }
       }
     },
+    "/api/v1/admin/licence/import" : {
+      "post" : {
+        "tags" : [ "licence-admin-controller" ],
+        "operationId" : "importLicence",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ImportLicenceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LicenceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/legal-holds" : {
       "get" : {
         "tags" : [ "legal-hold-admin-controller" ],
@@ -5854,6 +5882,24 @@
         }
       }
     },
+    "/api/v1/admin/licence" : {
+      "get" : {
+        "tags" : [ "licence-admin-controller" ],
+        "operationId" : "get_19",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LicenceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/authz/visibility-drift" : {
       "get" : {
         "tags" : [ "visibility-migration-controller" ],
@@ -7031,7 +7077,7 @@
             "format" : "int64"
           },
           "gitPurgeLastError" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         }
       },
@@ -8133,6 +8179,57 @@
           "grantedAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "ImportLicenceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "licenceJson" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LicenceView" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "licenseId" : {
+            "type" : "string"
+          },
+          "licensee" : {
+            "type" : "string"
+          },
+          "edition" : {
+            "type" : "string"
+          },
+          "issuedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "maxUsers" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "activeUsers" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "effectiveMaxUsers" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "evaluationMode" : {
+            "type" : "boolean"
+          },
+          "bannerMessage" : {
+            "type" : "string"
           }
         }
       },

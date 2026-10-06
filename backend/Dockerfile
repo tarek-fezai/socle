@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 # syntax=docker/dockerfile:1
 
 # eclipse-temurin:21-jdk-jammy (build — Maven + JDK)
@@ -14,6 +14,15 @@ COPY pom.xml .
 RUN mvn -B -DskipTests dependency:go-offline
 
 COPY src ./src
+
+# Clé publique de licence : au BUILD uniquement.
+# ARG optionnel — s'il est fourni (CI/e2e), remplace ed25519-public.b64 avant le package.
+# Release : ne pas passer l'ARG → clé du dépôt embarquée.
+ARG LICENCE_PUBLIC_KEY_B64=
+RUN if [ -n "$LICENCE_PUBLIC_KEY_B64" ]; then \
+      printf '%s' "$LICENCE_PUBLIC_KEY_B64" > src/main/resources/licence/ed25519-public.b64 ; \
+    fi
+
 RUN mvn -B -DskipTests package \
     && cp target/socle-backend-*.jar /build/app.jar
 
@@ -30,6 +39,8 @@ RUN jlink \
 
 # alpine:3.20.3 (runtime OS) + Temurin 21 JRE (jlink, non-root UID 10001)
 FROM alpine@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a AS runtime
+
+LABEL org.opencontainers.image.licenses="LicenseRef-Socle-Proprietary"
 
 RUN apk add --no-cache ca-certificates \
     && adduser -D -u 10001 -H -s /sbin/nologin appuser \

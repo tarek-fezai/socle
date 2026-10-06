@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /** Données alignées sur Branding.dc.html (accent indigo, expéditeur Démo, URL docs.example.com). */
 
 export const BRANDING_ADMIN_VIEW = {

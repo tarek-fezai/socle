@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Normalisation N1–N10 de Edit.dc.html — documentée dans l'en-tête de edit-visual.spec.mjs.
  * À appeler APRÈS annotateEditMockup (les annotations se font sur la structure d'origine).

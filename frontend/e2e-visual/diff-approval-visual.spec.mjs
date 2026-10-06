@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Comparaison d'approbation (/approvals/:requestId/diff) vs DiffApproval.dc.html @ 1440×900.
  * Données : `GET …/versions/12/compare/13?mode=lines` (comparaison ligne à ligne, pas le diff JSON),

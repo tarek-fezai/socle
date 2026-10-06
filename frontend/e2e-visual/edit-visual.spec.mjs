@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Document EDIT screen (/docs/:id/edit) vs Edit.dc.html (desktop 1440×900).
  * Pattern: page-visual.spec.mjs (pixel diff ≤ 1 % + data-mock-id structural compare).

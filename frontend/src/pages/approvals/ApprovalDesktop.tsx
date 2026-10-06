@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { useRef, type ReactNode, type Ref } from 'react'
 import { Link } from 'react-router-dom'
 import { formatSlaRail, type ApprovalItem } from '../../lib/approvals'

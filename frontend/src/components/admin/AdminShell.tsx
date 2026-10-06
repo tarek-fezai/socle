@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import './admin-page.css'
 
-export type AdminNavKey = 'tags' | 'custom-fields' | 'templates' | 'retention' | 'branding'
+export type AdminNavKey = 'tags' | 'custom-fields' | 'templates' | 'retention' | 'branding' | 'licence'
 
 type NavItem =
   | { kind: 'link'; key?: AdminNavKey; label: string; to: string; mockId?: string }
@@ -44,7 +44,13 @@ const NAV_ITEMS: NavItem[] = [
   },
   { kind: 'placeholder', label: 'Attestations' },
   { kind: 'placeholder', label: "Journal d'audit" },
-  { kind: 'placeholder', label: 'Licence' },
+  {
+    kind: 'link',
+    key: 'licence',
+    label: 'Licence',
+    to: '/admin/licence',
+    mockId: 'admin-nav-licence',
+  },
 ]
 
 export type AdminShellProps = {

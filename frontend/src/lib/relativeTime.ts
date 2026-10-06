@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 
 /** Format relatif FR court pour l’accueil (maquette). */
 export function formatRelativeFr(iso: string, now = Date.now()): string {

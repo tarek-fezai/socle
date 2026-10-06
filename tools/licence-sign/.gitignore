@@ -1,0 +1,6 @@
+# Ne jamais stocker de clés privées ici — passer --key vers un fichier hors dépôt.
+*
+!.gitignore
+!README.md
+!sign.mjs
+!example-licence.json

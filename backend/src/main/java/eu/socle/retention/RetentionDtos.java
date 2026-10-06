@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.retention;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,7 +35,7 @@ public final class RetentionDtos {
             Instant updatedAt,
             long gitPurgePendingCount,
             long gitPurgeFailedCount,
-            String gitPurgeLastError
+            @Schema(types = { "string", "null" }, nullable = true) String gitPurgeLastError
     ) {}
 
     /** PUT = remplacement complet ; {@code processingRegisterReviewedAt = null} efface la date. */

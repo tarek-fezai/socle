@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 -- V5 hardcodait le rôle "socle". Si l'instance tourne sous un autre rôle
 -- (ex. socle_app), aligner les grants append-only sur current_user.
 DO $$

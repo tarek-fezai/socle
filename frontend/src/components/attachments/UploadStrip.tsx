@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import type { UploadItem } from './useAttachmentUploads'
 
 /** Envois en cours (barre de progression) ou en échec (message serveur, fermable). */

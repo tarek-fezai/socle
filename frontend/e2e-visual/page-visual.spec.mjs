@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Document READ page (/docs/:id) vs Main.dc.html (desktop) and MobilePage.dc.html (mobile).
  * Pattern: dashboard-visual.spec.mjs (pixel diff + data-mock-id structural compare).

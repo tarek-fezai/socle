@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Seed data for the document READ page visual tests — aligns with Main.dc.html /
  * MobilePage.dc.html numbers and copy ("Politique de gestion des accès").

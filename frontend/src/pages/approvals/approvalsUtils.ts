@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Logique pure des écrans d'approbation (Approval.dc.html, DiffApproval.dc.html,
  * MobileApproval.dc.html) : circuit, libellés, textes.

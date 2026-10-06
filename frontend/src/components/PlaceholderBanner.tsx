@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { listPlaceholderHints, placeholderBannerText } from '../lib/templates'
 
 /** Bandeau « N zones à compléter » tant que le corps contient des zones `placeholder`. */

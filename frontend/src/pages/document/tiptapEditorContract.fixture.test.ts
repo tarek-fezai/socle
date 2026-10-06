@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Contrat éditeur → TipTapContentValidator :
  * construit via TipTap (mêmes extensions que DocumentEditor) un document couvrant

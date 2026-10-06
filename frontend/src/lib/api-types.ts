@@ -1140,6 +1140,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/licence/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importLicence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/legal-holds": {
         parameters: {
             query?: never;
@@ -2228,6 +2244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/licence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_19"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/authz/visibility-drift": {
         parameters: {
             query?: never;
@@ -2772,7 +2804,7 @@ export interface components {
             gitPurgePendingCount?: number;
             /** Format: int64 */
             gitPurgeFailedCount?: number;
-            gitPurgeLastError?: string;
+            gitPurgeLastError?: string | null;
         };
         UpdateFieldRequest: {
             name: string;
@@ -3208,6 +3240,27 @@ export interface components {
             grantedBy?: string;
             /** Format: date-time */
             grantedAt?: string;
+        };
+        ImportLicenceRequest: {
+            licenceJson?: string;
+        };
+        LicenceView: {
+            status?: string;
+            licenseId?: string;
+            licensee?: string;
+            edition?: string;
+            /** Format: date-time */
+            issuedAt?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: int32 */
+            maxUsers?: number;
+            /** Format: int64 */
+            activeUsers?: number;
+            /** Format: int32 */
+            effectiveMaxUsers?: number;
+            evaluationMode?: boolean;
+            bannerMessage?: string;
         };
         PlaceLegalHoldRequest: {
             scopeType?: string;
@@ -6503,6 +6556,30 @@ export interface operations {
             };
         };
     };
+    importLicence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportLicenceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LicenceView"];
+                };
+            };
+        };
+    };
     list_13: {
         parameters: {
             query?: {
@@ -8380,6 +8457,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DriftReport"];
+                };
+            };
+        };
+    };
+    get_19: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LicenceView"];
                 };
             };
         };

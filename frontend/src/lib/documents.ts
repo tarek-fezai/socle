@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import type { components } from './api-types'
 
 /** Types générés depuis `openapi/openapi.json`, recoupés avec les champs requis côté fil. */

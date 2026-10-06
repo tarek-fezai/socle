@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.identity;
 
 import eu.socle.user.UserEntity;
@@ -54,7 +54,7 @@ class UserSyncAccessPolicyTest {
         syncService = new UserSyncService(
                 userRepository, identityService, identityRepository, mapper, properties,
                 platformRoleService, new AccessPolicyService(properties, mapper, identityService),
-                accessAuditService);
+                accessAuditService, null);
         when(identityService.findUserByIdentity(ISSUER, SUBJECT)).thenReturn(Optional.empty());
         when(identityRepository.findByIssuerAndSubject(ISSUER, SUBJECT)).thenReturn(Optional.empty());
         when(userRepository.existsById(any())).thenReturn(false);

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 export type SiemProvider = 'splunk' | 'datadog' | 'sentinel'
 export type SiemStatus = 'connected' | 'disconnected' | 'error'
 export type WebhookStatus = 'active' | 'disabled'

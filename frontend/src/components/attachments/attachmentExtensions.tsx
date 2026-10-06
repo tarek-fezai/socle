@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { Node, NodeViewWrapper, ReactNodeViewRenderer, mergeAttributes, type NodeViewProps } from '@tiptap/react'
 import { ATTACHMENT_NODE_TYPE, IMAGE_NODE_TYPE } from '../../lib/attachments'
 import { AttachmentFile, AttachmentImage } from './AttachmentViews'

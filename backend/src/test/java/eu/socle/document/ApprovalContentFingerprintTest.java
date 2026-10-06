@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.document;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Seed data for dashboard visual tests — aligns with Dashboard.dc.html numbers/copy.
  */

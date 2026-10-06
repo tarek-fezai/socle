@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 
 /** Same-origin API base when `VITE_API_BASE_URL` is empty or unset (production / Vite proxy in dev). */
 export function apiBaseUrl(): string {

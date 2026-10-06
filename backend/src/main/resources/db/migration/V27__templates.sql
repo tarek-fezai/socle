@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 -- Modèles de pages : portée global|espace, métadonnées, provenance documents, seed.
 
 -- ---------------------------------------------------------------------------

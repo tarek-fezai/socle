@@ -197,6 +197,9 @@ services:
     build:
       context: ../../backend
       dockerfile: Dockerfile
+      args:
+        # CI/e2e uniquement : clé publique de TEST au build. Release : laisser vide → clé du dépôt.
+        LICENCE_PUBLIC_KEY_B64: ${LICENCE_PUBLIC_KEY_B64:-}
     environment:
       <<: *backend-env
     volumes:

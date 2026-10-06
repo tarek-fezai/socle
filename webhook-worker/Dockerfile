@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 # syntax=docker/dockerfile:1
 
 # golang:1.22-bookworm (build)
@@ -15,6 +15,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/worker 
 
 # gcr.io/distroless/static-debian12:nonroot — runtime UID/GID 65532
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS runtime
+
+LABEL org.opencontainers.image.licenses="LicenseRef-Socle-Proprietary"
 
 COPY --from=build /out/worker /worker
 

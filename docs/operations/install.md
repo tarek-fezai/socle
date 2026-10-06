@@ -37,13 +37,31 @@ Temporal and OpenFGA run in-process with Postgres in the default Compose stack; 
 
 4. Configure OIDC to your IdP (issuer, client id/secret, frontend client id, CORS). See [Identity providers](../identity-providers.md).
 
-5. Optional first admin bootstrap (when using `socle.identity.role-source` `INTERNAL` or `BOTH`):
+5. **Licence d'instance (obligatoire pour les utilisateurs hors bootstrap)**
 
-   ```yaml
-   # or equivalent env: SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS=<oidc-sub>
-   socle.identity.bootstrap-admin-subjects:
-     - "<subject from your IdP>"
-   ```
+   Sans licence valide, **aucun** nouvel utilisateur ne peut être créé (`EVALUATION_MAX_USERS = 0`),
+   sauf les sujets listés dans `SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS`.
+
+   Procédure :
+
+   1. **Avant le premier démarrage**, définir le(s) sujet(s) OIDC bootstrap (claim `sub`) :
+
+      ```bash
+      # deploy/compose/.env
+      SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS=<oidc-sub-de-l-admin>
+      ```
+
+      ou propriété :
+
+      ```yaml
+      socle.identity.bootstrap-admin-subjects:
+        - "<subject from your IdP>"
+      ```
+
+   2. Démarrer le stack, se connecter avec ce compte bootstrap (premier login → admin système).
+   3. Ouvrir **Administration → Licence** (état « Aucune licence ») et **Importer un fichier de licence**
+      signé (`tools/licence-sign`, clé privée hors dépôt).
+   4. Ensuite seulement, les autres utilisateurs peuvent être provisionnés jusqu'à `maxUsers`.
 
 6. Start the stack:
 

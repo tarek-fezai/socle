@@ -1,8 +1,14 @@
 # Contributing to Socle
 
+## Contributions externes
+
+Les contributions externes (code, documentation, patches) **ne sont pas acceptées** sans
+**accord écrit préalable** du titulaire. Contactez le mainteneur avant d'ouvrir une PR si vous
+disposez d'un tel accord.
+
 ## Developer Certificate of Origin (DCO)
 
-Every commit **must** be signed off (DCO). Use:
+When an agreed contribution is accepted, every commit **must** be signed off (DCO). Use:
 
 ```bash
 git commit -s

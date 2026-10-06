@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 -- author_id = auteur du contenu ; archived_by = qui a déclenché l'archivage.
 -- documents.updated_by = auteur du contenu courant.
 

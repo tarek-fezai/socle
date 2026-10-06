@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import axios from 'axios'
 import { getAccessToken } from './auth'
 import { apiBaseUrl } from './urls'
