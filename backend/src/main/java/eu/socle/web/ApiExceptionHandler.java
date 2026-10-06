@@ -88,6 +88,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                     : ApiErrors.licenceUserLimitNoLicence();
             return toBusinessProblem(coded, ApiErrors.LICENCE_USER_LIMIT, request);
         }
+        if (ex.getReason() == AccessDeniedReason.IDENTITY_CONFLICT) {
+            String detail = ex.getDetail() != null && !ex.getDetail().isBlank()
+                    ? ex.getDetail()
+                    : "Identité déjà associée à un autre compte : contactez l'administrateur";
+            return toBusinessProblem(
+                    new CodedStatusException(HttpStatus.FORBIDDEN, ApiErrors.IDENTITY_CONFLICT, detail),
+                    ApiErrors.IDENTITY_CONFLICT,
+                    request);
+        }
         Map<String, String> body = new LinkedHashMap<>();
         body.put("error", "access_denied");
         body.put("reason", ex.getReason().code());

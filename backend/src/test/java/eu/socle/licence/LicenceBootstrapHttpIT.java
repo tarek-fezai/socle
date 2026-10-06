@@ -81,6 +81,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LicenceBootstrapHttpIT {
 
     static final String ISSUER = "http://localhost:8081/realms/socle";
+    static final String ISSUER_OTHER = "https://other-idp.example/realms/other";
     static final String BOOTSTRAP_SUB = "11111111-1111-1111-1111-111111111111";
     static final String EXISTING_SUB = "22222222-2222-2222-2222-222222222222";
     static final String NEW_SUB = "33333333-3333-3333-3333-333333333333";
@@ -248,6 +249,37 @@ class LicenceBootstrapHttpIT {
     }
 
     @Test
+    void sameSubDifferentIssuer_403IdentityConflict_noLink_originalStillOk() throws Exception {
+        // Compte A : issuer1 / sub X (id = sub)
+        seedUser(EXISTING_SUB, "alice@example.com", false);
+        UUID userId = UUID.fromString(EXISTING_SUB);
+        long identitiesBefore = jdbc.queryForObject(
+                "SELECT count(*) FROM user_identities WHERE user_id = ?", Long.class, userId);
+
+        // JWT issuer2 / même sub → refus, aucune liaison implicite
+        mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION,
+                        bearer(ISSUER_OTHER, EXISTING_SUB, "alice@evil.com", "Alice Evil")))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ApiErrors.IDENTITY_CONFLICT))
+                .andExpect(jsonPath("$.detail").value(
+                        "Identité déjà associée à un autre compte : contactez l'administrateur"));
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM user_identities WHERE user_id = ?", Long.class, userId))
+                .isEqualTo(identitiesBefore);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM user_identities WHERE issuer = ?", Long.class, ISSUER_OTHER))
+                .isZero();
+
+        // A toujours accessible via issuer1
+        mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION,
+                        bearer(EXISTING_SUB, "alice@example.com", "Alice")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(EXISTING_SUB));
+    }
+
+    @Test
     void maxUsersReached_new403_existing200() throws Exception {
         seedUser(BOOTSTRAP_SUB, "contributeur@example.com", true);
         seedUser(EXISTING_SUB, "auditeur@example.com", false);
@@ -336,9 +368,13 @@ class LicenceBootstrapHttpIT {
     }
 
     private static String bearer(String sub, String email, String name) throws Exception {
+        return bearer(ISSUER, sub, email, name);
+    }
+
+    private static String bearer(String issuer, String sub, String email, String name) throws Exception {
         Instant now = Instant.now();
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                .issuer(ISSUER)
+                .issuer(issuer)
                 .subject(sub)
                 .issueTime(Date.from(now))
                 .expirationTime(Date.from(now.plusSeconds(3600)))

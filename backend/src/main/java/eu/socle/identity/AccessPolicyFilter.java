@@ -114,15 +114,21 @@ public class AccessPolicyFilter extends OncePerRequestFilter {
         AccessDeniedReason reason = denied.getReason();
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        if (reason == AccessDeniedReason.LICENCE_USER_LIMIT) {
+        if (reason == AccessDeniedReason.LICENCE_USER_LIMIT
+                || reason == AccessDeniedReason.IDENTITY_CONFLICT) {
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            String code = reason == AccessDeniedReason.IDENTITY_CONFLICT
+                    ? ApiErrors.IDENTITY_CONFLICT
+                    : ApiErrors.LICENCE_USER_LIMIT;
             String detail = denied.getDetail() != null && !denied.getDetail().isBlank()
                     ? denied.getDetail()
-                    : "Aucune licence valide installée : contactez l'administrateur";
+                    : (reason == AccessDeniedReason.IDENTITY_CONFLICT
+                            ? "Identité déjà associée à un autre compte : contactez l'administrateur"
+                            : "Aucune licence valide installée : contactez l'administrateur");
             String escaped = detail.replace("\\", "\\\\").replace("\"", "\\\"");
             response.getWriter().write(
                     "{\"title\":\"Forbidden\",\"status\":403,\"detail\":\"" + escaped
-                            + "\",\"code\":\"" + ApiErrors.LICENCE_USER_LIMIT + "\"}");
+                            + "\",\"code\":\"" + code + "\"}");
             return;
         }
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

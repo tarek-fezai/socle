@@ -12,7 +12,13 @@ public enum AccessDeniedReason {
      * Création d'utilisateur refusée (aucune licence valide ou limite de sièges).
      * Réponse HTTP : {@code application/problem+json} avec {@code code=licence_user_limit}.
      */
-    LICENCE_USER_LIMIT("licence_user_limit");
+    LICENCE_USER_LIMIT("licence_user_limit"),
+    /**
+     * Identité (issuer, sub) inconnue dont le {@code sub} entre en conflit avec un
+     * {@code users.id} existant — pas de liaison implicite inter-IdP.
+     * Réponse HTTP : {@code application/problem+json} avec {@code code=identity_conflict}.
+     */
+    IDENTITY_CONFLICT("identity_conflict");
 
     private final String code;
 

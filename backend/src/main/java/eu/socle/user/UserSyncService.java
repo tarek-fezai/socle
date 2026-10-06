@@ -97,27 +97,18 @@ public class UserSyncService {
                 // Compte existant rattaché à cette identité : désactivé / domaine / groupe.
                 requireGranted(accessPolicyService.evaluate(jwt, user));
             } else {
-                Optional<UserEntity> orphan = findExistingUserBySubject(subject);
-                if (orphan.isPresent()) {
-                    // Ligne users déjà présente (ex. id = sub UUID) sans identité : pas une création.
-                    user = orphan.get();
-                    firstLogin = false;
-                    if (AccessPolicyService.isDisabled(user)) {
-                        throw new AccessPolicyDeniedException(AccessDeniedReason.ACCOUNT_DISABLED);
-                    }
-                    requireGranted(accessPolicyService.evaluate(jwt, user));
-                } else {
-                    // Création effective uniquement — limite de sièges / licence ici seulement.
-                    requireGranted(accessPolicyService.evaluate(jwt, null));
-                    if (licenceService != null) {
-                        licenceService.assertCanCreateUser(subject);
-                    }
-                    newAccount = true;
-                    user = new UserEntity();
-                    user.setId(allocateId(subject));
-                    user.setSystemAccount(false);
-                    user.setStatus("active");
+                // Jamais de liaison implicite users.id = sub (prise de compte inter-IdP).
+                refuseIfSubjectCollidesWithExistingUserId(subject);
+                // Création effective uniquement — limite de sièges / licence ici seulement.
+                requireGranted(accessPolicyService.evaluate(jwt, null));
+                if (licenceService != null) {
+                    licenceService.assertCanCreateUser(subject);
                 }
+                newAccount = true;
+                user = new UserEntity();
+                user.setId(allocateId(subject));
+                user.setSystemAccount(false);
+                user.setStatus("active");
             }
         }
 
@@ -211,15 +202,20 @@ public class UserSyncService {
     }
 
     /**
-     * Compte déjà en base dont l'id égale le {@code sub} UUID — sans passer par la création
-     * (donc sans contrôle licence). Cas typique : bootstrap / seed / sync partiel.
+     * Refuse si {@code sub} est un UUID déjà utilisé comme {@code users.id} alors qu'aucune
+     * identité (issuer, sub) n'existe pour ce JWT — évite la prise de compte inter-IdP.
+     * La liaison d'identités reste uniquement explicite (admin / import).
      */
-    private Optional<UserEntity> findExistingUserBySubject(String subject) {
+    private void refuseIfSubjectCollidesWithExistingUserId(String subject) {
         try {
             UUID asUuid = UUID.fromString(subject);
-            return userRepository.findById(asUuid);
+            if (userRepository.existsById(asUuid)) {
+                throw new AccessPolicyDeniedException(
+                        AccessDeniedReason.IDENTITY_CONFLICT,
+                        "Identité déjà associée à un autre compte : contactez l'administrateur");
+            }
         } catch (IllegalArgumentException ignored) {
-            return Optional.empty();
+            // subject non-UUID : pas de collision possible avec users.id UUID
         }
     }
 
