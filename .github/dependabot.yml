@@ -23,6 +23,16 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
     groups:
+      tiptap:
+        patterns:
+          - "@tiptap/*"
+      eslint:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@eslint/*"
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
       npm-minor-patch:
         update-types:
           - minor
