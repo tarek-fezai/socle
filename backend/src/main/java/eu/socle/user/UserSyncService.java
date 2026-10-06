@@ -97,16 +97,27 @@ public class UserSyncService {
                 // Compte existant rattaché à cette identité : désactivé / domaine / groupe.
                 requireGranted(accessPolicyService.evaluate(jwt, user));
             } else {
-                // Aucune création avant décision de la politique d'accès + limite de sièges.
-                requireGranted(accessPolicyService.evaluate(jwt, null));
-                if (licenceService != null) {
-                    licenceService.assertCanCreateUser(subject);
+                Optional<UserEntity> orphan = findExistingUserBySubject(subject);
+                if (orphan.isPresent()) {
+                    // Ligne users déjà présente (ex. id = sub UUID) sans identité : pas une création.
+                    user = orphan.get();
+                    firstLogin = false;
+                    if (AccessPolicyService.isDisabled(user)) {
+                        throw new AccessPolicyDeniedException(AccessDeniedReason.ACCOUNT_DISABLED);
+                    }
+                    requireGranted(accessPolicyService.evaluate(jwt, user));
+                } else {
+                    // Création effective uniquement — limite de sièges / licence ici seulement.
+                    requireGranted(accessPolicyService.evaluate(jwt, null));
+                    if (licenceService != null) {
+                        licenceService.assertCanCreateUser(subject);
+                    }
+                    newAccount = true;
+                    user = new UserEntity();
+                    user.setId(allocateId(subject));
+                    user.setSystemAccount(false);
+                    user.setStatus("active");
                 }
-                newAccount = true;
-                user = new UserEntity();
-                user.setId(allocateId(subject));
-                user.setSystemAccount(false);
-                user.setStatus("active");
             }
         }
 
@@ -193,11 +204,23 @@ public class UserSyncService {
                 && source != IdentityProperties.RoleSource.BOTH) {
             return;
         }
-        var bootstrap = identityProperties.getBootstrapAdminSubjects();
-        if (bootstrap == null || bootstrap.isEmpty() || !bootstrap.contains(subject)) {
+        if (!identityProperties.isBootstrapAdminSubject(subject)) {
             return;
         }
         platformRoleService.grantBootstrapAdminIfNeeded(user.getId(), subject);
+    }
+
+    /**
+     * Compte déjà en base dont l'id égale le {@code sub} UUID — sans passer par la création
+     * (donc sans contrôle licence). Cas typique : bootstrap / seed / sync partiel.
+     */
+    private Optional<UserEntity> findExistingUserBySubject(String subject) {
+        try {
+            UUID asUuid = UUID.fromString(subject);
+            return userRepository.findById(asUuid);
+        } catch (IllegalArgumentException ignored) {
+            return Optional.empty();
+        }
     }
 
     private UUID allocateId(String subject) {

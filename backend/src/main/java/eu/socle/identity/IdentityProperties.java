@@ -199,7 +199,70 @@ public class IdentityProperties {
     }
 
     public void setBootstrapAdminSubjects(List<String> bootstrapAdminSubjects) {
-        this.bootstrapAdminSubjects = bootstrapAdminSubjects != null ? bootstrapAdminSubjects : new ArrayList<>();
+        this.bootstrapAdminSubjects = normalizeBootstrapSubjects(bootstrapAdminSubjects);
+    }
+
+    /**
+     * {@code true} si {@code subject} (claim OIDC {@code sub}) figure dans
+     * {@link #bootstrapAdminSubjects} après normalisation (trim, CSV, {@code issuer|sub}).
+     */
+    public boolean isBootstrapAdminSubject(String subject) {
+        if (subject == null || subject.isBlank() || bootstrapAdminSubjects.isEmpty()) {
+            return false;
+        }
+        String needle = normalizeBootstrapToken(subject.trim());
+        if (needle.isEmpty()) {
+            return false;
+        }
+        for (String s : bootstrapAdminSubjects) {
+            if (needle.equals(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Normalise la liste issue de YAML / env :
+     * <ul>
+     *   <li>split CSV si un seul élément contient des virgules
+     *       ({@code SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS=a,b}) ;</li>
+     *   <li>accepte {@code issuer|sub} ou {@code issuer#sub} → conserve le {@code sub} ;</li>
+     *   <li>trim, ignore les vides.</li>
+     * </ul>
+     */
+    static List<String> normalizeBootstrapSubjects(List<String> raw) {
+        List<String> out = new ArrayList<>();
+        if (raw == null || raw.isEmpty()) {
+            return out;
+        }
+        for (String entry : raw) {
+            if (entry == null || entry.isBlank()) {
+                continue;
+            }
+            for (String part : entry.split(",")) {
+                String token = normalizeBootstrapToken(part);
+                if (!token.isEmpty() && !out.contains(token)) {
+                    out.add(token);
+                }
+            }
+        }
+        return out;
+    }
+
+    static String normalizeBootstrapToken(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String t = raw.trim();
+        if (t.isEmpty()) {
+            return "";
+        }
+        int sep = Math.max(t.lastIndexOf('|'), t.lastIndexOf('#'));
+        if (sep > 0 && sep < t.length() - 1) {
+            t = t.substring(sep + 1).trim();
+        }
+        return t;
     }
 
     public String getClientId() {

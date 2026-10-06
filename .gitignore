@@ -62,3 +62,4 @@ infra/minio-data/
 # E2E licence de TEST (éphémère, générée par generate-ci-env.sh)
 e2e/.ci-licence-keys/
 deploy/compose/.env.ci
+deploy/compose/.env.production

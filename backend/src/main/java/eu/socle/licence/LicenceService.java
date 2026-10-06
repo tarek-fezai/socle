@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
+import eu.socle.identity.AccessDeniedReason;
+import eu.socle.identity.AccessPolicyDeniedException;
 import eu.socle.identity.IdentityFacade;
 import eu.socle.identity.IdentityProperties;
 import eu.socle.licence.LicenceDtos.ImportLicenceRequest;
@@ -165,22 +167,29 @@ public class LicenceService {
     /**
      * Refuse la création d'un nouvel utilisateur si aucune licence valide ou si la limite
      * de sièges est atteinte. Les bootstrap admins sont toujours autorisés.
-     * Les comptes existants ne sont jamais bloqués.
+     * Les comptes existants ne sont jamais bloqués (ne pas appeler cette méthode pour eux).
+     *
+     * <p>Lève {@link AccessPolicyDeniedException} ({@link AccessDeniedReason#LICENCE_USER_LIMIT})
+     * — traité comme un refus de politique d'accès (403 problem+json), jamais un 500.
      *
      * @param oidcSubject claim {@code sub} du JWT (peut être {@code null})
      */
     @Transactional(readOnly = true)
     public void assertCanCreateUser(String oidcSubject) {
-        if (isBootstrapAdminSubject(oidcSubject)) {
+        if (identityProperties != null && identityProperties.isBootstrapAdminSubject(oidcSubject)) {
             return;
         }
         SeatPolicy policy = seatPolicy();
         if (!policy.validLicence()) {
-            throw ApiErrors.licenceUserLimitNoLicence();
+            throw new AccessPolicyDeniedException(
+                    AccessDeniedReason.LICENCE_USER_LIMIT,
+                    ApiErrors.licenceUserLimitNoLicence().getReason());
         }
         long active = countActiveUsers();
         if (active >= policy.maxUsers()) {
-            throw ApiErrors.licenceUserLimit(policy.maxUsers(), active, "limite de sièges");
+            throw new AccessPolicyDeniedException(
+                    AccessDeniedReason.LICENCE_USER_LIMIT,
+                    ApiErrors.licenceUserLimit(policy.maxUsers(), active, "limite de sièges").getReason());
         }
     }
 
@@ -226,21 +235,10 @@ public class LicenceService {
                 active, seats.maxUsers(), !seats.validLicence(), banner);
     }
 
+    /** @deprecated préférer {@link IdentityProperties#isBootstrapAdminSubject(String)} */
+    @Deprecated
     boolean isBootstrapAdminSubject(String subject) {
-        if (subject == null || subject.isBlank() || identityProperties == null) {
-            return false;
-        }
-        String needle = subject.trim();
-        List<String> list = identityProperties.getBootstrapAdminSubjects();
-        if (list == null || list.isEmpty()) {
-            return false;
-        }
-        for (String s : list) {
-            if (s != null && needle.equals(s.trim())) {
-                return true;
-            }
-        }
-        return false;
+        return identityProperties != null && identityProperties.isBootstrapAdminSubject(subject);
     }
 
     private SeatPolicy seatPolicy() {

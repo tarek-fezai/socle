@@ -43,12 +43,15 @@ FROM alpine@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4
 LABEL org.opencontainers.image.licenses="LicenseRef-Socle-Proprietary"
 
 RUN apk add --no-cache ca-certificates \
-    && adduser -D -u 10001 -H -s /sbin/nologin appuser \
+    && adduser -D -u 10001 -h /home/appuser -s /sbin/nologin appuser \
     && mkdir -p /app /data/git-content /data/blobs /openfga-config /tmp \
-    && chown -R 10001:10001 /app /data/git-content /data/blobs /openfga-config /tmp
+               /home/appuser/.config/jgit \
+    && chown -R 10001:10001 /app /data/git-content /data/blobs /openfga-config /tmp /home/appuser
 
 ENV JAVA_HOME=/opt/java
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
+ENV HOME=/home/appuser
+ENV XDG_CONFIG_HOME=/home/appuser/.config
 
 COPY --from=jre /jre /opt/java
 COPY --from=build --chown=10001:10001 /build/app.jar /app/app.jar
