@@ -2244,6 +2244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/licence": {
         parameters: {
             query?: never;
@@ -3877,6 +3893,25 @@ export interface components {
             storageProvider?: string;
             items?: components["schemas"]["DriftItem"][];
             procedure?: string;
+        };
+        AdminOverviewView: {
+            oidc?: components["schemas"]["OidcSummaryView"];
+            /** Format: int64 */
+            userCount?: number;
+            /** Format: int64 */
+            spaceCount?: number;
+            plan?: components["schemas"]["PlanSummaryView"];
+        };
+        OidcSummaryView: {
+            issuer?: string;
+            clientId?: string;
+            status?: string;
+        };
+        PlanSummaryView: {
+            evaluationMode?: boolean;
+            edition?: string;
+            /** Format: date-time */
+            expiresAt?: string;
         };
         LegalHoldListResponse: {
             holds?: components["schemas"]["LegalHoldView"][];
@@ -8458,6 +8493,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DriftReport"];
+                };
+            };
+        };
+    };
+    overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminOverviewView"];
                 };
             };
         };

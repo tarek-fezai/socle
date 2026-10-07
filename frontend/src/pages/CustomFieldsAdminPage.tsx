@@ -181,7 +181,7 @@ export function CustomFieldsAdminPage() {
       active="custom-fields"
       breadcrumb={[
         { label: 'Compte', to: '/' },
-        { label: 'Administration', to: '/admin/tags' },
+        { label: 'Administration', to: '/admin' },
         { label: 'Champs personnalisés' },
       ]}
       mainClassName="admin-main--fields"

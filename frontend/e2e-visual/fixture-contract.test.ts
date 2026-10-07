@@ -27,6 +27,7 @@ import {
   PAGE_FEEDBACK_VIEWER,
   pageDocument,
 } from './page-fixtures.mjs'
+import { ADMIN_OVERVIEW_SEED } from './account-admin-fixtures.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const openapi = JSON.parse(readFileSync(resolve(root, 'openapi/openapi.json'), 'utf8'))
@@ -169,4 +170,9 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
     validate('ApprovalDetailView', APPR_DETAIL_DESKTOP)
     validate('ApprovalDetailView', APPR_DETAIL_MOBILE)
   })
+
+  it('ADMIN_OVERVIEW_SEED matches AdminOverviewView', () => {
+    validate('AdminOverviewView', ADMIN_OVERVIEW_SEED)
+  })
 })
+

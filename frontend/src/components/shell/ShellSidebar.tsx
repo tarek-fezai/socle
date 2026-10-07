@@ -2,16 +2,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
 import { documentHref, getSpaceTree, spaceBrowseHref, spaceTreeKey } from '../../lib/folders'
 import { listSpaces } from '../../lib/spaces'
 import {
-  initialsFromName,
   loadExpandedSpaces,
   saveExpandedSpaces,
   searchShortcutLabel,
 } from './shellUtils'
+import { ShellUserMenu } from './ShellUserMenu'
 import {
   useBrandingAccent,
   useBrandingInstanceName,
@@ -55,7 +54,6 @@ const iconTeam = (
 )
 
 export function ShellSidebar({ onOpenSearch }: Props) {
-  const { me, logout } = useAuth()
   const location = useLocation()
   const [expanded, setExpanded] = useState<Set<string>>(() => loadExpandedSpaces())
   const [kbd, setKbd] = useState('⌘K')
@@ -107,8 +105,6 @@ export function ShellSidebar({ onOpenSearch }: Props) {
   }
 
   const path = location.pathname
-  const displayName = me?.displayName ?? 'Compte'
-  const initials = me?.avatarInitials || initialsFromName(displayName)
   const logoUrl = useBrandingLogoUrl()
   const accent = useBrandingAccent()
   const brandName = useBrandingInstanceName() || 'Socle'
@@ -213,20 +209,7 @@ export function ShellSidebar({ onOpenSearch }: Props) {
         </p>
       )}
 
-      <button
-        type="button"
-        className="shell-user"
-        data-mock-id="shell-user"
-        onClick={() => {
-          if (window.confirm('Se déconnecter ?')) void logout()
-        }}
-        title="Déconnexion"
-      >
-        <span className="shell-avatar" aria-hidden>
-          {initials}
-        </span>{' '}
-        <span className="shell-user-name">{displayName}</span>
-      </button>
+      <ShellUserMenu />
     </aside>
   )
 }

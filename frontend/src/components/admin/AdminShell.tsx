@@ -4,14 +4,25 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import './admin-page.css'
 
-export type AdminNavKey = 'tags' | 'custom-fields' | 'templates' | 'retention' | 'branding' | 'licence'
+export type AdminNavKey =
+  | 'identity'
+  | 'branding'
+  | 'tags'
+  | 'custom-fields'
+  | 'templates'
+  | 'workflows'
+  | 'retention'
+  | 'licence'
+  | 'audit'
+  | 'integrations'
 
 type NavItem =
-  | { kind: 'link'; key?: AdminNavKey; label: string; to: string; mockId?: string }
-  | { kind: 'placeholder'; label: string }
+  | { kind: 'link'; key: AdminNavKey; label: string; to: string; mockId?: string }
+  | { kind: 'placeholder'; label: string; soon?: boolean }
 
+/** Ordre Admin.dc.html */
 const NAV_ITEMS: NavItem[] = [
-  { kind: 'placeholder', label: 'Identité & SSO' },
+  { kind: 'link', key: 'identity', label: 'Identité & SSO', to: '/admin', mockId: 'admin-nav-identity' },
   {
     kind: 'link',
     key: 'branding',
@@ -19,12 +30,12 @@ const NAV_ITEMS: NavItem[] = [
     to: '/admin/branding',
     mockId: 'admin-nav-branding',
   },
-  { kind: 'placeholder', label: 'Membres & équipes' },
-  { kind: 'placeholder', label: 'Identités utilisateurs' },
-  { kind: 'placeholder', label: 'Rôles globaux' },
-  { kind: 'placeholder', label: 'Intégrations & API' },
-  { kind: 'placeholder', label: 'Santé du contenu' },
-  { kind: 'placeholder', label: 'Analytique' },
+  { kind: 'placeholder', label: 'Membres & équipes', soon: true },
+  { kind: 'placeholder', label: 'Identités utilisateurs', soon: true },
+  { kind: 'placeholder', label: 'Rôles globaux', soon: true },
+  { kind: 'link', key: 'integrations', label: 'Intégrations & API', to: '/integrations' },
+  { kind: 'placeholder', label: 'Santé du contenu', soon: true },
+  { kind: 'placeholder', label: 'Analytique', soon: true },
   { kind: 'link', key: 'tags', label: 'Tags', to: '/admin/tags', mockId: 'admin-nav-tags' },
   {
     kind: 'link',
@@ -34,7 +45,12 @@ const NAV_ITEMS: NavItem[] = [
     mockId: 'admin-nav-custom-fields',
   },
   { kind: 'link', key: 'templates', label: 'Modèles', to: '/admin/templates' },
-  { kind: 'placeholder', label: "Workflows d'approbation" },
+  {
+    kind: 'link',
+    key: 'workflows',
+    label: "Workflows d'approbation",
+    to: '/admin/workflows',
+  },
   {
     kind: 'link',
     key: 'retention',
@@ -42,8 +58,8 @@ const NAV_ITEMS: NavItem[] = [
     to: '/admin/retention',
     mockId: 'admin-nav-retention',
   },
-  { kind: 'placeholder', label: 'Attestations' },
-  { kind: 'placeholder', label: "Journal d'audit" },
+  { kind: 'placeholder', label: 'Attestations', soon: true },
+  { kind: 'link', key: 'audit', label: "Journal d'audit", to: '/audit' },
   {
     kind: 'link',
     key: 'licence',
@@ -65,7 +81,7 @@ export type AdminShellProps = {
   innerClassName?: string
 }
 
-/** Layout admin (TagsAdmin / CustomFields) — fil d'Ariane 60px, sous-nav 240px, contenu, rail optionnel. */
+/** Layout admin — fil d'Ariane 60px, sous-nav 240px, contenu, rail optionnel. */
 export function AdminShell({
   active,
   breadcrumb,
@@ -108,8 +124,13 @@ export function AdminShell({
           {NAV_ITEMS.map((item) => {
             if (item.kind === 'placeholder') {
               return (
-                <span key={item.label} className="admin-nav-item admin-nav-item--muted">
+                <span
+                  key={item.label}
+                  className="admin-nav-item admin-nav-item--muted"
+                  aria-disabled
+                >
                   {item.label}
+                  {item.soon ? <span className="admin-nav-soon">Bientôt</span> : null}
                 </span>
               )
             }
