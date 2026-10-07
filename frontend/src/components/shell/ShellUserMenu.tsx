@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { initialsFromName } from './shellUtils'
@@ -23,7 +23,7 @@ export function ShellUserMenu({ className = '', variant = 'sidebar' }: Props) {
     function onDoc(e: MouseEvent) {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
     }
-    function onKey(e: KeyboardEvent) {
+    function onKey(e: globalThis.KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
@@ -38,7 +38,7 @@ export function ShellUserMenu({ className = '', variant = 'sidebar' }: Props) {
     setOpen((v) => !v)
   }
 
-  function onTriggerKey(e: KeyboardEvent) {
+  function onTriggerKey(e: ReactKeyboardEvent<HTMLButtonElement>) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       toggle()
