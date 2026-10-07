@@ -112,34 +112,37 @@ final class TestImages {
         }
     }
 
-    /** WebP réel (lossy) via ImageIO + TwelveMonkeys si un writer est présent, sinon fixture RIFF minimale. */
-    static byte[] webp(int w, int h) {
-        try {
-            Iterator<ImageWriter> writers = ImageIO.getImageWritersByMIMEType("image/webp");
-            if (!writers.hasNext()) {
-                writers = ImageIO.getImageWritersByFormatName("webp");
-            }
-            if (writers.hasNext()) {
-                ImageWriter writer = writers.next();
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                try (ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
-                    writer.setOutput(ios);
-                    writer.write(null, new IIOImage(rgb(w, h), null, null), null);
-                } finally {
-                    writer.dispose();
-                }
-                byte[] bytes = baos.toByteArray();
-                if (bytes.length > 0) {
-                    return bytes;
-                }
-            }
-        } catch (IOException ignored) {
-            // fallback ci-dessous
-        }
-        // VP8L lossless 1×1 opaque noir — RIFF/WEBP valide (lu par TwelveMonkeys / libwebp).
+    /**
+     * Fixture WebP de référence (libwebp/cwebp) — voir {@code images/README.md}.
+     * Pas de repli ImageWriter / hex : les octets doivent rester alignés sur l'encodeur de référence.
+     */
+    static byte[] webpLossy() {
+        return resourceBytes("images/sample-lossy.webp");
+    }
+
+    static byte[] webpLossless() {
+        return resourceBytes("images/sample-lossless.webp");
+    }
+
+    /**
+     * Ancienne fixture hexadécimale volontairement tronquée (RIFF annonce 40 octets pour 33 réels ;
+     * chunk VP8L annonce 19 pour 13). libwebp et imageio-webp ≥ 3.13.1 la rejettent.
+     */
+    static byte[] truncatedWebp() {
         return hexToBytes(
                 "5249464620000000574542505650384C130000002F000000100710117118080200"
         );
+    }
+
+    private static byte[] resourceBytes(String classpath) {
+        try (var in = TestImages.class.getClassLoader().getResourceAsStream(classpath)) {
+            if (in == null) {
+                throw new IllegalStateException("resource manquante: " + classpath);
+            }
+            return in.readAllBytes();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static byte[] pngChunk(String type, byte[] data) {

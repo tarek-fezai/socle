@@ -105,15 +105,18 @@ class ImageSanitizerTest {
 
     @Test
     void webp_isReadableAndSanitized() throws Exception {
-        byte[] webp = TestImages.webp(4, 4);
-        String detected = new MediaTypeDetector().detect(new ByteArrayInputStream(webp), "pic.webp");
-        assertThat(detected).isEqualTo("image/webp");
+        for (byte[] webp : new byte[][] {TestImages.webpLossy(), TestImages.webpLossless()}) {
+            String detected = new MediaTypeDetector().detect(new ByteArrayInputStream(webp), "pic.webp");
+            assertThat(detected).isEqualTo("image/webp");
 
-        ImageSanitizer.Result result = sanitizer.sanitizeIfImage(webp, "image/webp").orElseThrow();
-        // Ré-encodage PNG (writer WebP optionnel) — sans métadonnées.
-        assertThat(result.mediaType()).isIn("image/png", "image/webp", "image/jpeg");
-        assertThat(result.width()).isPositive();
-        assertThat(result.height()).isPositive();
-        assertThat(ImageIO.read(new ByteArrayInputStream(result.bytes()))).isNotNull();
+            ImageSanitizer.Result result = sanitizer.sanitizeIfImage(webp, "image/webp").orElseThrow();
+            // Ré-encodage PNG (writer WebP optionnel) — sans métadonnées.
+            assertThat(result.mediaType()).isIn("image/png", "image/webp", "image/jpeg");
+            assertThat(result.width()).isPositive();
+            assertThat(result.height()).isPositive();
+            assertThat(ImageIO.read(new ByteArrayInputStream(result.bytes()))).isNotNull();
+            assertThat(TestImages.contains(result.bytes(), "Exif")).isFalse();
+            assertThat(TestImages.contains(result.bytes(), TestImages.GPS_MARKER)).isFalse();
+        }
     }
 }

@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
@@ -56,6 +57,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -295,6 +297,20 @@ class AttachmentSecurityWebMvcTest {
     }
 
     // ── POST : EXIF / GPS ──────────────────────────────────────────────────────────────────
+
+    @Test
+    void upload_truncatedWebp_is415_attachmentTypeRejected_andNotStored() throws Exception {
+        byte[] truncated = TestImages.truncatedWebp();
+        assertThat(truncated.length).isEqualTo(33);
+
+        mockMvc.perform(upload("broken.webp", "image/webp", truncated).with(jwt()))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ApiErrors.ATTACHMENT_TYPE_REJECTED));
+
+        assertThat(count("SELECT count(*) FROM attachments")).isZero();
+        assertThat(blobFileCount()).as("aucun blob orphelin").isZero();
+    }
 
     @Test
     void upload_jpegWithGpsExif_storedBytesHaveNoExif() throws Exception {
