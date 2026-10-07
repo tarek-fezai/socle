@@ -3463,6 +3463,7 @@ export interface components {
             documentCount?: number;
             /** Format: int32 */
             folderCount?: number;
+            folders?: components["schemas"]["TreeFolderNode"][];
             documents?: components["schemas"]["TreeDocumentNode"][];
         };
         GraphEdge: {

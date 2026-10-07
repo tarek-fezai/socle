@@ -8743,6 +8743,12 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "folders" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TreeFolderNode"
+            }
+          },
           "documents" : {
             "type" : "array",
             "items" : {
