@@ -97,7 +97,10 @@ export function AccountPage() {
         </div>
         <div className="account-page__top-actions">
           <button type="button" className="account-page__top-link" disabled>
-            Centre d&apos;aide <span className="account-soon">Bientôt</span>
+            Centre d&apos;aide{' '}
+            <span className="account-soon" data-visual-ignore>
+              Bientôt
+            </span>
           </button>
           <button
             type="button"
@@ -153,7 +156,7 @@ export function AccountPage() {
             <div className="account-section-title">Accessibilité</div>
             <span className="account-saved-hint">Enregistré sur cet appareil</span>
           </div>
-          <div className="account-card-row" data-mock-id="account-a11y">
+          <div className="account-card-row" data-mock-id="account-accessibility">
             <div className="account-row">
               <div className="account-row-label">
                 <div className="account-row-title">Contraste élevé</div>
@@ -205,7 +208,7 @@ export function AccountPage() {
           </div>
 
           <div className="account-section-title">Langue</div>
-          <div className="account-card-row">
+          <div className="account-card-row" data-mock-id="account-language">
             <div className="account-row">
               <div className="account-row-label">
                 <div className="account-row-title">Langue de l&apos;interface</div>
@@ -224,7 +227,9 @@ export function AccountPage() {
                 </div>
               </div>
               <Toggle label="Traduction automatique" on={false} onChange={() => {}} disabled />
-              <span className="account-soon">Bientôt</span>
+              <span className="account-soon" data-visual-ignore>
+                Bientôt
+              </span>
             </div>
           </div>
 
@@ -238,7 +243,9 @@ export function AccountPage() {
               <div className="account-row" key={title}>
                 <div className="account-row-title">{title}</div>
                 <Toggle label={title} on={false} onChange={() => {}} disabled />
-                <span className="account-soon">Bientôt</span>
+                <span className="account-soon" data-visual-ignore>
+                  Bientôt
+                </span>
               </div>
             ))}
           </div>
@@ -272,14 +279,21 @@ export function AccountPage() {
           </div>
 
           <div className="account-section-title">Sessions actives</div>
-          <div className="account-muted-box" data-mock-id="account-sessions">
+          <div
+            className="account-muted-box"
+            data-mock-id="account-sessions"
+            data-visual-mask="account-sessions-list"
+          >
             Gérées par le fournisseur d&apos;identité
           </div>
 
           <div className="account-section-head">
             <div className="account-section-title">Jetons d&apos;accès personnels</div>
             <span className="account-link account-link--disabled">
-              + Générer un jeton <span className="account-soon">Bientôt</span>
+              + Générer un jeton{' '}
+              <span className="account-soon" data-visual-ignore>
+                Bientôt
+              </span>
             </span>
           </div>
           <p className="account-row-desc" style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
@@ -290,16 +304,22 @@ export function AccountPage() {
             </Link>
             .
           </p>
-          <div className="account-empty-pat" data-mock-id="account-pat-empty">
+          <div
+            className="account-empty-pat"
+            data-mock-id="account-pat"
+            data-visual-mask="account-pat-list"
+          >
             Aucun jeton personnel
           </div>
 
           <div className="account-section-title">Confidentialité &amp; données personnelles</div>
-          <div className="account-card-row" data-mock-id="account-privacy">
-            <div className="account-row">
+          <div className="account-card-row account-card-row--privacy" data-mock-id="account-privacy">
+            <div className="account-row account-row--privacy">
               <div className="account-row-label">
-                <div className="account-row-title">Télécharger mes données</div>
-                <div className="account-row-desc">
+                <div className="account-row-title account-row-title--semibold">
+                  Télécharger mes données
+                </div>
+                <div className="account-row-desc account-row-desc--privacy">
                   Exportez une archive de vos données personnelles : profil, documents dont vous
                   êtes auteur, commentaires, historique d&apos;activité et attestations —
                   conformément au RGPD (droit à la portabilité).
@@ -321,6 +341,12 @@ export function AccountPage() {
               </button>
             </div>
           </div>
+          {/* Réserve la hauteur de l’historique d’exports maquette (masqué en pixel) — pas de fausse ligne. */}
+          <div
+            className="account-export-history-slot"
+            data-visual-mask="account-export-history"
+            aria-hidden
+          />
 
           {showOrgAdmin ? (
             <>

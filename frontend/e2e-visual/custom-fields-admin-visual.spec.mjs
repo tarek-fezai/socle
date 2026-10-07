@@ -199,16 +199,7 @@ test.describe('custom fields admin structural', () => {
     console.log('custom-fields app layout', JSON.stringify(appLayout))
     const appMetrics = await collectMetrics(page, CUSTOM_FIELDS_ADMIN_DESKTOP_IDS)
 
-    const pageExceptions = {
-      'admin-subnav': {
-        skip: ['text'],
-        reason:
-          'Placeholders admin marqués « Bientôt » (Account/Admin PR) — absents des maquettes CustomFields/…',
-      },
-    }
-    const results = compareMetrics(mockMetrics, appMetrics, CUSTOM_FIELDS_ADMIN_DESKTOP_IDS, {
-      pageExceptions,
-    })
+    const results = compareMetrics(mockMetrics, appMetrics, CUSTOM_FIELDS_ADMIN_DESKTOP_IDS)
     const failed = results.filter((r) => r.diffs.length > 0)
     expect(failed, JSON.stringify(failed, null, 2)).toEqual([])
   })

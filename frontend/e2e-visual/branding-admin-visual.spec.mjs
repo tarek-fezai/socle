@@ -170,16 +170,7 @@ test.describe('branding admin structural', () => {
     await settleFonts(page)
     const appMetrics = await collectMetrics(page, BRANDING_ADMIN_DESKTOP_IDS)
 
-    const pageExceptions = {
-      'admin-subnav': {
-        skip: ['text'],
-        reason:
-          'Placeholders admin marqués « Bientôt » (Account/Admin PR) — absents des maquettes Branding/Tags/…',
-      },
-    }
-    const results = compareMetrics(mockMetrics, appMetrics, BRANDING_ADMIN_DESKTOP_IDS, {
-      pageExceptions,
-    })
+    const results = compareMetrics(mockMetrics, appMetrics, BRANDING_ADMIN_DESKTOP_IDS)
     const failed = results.filter((r) => r.diffs.length > 0)
     expect(failed, JSON.stringify(failed, null, 2)).toEqual([])
   })

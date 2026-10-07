@@ -179,11 +179,6 @@ test.describe('retention admin structural', () => {
 
     // Cascade y mesurée sous retention-durations (lignes admin-table-row vs divs maquette).
     const pageExceptions = {
-      'admin-subnav': {
-        skip: ['text'],
-        reason:
-          'Placeholders admin marqués « Bientôt » (Account/Admin PR) — absents de Retention.dc.html',
-      },
       'retention-compliance': {
         skip: ['box'],
         reason: 'box.y Δ=6px mesuré — cascade sous retention-durations (hauteur lignes)',

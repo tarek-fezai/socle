@@ -18,6 +18,8 @@ test.describe('Account → Admin navigation', () => {
     await expect(page).toHaveURL(/\/admin\/?$/)
     await expect(page.getByTestId('admin-forbidden')).toHaveCount(0)
     await expect(page.locator('[data-mock-id="admin-home-title"]')).toBeVisible()
+    await expect(page.locator('[data-mock-id="admin-stats-users"] .admin-rail__value')).toHaveText(/^\d+$/)
+    await expect(page.locator('[data-mock-id="admin-sso-provider"] .admin-mono').first()).toContainText(/https?:\/\//)
   })
 
   test('auditeur : pas de carte Organisation, /admin = 403', async ({ page }) => {

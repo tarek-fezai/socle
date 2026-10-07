@@ -88,20 +88,30 @@
 }
 
 .admin-subnav__org {
+  box-sizing: border-box;
   font-size: 11px;
   font-weight: 600;
+  line-height: 14px;
+  height: 26px; /* 4+14+8 padding/line — Admin.dc.html */
   color: #b0b0b5;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 4px 10px 8px;
+  overflow: hidden;
 }
 
 .admin-nav-item {
+  box-sizing: border-box;
   padding: 8px 10px;
   border-radius: 7px;
   font-size: 13.5px;
+  line-height: 20px;
+  height: 36px;
   color: #4b4b52;
   display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .admin-nav-item:hover {
@@ -427,10 +437,15 @@
 }
 
 .admin-nav-soon {
+  display: inline-block;
   margin-left: 6px;
   font-size: 10px;
   font-weight: 600;
   color: #9b9ba1;
+  line-height: 1.2;
+  /* largeur fixe → masques Playwright alignés app/maquette */
+  width: 4.2em;
+  vertical-align: baseline;
 }
 
 .admin-home-section-label {
@@ -443,11 +458,13 @@
 }
 
 .admin-home-disabled-block {
+  box-sizing: border-box;
   border: 1px solid #ececee;
   border-radius: 10px;
   padding: 14px 16px;
   margin-bottom: 14px;
   font-size: 13px;
+  line-height: 1.2;
   color: #9b9ba1;
   background: #fafafb;
 }

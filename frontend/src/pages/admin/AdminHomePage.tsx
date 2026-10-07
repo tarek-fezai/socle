@@ -55,15 +55,19 @@ export function AdminHomePage() {
       rightRail={
         data ? (
           <aside className="admin-rail" data-mock-id="admin-home-rail">
-            <div className="admin-rail__block">
+            <div className="admin-rail__block" data-mock-id="admin-stats-users">
               <div className="admin-rail__label">Utilisateurs</div>
               <div className="admin-rail__value admin-rail__value--serif">{data.userCount}</div>
             </div>
-            <div className="admin-rail__block">
+            <div className="admin-rail__block" data-mock-id="admin-stats-spaces">
               <div className="admin-rail__label">Espaces</div>
               <div className="admin-rail__value admin-rail__value--serif">{data.spaceCount}</div>
             </div>
-            <Link to="/admin/licence" className="admin-rail__block admin-rail__link">
+            <Link
+              to="/admin/licence"
+              className="admin-rail__block admin-rail__link"
+              data-mock-id="admin-stats-plan"
+            >
               <div className="admin-rail__label">Licence</div>
               <div className="admin-rail__text">{planDetail}</div>
             </Link>
@@ -87,7 +91,7 @@ export function AdminHomePage() {
 
       <div
         className="admin-home-oidc"
-        data-mock-id="admin-home-oidc"
+        data-mock-id="admin-sso-provider"
         style={{
           border: '1px solid #ececee',
           borderRadius: 12,
@@ -164,8 +168,11 @@ export function AdminHomePage() {
       </div>
 
       <div className="admin-home-section-label">Domaines autorisés</div>
-      <div className="admin-home-disabled-block" data-mock-id="admin-home-domains">
-        <span>Bientôt</span>
+      <div className="admin-home-disabled-block" data-mock-id="admin-domains">
+        Domaines autorisés —{' '}
+        <span className="account-soon" data-visual-ignore>
+          Bientôt
+        </span>
       </div>
 
       <div
@@ -184,18 +191,27 @@ export function AdminHomePage() {
       </div>
 
       <div className="admin-home-section-label">Politique de session</div>
-      <div className="admin-home-disabled-block" data-mock-id="admin-home-session">
-        <span>Bientôt</span>
+      <div className="admin-home-disabled-block" data-mock-id="admin-session-policy">
+        Politique de session —{' '}
+        <span className="account-soon" data-visual-ignore>
+          Bientôt
+        </span>
       </div>
 
       <div className="admin-home-section-label">Langues de l&apos;organisation</div>
-      <div className="admin-home-disabled-block" data-mock-id="admin-home-languages">
-        <span>Bientôt</span>
+      <div className="admin-home-disabled-block" data-mock-id="admin-languages">
+        Langues de l&apos;organisation —{' '}
+        <span className="account-soon" data-visual-ignore>
+          Bientôt
+        </span>
       </div>
 
       <div className="admin-home-section-label">Sessions</div>
-      <div className="admin-home-disabled-block" data-mock-id="admin-home-revoke-sessions">
-        Révoquer toutes les sessions — <span className="account-soon">Bientôt</span>
+      <div className="admin-home-disabled-block" data-mock-id="admin-revoke-sessions">
+        Révoquer toutes les sessions —{' '}
+        <span className="account-soon" data-visual-ignore>
+          Bientôt
+        </span>
       </div>
     </AdminShell>
   )

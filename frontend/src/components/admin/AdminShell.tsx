@@ -31,7 +31,6 @@ const NAV_ITEMS: NavItem[] = [
     mockId: 'admin-nav-branding',
   },
   { kind: 'placeholder', label: 'Membres & équipes', soon: true },
-  { kind: 'placeholder', label: 'Identités utilisateurs', soon: true },
   { kind: 'placeholder', label: 'Rôles globaux', soon: true },
   { kind: 'link', key: 'integrations', label: 'Intégrations & API', to: '/integrations' },
   { kind: 'placeholder', label: 'Santé du contenu', soon: true },
@@ -130,7 +129,11 @@ export function AdminShell({
                   aria-disabled
                 >
                   {item.label}
-                  {item.soon ? <span className="admin-nav-soon">Bientôt</span> : null}
+                  {item.soon ? (
+                    <span className="admin-nav-soon" data-visual-ignore>
+                      Bientôt
+                    </span>
+                  ) : null}
                 </span>
               )
             }
