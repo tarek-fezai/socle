@@ -22,7 +22,10 @@
     <mapstruct.version>1.6.3</mapstruct.version>
     <temporal.version>1.40.0</temporal.version>
     <springdoc.version>2.9.1</springdoc.version>
-    <openfga.version>0.11.0</openfga.version>
+    <!-- openfga-sdk 0.11.0: Jackson 3 + jackson-annotations 2.22 (JsonApplyView);
+         Boot 3.5 BOM still manages older annotations -> ClassNotFoundException at createStore.
+         Last good with Boot Jackson 2: 0.10.1. -->
+    <openfga.version>0.10.1</openfga.version>
     <aws.sdk.version>2.55.11</aws.sdk.version>
     <tika.version>3.3.2</tika.version>
     <!-- imageio-webp >=3.13.1: VP8L Huffman rejects the fixture (ImageIO.read fails with
