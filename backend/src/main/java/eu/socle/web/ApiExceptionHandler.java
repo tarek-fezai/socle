@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.web;
 
-import eu.socle.document.ApprovalConflictException;
+import eu.socle.identity.AccessDeniedReason;
 import eu.socle.identity.AccessPolicyDeniedException;
+import eu.socle.document.ApprovalConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +79,24 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     /** Refus de la politique d'accès levé hors filtre (ex. sync dans un contrôleur). */
     @ExceptionHandler(AccessPolicyDeniedException.class)
-    public ResponseEntity<Map<String, String>> handleAccessPolicyDenied(AccessPolicyDeniedException ex) {
+    public ResponseEntity<?> handleAccessPolicyDenied(
+            AccessPolicyDeniedException ex, HttpServletRequest request) {
+        if (ex.getReason() == AccessDeniedReason.LICENCE_USER_LIMIT) {
+            CodedStatusException coded = ex.getDetail() != null && !ex.getDetail().isBlank()
+                    ? new CodedStatusException(
+                            HttpStatus.FORBIDDEN, ApiErrors.LICENCE_USER_LIMIT, ex.getDetail())
+                    : ApiErrors.licenceUserLimitNoLicence();
+            return toBusinessProblem(coded, ApiErrors.LICENCE_USER_LIMIT, request);
+        }
+        if (ex.getReason() == AccessDeniedReason.IDENTITY_CONFLICT) {
+            String detail = ex.getDetail() != null && !ex.getDetail().isBlank()
+                    ? ex.getDetail()
+                    : "Identité déjà associée à un autre compte : contactez l'administrateur";
+            return toBusinessProblem(
+                    new CodedStatusException(HttpStatus.FORBIDDEN, ApiErrors.IDENTITY_CONFLICT, detail),
+                    ApiErrors.IDENTITY_CONFLICT,
+                    request);
+        }
         Map<String, String> body = new LinkedHashMap<>();
         body.put("error", "access_denied");
         body.put("reason", ex.getReason().code());

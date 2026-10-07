@@ -7,7 +7,18 @@ public enum AccessDeniedReason {
     NOT_IN_ALLOWED_GROUP("not_in_allowed_group"),
     ACCOUNT_DISABLED("account_disabled"),
     NOT_PROVISIONED("not_provisioned"),
-    EMAIL_DOMAIN_NOT_ALLOWED("email_domain_not_allowed");
+    EMAIL_DOMAIN_NOT_ALLOWED("email_domain_not_allowed"),
+    /**
+     * Création d'utilisateur refusée (aucune licence valide ou limite de sièges).
+     * Réponse HTTP : {@code application/problem+json} avec {@code code=licence_user_limit}.
+     */
+    LICENCE_USER_LIMIT("licence_user_limit"),
+    /**
+     * Identité (issuer, sub) inconnue dont le {@code sub} entre en conflit avec un
+     * {@code users.id} existant — pas de liaison implicite inter-IdP.
+     * Réponse HTTP : {@code application/problem+json} avec {@code code=identity_conflict}.
+     */
+    IDENTITY_CONFLICT("identity_conflict");
 
     private final String code;
 

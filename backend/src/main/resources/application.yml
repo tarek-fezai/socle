@@ -170,8 +170,8 @@ socle:
       auditeur: AUDITEUR
       integrateur: INTEGRATEUR
       administrateur-systeme: ADMINISTRATEUR_SYSTEME
-    # Overridable via SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS (comma-separated subs).
-    bootstrap-admin-subjects: []
+    # Liste vide par défaut (Java). Override env : SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS
+    # (subs OIDC séparés par des virgules ; ne pas fixer [] ici — empêche parfois le bind env).
     link-by-verified-email: false
     # Politique d'accès — jamais exposée via auth-config (groupes / domaines = confidentiels).
     access-policy:

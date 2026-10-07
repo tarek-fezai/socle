@@ -4,6 +4,8 @@ package eu.socle.licence;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import eu.socle.identity.AccessDeniedReason;
+import eu.socle.identity.AccessPolicyDeniedException;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.identity.IdentityFacade;
@@ -110,12 +112,9 @@ class LicenceServiceDbTest {
     @Test
     void withoutLicence_nonBootstrap_refused() {
         assertThatThrownBy(() -> service.assertCanCreateUser("random-user-sub"))
-                .isInstanceOf(CodedStatusException.class)
-                .satisfies(ex -> {
-                    CodedStatusException c = (CodedStatusException) ex;
-                    assertThat(c.getCode()).isEqualTo(ApiErrors.LICENCE_USER_LIMIT);
-                    assertThat(c.getReason()).contains("Aucune licence valide installée");
-                });
+                .isInstanceOf(AccessPolicyDeniedException.class)
+                .satisfies(ex -> assertThat(((AccessPolicyDeniedException) ex).getReason())
+                        .isEqualTo(AccessDeniedReason.LICENCE_USER_LIMIT));
     }
 
     @Test
@@ -143,9 +142,9 @@ class LicenceServiceDbTest {
 
         service.assertCanCreateUser(BOOTSTRAP_SUB); // bootstrap always OK
         assertThatThrownBy(() -> service.assertCanCreateUser("fourth-user"))
-                .isInstanceOf(CodedStatusException.class)
-                .satisfies(ex -> assertThat(((CodedStatusException) ex).getCode())
-                        .isEqualTo(ApiErrors.LICENCE_USER_LIMIT));
+                .isInstanceOf(AccessPolicyDeniedException.class)
+                .satisfies(ex -> assertThat(((AccessPolicyDeniedException) ex).getReason())
+                        .isEqualTo(AccessDeniedReason.LICENCE_USER_LIMIT));
         // existants toujours comptés / accessibles
         assertThat(service.view().activeUsers()).isEqualTo(3);
     }
@@ -159,9 +158,9 @@ class LicenceServiceDbTest {
         assertThat(service.view().status()).isEqualTo(LicenceService.STATUS_EXPIREE);
         assertThat(service.view().activeUsers()).isEqualTo(1); // ADMIN
         assertThatThrownBy(() -> service.assertCanCreateUser("new-after-expiry"))
-                .isInstanceOf(CodedStatusException.class)
-                .satisfies(ex -> assertThat(((CodedStatusException) ex).getReason())
-                        .contains("Aucune licence valide installée"));
+                .isInstanceOf(AccessPolicyDeniedException.class)
+                .satisfies(ex -> assertThat(((AccessPolicyDeniedException) ex).getReason())
+                        .isEqualTo(AccessDeniedReason.LICENCE_USER_LIMIT));
         service.assertCanCreateUser(BOOTSTRAP_SUB);
     }
 

@@ -97,7 +97,9 @@ public class UserSyncService {
                 // Compte existant rattaché à cette identité : désactivé / domaine / groupe.
                 requireGranted(accessPolicyService.evaluate(jwt, user));
             } else {
-                // Aucune création avant décision de la politique d'accès + limite de sièges.
+                // Jamais de liaison implicite users.id = sub (prise de compte inter-IdP).
+                refuseIfSubjectCollidesWithExistingUserId(subject);
+                // Création effective uniquement — limite de sièges / licence ici seulement.
                 requireGranted(accessPolicyService.evaluate(jwt, null));
                 if (licenceService != null) {
                     licenceService.assertCanCreateUser(subject);
@@ -193,11 +195,28 @@ public class UserSyncService {
                 && source != IdentityProperties.RoleSource.BOTH) {
             return;
         }
-        var bootstrap = identityProperties.getBootstrapAdminSubjects();
-        if (bootstrap == null || bootstrap.isEmpty() || !bootstrap.contains(subject)) {
+        if (!identityProperties.isBootstrapAdminSubject(subject)) {
             return;
         }
         platformRoleService.grantBootstrapAdminIfNeeded(user.getId(), subject);
+    }
+
+    /**
+     * Refuse si {@code sub} est un UUID déjà utilisé comme {@code users.id} alors qu'aucune
+     * identité (issuer, sub) n'existe pour ce JWT — évite la prise de compte inter-IdP.
+     * La liaison d'identités reste uniquement explicite (admin / import).
+     */
+    private void refuseIfSubjectCollidesWithExistingUserId(String subject) {
+        try {
+            UUID asUuid = UUID.fromString(subject);
+            if (userRepository.existsById(asUuid)) {
+                throw new AccessPolicyDeniedException(
+                        AccessDeniedReason.IDENTITY_CONFLICT,
+                        "Identité déjà associée à un autre compte : contactez l'administrateur");
+            }
+        } catch (IllegalArgumentException ignored) {
+            // subject non-UUID : pas de collision possible avec users.id UUID
+        }
     }
 
     private UUID allocateId(String subject) {

@@ -42,6 +42,8 @@ public final class ApiErrors {
     /** Création d'utilisateur refusée (limite de sièges / licence). */
     public static final String LICENCE_USER_LIMIT = "licence_user_limit";
     public static final String LICENCE_REJECTED = "licence_rejected";
+    /** Identité OIDC en conflit avec un compte existant (même sub / autre issuer). */
+    public static final String IDENTITY_CONFLICT = "identity_conflict";
 
     private ApiErrors() {}
 

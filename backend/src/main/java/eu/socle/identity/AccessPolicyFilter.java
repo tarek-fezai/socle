@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.identity;
 
+import eu.socle.web.ApiErrors;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,8 +22,8 @@ import java.nio.charset.StandardCharsets;
  * {@code /api/**} (y compris {@code /api/v1/me}). Les endpoints publics sont ignorés.
  *
  * <p>Décision mise en cache ≤ 60 s par (issuer, subject) ({@link AccessDecisionCache}).
- * Refus : HTTP 403 {@code {"error":"access_denied","reason":"…"}} — aucun compte n'est créé
- * et le token n'est jamais journalisé.
+ * Refus classique : HTTP 403 {@code {"error":"access_denied","reason":"…"}}.
+ * Refus licence : HTTP 403 {@code application/problem+json} ({@code code=licence_user_limit}).
  *
  * <p>Instancié par {@link AccessPolicyConfig} (et non {@code @Component}) pour ne pas être
  * enregistré une seconde fois comme filtre servlet hors de la chaîne Spring Security.
@@ -80,6 +81,19 @@ public class AccessPolicyFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Refus levé pendant le sync JWT (licence, compte désactivé, …) — prioritaire.
+        Object stashed = request.getAttribute(IdentityJwtConfig.SYNC_DENIED_REASON_ATTR);
+        if (stashed instanceof AccessPolicyDeniedException syncDenied) {
+            accessAuditService.recordDenied(issuer, subject, null, syncDenied.getReason());
+            writeDenied(response, syncDenied);
+            return;
+        }
+        if (stashed instanceof AccessDeniedReason syncReason) {
+            accessAuditService.recordDenied(issuer, subject, null, syncReason);
+            writeDenied(response, new AccessPolicyDeniedException(syncReason));
+            return;
+        }
+
         AccessPolicyService.Decision decision = decisionCache.get(issuer, subject).orElse(null);
         if (decision == null) {
             decision = accessPolicyService.evaluate(jwt);
@@ -92,13 +106,32 @@ public class AccessPolicyFilter extends OncePerRequestFilter {
         }
 
         accessAuditService.recordDenied(issuer, subject, null, decision.reason());
-        writeDenied(response, decision.reason());
+        writeDenied(response, new AccessPolicyDeniedException(decision.reason()));
     }
 
-    private static void writeDenied(HttpServletResponse response, AccessDeniedReason reason) throws IOException {
+    private static void writeDenied(HttpServletResponse response, AccessPolicyDeniedException denied)
+            throws IOException {
+        AccessDeniedReason reason = denied.getReason();
         response.setStatus(HttpStatus.FORBIDDEN.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        if (reason == AccessDeniedReason.LICENCE_USER_LIMIT
+                || reason == AccessDeniedReason.IDENTITY_CONFLICT) {
+            response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            String code = reason == AccessDeniedReason.IDENTITY_CONFLICT
+                    ? ApiErrors.IDENTITY_CONFLICT
+                    : ApiErrors.LICENCE_USER_LIMIT;
+            String detail = denied.getDetail() != null && !denied.getDetail().isBlank()
+                    ? denied.getDetail()
+                    : (reason == AccessDeniedReason.IDENTITY_CONFLICT
+                            ? "Identité déjà associée à un autre compte : contactez l'administrateur"
+                            : "Aucune licence valide installée : contactez l'administrateur");
+            String escaped = detail.replace("\\", "\\\\").replace("\"", "\\\"");
+            response.getWriter().write(
+                    "{\"title\":\"Forbidden\",\"status\":403,\"detail\":\"" + escaped
+                            + "\",\"code\":\"" + code + "\"}");
+            return;
+        }
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write("{\"error\":\"access_denied\",\"reason\":\"" + reason.code() + "\"}");
     }
 }
