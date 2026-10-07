@@ -25,7 +25,10 @@
     <openfga.version>0.11.0</openfga.version>
     <aws.sdk.version>2.55.11</aws.sdk.version>
     <tika.version>3.3.2</tika.version>
-    <twelvemonkeys.version>3.15.2</twelvemonkeys.version>
+    <!-- imageio-webp >=3.13.1: VP8L Huffman rejects the fixture (ImageIO.read fails with
+         IIOException "Code length repeat count overflows alphabet"). Last good: 3.13.0.
+         Do not bump without a WebP fixture valid under the newer decoder. -->
+    <twelvemonkeys.version>3.13.0</twelvemonkeys.version>
   </properties>
 
   <dependencies>
