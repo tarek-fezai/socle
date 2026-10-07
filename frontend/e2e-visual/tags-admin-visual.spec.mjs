@@ -194,8 +194,13 @@ test.describe('tags admin structural', () => {
     console.log('tags-admin app layout', JSON.stringify(appLayout))
     const appMetrics = await collectMetrics(page, TAGS_ADMIN_DESKTOP_IDS)
 
-    // Aucune exception box/text. Comparaison complète titre / CTA / compteurs / tableau / callout / rail.
-    const pageExceptions = {}
+    const pageExceptions = {
+      'admin-subnav': {
+        skip: ['text'],
+        reason:
+          'Placeholders admin marqués « Bientôt » (Account/Admin PR) — absents de TagsAdmin.dc.html',
+      },
+    }
     const results = compareMetrics(mockMetrics, appMetrics, TAGS_ADMIN_DESKTOP_IDS, {
       pageExceptions,
     })

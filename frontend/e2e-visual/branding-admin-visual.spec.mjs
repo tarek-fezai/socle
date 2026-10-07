@@ -170,8 +170,13 @@ test.describe('branding admin structural', () => {
     await settleFonts(page)
     const appMetrics = await collectMetrics(page, BRANDING_ADMIN_DESKTOP_IDS)
 
-    // Après compensation margin identité/domaine dans l'annotateur, viser zéro exception.
-    const pageExceptions = {}
+    const pageExceptions = {
+      'admin-subnav': {
+        skip: ['text'],
+        reason:
+          'Placeholders admin marqués « Bientôt » (Account/Admin PR) — absents des maquettes Branding/Tags/…',
+      },
+    }
     const results = compareMetrics(mockMetrics, appMetrics, BRANDING_ADMIN_DESKTOP_IDS, {
       pageExceptions,
     })
