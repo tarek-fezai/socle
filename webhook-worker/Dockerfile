@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 # syntax=docker/dockerfile:1
 
-# golang:1.22-bookworm (build)
-FROM golang@sha256:3d699e4d15d0f8f13c9195c0632a16702b8cbdece2955af1c23b37ae5d55a253 AS build
+# golang:1.25-bookworm (build) — go.mod requires go >= 1.25.0
+FROM golang@sha256:3b4a11519ad929d1e1d261a12cff056f0c85b735253d7d861346b9c6f8b36437 AS build
 
 WORKDIR /src
 
