@@ -5,6 +5,10 @@
 
 /** Explicit exceptions: id → justification (skipped checks listed). */
 export const EXCEPTIONS = {
+  'admin-nav-licence': {
+    skip: ['text'],
+    reason: 'Socle auto-hébergé : licence signée, pas de facturation',
+  },
   'divider-ou': {
     skip: ['color'],
     reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5 (contraste 4,5:1)',

@@ -685,7 +685,7 @@ test.describe('account admin visual', () => {
     await settleFonts(page)
     await maskGlyphs(
       page,
-      'h1, p, span, a, .admin-nav-item, .admin-subnav__org, .admin-mono, .admin-rail__label, .admin-rail__value, .admin-rail__text, .admin-lead, .admin-home-disabled-block, .admin-home-section-label',
+      'h1, p, span, a, .admin-nav-item, .admin-subnav__org, .admin-mono, .admin-rail__label, .admin-rail__value, .admin-rail__text, .admin-lead, .admin-home-disabled-block, .admin-home-section-label, .admin-home-oidc, .admin-home-oidc *',
     )
     // Forcer hauteur subnav viewport des deux côtés (évite mock 1252 vs app 749)
     await page.evaluate(() => {
