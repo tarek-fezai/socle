@@ -169,18 +169,58 @@ async function maskGlyphs(page, selector) {
 /** Uniformise les badges Bientôt → boîte 42×12 pour masques Playwright superposables. */
 async function normalizeBientotBadges(page) {
   await page.evaluate(() => {
-    document.querySelectorAll('.admin-nav-soon, .account-soon').forEach((el) => {
+    document.querySelectorAll('.admin-nav-soon').forEach((el) => {
+      if (!(el instanceof HTMLElement)) return
+      const inSubnav = el.closest('[data-mock-id="admin-subnav"]')
+      el.setAttribute('data-visual-mask', inSubnav ? 'admin-subnav-bientot' : 'admin-bientot-badge')
+      el.style.display = 'inline-block'
+      el.style.marginLeft = '6px'
+      el.style.width = '42px'
+      el.style.height = '12px'
+      el.style.fontSize = '10px'
+      el.style.lineHeight = '12px'
+      el.style.verticalAlign = 'middle'
+      el.style.overflow = 'hidden'
+      el.style.color = 'transparent'
+      el.textContent = '\u00a0'
+    })
+    document.querySelectorAll('.account-soon').forEach((el) => {
       if (!(el instanceof HTMLElement)) return
       el.setAttribute('data-visual-mask', 'admin-bientot-badge')
       el.style.display = 'inline-block'
       el.style.marginLeft = '6px'
       el.style.width = '42px'
       el.style.height = '12px'
-      el.style.fontSize = '0'
+      el.style.fontSize = '10px'
       el.style.lineHeight = '12px'
       el.style.verticalAlign = 'middle'
       el.style.overflow = 'hidden'
-      el.textContent = ''
+      el.style.color = 'transparent'
+      el.textContent = '\u00a0'
+    })
+  })
+}
+
+/** Hauteurs nav verrouillées uniquement pour le pixel (pas en CSS prod → structural OK). */
+async function lockAdminNavHeights(page) {
+  await page.evaluate(() => {
+    const org = document.querySelector('.admin-subnav__org, [data-mock-id="admin-subnav"] > :first-child')
+    if (org instanceof HTMLElement) {
+      org.style.boxSizing = 'border-box'
+      org.style.lineHeight = '14px'
+      org.style.height = '26px'
+      org.style.padding = '4px 10px 8px'
+      org.style.overflow = 'hidden'
+    }
+    document.querySelectorAll('.admin-nav-item, [data-mock-id="admin-subnav"] a, [data-mock-id="admin-subnav"] .nav-item').forEach((el) => {
+      if (!(el instanceof HTMLElement)) return
+      el.style.boxSizing = 'border-box'
+      el.style.padding = '8px 10px'
+      el.style.lineHeight = '20px'
+      el.style.height = '36px'
+      el.style.overflow = 'hidden'
+      el.style.whiteSpace = 'nowrap'
+      el.style.display = 'block'
     })
   })
 }
@@ -312,14 +352,6 @@ async function annotateAdminMockup(page) {
     const body = root.children[1]
     const subnav = body?.children[0]
     subnav?.setAttribute('data-mock-id', 'admin-subnav')
-    const org = subnav?.children?.[0]
-    if (org instanceof HTMLElement) {
-      org.style.boxSizing = 'border-box'
-      org.style.lineHeight = '14px'
-      org.style.height = '26px'
-      org.style.padding = '4px 10px 8px'
-      org.style.overflow = 'hidden'
-    }
     const soonLabels = new Set([
       'Membres & équipes',
       'Rôles globaux',
@@ -345,21 +377,11 @@ async function annotateAdminMockup(page) {
         const badge = document.createElement('span')
         badge.className = 'admin-nav-soon'
         badge.setAttribute('data-visual-ignore', '')
-        badge.setAttribute('data-visual-mask', 'admin-bientot-badge')
+        badge.setAttribute('data-visual-mask', 'admin-subnav-bientot')
         badge.style.cssText =
           'display:inline-block;margin-left:6px;width:42px;height:12px;font-size:0;line-height:12px;vertical-align:middle'
-        badge.textContent = ''
+        badge.textContent = '\u00a0'
         a.appendChild(badge)
-      }
-      // Hauteur fixe = parité avec .admin-nav-item (36px)
-      if (a instanceof HTMLElement) {
-        a.style.boxSizing = 'border-box'
-        a.style.padding = '8px 10px'
-        a.style.lineHeight = '20px'
-        a.style.height = '36px'
-        a.style.overflow = 'hidden'
-        a.style.whiteSpace = 'nowrap'
-        a.style.display = 'block'
       }
     }
 
@@ -441,9 +463,15 @@ async function shotSection(page, selector, { maskNames = [], label }) {
   await page.waitForTimeout(40)
   const box = await loc.boundingBox()
   if (!box || box.width < 1 || box.height < 1) throw new Error(`no box for ${selector}`)
+  if (maskNames.length) {
+    const n = await loc.locator(maskNames.map((m) => `[data-visual-mask="${m}"]`).join(',')).count()
+    if (n === 0) {
+      console.warn(`shotSection ${label}: 0 mask nodes for ${maskNames.join(',')}`)
+    }
+  }
   const shot = await loc.screenshot({
     animations: 'disabled',
-    mask: maskNames.map((n) => page.locator(`[data-visual-mask="${n}"]`)),
+    mask: maskNames.map((n) => page.locator(`${selector} [data-visual-mask="${n}"]`)),
     maskColor: '#FF00FF',
   })
   fs.mkdirSync(outDir, { recursive: true })
@@ -559,7 +587,8 @@ test.describe('account admin visual', () => {
     await page.goto('/admin')
     await page.waitForSelector('[data-mock-id="admin-sso-provider"]')
     await normalizeBientotBadges(page)
-    const appMaskNames = ['admin-bientot-badge']
+    await lockAdminNavHeights(page)
+    const appMaskNames = ['admin-bientot-badge', 'admin-subnav-bientot']
     const appCap = await shotFull(page, {
       maskNames: appMaskNames,
       glyphSelector:
@@ -590,6 +619,7 @@ test.describe('account admin visual', () => {
       'admin-mock-role-mapping',
       'admin-mock-storage',
       'admin-bientot-badge',
+      'admin-subnav-bientot',
     ]
     const mockCap = await shotFull(page, {
       maskNames: mockMaskNames,
@@ -620,7 +650,7 @@ test.describe('account admin visual', () => {
     })
 
     const sections = [
-      { sel: '[data-mock-id="admin-subnav"]', name: 'subnav', masks: ['admin-bientot-badge'] },
+      { sel: '[data-mock-id="admin-subnav"]', name: 'subnav', masks: ['admin-subnav-bientot'] },
       { sel: '[data-mock-id="admin-sso-provider"]', name: 'sso', masks: [] },
       { sel: '[data-mock-id="admin-stats-users"]', name: 'stats-users', masks: [] },
       { sel: '[data-mock-id="admin-stats-spaces"]', name: 'stats-spaces', masks: [] },
@@ -628,6 +658,8 @@ test.describe('account admin visual', () => {
 
     await page.goto('http://127.0.0.1:4174/Admin.dc.html')
     await annotateAdminMockup(page)
+    await normalizeBientotBadges(page)
+    await lockAdminNavHeights(page)
     await expandForFullPage(page)
     await settleFonts(page)
     await maskGlyphs(page, 'h1, p, span, a, div')
@@ -648,6 +680,7 @@ test.describe('account admin visual', () => {
     await page.goto('/admin')
     await page.waitForSelector('[data-mock-id="admin-sso-provider"]')
     await normalizeBientotBadges(page)
+    await lockAdminNavHeights(page)
     await expandForFullPage(page)
     await settleFonts(page)
     await maskGlyphs(
@@ -809,10 +842,6 @@ test.describe('account admin visual', () => {
         skip: ['box'],
         reason: 'box.y Δ≈8–11 mesuré — padding AdminShell vs canvas maquette.',
       },
-      'admin-nav-identity': {
-        skip: ['box'],
-        reason: 'box.height Δ=3.8 mesuré — .admin-nav-item height:36px (parité pixel) vs padding naturel maquette ≈32.2.',
-      },
       'admin-sso-provider': {
         skip: ['text', 'box'],
         reason:
@@ -841,9 +870,8 @@ test.describe('account admin visual', () => {
           'box.height Δ viewport — subnav étiré au parent flex ; libellés/ordre OK (badge data-visual-ignore).',
       },
       'admin-nav-licence': {
-        skip: ['text', 'box'],
-        reason:
-          'Socle auto-hébergé : licence signée, pas de facturation ; box.height Δ=3.8 / box.y Δ=3.8 — height:36px nav.',
+        skip: ['text'],
+        reason: 'Socle auto-hébergé : licence signée, pas de facturation',
       },
     }
     const results = compareMetrics(mockMetrics, appMetrics, ADMIN_IDS, { pageExceptions })
