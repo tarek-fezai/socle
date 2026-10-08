@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { test, expect } from '@playwright/test'
 import { loginViaUi } from '../helpers/auth'
 
@@ -20,6 +21,21 @@ test.describe('Account → Admin navigation', () => {
     await expect(page.locator('[data-mock-id="admin-home-title"]')).toBeVisible()
     await expect(page.locator('[data-mock-id="admin-stats-users"] .admin-rail__value')).toHaveText(/^\d+$/)
     await expect(page.locator('[data-mock-id="admin-sso-provider"] .admin-mono').first()).toContainText(/https?:\/\//)
+  })
+
+  test('contributeur : « Demander mon export » télécharge un JSON', async ({ page }) => {
+    await loginViaUi(page, USER_ADMIN, PASS_ADMIN)
+    await page.goto('/account')
+    await expect(page.getByTestId('account-page')).toBeVisible()
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Demander mon export' }).click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toMatch(/^socle-export-.+\.json$/)
+    const filePath = await download.path()
+    const content = JSON.parse(await readFile(filePath, 'utf8')) as unknown
+    expect(content).not.toBeNull()
+    expect(typeof content).toBe('object')
+    await expect(page.getByTestId('account-page').getByRole('alert')).toHaveCount(0)
   })
 
   test('auditeur : pas de carte Organisation, /admin = 403', async ({ page }) => {

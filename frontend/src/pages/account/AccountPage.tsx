@@ -76,13 +76,19 @@ export function AccountPage() {
     setExporting(true)
     try {
       const { data } = await api.get<Record<string, unknown>>('/api/v1/me/export')
+      if (!data || typeof data !== 'object') {
+        throw new Error('Réponse d\'export vide')
+      }
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `socle-export-${me?.id ?? 'me'}.json`
+      document.body.appendChild(a)
       a.click()
-      URL.revokeObjectURL(url)
+      a.remove()
+      // Chromium peut annuler le téléchargement si l'URL est révoquée dans la même tâche que le clic.
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch {
       setExportError('Export impossible pour le moment.')
     } finally {
