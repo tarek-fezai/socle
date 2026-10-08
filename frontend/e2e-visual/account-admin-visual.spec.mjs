@@ -85,12 +85,24 @@ export const NOT_IMPLEMENTED = [
     appImplementedProbe: 'text=Demandé le',
   },
   {
-    id: 'admin-nav-user-identities',
-    page: 'admin',
-    reason: 'Entrée nav « Identités utilisateurs » — page inexistante (retirée du produit, revue #64)',
-    backlog: 'ADMIN-USER-IDENTITIES',
-    mockMask: 'admin-nav-user-identities',
-    appImplementedProbe: '[data-mock-id="admin-subnav"] >> text=Identités utilisateurs',
+    id: 'account-pat-generate',
+    page: 'account',
+    reason: 'Action « + Générer un jeton » — jusqu’à la PR PAT',
+    backlog: 'ACCOUNT-PAT',
+    mockMask: 'account-pat-generate',
+    appPlaceholderSelector: '[data-visual-mask="account-pat-generate"] .account-soon',
+    appImplementedProbe: '[data-mock-id="account-pat"] >> a:has-text("Générer un jeton")',
+  },
+  {
+    id: 'account-notifications-toggles',
+    page: 'account',
+    reason: 'Interrupteurs préférences de notification — pas d’API préférences',
+    backlog: 'ACCOUNT-NOTIF-PREFS',
+    mockMask: 'account-notifications-toggles',
+    appPlaceholderSelector:
+      '[data-mock-id="account-notifications"] [data-visual-mask="account-notifications-toggles"]:disabled',
+    appImplementedProbe:
+      '[data-mock-id="account-notifications"] [data-visual-mask="account-notifications-toggles"]:not(:disabled)',
   },
   {
     id: 'admin-domains',
@@ -197,16 +209,21 @@ const ACCOUNT_PIXEL_SECTIONS = [
   { id: 'account-appearance', name: 'appearance', masks: [] },
   { id: 'account-accessibility', name: 'accessibility', masks: [] },
   { id: 'account-language', name: 'language', masks: [] },
-  { id: 'account-notifications', name: 'notifications', masks: [] },
-  { id: 'account-security', name: 'security', masks: ['account-security-2fa'] },
-  { id: 'account-pat', name: 'pat', masks: [] },
+  { id: 'account-notifications', name: 'notifications', masks: ['account-notifications-toggles'] },
+  {
+    id: 'account-security',
+    name: 'security',
+    masks: ['account-security-2fa', 'account-security-idp'],
+  },
+  { id: 'account-pat', name: 'pat', masks: ['account-pat-generate'] },
   { id: 'account-privacy', name: 'privacy', masks: [] },
   { id: 'account-org-admin', name: 'org-admin', masks: [] },
 ]
 
 /** Sections pixel admin (texte inclus). Domaines / langues / etc. → NOT_IMPLEMENTED. */
 const ADMIN_PIXEL_SECTIONS = [
-  { id: 'admin-subnav', name: 'subnav', masks: ['admin-nav-user-identities'] },
+  // Badges « Bientôt » : app uniquement (absents de la maquette)
+  { id: 'admin-subnav', name: 'subnav', masks: [], appOnlyMasks: ['admin-subnav-bientot'] },
   { id: 'admin-sso-provider', name: 'sso', masks: [] },
   { id: 'admin-stats-users', name: 'stats-users', masks: [] },
   { id: 'admin-stats-spaces', name: 'stats-spaces', masks: [] },
@@ -342,10 +359,17 @@ async function annotateAccountMockup(page) {
     byExact('Apparence')?.nextElementSibling?.setAttribute('data-mock-id', 'account-appearance')
     byExact('Accessibilité')?.nextElementSibling?.setAttribute('data-mock-id', 'account-accessibility')
     byExact('Langue')?.nextElementSibling?.setAttribute('data-mock-id', 'account-language')
-    byExact('Notifications')?.nextElementSibling?.setAttribute('data-mock-id', 'account-notifications')
+    const notifications = byExact('Notifications')?.nextElementSibling
+    notifications?.setAttribute('data-mock-id', 'account-notifications')
+    for (const row of [...(notifications?.children ?? [])]) {
+      row.children[1]?.setAttribute('data-visual-mask', 'account-notifications-toggles')
+    }
 
     const security = byExact('Sécurité')?.nextElementSibling
     security?.setAttribute('data-mock-id', 'account-security')
+    const authRow = security?.children?.[0]
+    authRow?.children?.[0]?.children?.[1]?.setAttribute('data-visual-mask', 'account-security-idp')
+    authRow?.children?.[1]?.setAttribute('data-visual-mask', 'account-security-idp')
     const twoFa = security?.children?.[1]
     if (twoFa) {
       twoFa.setAttribute('data-visual-mask', 'account-security-2fa')
@@ -363,6 +387,9 @@ async function annotateAccountMockup(page) {
     if (patLabel) {
       const head = patLabel.parentElement
       head?.setAttribute('data-mock-id', 'account-pat')
+      head
+        ?.querySelector('a[href="GeneratePersonalToken.dc.html"]')
+        ?.setAttribute('data-visual-mask', 'account-pat-generate')
       let after = head?.nextElementSibling
       if (after?.tagName === 'P') after = after.nextElementSibling
       if (after) {
@@ -398,14 +425,8 @@ async function annotateAdminMockup(page) {
 
     for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
       const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Licence' || t === 'Facturation') a.setAttribute('data-mock-id', 'admin-nav-licence')
-      if (t === 'Identités utilisateurs') {
-        // NOT_IMPLEMENTED : masque pixel + exclu du texte structural (pas de remove)
-        a.setAttribute('data-visual-mask', 'admin-nav-user-identities')
-        a.setAttribute('data-visual-ignore', '')
-        continue
-      }
-      if (/Identité/.test(t)) a.setAttribute('data-mock-id', 'admin-nav-identity')
+      if (t === 'Licence') a.setAttribute('data-mock-id', 'admin-nav-licence')
+      if (t === 'Identité & SSO') a.setAttribute('data-mock-id', 'admin-nav-identity')
     }
 
     const mainCol = body?.children[1]
@@ -459,14 +480,34 @@ async function shotSection(page, selector, { maskNames = [], label }) {
   await page.waitForTimeout(40)
   const box = await loc.boundingBox()
   if (!box || box.width < 1 || box.height < 1) throw new Error(`no box for ${selector}`)
+  const maskAreas = await page.evaluate(
+    ({ sel, names, pageArea }) =>
+      names.map((n) => {
+        let area = 0
+        let count = 0
+        for (const el of document.querySelectorAll(`${sel} [data-visual-mask="${n}"]`)) {
+          const r = el.getBoundingClientRect()
+          area += Math.max(0, r.width) * Math.max(0, r.height)
+          count++
+        }
+        return { name: n, count, areaPx: Math.round(area), pctOfPage: Number(((area / pageArea) * 100).toFixed(3)) }
+      }),
+    { sel: selector, names: maskNames, pageArea: PAGE_AREA },
+  )
+  for (const m of maskAreas) {
+    if (m.count === 0) throw new Error(`${label}: masque « ${m.name} » sans élément — annotation cassée`)
+    console.log(`MASK ${label} ${m.name}: ${m.count} él., ${m.areaPx} px (${m.pctOfPage} % page)`)
+  }
   const shot = await loc.screenshot({
     animations: 'disabled',
     mask: maskNames.map((n) => page.locator(`${selector} [data-visual-mask="${n}"]`)),
-    maskColor: '#FF00FF',
+    // Fond des sections (#FFFFFF) : une zone masquée compte comme fond vide des deux côtés,
+    // y compris quand l'élément n'existe que d'un côté (badges Bientôt app).
+    maskColor: '#FFFFFF',
   })
   fs.mkdirSync(outDir, { recursive: true })
   fs.writeFileSync(path.join(outDir, `${label}.png`), shot)
-  return { shot, box: { w: Math.round(box.width), h: Math.round(box.height) } }
+  return { shot, maskAreas, box: { w: Math.round(box.width), h: Math.round(box.height) } }
 }
 
 /**
@@ -633,7 +674,7 @@ test.describe('account admin visual', () => {
     const results = []
     for (const s of ADMIN_PIXEL_SECTIONS) {
       const app = await shotSection(page, `[data-mock-id="${s.id}"]`, {
-        maskNames: s.masks,
+        maskNames: [...s.masks, ...(s.appOnlyMasks ?? [])],
         label: `admin-sec-${s.name}-app`,
       })
       results.push(compareSectionShots(`admin-${s.name}`, mockSec[s.name].shot, app.shot, testInfo))
@@ -742,16 +783,6 @@ test.describe('account admin visual', () => {
       'admin-stats-plan': {
         skip: ['text'],
         reason: 'Libellé Licence depuis overview réel (édition / échéance) vs copie maquette.',
-      },
-      'admin-subnav': {
-        skip: ['box.height'],
-        reason:
-          'Hauteur réelle (Identités maquette absente app + badges Bientôt) — Δh déclaré ; x/y/w comparés.',
-      },
-      'admin-nav-licence': {
-        skip: ['text', 'box.y'],
-        reason:
-          'Socle auto-hébergé : licence signée, pas de facturation ; box.y Δ34.2 mesuré = cascade NOT_IMPLEMENTED admin-nav-user-identities (entrée maquette absente app) ; x/w/h comparés.',
       },
     }
     const results = compareMetrics(mockMetrics, appMetrics, ADMIN_STRUCTURAL_IDS, {

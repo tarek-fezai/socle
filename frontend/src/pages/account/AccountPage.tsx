@@ -22,11 +22,13 @@ function Toggle({
   onChange,
   disabled,
   label,
+  visualMask,
 }: {
   on: boolean
   onChange: (v: boolean) => void
   disabled?: boolean
   label: string
+  visualMask?: string
 }) {
   return (
     <button
@@ -35,6 +37,7 @@ function Toggle({
       aria-pressed={on}
       aria-label={label}
       disabled={disabled}
+      data-visual-mask={visualMask}
       onClick={() => onChange(!on)}
     >
       <span className="account-toggle-knob" aria-hidden />
@@ -246,7 +249,13 @@ export function AccountPage() {
             ].map((title) => (
               <div className="account-row" key={title}>
                 <div className="account-row-title">{title}</div>
-                <Toggle label={title} on={false} onChange={() => {}} disabled />
+                <Toggle
+                  label={title}
+                  on={false}
+                  onChange={() => {}}
+                  disabled
+                  visualMask="account-notifications-toggles"
+                />
                 <span className="account-soon" data-visual-ignore>
                   Bientôt
                 </span>
@@ -259,7 +268,7 @@ export function AccountPage() {
             <div className="account-row account-row--security">
               <div className="account-row-label">
                 <div className="account-row-title account-row-title--mb2">Authentification</div>
-                <div className="account-row-desc">
+                <div className="account-row-desc" data-visual-mask="account-security-idp">
                   Gérée par votre fournisseur d&apos;identité ({idpName})
                 </div>
               </div>
@@ -269,6 +278,7 @@ export function AccountPage() {
                   className="account-link"
                   target="_blank"
                   rel="noreferrer"
+                  data-visual-mask="account-security-idp"
                 >
                   Console compte →
                 </a>
@@ -299,7 +309,10 @@ export function AccountPage() {
 
           <div className="account-section-head" data-mock-id="account-pat">
             <div className="account-section-title">Jetons d&apos;accès personnels</div>
-            <span className="account-link account-link--disabled">
+            <span
+              className="account-link account-link--disabled"
+              data-visual-mask="account-pat-generate"
+            >
               + Générer un jeton{' '}
               <span className="account-soon" data-visual-ignore>
                 Bientôt

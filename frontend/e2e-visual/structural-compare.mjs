@@ -5,10 +5,6 @@
 
 /** Explicit exceptions: id → justification (skipped checks listed). */
 export const EXCEPTIONS = {
-  'admin-nav-licence': {
-    skip: ['text'],
-    reason: 'Socle auto-hébergé : licence signée, pas de facturation',
-  },
   'divider-ou': {
     skip: ['color'],
     reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5 (contraste 4,5:1)',
@@ -715,7 +711,6 @@ export async function annotateEditMockup(page) {
 
 /**
  * Alignement nav admin produit ↔ maquette :
- * - retire « Identités utilisateurs » (hors périmètre Socle / pas de page)
  * - annote « Facturation » / « Licence » avec data-mock-id=admin-nav-licence
  *   (exception texte : Socle auto-hébergé, licence signée pas de facturation)
  */
@@ -726,9 +721,6 @@ export function normalizeAdminMockupNavInDocument() {
   if (!subnav) return
   for (const a of [...subnav.querySelectorAll('a, .nav-item')]) {
     const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-    if (t === 'Identités utilisateurs' || /UserIdentities\.dc\.html/.test(a.getAttribute('href') || '')) {
-      a.remove()
-    }
     if (t === 'Facturation' || t === 'Licence') {
       a.setAttribute('data-mock-id', 'admin-nav-licence')
     }
@@ -748,9 +740,6 @@ export async function annotateTagsAdminMockup(page) {
     // inline normalize (page.evaluate scope has no module imports)
     for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
       const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Identités utilisateurs' || /UserIdentities\.dc\.html/.test(a.getAttribute('href') || '')) {
-        a.remove()
-      }
       if (t === 'Facturation' || t === 'Licence') {
         a.setAttribute('data-mock-id', 'admin-nav-licence')
       }
@@ -812,9 +801,6 @@ export async function annotateCustomFieldsAdminMockup(page) {
     subnav?.querySelector('a[href="CustomFields.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-custom-fields')
     for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
       const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Identités utilisateurs' || /UserIdentities\.dc\.html/.test(a.getAttribute('href') || '')) {
-        a.remove()
-      }
       if (t === 'Facturation' || t === 'Licence') {
         a.setAttribute('data-mock-id', 'admin-nav-licence')
       }
@@ -853,9 +839,6 @@ export async function annotateRetentionAdminMockup(page) {
     subnav?.querySelector('a[href="Retention.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-retention')
     for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
       const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Identités utilisateurs' || /UserIdentities\.dc\.html/.test(a.getAttribute('href') || '')) {
-        a.remove()
-      }
       if (t === 'Facturation' || t === 'Licence') {
         a.setAttribute('data-mock-id', 'admin-nav-licence')
       }
@@ -893,9 +876,6 @@ export async function annotateBrandingAdminMockup(page) {
     subnav?.querySelector('a[href="Branding.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-branding')
     for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
       const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Identités utilisateurs' || /UserIdentities\.dc\.html/.test(a.getAttribute('href') || '')) {
-        a.remove()
-      }
       if (t === 'Facturation' || t === 'Licence') {
         a.setAttribute('data-mock-id', 'admin-nav-licence')
       }
