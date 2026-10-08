@@ -54,7 +54,7 @@ export function AdminHomePage() {
       breadcrumb={[{ label: 'Compte', to: '/account' }, { label: 'Administration' }]}
       rightRail={
         data ? (
-          <aside className="admin-rail" data-mock-id="admin-home-rail">
+          <aside className="admin-rail admin-rail--home" data-mock-id="admin-home-rail">
             <div className="admin-rail__block" data-mock-id="admin-stats-users">
               <div className="admin-rail__label">Utilisateurs</div>
               <div className="admin-rail__value admin-rail__value--serif">{data.userCount}</div>
@@ -63,11 +63,7 @@ export function AdminHomePage() {
               <div className="admin-rail__label">Espaces</div>
               <div className="admin-rail__value admin-rail__value--serif">{data.spaceCount}</div>
             </div>
-            <Link
-              to="/admin/licence"
-              className="admin-rail__block admin-rail__link"
-              data-mock-id="admin-stats-plan"
-            >
+            <Link to="/admin/licence" className="admin-rail__block" data-mock-id="admin-stats-plan">
               <div className="admin-rail__label">Licence</div>
               <div className="admin-rail__text">{planDetail}</div>
             </Link>
@@ -75,6 +71,7 @@ export function AdminHomePage() {
         ) : undefined
       }
       innerWide
+      innerClassName="admin-home"
     >
       <h1 className="admin-title" data-mock-id="admin-home-title" style={{ marginBottom: 6 }}>
         Identité &amp; SSO
@@ -169,7 +166,6 @@ export function AdminHomePage() {
 
       <div className="admin-home-section-label">Domaines autorisés</div>
       <div className="admin-home-disabled-block" data-mock-id="admin-domains">
-        Domaines autorisés —{' '}
         <span className="account-soon" data-visual-ignore>
           Bientôt
         </span>
@@ -192,7 +188,6 @@ export function AdminHomePage() {
 
       <div className="admin-home-section-label">Politique de session</div>
       <div className="admin-home-disabled-block" data-mock-id="admin-session-policy">
-        Politique de session —{' '}
         <span className="account-soon" data-visual-ignore>
           Bientôt
         </span>
@@ -200,7 +195,6 @@ export function AdminHomePage() {
 
       <div className="admin-home-section-label">Langues de l&apos;organisation</div>
       <div className="admin-home-disabled-block" data-mock-id="admin-languages">
-        Langues de l&apos;organisation —{' '}
         <span className="account-soon" data-visual-ignore>
           Bientôt
         </span>
@@ -208,7 +202,6 @@ export function AdminHomePage() {
 
       <div className="admin-home-section-label">Sessions</div>
       <div className="admin-home-disabled-block" data-mock-id="admin-revoke-sessions">
-        Révoquer toutes les sessions —{' '}
         <span className="account-soon" data-visual-ignore>
           Bientôt
         </span>

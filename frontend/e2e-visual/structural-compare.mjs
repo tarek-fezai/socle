@@ -1556,12 +1556,12 @@ export function compareMetrics(mockMap, appMap, ids, { pageExceptions = {} } = {
           diffs.push(`${f}: maquette=${JSON.stringify(mv)} app=${JSON.stringify(av)}`)
         }
       }
-      if (!skip.has('box')) {
-        for (const k of ['x', 'y', 'width', 'height']) {
-          const d = Math.abs(mock.box[k] - app.box[k])
-          if (d > 3) {
-            diffs.push(`box.${k}: maquette=${mock.box[k].toFixed(1)} app=${app.box[k].toFixed(1)} Δ=${d.toFixed(1)}`)
-          }
+      // skip 'box' = toute la boîte ; skip 'box.y' / 'box.height' = cascade / Δ hauteur déclarés
+      for (const k of ['x', 'y', 'width', 'height']) {
+        if (skip.has('box') || skip.has(`box.${k}`)) continue
+        const d = Math.abs(mock.box[k] - app.box[k])
+        if (d > 3) {
+          diffs.push(`box.${k}: maquette=${mock.box[k].toFixed(1)} app=${app.box[k].toFixed(1)} Δ=${d.toFixed(1)}`)
         }
       }
     }

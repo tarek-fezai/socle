@@ -9,6 +9,8 @@
   background: #ffffff;
   color: #0e0e10;
   font-family: 'IBM Plex Sans', sans-serif;
+  /* Account.dc.html : aucun line-height déclaré (défaut navigateur), pas le 1.5 du preflight */
+  line-height: normal;
 }
 
 .account-page__top {
@@ -137,6 +139,10 @@
   margin-bottom: 12px;
 }
 
+.account-section-head > .account-section-title {
+  margin-bottom: 0;
+}
+
 .account-saved-hint {
   font-size: 11px;
   color: #9b9ba1;
@@ -164,6 +170,8 @@
 .account-row--stack {
   align-items: flex-start;
   flex-direction: column;
+  /* pas de gap vertical : la maquette enchaîne titre (mb 8) + boutons */
+  gap: 0;
 }
 
 .account-row-label {
@@ -179,8 +187,21 @@
 .account-row-desc {
   font-size: 12px;
   color: #9b9ba1;
-  margin-top: 2px;
-  line-height: 1.45;
+}
+
+/* Account.dc.html : margin-bottom explicite sur certains titres de ligne */
+.account-row-title--mb2 {
+  margin-bottom: 2px;
+}
+
+.account-row-title--mb4 {
+  margin-bottom: 4px;
+}
+
+/* Account.dc.html — lignes Sécurité : padding 14px 16px */
+.account-row--security {
+  padding: 14px 16px;
+  justify-content: space-between;
 }
 
 .account-theme-grid {
@@ -200,7 +221,6 @@
   cursor: pointer;
   font-family: inherit;
   font-size: inherit;
-  line-height: 1.2;
   text-align: left;
   appearance: none;
   -webkit-appearance: none;
@@ -216,11 +236,12 @@
 }
 
 .account-theme-preview {
+  /* Account.dc.html : height 56px content-box (+1px de bordure clair/système) */
   height: 56px;
   border-radius: 7px;
   margin-bottom: 10px;
   border: 1px solid #ececee;
-  box-sizing: border-box;
+  box-sizing: content-box;
   flex-shrink: 0;
 }
 
@@ -242,7 +263,6 @@
   font-size: 12.5px;
   font-weight: 600;
   color: #43434a;
-  line-height: 1.2;
 }
 
 .account-theme-opt--on .account-theme-label {
@@ -275,6 +295,8 @@
 }
 
 .account-toggle {
+  /* Account.dc.html : interrupteur 36×20 (div) — bouton sans chrome UA */
+  box-sizing: border-box;
   width: 36px;
   height: 20px;
   border-radius: 10px;
@@ -284,6 +306,11 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 0;
+  line-height: 0;
 }
 
 .account-toggle--on {
@@ -366,22 +393,11 @@
   margin-bottom: 32px;
   font-size: 13px;
   color: #6b6b72;
-  line-height: 1.5;
-}
-
-.account-muted-box[data-visual-mask='account-sessions-list'] {
-  /* ≈ 3 lignes sessions maquette (masquées en pixel) */
-  min-height: 174px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
 }
 
 .account-empty-pat {
   border: 1px solid #ececee;
   border-radius: 10px;
-  /* ≈ 2 lignes PAT maquette (masquées) */
-  min-height: 116px;
   box-sizing: border-box;
   padding: 16px;
   margin-bottom: 32px;
@@ -393,20 +409,16 @@
   justify-content: center;
 }
 
-.account-export-history-slot {
-  /* ≈ tableau historique export maquette — masqué, sans contenu inventé */
-  min-height: 96px;
-  margin-bottom: 48px;
-  border-radius: 10px;
-}
 
-/* Account.dc.html — carte export : padding 16px 18px */
+/* Account.dc.html — carte export : padding 16px 18px ; marge sous historique absente (NOT_IMPLEMENTED) */
 .account-card-row--privacy {
-  margin-bottom: 20px;
+  margin-bottom: 32px;
 }
 
 .account-row--privacy {
-  padding: 16px 18px;
+  /* Account.dc.html : carte 16px 18px + margin-bottom 4px du flex interne, sans gap */
+  padding: 16px 18px 20px;
+  gap: 0;
   align-items: center;
   justify-content: space-between;
 }
@@ -418,8 +430,6 @@
 
 .account-row-desc--privacy {
   max-width: 460px;
-  /* Account.dc.html : pas de line-height explicite (≈ 1.2 navigateur) */
-  line-height: 1.2;
 }
 
 .account-export-cta {
@@ -431,8 +441,8 @@
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1;
-  height: 15px;
+  /* Account.dc.html : <a> flex item, line-height normal */
+  line-height: normal;
   border: none;
   cursor: pointer;
   font-family: inherit;

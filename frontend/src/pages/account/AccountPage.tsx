@@ -211,7 +211,9 @@ export function AccountPage() {
           <div className="account-card-row" data-mock-id="account-language">
             <div className="account-row">
               <div className="account-row-label">
-                <div className="account-row-title">Langue de l&apos;interface</div>
+                <div className="account-row-title account-row-title--mb2">
+                  Langue de l&apos;interface
+                </div>
                 <div className="account-row-desc">Menus, boutons et notifications système</div>
               </div>
               <div className="account-select-mock account-select-mock--disabled" aria-disabled>
@@ -220,7 +222,9 @@ export function AccountPage() {
             </div>
             <div className="account-row">
               <div className="account-row-label">
-                <div className="account-row-title">Traduction automatique des documents</div>
+                <div className="account-row-title account-row-title--mb2">
+                  Traduction automatique des documents
+                </div>
                 <div className="account-row-desc">
                   Propose une traduction quand un document n&apos;existe pas dans votre langue
                   d&apos;interface
@@ -252,9 +256,9 @@ export function AccountPage() {
 
           <div className="account-section-title">Sécurité</div>
           <div className="account-card-row" data-mock-id="account-security">
-            <div className="account-row">
+            <div className="account-row account-row--security">
               <div className="account-row-label">
-                <div className="account-row-title">Authentification</div>
+                <div className="account-row-title account-row-title--mb2">Authentification</div>
                 <div className="account-row-desc">
                   Gérée par votre fournisseur d&apos;identité ({idpName})
                 </div>
@@ -270,9 +274,15 @@ export function AccountPage() {
                 </a>
               ) : null}
             </div>
-            <div className="account-row">
+            <div
+              className="account-row account-row--security"
+              data-visual-mask="account-security-2fa"
+              data-visual-ignore
+            >
               <div className="account-row-label">
-                <div className="account-row-title">Vérification en deux étapes</div>
+                <div className="account-row-title account-row-title--mb4">
+                  Vérification en deux étapes
+                </div>
                 <div className="account-row-desc">Gérée par le fournisseur d&apos;identité</div>
               </div>
             </div>
@@ -287,7 +297,7 @@ export function AccountPage() {
             Gérées par le fournisseur d&apos;identité
           </div>
 
-          <div className="account-section-head">
+          <div className="account-section-head" data-mock-id="account-pat">
             <div className="account-section-title">Jetons d&apos;accès personnels</div>
             <span className="account-link account-link--disabled">
               + Générer un jeton{' '}
@@ -306,7 +316,7 @@ export function AccountPage() {
           </p>
           <div
             className="account-empty-pat"
-            data-mock-id="account-pat"
+            data-mock-id="account-pat-list"
             data-visual-mask="account-pat-list"
           >
             Aucun jeton personnel
@@ -341,12 +351,6 @@ export function AccountPage() {
               </button>
             </div>
           </div>
-          {/* Réserve la hauteur de l’historique d’exports maquette (masqué en pixel) — pas de fausse ligne. */}
-          <div
-            className="account-export-history-slot"
-            data-visual-mask="account-export-history"
-            aria-hidden
-          />
 
           {showOrgAdmin ? (
             <>
@@ -358,7 +362,7 @@ export function AccountPage() {
                 data-testid="account-org-admin"
               >
                 <div>
-                  <div className="account-row-title">
+                  <div className="account-row-title account-row-title--mb2">
                     Administration de {orgLabel}
                   </div>
                   <div className="account-row-desc">
