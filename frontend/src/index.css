@@ -21,6 +21,26 @@ body {
   min-height: 100vh;
 }
 
+html[data-socle-font-scale='small'] {
+  font-size: 14px;
+}
+
+html[data-socle-font-scale='large'] {
+  font-size: 18px;
+}
+
+html[data-socle-high-contrast='true'] {
+  --socle-contrast-boost: 1;
+}
+
+html[data-socle-reduce-motion='true'] *,
+html[data-socle-reduce-motion='true'] *::before,
+html[data-socle-reduce-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
 @layer components {
   .page-shell {
     @apply mx-auto max-w-3xl px-6 py-10 md:px-10;

@@ -40,6 +40,8 @@ const KEEP_HELMET_STYLES = new Set([
   'CustomFields.dc.html',
   'Retention.dc.html',
   'Branding.dc.html',
+  'Admin.dc.html',
+  'Account.dc.html',
 ])
 
 function helmetStyles(rawHtml) {

@@ -40,6 +40,9 @@ import { SilentRenewPage } from './pages/SilentRenewPage'
 import { LoginPage, LoginErrorPage } from './pages/login/LoginPage'
 import { HomeDashboardPage } from './pages/home/HomeDashboardPage'
 import { FavoritesPage } from './pages/FavoritesPage'
+import { AccountPage } from './pages/account/AccountPage'
+import { AdminHomePage } from './pages/admin/AdminHomePage'
+import { RequirePlatformAdmin } from './auth/RequirePlatformAdmin'
 
 function ProtectedShell() {
   return (
@@ -63,12 +66,18 @@ export default function App() {
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/docs" element={<DocumentsPage />} />
           <Route path="/docs/new" element={<NewDocumentPage />} />
-          <Route path="/admin/templates" element={<TemplatesAdminPage />} />
-          <Route path="/admin/tags" element={<TagsAdminPage />} />
-          <Route path="/admin/custom-fields" element={<CustomFieldsAdminPage />} />
-          <Route path="/admin/retention" element={<RetentionAdminPage />} />
-          <Route path="/admin/branding" element={<BrandingAdminPage />} />
-          <Route path="/admin/licence" element={<LicenceAdminPage />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/admin" element={<RequirePlatformAdmin />}>
+            <Route index element={<AdminHomePage />} />
+            <Route path="templates" element={<TemplatesAdminPage />} />
+            <Route path="tags" element={<TagsAdminPage />} />
+            <Route path="custom-fields" element={<CustomFieldsAdminPage />} />
+            <Route path="retention" element={<RetentionAdminPage />} />
+            <Route path="branding" element={<BrandingAdminPage />} />
+            <Route path="licence" element={<LicenceAdminPage />} />
+            <Route path="workflows" element={<WorkflowsPage />} />
+            <Route path="approval-roles" element={<ApprovalRolesPage />} />
+          </Route>
           <Route path="/docs/:id" element={<DocumentReadPage />} />
           <Route path="/docs/:id/edit" element={<DocumentEditPage />} />
           <Route path="/docs/:id/view" element={<DocumentViewRedirect />} />
@@ -85,8 +94,6 @@ export default function App() {
           <Route path="/audit" element={<AuditPage />} />
           <Route path="/trash" element={<TrashPage />} />
           <Route path="/integrations" element={<IntegrationsPage />} />
-          <Route path="/admin/workflows" element={<WorkflowsPage />} />
-          <Route path="/admin/approval-roles" element={<ApprovalRolesPage />} />
           <Route path="/integrations/webhooks/deliveries" element={<WebhookDeliveriesPage />} />
           <Route path="/spaces" element={<SpacesPage />} />
           <Route path="/spaces/:spaceId" element={<SpaceSettingsPage />} />

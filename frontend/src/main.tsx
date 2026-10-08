@@ -6,6 +6,9 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { PublicBrandingProvider } from './lib/publicBranding'
 import './index.css'
+import { applyDevicePreferences } from './lib/devicePreferences'
+
+applyDevicePreferences()
 
 const queryClient = new QueryClient()
 

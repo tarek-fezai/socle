@@ -136,7 +136,7 @@ export function RetentionAdminPage() {
     <AdminShell
       active="retention"
       breadcrumb={[
-        { label: 'Administration', to: '/admin/tags' },
+        { label: 'Administration', to: '/admin' },
         { label: 'Rétention & conformité' },
       ]}
       innerClassName="admin-main__inner--retention"

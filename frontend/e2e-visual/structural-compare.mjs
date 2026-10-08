@@ -709,6 +709,24 @@ export async function annotateEditMockup(page) {
   })
 }
 
+/**
+ * Alignement nav admin produit ↔ maquette :
+ * - annote « Facturation » / « Licence » avec data-mock-id=admin-nav-licence
+ *   (exception texte : Socle auto-hébergé, licence signée pas de facturation)
+ */
+export function normalizeAdminMockupNavInDocument() {
+  const subnav =
+    document.querySelector('[data-mock-id="admin-subnav"]') ||
+    document.querySelector('body div[style*="1440px"] > div:nth-child(2) > div:first-child')
+  if (!subnav) return
+  for (const a of [...subnav.querySelectorAll('a, .nav-item')]) {
+    const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
+    if (t === 'Facturation' || t === 'Licence') {
+      a.setAttribute('data-mock-id', 'admin-nav-licence')
+    }
+  }
+}
+
 /** Annotate TagsAdmin.dc.html with data-mock-id. */
 export async function annotateTagsAdminMockup(page) {
   await page.evaluate(() => {
@@ -719,6 +737,13 @@ export async function annotateTagsAdminMockup(page) {
     const subnav = body?.children[0]
     subnav?.setAttribute('data-mock-id', 'admin-subnav')
     subnav?.querySelector('a[href="TagsAdmin.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-tags')
+    // inline normalize (page.evaluate scope has no module imports)
+    for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
+      const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
+      if (t === 'Facturation' || t === 'Licence') {
+        a.setAttribute('data-mock-id', 'admin-nav-licence')
+      }
+    }
     const main = body?.children[1]
     const rail = body?.children[2]
     main?.querySelector('h1')?.setAttribute('data-mock-id', 'tags-title')
@@ -774,6 +799,12 @@ export async function annotateCustomFieldsAdminMockup(page) {
     const subnav = body?.children[0]
     subnav?.setAttribute('data-mock-id', 'admin-subnav')
     subnav?.querySelector('a[href="CustomFields.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-custom-fields')
+    for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
+      const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
+      if (t === 'Facturation' || t === 'Licence') {
+        a.setAttribute('data-mock-id', 'admin-nav-licence')
+      }
+    }
     const split = body?.children[1]
     const main = split?.children[0]
     const rail = split?.children[1]
@@ -806,6 +837,12 @@ export async function annotateRetentionAdminMockup(page) {
     const subnav = body?.children[0]
     subnav?.setAttribute('data-mock-id', 'admin-subnav')
     subnav?.querySelector('a[href="Retention.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-retention')
+    for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
+      const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
+      if (t === 'Facturation' || t === 'Licence') {
+        a.setAttribute('data-mock-id', 'admin-nav-licence')
+      }
+    }
     const main = body?.children[1]
     const inner = main?.querySelector('div[style*="max-width"]') || main
     inner?.querySelector('h1')?.setAttribute('data-mock-id', 'retention-title')
@@ -837,6 +874,12 @@ export async function annotateBrandingAdminMockup(page) {
     const subnav = body?.children[0]
     subnav?.setAttribute('data-mock-id', 'admin-subnav')
     subnav?.querySelector('a[href="Branding.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-branding')
+    for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
+      const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
+      if (t === 'Facturation' || t === 'Licence') {
+        a.setAttribute('data-mock-id', 'admin-nav-licence')
+      }
+    }
     const split = body?.children[1]
     const main = split?.children[0]
     const rail = split?.children[1]
@@ -1363,10 +1406,16 @@ export async function collectMetrics(page, ids) {
         if (node.nodeType !== Node.ELEMENT_NODE) return
         const tag = node.tagName
         if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG') return
+        // Badges « Bientôt » (et autres) : exclus du texte structural, pas des libellés/ordre.
+        if (node.hasAttribute('data-visual-ignore')) return
         for (const c of node.childNodes) walk(c)
       }
       walk(el)
       return parts.join(' ')
+    }
+    function visibleText(el) {
+      if (el.hasAttribute?.('data-visual-ignore')) return ''
+      return spacedText(el)
     }
     function normWeight(w) {
       const map = { normal: '400', bold: '700' }
@@ -1390,15 +1439,21 @@ export async function collectMetrics(page, ids) {
       const cs = getComputedStyle(el)
       const r = el.getBoundingClientRect()
       const isSvgText = el.tagName.toLowerCase() === 'text'
+      const useSpaced =
+        id.startsWith('admin-') ||
+        id.startsWith('tags-') ||
+        id.startsWith('custom-fields-') ||
+        id.startsWith('retention-') ||
+        id.startsWith('branding-') ||
+        id.startsWith('account-')
       out[id] = {
-        text:
-          id.startsWith('admin-') ||
-          id.startsWith('tags-') ||
-          id.startsWith('custom-fields-') ||
-          id.startsWith('retention-') ||
-          id.startsWith('branding-')
-            ? spacedText(el)
-            : normText(el.textContent),
+        text: useSpaced
+          ? visibleText(el)
+          : (() => {
+              // Même exclusion data-visual-ignore pour le textContent agrégé.
+              if (el.querySelector?.('[data-visual-ignore]')) return visibleText(el)
+              return normText(el.textContent)
+            })(),
         fontFamily: firstFamily(cs.fontFamily),
         fontSize: cs.fontSize,
         fontWeight: normWeight(cs.fontWeight),
@@ -1481,12 +1536,12 @@ export function compareMetrics(mockMap, appMap, ids, { pageExceptions = {} } = {
           diffs.push(`${f}: maquette=${JSON.stringify(mv)} app=${JSON.stringify(av)}`)
         }
       }
-      if (!skip.has('box')) {
-        for (const k of ['x', 'y', 'width', 'height']) {
-          const d = Math.abs(mock.box[k] - app.box[k])
-          if (d > 3) {
-            diffs.push(`box.${k}: maquette=${mock.box[k].toFixed(1)} app=${app.box[k].toFixed(1)} Δ=${d.toFixed(1)}`)
-          }
+      // skip 'box' = toute la boîte ; skip 'box.y' / 'box.height' = cascade / Δ hauteur déclarés
+      for (const k of ['x', 'y', 'width', 'height']) {
+        if (skip.has('box') || skip.has(`box.${k}`)) continue
+        const d = Math.abs(mock.box[k] - app.box[k])
+        if (d > 3) {
+          diffs.push(`box.${k}: maquette=${mock.box[k].toFixed(1)} app=${app.box[k].toFixed(1)} Δ=${d.toFixed(1)}`)
         }
       }
     }

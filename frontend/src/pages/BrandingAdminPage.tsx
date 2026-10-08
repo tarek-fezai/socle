@@ -136,7 +136,7 @@ export function BrandingAdminPage() {
       active="branding"
       breadcrumb={[
         { label: 'Compte', to: '/' },
-        { label: 'Administration', to: '/admin/tags' },
+        { label: 'Administration', to: '/admin' },
         { label: 'Personnalisation de marque' },
       ]}
       mainClassName="admin-main--fields"

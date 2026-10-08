@@ -228,6 +228,64 @@
   font-weight: 500;
 }
 
+.shell-user-menu {
+  position: relative;
+  margin-top: auto;
+  width: 100%;
+}
+
+.shell-user-menu__panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 40;
+  min-width: 220px;
+  background: #ffffff;
+  border: 1px solid #ececee;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(14, 14, 16, 0.08);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-user-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0e0e10;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.shell-user-menu__item:hover:not(:disabled):not(.shell-user-menu__item--disabled) {
+  background: #f5f5f7;
+}
+
+.shell-user-menu__item--disabled {
+  color: #9b9ba1;
+  cursor: not-allowed;
+}
+
+.shell-user-menu__item--logout {
+  color: #b54708;
+}
+
+.shell-user-menu__soon {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9b9ba1;
+}
+
 .shell-main-col {
   flex-grow: 1;
   height: 100vh;

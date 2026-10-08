@@ -5882,6 +5882,24 @@
         }
       }
     },
+    "/api/v1/admin/overview" : {
+      "get" : {
+        "tags" : [ "admin-overview-controller" ],
+        "operationId" : "overview",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdminOverviewView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/licence" : {
       "get" : {
         "tags" : [ "licence-admin-controller" ],
@@ -9824,6 +9842,54 @@
           },
           "procedure" : {
             "type" : "string"
+          }
+        }
+      },
+      "AdminOverviewView" : {
+        "type" : "object",
+        "properties" : {
+          "oidc" : {
+            "$ref" : "#/components/schemas/OidcSummaryView"
+          },
+          "userCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "spaceCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "plan" : {
+            "$ref" : "#/components/schemas/PlanSummaryView"
+          }
+        }
+      },
+      "OidcSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "issuer" : {
+            "type" : "string"
+          },
+          "clientId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlanSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "evaluationMode" : {
+            "type" : "boolean"
+          },
+          "edition" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },

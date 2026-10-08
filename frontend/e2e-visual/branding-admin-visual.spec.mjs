@@ -170,11 +170,7 @@ test.describe('branding admin structural', () => {
     await settleFonts(page)
     const appMetrics = await collectMetrics(page, BRANDING_ADMIN_DESKTOP_IDS)
 
-    // Après compensation margin identité/domaine dans l'annotateur, viser zéro exception.
-    const pageExceptions = {}
-    const results = compareMetrics(mockMetrics, appMetrics, BRANDING_ADMIN_DESKTOP_IDS, {
-      pageExceptions,
-    })
+    const results = compareMetrics(mockMetrics, appMetrics, BRANDING_ADMIN_DESKTOP_IDS)
     const failed = results.filter((r) => r.diffs.length > 0)
     expect(failed, JSON.stringify(failed, null, 2)).toEqual([])
   })

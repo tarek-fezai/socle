@@ -24,7 +24,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.test.{ts,tsx}', 'e2e-visual/fixture-contract.test.ts'],
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'e2e-visual/fixture-contract.test.ts',
+      'e2e-visual/structural-compare-visual-ignore.test.ts',
+    ],
     exclude: ['**/node_modules/**', '**/dist/**'],
   },
 })

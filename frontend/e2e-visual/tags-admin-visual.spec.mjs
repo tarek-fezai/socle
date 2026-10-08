@@ -194,11 +194,7 @@ test.describe('tags admin structural', () => {
     console.log('tags-admin app layout', JSON.stringify(appLayout))
     const appMetrics = await collectMetrics(page, TAGS_ADMIN_DESKTOP_IDS)
 
-    // Aucune exception box/text. Comparaison complète titre / CTA / compteurs / tableau / callout / rail.
-    const pageExceptions = {}
-    const results = compareMetrics(mockMetrics, appMetrics, TAGS_ADMIN_DESKTOP_IDS, {
-      pageExceptions,
-    })
+    const results = compareMetrics(mockMetrics, appMetrics, TAGS_ADMIN_DESKTOP_IDS)
     const failed = results.filter((r) => r.diffs.length > 0)
     expect(failed, JSON.stringify(failed, null, 2)).toEqual([])
   })

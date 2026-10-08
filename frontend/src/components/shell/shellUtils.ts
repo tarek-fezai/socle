@@ -49,8 +49,13 @@ export function isApprovalsPath(pathname: string): boolean {
  * Pages admin Tags / Champs / Rétention / Branding — layout plein écran (maquettes admin),
  * sans sidebar shell ni barre haute globale.
  */
+export function isAccountPath(pathname: string): boolean {
+  return /^\/account\/?$/.test(pathname)
+}
+
+/** Toutes les routes /admin/* — layout plein écran (AdminShell). */
 export function isAdminWorkspacePath(pathname: string): boolean {
-  return /^\/admin\/(?:tags|custom-fields|retention|branding)\/?$/.test(pathname)
+  return /^\/admin(?:\/|$)/.test(pathname)
 }
 
 /** Pages qui portent leur propre chrome (lecture, modification, historique, approbation, admin). */
@@ -60,7 +65,8 @@ export function hasOwnDocumentChrome(pathname: string): boolean {
     isDocumentEditPath(pathname) ||
     isDocumentHistoryPath(pathname) ||
     isApprovalsPath(pathname) ||
-    isAdminWorkspacePath(pathname)
+    isAdminWorkspacePath(pathname) ||
+    isAccountPath(pathname)
   )
 }
 

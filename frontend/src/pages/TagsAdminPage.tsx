@@ -160,7 +160,7 @@ export function TagsAdminPage() {
     <AdminShell
       active="tags"
       breadcrumb={[
-        { label: 'Administration', to: '/admin/tags' },
+        { label: 'Administration', to: '/admin' },
         { label: 'Tags' },
       ]}
       rightRail={

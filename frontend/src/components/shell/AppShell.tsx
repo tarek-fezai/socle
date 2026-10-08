@@ -9,6 +9,7 @@ import { ShellHeader } from './ShellHeader'
 import { ShellSidebar } from './ShellSidebar'
 import {
   hasOwnDocumentChrome,
+  isAccountPath,
   isAdminWorkspacePath,
   isApplePlatform,
   type ShellOutletContext,
@@ -23,6 +24,8 @@ export function AppShellLayout() {
   // Page de lecture : barre haute + onglets fournis par la page (Main.dc.html / MobilePage.dc.html).
   const ownChrome = hasOwnDocumentChrome(pathname)
   const adminWorkspace = isAdminWorkspacePath(pathname)
+  const accountPage = isAccountPath(pathname)
+  const hideShellChrome = adminWorkspace || accountPage
 
   const openSearch = useCallback(() => {
     setMenuOpen(false)
@@ -51,20 +54,20 @@ export function AppShellLayout() {
 
   return (
     <div
-      className={`shell-root${adminWorkspace ? ' shell-root--admin-workspace' : ''}`}
+      className={`shell-root${hideShellChrome ? ' shell-root--admin-workspace' : ''}`}
       data-mock-id="shell-root"
     >
       <div className="shell-desktop" data-mock-id="shell-frame">
-        {!adminWorkspace && <ShellSidebar onOpenSearch={openSearch} />}
+        {!hideShellChrome && <ShellSidebar onOpenSearch={openSearch} />}
         <div className="shell-main-col">
-          {!ownChrome && !adminWorkspace && (
+          {!ownChrome && !hideShellChrome && (
             <MobileTopBar onOpenMenu={() => setMenuOpen(true)} />
           )}
-          {!ownChrome && !adminWorkspace && <ShellHeader />}
+          {!ownChrome && !hideShellChrome && <ShellHeader />}
           <div className="shell-outlet" data-mock-id="shell-outlet">
             <Outlet context={outletContext} />
           </div>
-          {!ownChrome && !adminWorkspace && <MobileTabBar />}
+          {!ownChrome && !hideShellChrome && <MobileTabBar />}
         </div>
       </div>
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onOpenSearch={openSearch} />
