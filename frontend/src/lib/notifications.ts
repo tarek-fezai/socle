@@ -59,6 +59,16 @@ export function formatNotificationMessage(n: NotificationItem): string {
       ? `Vous avez été mentionné dans un commentaire sur « ${title} ».`
       : 'Vous avez été mentionné dans un commentaire.'
   }
+  if (n.type === 'pat_expiring') {
+    const name = String(n.payload?.name ?? '').trim() || 'sans nom'
+    const last4 = String(n.payload?.last4 ?? '')
+    const raw = n.payload?.expires_at
+    const at = typeof raw === 'string' ? Date.parse(raw) : NaN
+    const date = Number.isNaN(at)
+      ? 'dans 7 jours'
+      : `le ${new Date(at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    return `Votre jeton d'accès personnel « ${name} » (…${last4}) expire ${date}.`
+  }
   const msg = n.payload?.message
   if (typeof msg === 'string' && msg.trim()) return msg
   return `Notification (${n.type})`
@@ -84,6 +94,9 @@ export function notificationResourceLink(n: NotificationItem): string | null {
   }
   if (n.type === 'approval_chain_exhausted') {
     return '/approvals'
+  }
+  if (n.type === 'pat_expiring') {
+    return '/account'
   }
   return null
 }

@@ -44,8 +44,32 @@ public final class ApiErrors {
     public static final String LICENCE_REJECTED = "licence_rejected";
     /** Identité OIDC en conflit avec un compte existant (même sub / autre issuer). */
     public static final String IDENTITY_CONFLICT = "identity_conflict";
+    /** Jeton d'accès personnel : durée hors 1..90 jours. */
+    public static final String PAT_EXPIRY_INVALID = "pat_expiry_invalid";
+    /** Jeton d'accès personnel : 10 jetons actifs au maximum. */
+    public static final String PAT_LIMIT_REACHED = "pat_limit_reached";
+    /** Route interdite à l'authentification par jeton d'accès personnel. */
+    public static final String PAT_NOT_ALLOWED = "pat_not_allowed";
+    /** Jeton {@code read} : méthodes GET / HEAD / OPTIONS uniquement. */
+    public static final String PAT_SCOPE_INSUFFICIENT = "pat_scope_insufficient";
 
     private ApiErrors() {}
+
+    public static CodedStatusException patExpiryInvalid(int minDays, int maxDays) {
+        return new CodedStatusException(
+                HttpStatus.BAD_REQUEST,
+                PAT_EXPIRY_INVALID,
+                "Expiration obligatoire : entre " + minDays + " et " + maxDays + " jours",
+                Map.of("minDays", minDays, "maxDays", maxDays));
+    }
+
+    public static CodedStatusException patLimitReached(int maxActive) {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                PAT_LIMIT_REACHED,
+                "Nombre maximal de jetons actifs atteint (" + maxActive + ") : révoquez un jeton existant",
+                Map.of("maxActive", maxActive));
+    }
 
     public static CodedStatusException licenceUserLimit(int maxUsers, long activeUsers, String reason) {
         boolean noValidLicence = maxUsers <= 0

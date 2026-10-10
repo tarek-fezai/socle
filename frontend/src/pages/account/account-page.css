@@ -395,6 +395,315 @@
   color: #6b6b72;
 }
 
+/* Account.dc.html — liste des jetons d'accès personnels */
+.account-pat-row {
+  display: flex;
+  align-items: center;
+  padding: 13px 16px;
+}
+
+.account-pat-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0e0e10;
+}
+
+/* Maquette : classe « mono » sans police mono chargée → texte en IBM Plex Sans */
+.account-pat-meta {
+  font-size: 11.5px;
+  color: #9b9ba1;
+  margin-top: 2px;
+}
+
+.account-pat-used {
+  font-size: 11px;
+  color: #9b9ba1;
+  margin-right: 16px;
+}
+
+/* Police UA du <button> comme Account.dc.html (pas de preflight côté maquette) */
+.account-pat-revoke {
+  font-family: revert;
+  font-size: 12px;
+  color: #b54708;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 1px 6px;
+  margin: 0;
+  line-height: normal;
+}
+
+.account-pat-revoke:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.account-pat-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-pat-confirm-text {
+  font-size: 12px;
+  color: #43434a;
+  font-weight: 500;
+}
+
+.account-pat-cancel {
+  font-size: 12px;
+  color: #6b6b72;
+  border: 1px solid #ececee;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 4px 10px;
+}
+
+.account-pat-revoke--confirm {
+  border: 1px solid #f3d3c4;
+  border-radius: 6px;
+  background: #fceeea;
+  font-family: inherit;
+  padding: 4px 10px;
+}
+
+/* GeneratePersonalToken.dc.html — modale 480 px sur fond assombri */
+.pat-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(14, 14, 16, 0.45);
+  font-family: 'IBM Plex Sans', sans-serif;
+  line-height: normal;
+}
+
+.pat-modal {
+  position: relative;
+  width: 480px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 28px 24px;
+  outline: none;
+}
+
+/* Ombre sur un pseudo-élément : portée par la carte elle-même, elle prive Chromium de l'anticrénelage
+   LCD du texte dans la couche fixe translucide (rendu plus maigre que la maquette). */
+.pat-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 24px 60px rgba(14, 14, 16, 0.28);
+  pointer-events: none;
+}
+
+.pat-modal__title {
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-size: 24px;
+  margin: 0 0 6px;
+  color: #0e0e10;
+}
+
+.pat-modal__desc {
+  font-size: 13px;
+  color: #9b9ba1;
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+.pat-modal__label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #43434a;
+  margin-bottom: 6px;
+}
+
+.pat-modal__label--mb8 {
+  margin-bottom: 8px;
+}
+
+.pat-modal__input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #ececee;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #0e0e10;
+  margin: 0 0 18px;
+  font-family: inherit;
+  line-height: normal;
+  background: #ffffff;
+}
+
+.pat-modal__input:focus {
+  outline: 2px solid #3730e0;
+  outline-offset: -1px;
+}
+
+.pat-modal__scopes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.pat-modal__scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1.5px solid #ececee;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.pat-modal__scope:hover {
+  border-color: #3730e0;
+}
+
+.pat-modal__scope--on {
+  border-color: #3730e0;
+  background: #f8f8fe;
+}
+
+/* Marges UA du bouton radio (la maquette n'a pas de preflight) */
+.pat-modal__scope input[type='radio'] {
+  margin: 3px 3px 0 5px;
+  accent-color: #3730e0;
+}
+
+.pat-modal__scope-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0e0e10;
+}
+
+.pat-modal__scope-desc {
+  font-size: 11.5px;
+  color: #9b9ba1;
+}
+
+.pat-modal__presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.pat-modal__preset {
+  flex: 1;
+  text-align: center;
+  padding: 9px;
+  border: 1px solid #ececee;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #43434a;
+  cursor: pointer;
+  line-height: normal;
+}
+
+.pat-modal__preset--on {
+  border: 1.5px solid #3730e0;
+  background: #f8f8fe;
+  font-weight: 600;
+  color: #3730e0;
+}
+
+.pat-modal__error {
+  margin: -10px 0 14px;
+  font-size: 12.5px;
+  color: #b54708;
+}
+
+.pat-modal__actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Étirés à la hauteur de la rangée (42 px, bordure du ghost) : texte calé sous le padding haut
+   comme les <a> de la maquette, et non recentré comme le ferait un <button>. */
+.pat-modal__ghost,
+.pat-modal__cta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: center;
+  padding: 11px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: normal;
+  cursor: pointer;
+  margin: 0;
+}
+
+.pat-modal__ghost {
+  flex: 1;
+  border: 1px solid #ececee;
+  background: #ffffff;
+  color: #43434a;
+  font-weight: 500;
+}
+
+.pat-modal__ghost:hover {
+  background: #f5f5f7;
+}
+
+.pat-modal__cta {
+  flex: 1.4;
+  border: none;
+  background: #3730e0;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pat-modal__cta:hover:not(:disabled) {
+  background: #2c27c7;
+}
+
+.pat-modal__cta:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.pat-modal__secret {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+  color: #0e0e10;
+  background: #f5f5f7;
+  border: 1px solid #ececee;
+  border-radius: 8px;
+  padding: 12px;
+  word-break: break-all;
+  user-select: all;
+  margin-bottom: 12px;
+}
+
+.pat-modal__warning {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #b54708;
+  background: #fceeea;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 18px;
+}
+
 .account-empty-pat {
   border: 1px solid #ececee;
   border-radius: 10px;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.identity;
 
+import eu.socle.pat.PatAuthenticationToken;
 import eu.socle.web.ApiErrors;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -73,6 +74,12 @@ public class AccessPolicyFilter extends OncePerRequestFilter {
         }
 
         Jwt jwt = jwtAuth.getToken();
+        if (auth instanceof PatAuthenticationToken || PatClaims.isPat(jwt)) {
+            // Jeton d'accès personnel : compte existant et actif vérifiés à l'authentification ;
+            // la politique d'admission (domaine, groupe, JIT) ne s'applique qu'aux JWT de l'IdP.
+            chain.doFilter(request, response);
+            return;
+        }
         String subject = claimsMapper.subject(jwt);
         String issuer = claimsMapper.issuer(jwt);
         if (subject == null || issuer == null) {

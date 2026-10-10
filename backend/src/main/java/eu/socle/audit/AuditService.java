@@ -132,6 +132,7 @@ public class AuditService {
             Map<String, Object> metadata,
             String ipAddress
     ) {
+        metadata = AuthMethodContext.enrich(metadata);
         String metaJson = toJson(metadata);
         Instant now = Instant.now();
         Long auditEventId;

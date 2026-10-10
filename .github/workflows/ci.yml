@@ -298,6 +298,7 @@ jobs:
             --set idp.issuerUri=http://example/realms/x \
             --set secrets.postgresPassword=TestPass1! \
             --set secrets.oidcClientSecret=TestOidc1! \
+            --set secrets.patPepper=ci-helm-pat-pepper-not-a-secret-0123456789 \
             --set postgres.host=pg.example \
             >/tmp/helm-out.yaml 2>/tmp/helm-err.txt; then
             echo "expected helm template to fail for git + replicas=2" >&2
@@ -319,6 +320,7 @@ jobs:
             --set idp.issuerUri=http://example/realms/x \
             --set secrets.postgresPassword=TestPass1! \
             --set secrets.oidcClientSecret=TestOidc1! \
+            --set secrets.patPepper=ci-helm-pat-pepper-not-a-secret-0123456789 \
             --set postgres.host=pg.example \
             >/tmp/helm-blob-out.yaml 2>/tmp/helm-blob-err.txt; then
             echo "expected helm template to fail for blob.local + replicas=2" >&2

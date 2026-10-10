@@ -8,6 +8,7 @@ import eu.socle.identity.AccessPolicyService;
 import eu.socle.identity.PlatformRoleEntity;
 import eu.socle.identity.PlatformRoleRepository;
 import eu.socle.identity.SocleRole;
+import eu.socle.pat.PatService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +47,7 @@ class UserAccountServiceTest {
     @Mock UserIdentityRepository identityRepository;
     @Mock PlatformRoleRepository platformRoleRepository;
     @Mock AuditService auditService;
+    @Mock PatService patService;
 
     AccessDecisionCache cache;
     UserAccountService service;
@@ -54,7 +56,7 @@ class UserAccountServiceTest {
     void setUp() {
         cache = new AccessDecisionCache();
         service = new UserAccountService(
-                userRepository, identityRepository, platformRoleRepository, auditService, cache);
+                userRepository, identityRepository, platformRoleRepository, auditService, cache, patService);
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(identityRepository.findByUserId(TARGET)).thenReturn(List.of(identity()));
     }
@@ -72,6 +74,7 @@ class UserAccountServiceTest {
         verify(auditService).record(
                 eq(ACTOR), eq(false), eq(AuditActions.USER_DISABLED),
                 eq("user"), eq(TARGET), anyMap(), isNull());
+        verify(patService).revokeAllForUser(TARGET, ACTOR, PatService.REASON_USER_DISABLED);
     }
 
     @Test

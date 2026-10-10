@@ -3,12 +3,24 @@ package eu.socle.config;
 
 import eu.socle.identity.AccessPolicyFilter;
 import eu.socle.identity.SocleRole;
+import eu.socle.pat.PatAuthenticationProvider;
+import eu.socle.pat.PatRestrictionFilter;
+import eu.socle.pat.PatTokenFormat;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationManagerResolver;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -47,7 +59,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             ObjectProvider<Converter<Jwt, ? extends AbstractAuthenticationToken>> jwtAuthenticationConverter,
-            ObjectProvider<AccessPolicyFilter> accessPolicyFilter
+            ObjectProvider<AccessPolicyFilter> accessPolicyFilter,
+            ObjectProvider<JwtDecoder> jwtDecoder,
+            ObjectProvider<PatAuthenticationProvider> patAuthenticationProvider
     ) throws Exception {
         Converter<Jwt, ? extends AbstractAuthenticationToken> converter =
                 jwtAuthenticationConverter.getIfAvailable(SecurityConfig::fallbackJwtConverter);
@@ -100,6 +114,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api-docs",
                                 "/api-docs/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
                                 "/ApiDocs.dc.html",
                                 "/ApiDocs.dc.html/**",
                                 "/swagger-ui/**",
@@ -147,15 +163,61 @@ public class SecurityConfig {
                         ).authenticated()
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(converter)));
+                        .authenticationManagerResolver(bearerAuthenticationManagerResolver(
+                                jwtDecoder, converter, patAuthenticationProvider)));
 
+        http.addFilterAfter(new PatRestrictionFilter(), BearerTokenAuthenticationFilter.class);
         // Politique d'accès après validation du JWT (absente des @WebMvcTest qui n'importent que cette config).
         AccessPolicyFilter policyFilter = accessPolicyFilter.getIfAvailable();
         if (policyFilter != null) {
-            http.addFilterAfter(policyFilter, BearerTokenAuthenticationFilter.class);
+            http.addFilterAfter(policyFilter, PatRestrictionFilter.class);
         }
 
         return http.build();
+    }
+
+    /**
+     * Bearer {@code pat_…} → {@link PatAuthenticationProvider} (jamais présenté au décodeur JWT) ;
+     * tout autre Bearer → resource server JWT inchangé. Le décodeur est résolu à la première requête
+     * JWT (découverte OIDC paresseuse, comme l'auto-configuration).
+     */
+    static AuthenticationManagerResolver<HttpServletRequest> bearerAuthenticationManagerResolver(
+            ObjectProvider<JwtDecoder> jwtDecoder,
+            Converter<Jwt, ? extends AbstractAuthenticationToken> converter,
+            ObjectProvider<PatAuthenticationProvider> patAuthenticationProvider
+    ) {
+        DefaultBearerTokenResolver bearerResolver = new DefaultBearerTokenResolver();
+        AuthenticationManager jwtManager = new AuthenticationManager() {
+            private volatile AuthenticationManager delegate;
+
+            @Override
+            public Authentication authenticate(Authentication authentication) {
+                AuthenticationManager current = delegate;
+                if (current == null) {
+                    JwtAuthenticationProvider provider = new JwtAuthenticationProvider(jwtDecoder.getObject());
+                    provider.setJwtAuthenticationConverter(converter);
+                    current = new ProviderManager(provider);
+                    delegate = current;
+                }
+                return current.authenticate(authentication);
+            }
+        };
+        AuthenticationManager patManager = authentication -> {
+            PatAuthenticationProvider provider = patAuthenticationProvider.getIfAvailable();
+            if (provider == null) {
+                throw new InvalidBearerTokenException("Invalid token");
+            }
+            return provider.authenticate(authentication);
+        };
+        return request -> {
+            String token;
+            try {
+                token = bearerResolver.resolve(request);
+            } catch (RuntimeException e) {
+                return jwtManager;
+            }
+            return token != null && token.startsWith(PatTokenFormat.PREFIX) ? patManager : jwtManager;
+        };
     }
 
     private static Converter<Jwt, ? extends AbstractAuthenticationToken> fallbackJwtConverter() {

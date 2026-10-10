@@ -6,6 +6,7 @@ import eu.socle.audit.AuditService;
 import eu.socle.identity.AccessDecisionCache;
 import eu.socle.identity.PlatformRoleRepository;
 import eu.socle.identity.SocleRole;
+import eu.socle.pat.PatService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +19,8 @@ import java.util.UUID;
 
 /**
  * Activation / désactivation administrative d'un compte ({@code users.status}).
- * Un compte {@code disabled} est refusé par la politique d'accès même avec un JWT valide.
+ * Un compte {@code disabled} est refusé par la politique d'accès même avec un JWT valide ;
+ * ses jetons d'accès personnels sont révoqués dans la même transaction.
  */
 @Service
 public class UserAccountService {
@@ -31,19 +33,22 @@ public class UserAccountService {
     private final PlatformRoleRepository platformRoleRepository;
     private final AuditService auditService;
     private final AccessDecisionCache accessDecisionCache;
+    private final PatService patService;
 
     public UserAccountService(
             UserRepository userRepository,
             UserIdentityRepository identityRepository,
             PlatformRoleRepository platformRoleRepository,
             AuditService auditService,
-            AccessDecisionCache accessDecisionCache
+            AccessDecisionCache accessDecisionCache,
+            PatService patService
     ) {
         this.userRepository = userRepository;
         this.identityRepository = identityRepository;
         this.platformRoleRepository = platformRoleRepository;
         this.auditService = auditService;
         this.accessDecisionCache = accessDecisionCache;
+        this.patService = patService;
     }
 
     @Transactional
@@ -57,6 +62,7 @@ public class UserAccountService {
         user.setStatus(STATUS_DISABLED);
         UserEntity saved = userRepository.save(user);
         invalidateCache(userId);
+        patService.revokeAllForUser(userId, actorId, PatService.REASON_USER_DISABLED);
         auditService.record(
                 actorId, false,
                 AuditActions.USER_DISABLED,

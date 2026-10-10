@@ -1445,7 +1445,8 @@ export async function collectMetrics(page, ids) {
         id.startsWith('custom-fields-') ||
         id.startsWith('retention-') ||
         id.startsWith('branding-') ||
-        id.startsWith('account-')
+        id.startsWith('account-') ||
+        id.startsWith('pat-generate-')
       out[id] = {
         text: useSpaced
           ? visibleText(el)

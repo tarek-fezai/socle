@@ -119,6 +119,10 @@ socle:
   security:
     # Production / compose : true — refuse change-me, admin, socle, secrets vides.
     reject-weak-secrets: ${SOCLE_REJECT_WEAK_SECRETS:false}
+  pat:
+    # Pepper HMAC-SHA256 des jetons d'accès personnels (≥ 32 octets). Obligatoire hors profil
+    # dev/local : démarrage refusé si absent ou trop court. Générer : openssl rand -base64 48
+    pepper: ${SOCLE_PAT_PEPPER:}
   openfga:
     api-url: ${OPENFGA_API_URL:http://localhost:8082}
     store-id: ${OPENFGA_STORE_ID:}

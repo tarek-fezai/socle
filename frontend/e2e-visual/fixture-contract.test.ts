@@ -27,7 +27,7 @@ import {
   PAGE_FEEDBACK_VIEWER,
   pageDocument,
 } from './page-fixtures.mjs'
-import { ADMIN_OVERVIEW_SEED } from './account-admin-fixtures.mjs'
+import { ACCOUNT_VISUAL_NOW, ADMIN_OVERVIEW_SEED, PAT_TOKENS_SEED } from './account-admin-fixtures.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const openapi = JSON.parse(readFileSync(resolve(root, 'openapi/openapi.json'), 'utf8'))
@@ -173,6 +173,19 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
 
   it('ADMIN_OVERVIEW_SEED matches AdminOverviewView', () => {
     validate('AdminOverviewView', ADMIN_OVERVIEW_SEED)
+  })
+
+  it('PAT_TOKENS_SEED matches PersonalAccessToken (expiration obligatoire ≤ 90 jours)', () => {
+    expect(PAT_TOKENS_SEED).toHaveLength(2)
+    for (const t of PAT_TOKENS_SEED) {
+      validate('PersonalAccessToken', t)
+      expect(t.expiresAt, `${t.name}: expiresAt`).toBeTruthy()
+      const days = (Date.parse(t.expiresAt!) - Date.parse(t.createdAt!)) / 86_400_000
+      expect(days).toBeGreaterThan(0)
+      expect(days).toBeLessThanOrEqual(90)
+      expect(Date.parse(t.createdAt!)).toBeLessThanOrEqual(ACCOUNT_VISUAL_NOW)
+    }
+    expect(PAT_TOKENS_SEED.some((t) => t.scope === 'read_write')).toBe(true)
   })
 })
 

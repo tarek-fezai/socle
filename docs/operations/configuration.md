@@ -26,6 +26,17 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `OIDC_CLIENT_SECRET` | `change-me` | yes (prod) | **yes** | Backend OAuth client secret |
 | `OIDC_FRONTEND_CLIENT_ID` | `socle-frontend` | no | no | Public SPA client id (`socle.identity.client-id`) |
 
+## Personal access tokens (`socle.pat`)
+
+| Name | Default | Required | Secret | Description |
+|------|---------|----------|--------|-------------|
+| `SOCLE_PAT_PEPPER` | empty | **yes** (all non-`dev`/`local` profiles) | **yes** | HMAC-SHA256 pepper for personal access tokens, ≥ 32 bytes (`openssl rand -base64 48`). Startup is refused when absent or shorter; `dev`/`local` fall back to an ephemeral random pepper (tokens lost on restart). Changing it invalidates every issued token. Helm: `secrets.patPepper` (required) or key `SOCLE_PAT_PEPPER` in `backend.existingSecret`. |
+
+**Security (PAT vs IdP JWT):**
+
+- A personal access token **never** carries the platform role `ADMINISTRATEUR_SYSTEME`, even when the token owner holds it in the database. Admin URL checks (`/api/v1/admin/**`, `/api-docs`) and service-level `isSystemAdmin` / authority checks therefore fail closed for PAT principals.
+- Claims whose names start with `socle_` are **reserved** for Socle synthetic PAT principals. The IdP JWT decoder rejects any JWT that contains such a claim (`401 invalid_token`). Recognition of a PAT principal also requires a synthetic token value prefixed with `pat:` (impossible for a compact IdP JWT) and, where the `Authentication` is available, `instanceof PatAuthenticationToken`.
+
 ## Instance & storage
 
 | Name | Default | Required | Secret | Description |

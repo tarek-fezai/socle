@@ -7,6 +7,7 @@ import eu.socle.identity.AccessPolicyDeniedException;
 import eu.socle.identity.AccessPolicyService;
 import eu.socle.identity.IdentityClaimsMapper;
 import eu.socle.identity.IdentityProperties;
+import eu.socle.identity.PatClaims;
 import eu.socle.identity.PlatformRoleService;
 import eu.socle.licence.LicenceService;
 import org.slf4j.Logger;
@@ -66,6 +67,9 @@ public class UserSyncService {
 
     @Transactional
     public UserEntity syncFromJwt(Jwt jwt) {
+        if (PatClaims.isPat(jwt)) {
+            return patUser(jwt);
+        }
         String subject = claimsMapper.subject(jwt);
         String issuer = claimsMapper.issuer(jwt);
         if (subject == null || subject.isBlank()) {
@@ -134,6 +138,21 @@ public class UserSyncService {
             auditAccessGrantedAfterCommit(saved.getId(), issuer, subject);
         }
         return saved;
+    }
+
+    /**
+     * Jeton d'accès personnel : compte relu tel quel — jamais créé, rattaché ni mis à jour
+     * (profil, dernière connexion) ; la licence ne s'applique qu'à la création de compte.
+     */
+    private UserEntity patUser(Jwt jwt) {
+        UUID userId = PatClaims.userId(jwt)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "jeton invalide"));
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "jeton invalide"));
+        if (!UserAccountService.STATUS_ACTIVE.equalsIgnoreCase(user.getStatus())) {
+            throw new AccessPolicyDeniedException(AccessDeniedReason.ACCOUNT_DISABLED);
+        }
+        return user;
     }
 
     private static void requireGranted(AccessPolicyService.Decision decision) {

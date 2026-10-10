@@ -484,6 +484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPersonalAccessTokens"];
+        put?: never;
+        post: operations["createPersonalAccessToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/link-previews": {
         parameters: {
             query?: never;
@@ -2388,6 +2404,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokePersonalAccessToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/groups/{id}/members/{userId}": {
         parameters: {
             query?: never;
@@ -2950,6 +2982,35 @@ export interface components {
             documentTitle?: string;
             readAt?: string;
             createdAt?: string;
+        };
+        PersonalAccessTokenCreateRequest: {
+            name: string;
+            /** @enum {string} */
+            scope: "read" | "read_write";
+            /** Format: int32 */
+            expiresInDays: number;
+        };
+        PersonalAccessToken: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            /** @description 4 derniers caractères du jeton */
+            last4?: string;
+            /** @enum {string} */
+            scope?: "read" | "read_write";
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: date-time */
+            lastUsedAt?: string | null;
+            /** @enum {string} */
+            status?: "active" | "expired" | "revoked";
+        };
+        PersonalAccessTokenCreated: {
+            token?: components["schemas"]["PersonalAccessToken"];
+            /** @description Jeton en clair — renvoyé une seule fois, jamais réaffiché */
+            plaintext: string;
         };
         FetchRequest: {
             url: string;
@@ -5269,6 +5330,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["NotificationView"];
+                };
+            };
+        };
+    };
+    listPersonalAccessTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PersonalAccessToken"][];
+                };
+            };
+        };
+    };
+    createPersonalAccessToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalAccessTokenCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PersonalAccessTokenCreated"];
                 };
             };
         };
@@ -8695,6 +8800,26 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["GovernanceView"];
                 };
+            };
+        };
+    };
+    revokePersonalAccessToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
