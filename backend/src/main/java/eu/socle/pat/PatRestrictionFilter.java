@@ -46,10 +46,11 @@ public class PatRestrictionFilter extends OncePerRequestFilter {
             FilterChain chain
     ) throws ServletException, IOException {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof Jwt jwt) || !PatClaims.isPat(jwt)) {
+        if (!(auth instanceof PatAuthenticationToken patAuth)) {
             chain.doFilter(request, response);
             return;
         }
+        Jwt jwt = patAuth.getToken();
         if (isForbiddenPath(pathHelper.getPathWithinApplication(request))) {
             write(response, ApiErrors.PAT_NOT_ALLOWED,
                     "Opération interdite avec un jeton d'accès personnel");

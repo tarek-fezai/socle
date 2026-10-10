@@ -12,7 +12,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -57,13 +56,13 @@ public class PatAuthenticationProvider implements AuthenticationProvider {
         List<GrantedAuthority> authorities = roles.stream()
                 .<GrantedAuthority>map(r -> new SimpleGrantedAuthority(r.authority()))
                 .toList();
-        JwtAuthenticationToken token = new JwtAuthenticationToken(jwt, authorities, pat.subject());
+        PatAuthenticationToken token = new PatAuthenticationToken(jwt, authorities, pat.subject());
         token.setDetails(authentication.getDetails());
         return token;
     }
 
     private Jwt syntheticJwt(PatService.Authenticated pat) {
-        Jwt.Builder builder = Jwt.withTokenValue("pat:" + pat.patId())
+        Jwt.Builder builder = Jwt.withTokenValue(PatClaims.TOKEN_VALUE_PREFIX + pat.patId())
                 .header("alg", "none")
                 .claim("iss", pat.issuer())
                 .claim(identityProperties.getSubjectClaim(), pat.subject())

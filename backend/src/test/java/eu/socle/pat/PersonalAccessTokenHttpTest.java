@@ -159,6 +159,10 @@ class PersonalAccessTokenHttpTest {
             jdbc.update("DELETE FROM audit_log_events");
             jdbc.update("DELETE FROM notifications");
             jdbc.update("DELETE FROM personal_access_tokens");
+            jdbc.update("DELETE FROM approval_role_assignments");
+            jdbc.update("DELETE FROM group_members");
+            jdbc.update("DELETE FROM groups");
+            jdbc.update("DELETE FROM templates");
             jdbc.update("DELETE FROM space_owners");
             jdbc.update("DELETE FROM spaces");
             jdbc.update("DELETE FROM user_platform_roles");
@@ -398,6 +402,91 @@ class PersonalAccessTokenHttpTest {
     }
 
     @Test
+    void idpJwt_withSocleClaims_is401_noAdminImpersonation_noAdminAudit() throws Exception {
+        long auditBefore = jdbc.queryForObject("SELECT count(*) FROM audit_log_events", Long.class);
+
+        mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, jwt(USER_SUB)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(USER_ID.toString()));
+
+        String spoofAdmin = signedJwt(USER_SUB, Map.of(
+                "socle_auth_method", "pat",
+                "socle_pat_user_id", ADMIN_ID.toString(),
+                "socle_pat_id", UUID.randomUUID().toString()));
+        mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, spoofAdmin))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/admin/overview").header(HttpHeaders.AUTHORIZATION, spoofAdmin))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/me/export").header(HttpHeaders.AUTHORIZATION, spoofAdmin))
+                .andExpect(status().isUnauthorized());
+
+        String anySocle = signedJwt(USER_SUB, Map.of("socle_probe", "x"));
+        mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, anySocle))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM audit_log_events WHERE actor_id = ?", Long.class, ADMIN_ID))
+                .isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log_events", Long.class))
+                .isEqualTo(auditBefore);
+    }
+
+    @Test
+    void adminPat_stripsSystemAdmin_serviceAndApiDocs_whileAdminJwtOk() throws Exception {
+        String pat = createToken(jwt(ADMIN_SUB), "admin-rw", "read_write", 30);
+        String adminJwt = jwt(ADMIN_SUB);
+
+        String globalBody = "{\"name\":\"Modèle global PAT\",\"body\":{\"type\":\"doc\",\"content\":[]}}";
+        mockMvc.perform(post("/api/v1/templates").header(HttpHeaders.AUTHORIZATION, "Bearer " + pat)
+                        .contentType(MediaType.APPLICATION_JSON).content(globalBody))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/templates").header(HttpHeaders.AUTHORIZATION, adminJwt)
+                        .contentType(MediaType.APPLICATION_JSON).content(globalBody))
+                .andExpect(status().isCreated());
+
+        UUID foreignGroup = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO groups (id, name, created_by, created_at) VALUES (?, 'Groupe utilisateur', ?, now())
+                """, foreignGroup, USER_ID);
+        mockMvc.perform(delete("/api/v1/groups/" + foreignGroup).header(HttpHeaders.AUTHORIZATION, "Bearer " + pat))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/groups/" + foreignGroup).header(HttpHeaders.AUTHORIZATION, adminJwt))
+                .andExpect(status().isNoContent());
+
+        UUID roleId = jdbc.queryForObject("SELECT id FROM global_roles ORDER BY name LIMIT 1", UUID.class);
+        String assignAll = mapper.writeValueAsString(Map.of(
+                "roleId", roleId.toString(),
+                "subjectType", "user",
+                "subjectId", USER_ID.toString(),
+                "scopeType", "all"));
+        mockMvc.perform(post("/api/v1/approval-role-assignments")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + pat)
+                        .contentType(MediaType.APPLICATION_JSON).content(assignAll))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/approval-role-assignments")
+                        .header(HttpHeaders.AUTHORIZATION, adminJwt)
+                        .contentType(MediaType.APPLICATION_JSON).content(assignAll))
+                .andExpect(status().isCreated());
+
+        String apiDocsPath = resolveApiDocsPath(adminJwt);
+        mockMvc.perform(get(apiDocsPath).header(HttpHeaders.AUTHORIZATION, "Bearer " + pat))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(apiDocsPath).header(HttpHeaders.AUTHORIZATION, adminJwt))
+                .andExpect(status().isOk());
+    }
+
+    private String resolveApiDocsPath(String adminJwt) throws Exception {
+        for (String path : List.of("/api-docs", "/v3/api-docs")) {
+            int status = mockMvc.perform(get(path).header(HttpHeaders.AUTHORIZATION, adminJwt))
+                    .andReturn().getResponse().getStatus();
+            if (status == 200) {
+                return path;
+            }
+        }
+        throw new AssertionError("aucun endpoint OpenAPI joignable en JWT admin (/api-docs, /v3/api-docs)");
+    }
+
+    @Test
     void createTokenWithPat_403_exportWithPat_403() throws Exception {
         String pat = createToken(jwt(USER_SUB), "rw", "read_write", 30);
 
@@ -554,8 +643,12 @@ class PersonalAccessTokenHttpTest {
     }
 
     private static String jwt(String sub) throws Exception {
+        return signedJwt(sub, Map.of());
+    }
+
+    private static String signedJwt(String sub, Map<String, Object> extraClaims) throws Exception {
         Instant now = Instant.now();
-        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+        JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
                 .issuer(ISSUER)
                 .subject(sub)
                 .issueTime(Date.from(now))
@@ -563,10 +656,13 @@ class PersonalAccessTokenHttpTest {
                 .claim("email", sub + "@example.com")
                 .claim("email_verified", true)
                 .claim("name", "Test " + sub.substring(0, 4))
-                .claim("realm_access", Map.of("roles", List.of("contributeur")))
-                .build();
+                .claim("realm_access", Map.of("roles", List.of("contributeur")));
+        for (Map.Entry<String, Object> e : extraClaims.entrySet()) {
+            claims.claim(e.getKey(), e.getValue());
+        }
         SignedJWT jwt = new SignedJWT(
-                new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaKey.getKeyID()).build(), claims);
+                new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaKey.getKeyID()).build(),
+                claims.build());
         jwt.sign(new RSASSASigner(rsaKey.toPrivateKey()));
         return "Bearer " + jwt.serialize();
     }

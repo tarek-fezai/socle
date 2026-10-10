@@ -2,10 +2,10 @@
 package eu.socle.audit;
 
 import eu.socle.identity.PatClaims;
+import eu.socle.pat.PatAuthenticationToken;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -32,8 +32,8 @@ public final class AuthMethodContext {
             return propagated;
         }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
-            return PatClaims.patId(jwt).orElse(null);
+        if (auth instanceof PatAuthenticationToken patAuth) {
+            return PatClaims.patId(patAuth.getToken()).orElse(null);
         }
         return null;
     }

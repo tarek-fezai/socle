@@ -90,6 +90,6 @@ class PatRestrictionFilterTest {
                 .claim(PatClaims.PAT_USER_ID, UUID.randomUUID().toString())
                 .claim(PatClaims.PAT_SCOPE, scope)
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(60)).build();
-        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt, List.of()));
+        SecurityContextHolder.getContext().setAuthentication(new PatAuthenticationToken(jwt, List.of(), "s"));
     }
 }

@@ -114,6 +114,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api-docs",
                                 "/api-docs/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
                                 "/ApiDocs.dc.html",
                                 "/ApiDocs.dc.html/**",
                                 "/swagger-ui/**",
