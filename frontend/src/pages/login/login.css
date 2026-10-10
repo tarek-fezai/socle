@@ -11,6 +11,8 @@
   background: #ffffff;
   color: #0e0e10;
   min-height: 100vh;
+  /* Login*.dc.html : line-height défaut navigateur hors textes explicitement à 1.4 / 1.6 */
+  line-height: normal;
 }
 
 .login-root a {
@@ -72,7 +74,6 @@
   font-size: 17px;
   font-weight: 700;
   color: #0e0e10;
-  line-height: 1.2;
 }
 
 .login-title {
@@ -80,7 +81,6 @@
   font-size: 34px;
   margin: 0 0 8px;
   color: #0e0e10;
-  line-height: 1.2;
 }
 
 .login-title--error {
@@ -91,7 +91,6 @@
   font-size: 14px;
   color: #9b9ba1;
   margin: 0 0 32px;
-  line-height: 1.2;
 }
 
 .login-subtitle--error {
@@ -106,7 +105,6 @@
   font-weight: 600;
   color: #43434a;
   margin-bottom: 6px;
-  line-height: 1.2;
 }
 
 .login-email-wrap {
@@ -151,7 +149,6 @@
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
-  line-height: 1;
   margin-bottom: 20px;
   border: none;
   cursor: pointer;
@@ -418,14 +415,12 @@
   .login-mobile-name {
     font-size: 26px;
     color: #0e0e10;
-    line-height: 1.2;
   }
 
   .login-mobile-org {
     font-size: 13px;
     color: #9b9ba1;
     margin-top: 4px;
-    line-height: 1.2;
   }
 
   .login-mobile-sso {

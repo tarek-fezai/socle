@@ -110,10 +110,10 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
   }
 
   return (
-    <div className="shell-drawer-root shell-mobile-only" data-mock-id="mobile-menu" data-testid="mobile-menu">
+    <div className="shell-drawer-root shell-mobile-only" data-testid="mobile-menu">
       <div className="shell-drawer-backdrop" onClick={onClose} aria-hidden />
-      <div className="shell-drawer" role="dialog" aria-modal="true" aria-label="Menu">
-        <div className="shell-drawer-head">
+      <div className="shell-drawer" role="dialog" aria-modal="true" aria-label="Menu" data-mock-id="mobile-menu">
+        <div className="shell-drawer-head" data-mock-id="mobile-menu-head">
           <div className="shell-drawer-logo">
             {logoUrl ? (
               <img
@@ -140,6 +140,7 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
         <button
           type="button"
           className="shell-drawer-search"
+          data-mock-id="mobile-menu-search"
           onClick={() => {
             onClose()
             onOpenSearch()
@@ -167,7 +168,7 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
           </button>
         )}
 
-        <div className="shell-drawer-nav">
+        <div className="shell-drawer-nav" data-mock-id="mobile-menu-nav">
           {view.documents.map((doc, i) => {
             const active = path === documentHref(doc.id) || path.startsWith(`/docs/${doc.id}/`)
             return (
@@ -183,11 +184,16 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
             )
           })}
 
-          {view.folders.map((node) => {
+          {view.folders.map((node, fi) => {
             const openFolder = expandedFolders.has(node.folder.id) || expandedFolders.size === 0
             return (
               <div key={node.folder.id}>
-                <button type="button" className="shell-drawer-folder" onClick={() => toggleFolder(node.folder.id)}>
+                <button
+                  type="button"
+                  className="shell-drawer-folder"
+                  onClick={() => toggleFolder(node.folder.id)}
+                  data-mock-id={`mobile-menu-folder-${fi}`}
+                >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" strokeWidth="2" aria-hidden>
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
@@ -248,7 +254,7 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
           )}
         </div>
 
-        <div className="shell-drawer-actions">
+        <div className="shell-drawer-actions" data-mock-id="mobile-menu-actions">
           <Link to="/docs/new" className="shell-drawer-action" onClick={onClose}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3730E0" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -269,7 +275,7 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
           </Link>
         </div>
 
-        <Link to="/trash" className="shell-drawer-trash" onClick={onClose}>
+        <Link to="/trash" className="shell-drawer-trash" onClick={onClose} data-mock-id="mobile-menu-trash">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <polyline points="3 6 5 6 21 6" />
             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
@@ -283,7 +289,7 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
           <span className="shell-avatar" aria-hidden>
             {initials}
           </span>{' '}
-          <span>{displayName}</span>
+          <span className="shell-drawer-user-name">{displayName}</span>
         </Link>
       </div>
     </div>

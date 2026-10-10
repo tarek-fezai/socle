@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
@@ -169,7 +169,7 @@ export function ShellSidebar({ onOpenSearch }: Props) {
             .slice()
             .sort((a, b) => a.position - b.position || a.title.localeCompare(b.title, 'fr'))
           return (
-            <div key={space.id}>
+            <Fragment key={space.id}>
               <button
                 type="button"
                 className={`shell-tree-section${idx > 0 ? ' spaced' : ''}`}
@@ -198,7 +198,7 @@ export function ShellSidebar({ onOpenSearch }: Props) {
                   Parcourir…
                 </Link>
               )}
-            </div>
+            </Fragment>
           )
         })}
       </div>

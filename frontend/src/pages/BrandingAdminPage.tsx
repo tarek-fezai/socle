@@ -163,17 +163,17 @@ export function BrandingAdminPage() {
           </div>
           <div className="admin-rail__divider" data-mock-id="branding-rail-seealso">
             <div className="admin-rail__label">Voir aussi</div>
-            <Link to="/admin/tags" className="admin-rail__link">
-              Administration →
+            <Link to="/admin/licence" className="admin-rail__link">
+              Licence →
             </Link>
-            <span className="admin-rail__link" style={{ color: '#9B9BA1', cursor: 'default' }}>
+            <Link to="/admin" className="admin-rail__link">
               Identité &amp; SSO →
-            </span>
+            </Link>
           </div>
         </aside>
       }
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }} data-mock-id="branding-title-row">
         <h1 className="admin-title" data-mock-id="branding-title" style={{ margin: 0 }}>
           Personnalisation de marque
         </h1>

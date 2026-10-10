@@ -2,170 +2,111 @@
 /**
  * Règles : docs/visual-parity.md
  *
- * Branding admin (/admin/branding) vs Branding.dc.html @ 1440×900
- * (maquette annotée : sans badge Entreprise / DNS / socle.app).
+ * /admin/branding vs Branding.dc.html @ 1440×900.
+ *
+ * La maquette n'est pas modifiée : badge « Entreprise », domaine personnalisé + DNS, encart
+ * « Réservé au plan Entreprise » restent visibles et comparés. Les écarts avec l'instance
+ * auto-hébergée (URL publique en lecture seule, e-mail de test) sont des écarts de conception
+ * à trancher — les sections concernées échouent tant qu'ils ne sont pas décidés.
+ *
+ * Pixel honnête (texte inclus, ≤ 1 % par section) ; seul exclu : `mask` Playwright nommé.
+ * Annotation maquette : data-* uniquement (`annotateBrandingAdminMockup`).
+ *
+ * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/branding-admin-visual.spec.mjs`
  */
-import { test, expect } from '@playwright/test'
-import { SCREENSHOT_OPTIONS } from './visual-parity-kit.mjs'
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { PNG } from 'pngjs'
-import pixelmatch from 'pixelmatch'
+import { test } from '@playwright/test'
 import {
   BRANDING_ADMIN_DESKTOP_IDS,
   annotateBrandingAdminMockup,
-  assertFontsLoaded,
   collectMetrics,
   compareMetrics,
 } from './structural-compare.mjs'
 import { ME_TAREK, NOTIFICATIONS_SEED, VISUAL_NOW } from './dashboard-fixtures.mjs'
 import { BRANDING_ADMIN_VIEW, PUBLIC_BRANDING_VIEW } from './branding-admin-fixtures.mjs'
+import {
+  MOCK_ORIGIN,
+  compareSectionShots,
+  expectNoStructuralDiffs,
+  finishPixelResults,
+  injectOidcSession,
+  json,
+  mockBaseApis,
+  reportNotImplemented,
+  settleFonts,
+  shotSection,
+} from './visual-parity-kit.mjs'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const outDir = path.join(__dirname, 'test-results')
+/** Toutes les zones de la maquette ont une donnée produit ou un écart de conception déclaré. */
+export const NOT_IMPLEMENTED = []
 
-const AUTH_CONFIG = {
-  authority: 'http://127.0.0.1:9/realms/socle',
-  clientId: 'socle-frontend',
-  scopes: ['openid', 'profile', 'email'],
-  organizationName: 'Organisation Démo',
-  displayName: 'Organisation Démo',
-  supportContact: 'identite@example.com',
-  passkeyAcrValues: 'phr',
-  idpDisplayName: 'Demo IdP',
-}
+const SIZE_EXCEPTIONS = {}
 
-const json = (route, body, status = 200) =>
-  route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+const PIXEL_SECTIONS = [
+  { id: 'admin-breadcrumb', name: 'breadcrumb' },
+  // Badges « Bientôt » : app uniquement (entrées de navigation non livrées, absentes de la maquette).
+  { id: 'admin-subnav', name: 'subnav', appOnlyMasks: ['admin-subnav-bientot'] },
+  { id: 'branding-title-row', name: 'title-row' },
+  { id: 'branding-lead', name: 'lead' },
+  { id: 'branding-logo-label', name: 'logo-label' },
+  { id: 'branding-identity', name: 'identity' },
+  { id: 'branding-domain-label', name: 'domain-label' },
+  { id: 'branding-domain', name: 'domain' },
+  { id: 'branding-email-label', name: 'email-label' },
+  { id: 'branding-email', name: 'email' },
+  { id: 'branding-rail-hosting', name: 'rail-hosting' },
+  { id: 'branding-rail-where', name: 'rail-where' },
+  { id: 'branding-rail-seealso', name: 'rail-seealso' },
+]
 
-function diffRatio(a, b, label) {
-  const img1 = PNG.sync.read(a)
-  const img2 = PNG.sync.read(b)
-  const { width, height } = img1
-  const diff = new PNG({ width, height })
-  const n = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 })
-  const ratio = n / (width * height)
-  fs.writeFileSync(path.join(outDir, `${label}-diff.png`), PNG.sync.write(diff))
-  return ratio
-}
-
-async function injectOidcSession(page) {
-  await page.addInitScript(
-    ({ authority, clientId, now }) => {
-      Date.now = () => now
-      const key = `oidc.user:${authority}:${clientId}`
-      const user = {
-        id_token: 'visual.id',
-        session_state: 'visual',
-        access_token: 'visual-access-token',
-        refresh_token: 'visual-refresh',
-        token_type: 'Bearer',
-        scope: 'openid profile email',
-        profile: { sub: 'tarek-visual', name: 'Tarek Fezai', preferred_username: 'tarek', given_name: 'Tarek' },
-        expires_at: Math.floor(now / 1000) + 3600,
-      }
-      sessionStorage.setItem(key, JSON.stringify(user))
-    },
-    { authority: AUTH_CONFIG.authority, clientId: AUTH_CONFIG.clientId, now: VISUAL_NOW },
-  )
-}
-
-async function mockBrandingAdminApis(page) {
-  await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
+async function mockApis(page) {
+  await mockBaseApis(page, { me: ME_TAREK, notifications: NOTIFICATIONS_SEED })
   await page.route('**/api/v1/public/branding', (route) => json(route, PUBLIC_BRANDING_VIEW))
-  await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
-  await page.route('**/api/v1/notifications**', (route) => json(route, NOTIFICATIONS_SEED))
   await page.route('**/api/v1/admin/branding', (route) => json(route, BRANDING_ADMIN_VIEW))
   await page.route('**/api/v1/admin/branding/**', (route) => json(route, BRANDING_ADMIN_VIEW))
 }
 
-async function settleFonts(page) {
-  await assertFontsLoaded(page)
-}
-
-async function maskAdminGlyphs(page) {
-  await page.evaluate(() => {
-    const hide = (el) => {
-      if (!el) return
-      el.style.color = 'transparent'
-      el.style.webkitTextFillColor = 'transparent'
-      el.style.textShadow = 'none'
-    }
-    // Inclure les divs (labels rail maquette = div inline, pas .admin-rail__label).
-    document
-      .querySelectorAll(
-        'h1, p, span, a, button, label, input, div, .admin-nav-item, .admin-lead, .admin-page__breadcrumb-trail, .admin-page__home-link, .admin-builder-label, .admin-form-label, .admin-link-action, .admin-mono',
-      )
-      .forEach(hide)
-    document.querySelectorAll('svg').forEach((el) => {
-      el.style.visibility = 'hidden'
+async function shootSections(page, side) {
+  const out = {}
+  for (const s of PIXEL_SECTIONS) {
+    out[s.name] = await shotSection(page, `[data-mock-id="${s.id}"]`, {
+      maskNames: side === 'app' ? (s.appOnlyMasks ?? []) : [],
+      label: `branding-admin-sec-${s.name}-${side}`,
     })
-  })
+  }
+  return out
 }
 
 test.describe('branding admin visual', () => {
-  test('desktop Branding vs maquette @ 1440×900', async ({ page }, testInfo) => {
-    await injectOidcSession(page)
-    await mockBrandingAdminApis(page)
+  test('desktop Branding — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
+    await injectOidcSession(page, VISUAL_NOW)
+    await mockApis(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    await page.goto('/admin/branding')
-    await page.waitForSelector('[data-mock-id="branding-title"]')
-    await page.evaluate(() => {
-      document.documentElement.style.overflow = 'hidden'
-      document.body.style.margin = '0'
-      document.body.style.overflow = 'hidden'
-      const admin = document.querySelector('.admin-page')
-      if (admin) {
-        admin.style.width = '1440px'
-        admin.style.height = '900px'
-      }
-    })
-    await settleFonts(page)
-    await maskAdminGlyphs(page)
-    await page.waitForTimeout(120)
-    const appShot = await page.screenshot({
-      ...SCREENSHOT_OPTIONS,
-      fullPage: false,
-      clip: { x: 0, y: 0, width: 1440, height: 900 },
-    })
-
-    await page.goto('http://127.0.0.1:4174/Branding.dc.html')
+    await page.goto(`${MOCK_ORIGIN}/Branding.dc.html`)
     await annotateBrandingAdminMockup(page)
-    await page.evaluate(() => {
-      const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
-      if (root) {
-        root.style.width = '1440px'
-        root.style.height = '900px'
-      }
-    })
     await settleFonts(page)
-    await maskAdminGlyphs(page)
-    await page.waitForTimeout(120)
-    const mockShot = await page.screenshot({
-      ...SCREENSHOT_OPTIONS,
-      fullPage: false,
-      clip: { x: 0, y: 0, width: 1440, height: 900 },
-    })
+    await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'branding-admin')
+    const mockSec = await shootSections(page, 'mock')
 
-    await testInfo.attach('maquette-branding-admin', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-branding-admin', { body: appShot, contentType: 'image/png' })
-    const ratio = diffRatio(mockShot, appShot, 'branding-admin-desktop')
-    console.log(`branding-admin-desktop pixel diff ratio = ${(ratio * 100).toFixed(3)} %`)
-    expect(ratio, `branding admin diff ${ratio}`).toBeLessThanOrEqual(0.01)
-  })
-})
-
-test.describe('branding admin structural', () => {
-  test('data-mock-id metrics vs Branding.dc.html (annotée)', async ({ page }) => {
-    await injectOidcSession(page)
-    await mockBrandingAdminApis(page)
-    await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/admin/branding')
     await page.waitForSelector('[data-mock-id="branding-identity"]')
+    await page.mouse.move(1, 1)
+    await settleFonts(page)
+    const appSec = await shootSections(page, 'app')
 
-    await page.goto('http://127.0.0.1:4174/Branding.dc.html')
+    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const results = PIXEL_SECTIONS.map((s) =>
+      compare(`branding-admin-${s.name}`, mockSec[s.name].shot, appSec[s.name].shot, testInfo),
+    )
+    finishPixelResults('branding-admin', results)
+  })
+
+  test('Branding structural — data-mock-id', async ({ page }) => {
+    await injectOidcSession(page, VISUAL_NOW)
+    await mockApis(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+
+    await page.goto(`${MOCK_ORIGIN}/Branding.dc.html`)
     await annotateBrandingAdminMockup(page)
     await settleFonts(page)
     const mockMetrics = await collectMetrics(page, BRANDING_ADMIN_DESKTOP_IDS)
@@ -175,8 +116,6 @@ test.describe('branding admin structural', () => {
     await settleFonts(page)
     const appMetrics = await collectMetrics(page, BRANDING_ADMIN_DESKTOP_IDS)
 
-    const results = compareMetrics(mockMetrics, appMetrics, BRANDING_ADMIN_DESKTOP_IDS)
-    const failed = results.filter((r) => r.diffs.length > 0)
-    expect(failed, JSON.stringify(failed, null, 2)).toEqual([])
+    expectNoStructuralDiffs(compareMetrics(mockMetrics, appMetrics, BRANDING_ADMIN_DESKTOP_IDS))
   })
 })

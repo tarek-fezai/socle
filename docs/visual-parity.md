@@ -7,8 +7,12 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile` |
-| **À nettoyer** (audit PR #69 — cheats pré-capture : `maskGlyphs` / `maskAdminGlyphs`, forçage DOM, clips pleine page, seuils relâchés, normalizers) | `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin` |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin` |
+| **À nettoyer** (mutation DOM de la maquette avant capture) | `search` : `annotateSearchMockup` scinde le nœud texte « · mentionne … » et l’enveloppe dans un `<span>` créé pour le masquer |
+
+Les specs `login`, `dashboard`, `tags-admin`, `custom-fields-admin` et `branding-admin` sont propres mais
+**échouent** : sections encore > 1 % (écarts de conception en attente de décision, anticrénelage du
+tiroir mobile). Aucune mutation, aucun masque ajouté pour les faire passer.
 
 ## Décisions produit
 
@@ -108,8 +112,8 @@ SUBPIXEL_EXCEPTIONS[sectionId] = { upstreamNotImplemented: '<id NOT_IMPLEMENTED>
 
 ## Specs hérités
 
-Les specs listés « À nettoyer » dans le tableau **État des specs** violent encore ces règles
-(`maskGlyphs`, normalizers, forçage 1440×900, etc.). Les écrans document / historique /
-comparaison / approbation / restauration sont passés en méthode honnête (sections + kit) ;
-login, dashboard et admin (branding, custom-fields, tags, retention) restent à migrer.
+Login, dashboard et admin (branding, custom-fields, tags, retention) sont migrés sur le kit :
+plus de `maskGlyphs` / `maskAdminGlyphs`, plus de retrait d’éléments ni de `display: none`, plus
+de forçage de `line-height` dans `collectMetrics`. Le tableau **État des specs** liste les specs
+qui violent encore ces règles.
 Tout **nouveau** spec doit suivre ce document.

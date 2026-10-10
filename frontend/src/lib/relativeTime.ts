@@ -28,9 +28,9 @@ export function formatShortDateFr(iso: string): string {
   }).format(d)
 }
 
-/** « 4 302 » (espace fine pour milliers). */
+/** « 4 302 » : séparateur de milliers insécable de la largeur d'une espace (U+202F d'Intl trop étroit). */
 export function formatFrInteger(n: number): string {
-  return new Intl.NumberFormat('fr-FR').format(Math.round(n))
+  return new Intl.NumberFormat('fr-FR').format(Math.round(n)).replace(/\u202f/g, '\u00a0')
 }
 
 export function statusDraftLabel(status: string): string {

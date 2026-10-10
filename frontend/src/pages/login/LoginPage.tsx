@@ -171,7 +171,7 @@ export function LoginPage() {
       {/* Desktop = Login.dc.html */}
       <div className="login-shell login-desktop">
         <div className="login-form-col">
-          <div className="login-brand">
+          <div className="login-brand" data-mock-id="login-brand">
             <BrandMark />
             <BrandName mockId="brand-name" />
           </div>
@@ -216,7 +216,7 @@ export function LoginPage() {
             </button>
           </form>
 
-          <div className="login-divider">
+          <div className="login-divider" data-mock-id="login-divider">
             <div className="login-divider-line" />
             <span className="login-divider-text" data-mock-id="divider-ou">
               ou
@@ -227,6 +227,7 @@ export function LoginPage() {
           <button
             type="button"
             className="login-sso"
+            data-mock-id="sso-org-btn"
             onClick={() => void run(() => loginWithSso(returnTo))}
           >
             <LockIcon />
@@ -239,6 +240,7 @@ export function LoginPage() {
             <button
               type="button"
               className="login-sso"
+              data-mock-id="sso-passkey-btn"
               onClick={() => void run(() => loginWithAcr(passkeyAcr, returnTo))}
             >
               <PasskeyIcon />
@@ -255,7 +257,7 @@ export function LoginPage() {
           <PoweredBy />
         </div>
 
-        <div className="login-visual">
+        <div className="login-visual" data-mock-id="login-visual">
           <LoginVisualSvg />
           <div className="login-quote">
             <p className="login-serif" data-mock-id="quote">
@@ -268,7 +270,7 @@ export function LoginPage() {
       {/* Mobile = MobileLogin.dc.html */}
       <div className="login-mobile">
         <div className="login-mobile-body">
-          <div className="login-mobile-brand">
+          <div className="login-mobile-brand" data-mock-id="mobile-brand-block">
             <BrandMark size={44} className="login-mobile-mark" />
             <BrandName className="login-serif login-mobile-name" mockId="mobile-brand-name" />
             {orgName ? (
@@ -281,6 +283,7 @@ export function LoginPage() {
           <button
             type="button"
             className="login-mobile-sso"
+            data-mock-id="mobile-sso-btn"
             onClick={() => void run(() => loginWithSso(returnTo))}
           >
             <LockIcon stroke="#FFFFFF" />
@@ -365,12 +368,12 @@ export function LoginErrorPage() {
     <div className="login-root">
       <div className="login-shell login-desktop">
         <div className="login-form-col">
-          <div className="login-brand login-brand--error">
+          <div className="login-brand login-brand--error" data-mock-id="login-brand">
             <BrandMark />
             <BrandName mockId="brand-name" />
           </div>
 
-          <div className="login-alert-icon">
+          <div className="login-alert-icon" data-mock-id="login-alert-icon">
             <AlertIcon />
           </div>
 
@@ -378,7 +381,11 @@ export function LoginErrorPage() {
             Connexion refusée
           </h1>
           <p className="login-subtitle login-subtitle--error" data-mock-id="subtitle">
-            L&apos;authentification SSO a réussi, mais l&apos;accès à Socle est refusé pour{' '}
+            {cause === REASON_COPY.not_provisioned ? (
+              <>L&apos;authentification SSO a réussi, mais aucun compte Socle n&apos;est associé à </>
+            ) : (
+              <>L&apos;authentification SSO a réussi, mais l&apos;accès à Socle est refusé pour </>
+            )}
             <strong style={{ color: '#0E0E10' }}>{email || 'votre compte'}</strong>.
           </p>
 
@@ -412,7 +419,7 @@ export function LoginErrorPage() {
           <PoweredBy />
         </div>
 
-        <div className="login-visual login-visual--error">
+        <div className="login-visual login-visual--error" data-mock-id="login-visual">
           <LoginErrorVisualSvg />
           <div className="login-quote">
             <p className="login-serif" data-mock-id="quote">

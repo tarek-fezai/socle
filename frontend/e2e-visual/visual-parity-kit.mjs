@@ -57,9 +57,9 @@ export function isBaselineRun() {
 }
 
 /** Session OIDC factice + horloge figée (`Date.now`). */
-export async function injectOidcSession(page, now = VISUAL_NOW) {
+export async function injectOidcSession(page, now = VISUAL_NOW, { profile = {}, expandedSpaces = null } = {}) {
   await page.addInitScript(
-    ({ authority, clientId, now }) => {
+    ({ authority, clientId, now, profile, expandedSpaces }) => {
       Date.now = () => now
       sessionStorage.setItem(
         `oidc.user:${authority}:${clientId}`,
@@ -67,11 +67,12 @@ export async function injectOidcSession(page, now = VISUAL_NOW) {
           access_token: 'visual-access-token',
           token_type: 'Bearer',
           expires_at: Math.floor(now / 1000) + 3600,
-          profile: { sub: 'tarek-visual', name: 'Tarek Fezai' },
+          profile: { sub: 'tarek-visual', name: 'Tarek Fezai', ...profile },
         }),
       )
+      if (expandedSpaces) localStorage.setItem('socle.shell.expandedSpaces', JSON.stringify(expandedSpaces))
     },
-    { authority: AUTH_CONFIG.authority, clientId: AUTH_CONFIG.clientId, now },
+    { authority: AUTH_CONFIG.authority, clientId: AUTH_CONFIG.clientId, now, profile, expandedSpaces },
   )
 }
 
@@ -408,10 +409,13 @@ export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, notImp
 
     if (dw !== 0 || dh !== 0) {
       if (!ex) {
-        const msg = `${name}: SIZE MISMATCH ${note} (Δw=${dw}, Δh=${dh}) — aucune SIZE_EXCEPTION déclarée`
+        // Information seulement (jamais un succès) : % sur la zone commune haut-gauche.
+        const c = cropTopLeftCommon(mockShot, appShot)
+        const cropPct = diffRatio(c.a, c.b, name) * 100
+        const msg = `${name}: SIZE MISMATCH ${note} (Δw=${dw}, Δh=${dh}) — aucune SIZE_EXCEPTION déclarée (info : ${cropPct.toFixed(3)} % sur zone commune)`
         console.log(msg)
         testInfo.annotations.push({ type: 'section-pixel', description: msg })
-        return { name, pct: NaN, mock, app, ok: false, note: msg }
+        return { name, pct: NaN, cropPct, mock, app, ok: false, note: msg }
       }
       if (ex.dw !== dw || ex.dh !== dh) {
         const msg = `${name}: SIZE Δ déclaré dw=${ex.dw}/dh=${ex.dh} mais mesuré dw=${dw}/dh=${dh}`
@@ -567,6 +571,7 @@ export function finishPixelResults(specName, results, extra = {}) {
         sections: results.map((r) => ({
           name: r.name,
           pct: Number.isFinite(r.pct) ? Number(r.pct.toFixed(4)) : null,
+          ...(Number.isFinite(r.cropPct) ? { cropPct: Number(r.cropPct.toFixed(4)) } : {}),
           mock: r.mock,
           app: r.app,
           ok: r.ok,

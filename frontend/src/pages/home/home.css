@@ -9,6 +9,8 @@
   background: #ffffff;
   color: #0e0e10;
   font-family: 'IBM Plex Sans', sans-serif;
+  /* Dashboard.dc.html : aucun line-height déclaré (défaut navigateur), pas le 1.5 du preflight */
+  line-height: normal;
 }
 
 .home-title {
@@ -17,7 +19,6 @@
   font-size: 44px;
   margin: 0 0 6px;
   color: #0e0e10;
-  line-height: 1.15;
 }
 
 .home-subtitle {
@@ -49,7 +50,6 @@
   font-family: 'Instrument Serif', serif;
   font-size: 32px;
   color: #0e0e10;
-  line-height: 1.1;
 }
 
 .home-kpi-value--warn {
@@ -118,6 +118,10 @@
   margin-bottom: 3px;
 }
 
+.home-card--block .home-card-title {
+  margin-bottom: 4px;
+}
+
 .home-card-meta {
   font-size: 12px;
   color: #9b9ba1;
@@ -169,6 +173,23 @@
 
 .home-activity-row em {
   font-style: italic;
+  /* Pas de fichier IBM Plex Sans Italic embarqué : oblique synthétique, comme la maquette */
+  font-synthesis: style;
+}
+
+.home-activity-avatar--you {
+  background: #0e0e10;
+  color: #ffffff;
+}
+
+.home-activity-avatar--tone-0 {
+  background: #eeedfd;
+  color: #3730e0;
+}
+
+.home-activity-avatar--tone-1 {
+  background: #f2e4dc;
+  color: #8a4a2e;
 }
 
 .home-empty {
@@ -257,8 +278,9 @@
     gap: 0;
   }
 
+  /* 24px sous la dernière carte « Reprendre » (MobileDashboard), dont 9px de marge de carte */
   .home-col-side .home-section-title:first-child {
-    margin-top: 0;
+    margin-top: 15px;
   }
 
   .home-published-desktop {
@@ -286,6 +308,10 @@
   .home-card-title {
     font-size: 13.5px;
     margin-bottom: 2px;
+  }
+
+  .home-card--block .home-card-title {
+    margin-bottom: 3px;
   }
 
   .home-card-meta {

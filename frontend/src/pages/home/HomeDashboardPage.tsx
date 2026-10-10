@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
 import { getHomeDashboard, homeQueryKey } from '../../lib/home'
 import { formatFrInteger, formatShortDateFr } from '../../lib/relativeTime'
 import { initialsFromName } from '../../components/shell/shellUtils'
 import './home.css'
 
+const ACTIVITY_AVATAR_TONES = 2
+
 export function HomeDashboardPage() {
+  const { me } = useAuth()
   const home = useQuery({
     queryKey: homeQueryKey,
     queryFn: () => getHomeDashboard(api),
@@ -39,6 +43,16 @@ export function HomeDashboardPage() {
   const teamActivity = d.teamActivity ?? []
   const reliability =
     k.averageReliabilityPercent == null ? null : Math.round(k.averageReliabilityPercent)
+  const meInitials = me?.avatarInitials || initialsFromName(me?.displayName ?? '') || 'V'
+  let othersSeen = 0
+  const activityAvatars = teamActivity.map((a) => {
+    if (a.you) return { className: 'home-activity-avatar--you', initials: meInitials }
+    const tone = othersSeen++ % ACTIVITY_AVATAR_TONES
+    return {
+      className: `home-activity-avatar--tone-${tone}`,
+      initials: initialsFromName(a.actorDisplayName ?? ''),
+    }
+  })
 
   return (
     <div className="home-page" data-mock-id="home-page">
@@ -85,7 +99,7 @@ export function HomeDashboardPage() {
               key={item.documentId}
               to={`/docs/${item.documentId}/edit`}
               className="home-card"
-              data-mock-id={i === 0 ? 'home-resume-card' : undefined}
+              data-mock-id={`home-resume-card-${i}`}
             >
               <div>
                 <div className="home-card-title">{item.title}</div>
@@ -109,7 +123,7 @@ export function HomeDashboardPage() {
                 key={item.documentId}
                 to={`/docs/${item.documentId}`}
                 className="home-card"
-                data-mock-id={i === 0 ? 'home-published-card' : undefined}
+                data-mock-id={`home-published-card-${i}`}
               >
                 <div>
                   <div className="home-card-title">{item.title}</div>
@@ -142,7 +156,7 @@ export function HomeDashboardPage() {
                 key={item.requestId}
                 to={`/approvals/${item.requestId}`}
                 className="home-card home-card--block"
-                data-mock-id={i === 0 ? 'home-approval-card' : undefined}
+                data-mock-id={`home-approval-card-${i}`}
               >
                 <div className="home-card-title">{item.title}</div>
                 <div className="home-card-meta home-card-meta--mb">
@@ -163,16 +177,13 @@ export function HomeDashboardPage() {
           <div className="home-activity" data-mock-id="home-activity">
             {teamActivity.length === 0 && <p className="home-empty">Pas d&apos;activité récente.</p>}
             {teamActivity.map((a, i) => (
-              <div key={`${a.documentId ?? 'x'}-${a.createdAt}-${i}`} className="home-activity-row">
-                <div
-                  className="home-activity-avatar"
-                  style={{
-                    background: '#EEEDFD',
-                    color: '#3730E0',
-                  }}
-                  aria-hidden
-                >
-                  {a.you ? 'V' : initialsFromName(a.actorDisplayName ?? '')}
+              <div
+                key={`${a.documentId ?? 'x'}-${a.createdAt}-${i}`}
+                className="home-activity-row"
+                data-mock-id={`home-activity-row-${i}`}
+              >
+                <div className={`home-activity-avatar ${activityAvatars[i].className}`} aria-hidden>
+                  {activityAvatars[i].initials}
                 </div>
                 <span>
                   {a.you ? (

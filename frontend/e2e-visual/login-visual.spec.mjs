@@ -1,14 +1,23 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Règles : docs/visual-parity.md
+ *
+ * /login vs Login.dc.html (1440×900), /login/erreur vs LoginError.dc.html (1440×900),
+ * /login vs MobileLogin.dc.html (390×844).
+ *
+ * États figés de la maquette reproduits par interaction / données réelles :
+ * - Login : « tarek.fezai » saisi au clavier dans le champ e-mail, puis focus retiré (la maquette
+ *   n'a pas d'anneau de focus ; un champ focalisé fait aussi passer Chromium en anti-crénelage
+ *   niveaux de gris sur le texte des boutons) ;
+ * - LoginError : e-mail issu du profil OIDC de la session (jamais réécrit dans le DOM).
+ *
+ * Pixel honnête (texte inclus, ≤ 1 % par section) ; seul exclu : `mask` Playwright nommé.
+ * Annotation maquette : data-* uniquement (`annotateLogin*Mockup`).
+ *
+ * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/login-visual.spec.mjs`
+ * (écrit test-results/login-*-before.json, n'échoue pas).
  */
 import { test, expect } from '@playwright/test'
-import { SCREENSHOT_OPTIONS } from './visual-parity-kit.mjs'
-import fs from 'node:fs'
-import path from 'node:path'
-import { PNG } from 'pngjs'
-import pixelmatch from 'pixelmatch'
-import { fileURLToPath } from 'node:url'
 import {
   LOGIN_DESKTOP_IDS,
   LOGIN_ERROR_IDS,
@@ -20,117 +29,118 @@ import {
   collectMetrics,
   compareMetrics,
 } from './structural-compare.mjs'
+import { VISUAL_NOW } from './dashboard-fixtures.mjs'
+import {
+  AUTH_CONFIG,
+  MOCK_ORIGIN,
+  assertNotImplementedGuards,
+  compareSectionShots,
+  expectNoStructuralDiffs,
+  finishPixelResults,
+  injectOidcSession,
+  json,
+  pageAreaFor,
+  reportNotImplemented,
+  settleFonts,
+  shotSection,
+} from './visual-parity-kit.mjs'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const outDir = path.join(__dirname, 'test-results')
-
-const AUTH_CONFIG = {
-  authority: 'http://127.0.0.1:9/realms/socle',
-  clientId: 'socle-frontend',
-  scopes: ['openid', 'profile', 'email'],
-  organizationName: 'Organisation Démo',
-  displayName: 'Organisation Démo',
+const LOGIN_AUTH_CONFIG = {
+  ...AUTH_CONFIG,
   supportContact: 'identite@example.com',
   passkeyAcrValues: 'phr',
-  idpDisplayName: 'Demo IdP',
 }
 
-async function mockAuthConfig(page, overrides = {}) {
-  await page.route('**/api/v1/public/auth-config', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ ...AUTH_CONFIG, ...overrides }),
+/** Marque par défaut de l'instance (aucun nom personnalisé) : « Socle », comme la maquette. */
+const DEFAULT_PUBLIC_BRANDING = { accentColor: '#3730E0', hidePoweredBy: false }
+
+const MOBILE = { width: 390, height: 844 }
+
+/**
+ * Zones maquette sans donnée / fonctionnalité produit — NON comparées, jamais « passées ».
+ * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
+ */
+export const NOT_IMPLEMENTED = [
+  {
+    id: 'login-email-domain-hint',
+    page: 'login',
+    reason:
+      'Suggestion grisée du domaine de l’organisation (« @example.com ») après la saisie de l’identifiant : l’app n’a pas de complétion de domaine — le champ est un input e-mail simple',
+    backlog: 'LOGIN-EMAIL-DOMAIN-HINT',
+    mockMask: 'login-email-domain-hint',
+  },
+]
+
+/** Caret dessiné de la maquette (span 2×16) : l'app a un vrai caret, masqué à la capture. */
+const FAKE_CARET_MASK = {
+  name: 'login-mock-fake-caret',
+  selector: '[data-visual-mask="login-mock-fake-caret"]',
+  reason: 'caret dessiné de la maquette (le caret réel de l’app est masqué par la capture)',
+}
+
+const SIZE_EXCEPTIONS = {}
+
+const DESKTOP_SECTIONS = [
+  { id: 'login-brand', name: 'brand' },
+  { id: 'title', name: 'title' },
+  { id: 'subtitle', name: 'subtitle' },
+  { id: 'label-email', name: 'label-email' },
+  {
+    id: 'email-field',
+    name: 'email-field',
+    mockMasks: ['login-email-domain-hint'],
+    mockTargeted: [FAKE_CARET_MASK],
+  },
+  { id: 'cta-continue', name: 'cta' },
+  { id: 'login-divider', name: 'divider' },
+  { id: 'sso-org-btn', name: 'sso-org' },
+  { id: 'sso-passkey-btn', name: 'sso-passkey' },
+  { id: 'footer', name: 'footer' },
+  { id: 'login-visual', name: 'visual' },
+]
+
+const ERROR_SECTIONS = [
+  { id: 'login-brand', name: 'brand' },
+  { id: 'login-alert-icon', name: 'alert-icon' },
+  { id: 'title', name: 'title' },
+  { id: 'subtitle', name: 'subtitle' },
+  { id: 'causes', name: 'causes' },
+  { id: 'cta-retry', name: 'retry' },
+  { id: 'contact-support', name: 'contact' },
+  { id: 'footer', name: 'footer' },
+  { id: 'login-visual', name: 'visual' },
+]
+
+const MOBILE_SECTIONS = [
+  { id: 'mobile-brand-block', name: 'brand' },
+  { id: 'mobile-sso-btn', name: 'sso' },
+  { id: 'mobile-note', name: 'note' },
+  { id: 'mobile-help', name: 'help' },
+]
+
+async function mockLoginApis(page, authOverrides = {}) {
+  await page.route('**/api/v1/public/auth-config', (route) =>
+    json(route, { ...LOGIN_AUTH_CONFIG, ...authOverrides }),
+  )
+  await page.route('**/api/v1/public/branding', (route) => json(route, DEFAULT_PUBLIC_BRANDING))
+}
+
+async function shootSections(page, sections, side, prefix, pageArea) {
+  const out = {}
+  for (const s of sections) {
+    out[s.name] = await shotSection(page, `[data-mock-id="${s.id}"]`, {
+      maskNames: side === 'mock' ? (s.mockMasks ?? []) : [],
+      targeted: side === 'mock' ? (s.mockTargeted ?? []) : [],
+      label: `${prefix}-sec-${s.name}-${side}`,
+      pageArea,
     })
-  })
-}
-
-function diffRatio(a, b, label) {
-  const imgA = PNG.sync.read(a)
-  const imgB = PNG.sync.read(b)
-  if (imgA.width !== imgB.width || imgA.height !== imgB.height) {
-    throw new Error(
-      `${label}: size mismatch ${imgA.width}x${imgA.height} vs ${imgB.width}x${imgB.height}`,
-    )
   }
-  const diff = new PNG({ width: imgA.width, height: imgA.height })
-  const mismatched = pixelmatch(imgA.data, imgB.data, diff.data, imgA.width, imgA.height, {
-    threshold: 0.2,
-    includeAA: false,
-  })
-  fs.mkdirSync(outDir, { recursive: true })
-  fs.writeFileSync(path.join(outDir, `${label}-maquette.png`), a)
-  fs.writeFileSync(path.join(outDir, `${label}-app.png`), b)
-  fs.writeFileSync(path.join(outDir, `${label}-diff.png`), PNG.sync.write(diff))
-  const total = imgA.width * imgA.height
-  return mismatched / total
+  return out
 }
 
-/** Wait for local OFL fonts before screenshots (avoids FOUT on cold CI). */
-async function settleFonts(page) {
-  await page.evaluate(() => document.fonts.ready)
-}
-
-/** Hide glyph rasters that FreeType hinting shifts across OS; keep chrome/layout. */
-async function maskGlyphSensitive(page, mode) {
-  await page.evaluate((m) => {
-    const hide = (el) => {
-      if (!el) return
-      el.style.color = 'transparent'
-      el.style.webkitTextFillColor = 'transparent'
-      el.style.textShadow = 'none'
-    }
-    if (m === 'app-desktop') {
-      hide(document.querySelector('.login-brand-name'))
-      hide(document.querySelector('.login-title'))
-      hide(document.querySelector('.login-subtitle'))
-      hide(document.querySelector('.login-label'))
-      document.querySelectorAll('.login-cta, .login-sso-label').forEach(hide)
-      document.querySelectorAll('.login-quote').forEach(hide)
-      document.querySelectorAll('.login-visual svg text, .login-panel svg text, svg text').forEach(hide)
-    }
-    if (m === 'mock-desktop') {
-      const formCol = document.querySelector('body div[style*="560px"]') || document.querySelector('body div[style*="1440px"] > div')
-      if (formCol) {
-        formCol.querySelectorAll('h1, p, label, span, a').forEach((el) => {
-          // keep SVG icons inside SSO links visible: only hide text nodes' color on text tags
-          if (el.tagName === 'A') {
-            el.querySelectorAll('span').forEach(hide)
-            el.style.color = 'transparent'
-          } else {
-            hide(el)
-          }
-        })
-        // brand name is a div
-        const brand = Array.from(formCol.querySelectorAll('div')).find(
-          (d) => (d.textContent || '').trim() === 'Socle' && d.children.length === 0,
-        )
-        hide(brand)
-      }
-      const quote = Array.from(document.querySelectorAll('p')).find((p) =>
-        (p.textContent || '').includes('documentation qui suit'),
-      )
-      hide(quote)
-      document.querySelectorAll('svg text').forEach(hide)
-    }
-    if (m === 'app-mobile') {
-      hide(document.querySelector('.login-mobile-name'))
-      hide(document.querySelector('.login-mobile-org'))
-      hide(document.querySelector('.login-mobile-sso-label'))
-    }
-    if (m === 'mock-mobile') {
-      const root = Array.from(document.querySelectorAll('div')).find((d) =>
-        (d.getAttribute('style') || '').includes('390px'),
-      )
-      if (root) {
-        root.querySelectorAll('.serif, span').forEach(hide)
-        const org = Array.from(root.querySelectorAll('div')).find(
-          (d) => (d.textContent || '').trim() === 'Organisation Démo',
-        )
-        hide(org)
-      }
-    }
-  }, mode)
+function compareAll(sections, mockSec, appSec, prefix, testInfo) {
+  const compare = compareSectionShots(SIZE_EXCEPTIONS)
+  return sections.map((s) => compare(`${prefix}-${s.name}`, mockSec[s.name].shot, appSec[s.name].shot, testInfo))
 }
 
 test.describe('login visual parity', () => {
@@ -138,277 +148,78 @@ test.describe('login visual parity', () => {
     const blocked = []
     page.on('request', (req) => {
       const u = req.url()
-      if (u.includes('fonts.googleapis.com') || u.includes('fonts.gstatic.com')) {
-        blocked.push(u)
-      }
+      if (u.includes('fonts.googleapis.com') || u.includes('fonts.gstatic.com')) blocked.push(u)
     })
-    await mockAuthConfig(page)
+    await mockLoginApis(page)
     await page.goto('/login')
     await page.waitForSelector('text=Se connecter')
     expect(blocked, `Google Fonts requests: ${blocked.join(', ')}`).toEqual([])
   })
 
-  test('desktop Login vs maquette @ 1440×900', async ({ page }, testInfo) => {
-    await mockAuthConfig(page)
+  test('desktop Login — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
+    await mockLoginApis(page)
     await page.setViewportSize({ width: 1440, height: 900 })
+
+    await page.goto(`${MOCK_ORIGIN}/Login.dc.html`)
+    await annotateLoginMockup(page)
+    await settleFonts(page)
+    await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'login')
+    const mockSec = await shootSections(page, DESKTOP_SECTIONS, 'mock', 'login')
 
     await page.goto('/login')
-    await page.waitForSelector('#login-email')
-    await page.fill('#login-email', 'tarek.fezai@example.com')
-    await page.evaluate(() => {
-      document.documentElement.style.overflow = 'hidden'
-      document.body.style.margin = '0'
-      document.body.style.overflow = 'hidden'
-      document.querySelector('.login-mobile')?.setAttribute('style', 'display:none !important')
-      const shell = document.querySelector('.login-shell')
-      if (shell) {
-        shell.style.width = '1440px'
-        shell.style.height = '900px'
-        shell.style.minHeight = '900px'
-      }
-      const desk = document.querySelector('.login-desktop')
-      if (desk) desk.style.display = 'flex'
-      const email = document.querySelector('.login-email-wrap')
-      if (email) email.style.visibility = 'hidden'
-      // Texte informatif AA (#75757C) ≠ maquette #B0B0B5 — exclus de la comparaison
-      document.querySelectorAll('.login-footer, .login-divider').forEach((el) => {
-        el.style.visibility = 'hidden'
-      })
-    })
+    await page.waitForSelector('[data-mock-id="sso-passkey-btn"]')
+    await page.fill('#login-email', 'tarek.fezai')
+    await page.locator('#login-email').blur()
+    await page.mouse.move(1, 1)
     await settleFonts(page)
-    await maskGlyphSensitive(page, 'app-desktop')
-    await page.waitForTimeout(100)
-    const appShot = await page.screenshot({ ...SCREENSHOT_OPTIONS, fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
+    await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'login')
+    const appSec = await shootSections(page, DESKTOP_SECTIONS, 'app', 'login')
 
-    await page.goto('http://127.0.0.1:4174/Login.dc.html')
-    await page.evaluate(() => {
-      const root = document.querySelector('body div[style*="1440px"]') || document.querySelector('body > div, x-dc > div')
-      if (root) {
-        root.style.width = '1440px'
-        root.style.height = '900px'
-      }
-      const boxes = Array.from(document.querySelectorAll('div')).filter(
-        (d) =>
-          (d.getAttribute('style') || '').includes('border: 1px solid #ECECEE') &&
-          (d.getAttribute('style') || '').includes('border-radius: 9px'),
-      )
-      const emailBox = boxes[0]
-      if (emailBox) emailBox.style.visibility = 'hidden'
-      // Masquer le pied et le séparateur « ou » (couleur informative)
-      const footer = Array.from(document.querySelectorAll('p')).find((p) =>
-        (p.textContent || '').includes('Réservé aux comptes'),
-      )
-      if (footer) footer.style.visibility = 'hidden'
-      const ouRow = Array.from(document.querySelectorAll('div')).find((d) => {
-        const t = d.textContent || ''
-        return t.trim() === 'ou' || (t.includes('ou') && d.children.length === 3)
-      })
-      if (ouRow && (ouRow.textContent || '').trim().length < 10) ouRow.style.visibility = 'hidden'
-    })
-    await settleFonts(page)
-    await maskGlyphSensitive(page, 'mock-desktop')
-    await page.waitForTimeout(100)
-    const mockShot = await page.screenshot({ ...SCREENSHOT_OPTIONS, fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
-
-    await testInfo.attach('maquette-login', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-login', { body: appShot, contentType: 'image/png' })
-
-    const ratio = diffRatio(mockShot, appShot, 'login-desktop')
-    await testInfo.attach('diff-ratio', {
-      body: Buffer.from(`diffPixelRatio=${ratio}`),
-      contentType: 'text/plain',
-    })
-    expect(ratio, `desktop diff ${ratio}`).toBeLessThanOrEqual(0.01)
+    finishPixelResults('login', compareAll(DESKTOP_SECTIONS, mockSec, appSec, 'login', testInfo))
   })
 
-  test('LoginError vs maquette (causes masked) @ 1440×900', async ({ page }, testInfo) => {
-    await mockAuthConfig(page)
+  test('LoginError — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
+    await injectOidcSession(page, VISUAL_NOW, { profile: { email: 'tarek.fezai@example.com' } })
+    await mockLoginApis(page)
     await page.setViewportSize({ width: 1440, height: 900 })
+
+    await page.goto(`${MOCK_ORIGIN}/LoginError.dc.html`)
+    await annotateLoginErrorMockup(page)
+    await settleFonts(page)
+    const mockSec = await shootSections(page, ERROR_SECTIONS, 'mock', 'login-error')
 
     await page.goto('/login/erreur?reason=not_provisioned')
-    await page.waitForSelector('text=Connexion refusée')
-    await page.evaluate(() => {
-      document.documentElement.style.overflow = 'hidden'
-      document.body.style.margin = '0'
-      document.querySelector('.login-mobile')?.setAttribute('style', 'display:none !important')
-      const shell = document.querySelector('.login-shell')
-      if (shell) {
-        shell.style.width = '1440px'
-        shell.style.height = '900px'
-        shell.style.minHeight = '900px'
-      }
-      const desk = document.querySelector('.login-desktop')
-      if (desk) desk.style.display = 'flex'
-      const strong = document.querySelector('.login-subtitle--error strong')
-      if (strong) strong.textContent = 'tarek.fezai@example.com'
-      const sub = document.querySelector('.login-subtitle--error')
-      if (sub) {
-        sub.style.height = '72px'
-        sub.style.visibility = 'hidden'
-      }
-      const causes = document.querySelector('[data-testid="login-error-causes"]')
-      if (causes) {
-        causes.style.height = '140px'
-        causes.style.visibility = 'hidden'
-      }
-      const ghost = document.querySelector('.login-ghost')
-      if (ghost) {
-        ghost.style.height = '44px'
-        ghost.style.visibility = 'hidden'
-      }
-      document.querySelectorAll('.login-footer').forEach((el) => {
-        el.style.visibility = 'hidden'
-      })
-      const hide = (el) => {
-        if (!el) return
-        el.style.color = 'transparent'
-        el.style.webkitTextFillColor = 'transparent'
-        el.style.textShadow = 'none'
-      }
-      hide(document.querySelector('.login-brand-name'))
-      hide(document.querySelector('.login-title'))
-      hide(document.querySelector('.login-cta'))
-      hide(document.querySelector('.login-quote'))
-      document.querySelectorAll('svg text').forEach((el) => {
-        el.style.fill = 'transparent'
-      })
-    })
+    await page.waitForSelector('text=tarek.fezai@example.com')
+    await page.mouse.move(1, 1)
     await settleFonts(page)
-    await page.waitForTimeout(100)
-    const appShot = await page.screenshot({ ...SCREENSHOT_OPTIONS, fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
+    const appSec = await shootSections(page, ERROR_SECTIONS, 'app', 'login-error')
 
-    await page.goto('http://127.0.0.1:4174/LoginError.dc.html')
-    await page.evaluate(() => {
-      const paragraphs = Array.from(document.querySelectorAll('p'))
-      const sub = paragraphs.find((p) => (p.textContent || '').includes('authentification SSO'))
-      if (sub) {
-        sub.style.height = '72px'
-        sub.style.visibility = 'hidden'
-      }
-      const box = document.querySelector('div[style*="border: 1px solid #ECECEE"]')
-      if (box) {
-        box.style.height = '140px'
-        box.style.visibility = 'hidden'
-      }
-      const ghost = Array.from(document.querySelectorAll('a')).find((a) =>
-        (a.textContent || '').includes('provisioning'),
-      )
-      if (ghost) {
-        ghost.style.height = '44px'
-        ghost.style.display = 'block'
-        ghost.style.visibility = 'hidden'
-      }
-      const footer = paragraphs.find((p) => (p.textContent || '').includes('Un problème persiste'))
-      if (footer) footer.style.visibility = 'hidden'
-      // Mask glyph-sensitive title/quote for OS-stable chrome comparison
-      const title = document.querySelector('h1')
-      if (title) {
-        title.style.color = 'transparent'
-        title.style.webkitTextFillColor = 'transparent'
-      }
-      const brand = Array.from(document.querySelectorAll('div')).find(
-        (d) => (d.textContent || '').trim() === 'Socle' && d.children.length === 0,
-      )
-      if (brand) {
-        brand.style.color = 'transparent'
-        brand.style.webkitTextFillColor = 'transparent'
-      }
-      const quote = paragraphs.find((p) => (p.textContent || '').includes("L'accès suit"))
-      if (quote) {
-        quote.style.color = 'transparent'
-        quote.style.webkitTextFillColor = 'transparent'
-      }
-      document.querySelectorAll('svg text').forEach((el) => {
-        el.style.fill = 'transparent'
-      })
-      const cta = Array.from(document.querySelectorAll('a')).find((a) =>
-        (a.textContent || '').includes('Réessayer'),
-      )
-      if (cta) {
-        cta.style.color = 'transparent'
-        cta.style.webkitTextFillColor = 'transparent'
-      }
-    })
-    await settleFonts(page)
-    await page.waitForTimeout(100)
-    const mockShot = await page.screenshot({ ...SCREENSHOT_OPTIONS, fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
-
-    await testInfo.attach('maquette-login-error', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-login-error', { body: appShot, contentType: 'image/png' })
-
-    const ratio = diffRatio(mockShot, appShot, 'login-error')
-    expect(ratio, `error diff ${ratio}`).toBeLessThanOrEqual(0.01)
+    finishPixelResults('login-error', compareAll(ERROR_SECTIONS, mockSec, appSec, 'login-error', testInfo))
   })
 
-  test('MobileLogin vs /login @ 390×844', async ({ page }, testInfo) => {
-    await mockAuthConfig(page)
-    await page.setViewportSize({ width: 390, height: 844 })
+  test('MobileLogin — sections pixel ≤ 1 % @ 390×844', async ({ page }, testInfo) => {
+    await mockLoginApis(page)
+    await page.setViewportSize(MOBILE)
+    const area = pageAreaFor(MOBILE)
 
-    await page.goto('http://127.0.0.1:4174/MobileLogin.dc.html')
-    await page.waitForSelector('text=Socle')
-    await page.evaluate(() => {
-      const root = Array.from(document.querySelectorAll('div')).find((d) =>
-        (d.getAttribute('style') || '').includes('390px'),
-      )
-      if (root) {
-        root.style.position = 'fixed'
-        root.style.left = '0'
-        root.style.top = '0'
-        root.style.width = '390px'
-        root.style.height = '844px'
-        root.style.boxSizing = 'border-box'
-      }
-      const note = Array.from(document.querySelectorAll('p')).find((p) =>
-        (p.textContent || '').includes('Réservé aux comptes'),
-      )
-      if (note) note.style.visibility = 'hidden'
-      const help = Array.from(document.querySelectorAll('div')).find(
-        (d) => (d.textContent || '').includes("Besoin d'aide") && d.children.length <= 1,
-      )
-      if (help) help.style.visibility = 'hidden'
-    })
+    await page.goto(`${MOCK_ORIGIN}/MobileLogin.dc.html`)
+    await annotateMobileMockup(page)
     await settleFonts(page)
-    await maskGlyphSensitive(page, 'mock-mobile')
-    await page.waitForTimeout(100)
-    const mockShot = await page.locator('div[style*="390px"]').first().screenshot(SCREENSHOT_OPTIONS)
+    const mockSec = await shootSections(page, MOBILE_SECTIONS, 'mock', 'login-mobile', area)
 
     await page.goto('/login')
-    await page.waitForSelector('.login-mobile')
-    await page.evaluate(() => {
-      document.body.style.margin = '0'
-      document.querySelector('.login-desktop')?.setAttribute('style', 'display:none !important')
-      const mob = document.querySelector('.login-mobile')
-      if (mob) {
-        mob.style.display = 'flex'
-        mob.style.position = 'fixed'
-        mob.style.left = '0'
-        mob.style.top = '0'
-        mob.style.width = '390px'
-        mob.style.height = '844px'
-        mob.style.minHeight = '844px'
-        mob.style.boxSizing = 'border-box'
-        mob.style.padding = '60px 28px 32px'
-      }
-      document.querySelectorAll('.login-mobile-note, .login-mobile-help').forEach((el) => {
-        el.style.visibility = 'hidden'
-      })
-    })
+    await page.waitForSelector('[data-mock-id="mobile-sso-btn"]')
+    await page.mouse.move(1, 1)
     await settleFonts(page)
-    await maskGlyphSensitive(page, 'app-mobile')
-    await page.waitForTimeout(100)
-    const appShot = await page.locator('.login-mobile').screenshot(SCREENSHOT_OPTIONS)
+    const appSec = await shootSections(page, MOBILE_SECTIONS, 'app', 'login-mobile', area)
 
-    await testInfo.attach('maquette-mobile-login', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-mobile-login', { body: appShot, contentType: 'image/png' })
-
-    const ratio = diffRatio(mockShot, appShot, 'login-mobile')
-    expect(ratio, `mobile diff ${ratio}`).toBeLessThanOrEqual(0.01)
+    finishPixelResults('login-mobile', compareAll(MOBILE_SECTIONS, mockSec, appSec, 'login-mobile', testInfo))
   })
 })
 
 test.describe('login structural typography', () => {
   test('embedded OFL fonts loaded on /login', async ({ page }) => {
-    await mockAuthConfig(page)
+    await mockLoginApis(page)
     await page.goto('/login')
     await page.waitForSelector('[data-mock-id="title"]')
     const fonts = await assertFontsLoaded(page)
@@ -417,226 +228,64 @@ test.describe('login structural typography', () => {
     }
   })
 
-  test('desktop Login structural match', async ({ page }, testInfo) => {
-    await mockAuthConfig(page)
+  test('desktop Login structural', async ({ page }) => {
+    await mockLoginApis(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    async function prepDesktopShell(isMock) {
-      await page.evaluate((mock) => {
-        document.body.style.margin = '0'
-        if (mock) {
-          const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
-          if (root) {
-            root.style.width = '1440px'
-            root.style.height = '900px'
-          }
-          const formCol = document.querySelector('div[style*="560px"]')
-          if (formCol) {
-            formCol.style.justifyContent = 'flex-start'
-            formCol.style.paddingTop = '96px'
-          }
-          const email = document.querySelector('[data-mock-id="email-field"]')
-          if (email) {
-            email.style.height = '44px'
-            email.style.boxSizing = 'border-box'
-            email.style.visibility = 'hidden'
-          }
-        } else {
-          document.querySelector('.login-mobile')?.setAttribute('style', 'display:none !important')
-          const shell = document.querySelector('.login-shell')
-          if (shell) {
-            shell.style.width = '1440px'
-            shell.style.height = '900px'
-            shell.style.minHeight = '900px'
-          }
-          const desk = document.querySelector('.login-desktop')
-          if (desk) desk.style.display = 'flex'
-          const formCol = document.querySelector('.login-form-col')
-          if (formCol) {
-            formCol.style.justifyContent = 'flex-start'
-            formCol.style.paddingTop = '96px'
-          }
-          const email = document.querySelector('[data-mock-id="email-field"]')
-          if (email) {
-            email.style.height = '44px'
-            email.style.boxSizing = 'border-box'
-            email.style.visibility = 'hidden'
-          }
-        }
-      }, isMock)
-    }
-
-    await page.goto('http://127.0.0.1:4174/Login.dc.html')
-    await settleFonts(page)
+    await page.goto(`${MOCK_ORIGIN}/Login.dc.html`)
     await annotateLoginMockup(page)
-    await prepDesktopShell(true)
+    await settleFonts(page)
     const mockMap = await collectMetrics(page, LOGIN_DESKTOP_IDS)
 
     await page.goto('/login')
-    await page.waitForSelector('[data-mock-id="title"]')
+    await page.waitForSelector('[data-mock-id="sso-passkey-btn"]')
+    await page.fill('#login-email', 'tarek.fezai')
+    await page.locator('#login-email').blur()
     await settleFonts(page)
-    await prepDesktopShell(false)
     const appMap = await collectMetrics(page, LOGIN_DESKTOP_IDS)
-    const fonts = await assertFontsLoaded(page)
-    expect(fonts.find((f) => f.family === 'Instrument Serif')?.loaded).toBe(true)
-    expect(fonts.find((f) => f.family === 'IBM Plex Sans')?.loaded).toBe(true)
 
-    const results = compareMetrics(mockMap, appMap, LOGIN_DESKTOP_IDS)
-    await testInfo.attach('structural-desktop.json', {
-      body: Buffer.from(JSON.stringify(results, null, 2)),
-      contentType: 'application/json',
-    })
-    fs.mkdirSync(outDir, { recursive: true })
-    fs.writeFileSync(path.join(outDir, 'structural-desktop.json'), JSON.stringify(results, null, 2))
-    const failures = results.filter((r) => r.diffs.length)
-    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+    expectNoStructuralDiffs(compareMetrics(mockMap, appMap, LOGIN_DESKTOP_IDS))
   })
 
-  test('LoginError structural match', async ({ page }, testInfo) => {
-    await mockAuthConfig(page)
+  test('LoginError structural', async ({ page }) => {
+    await injectOidcSession(page, VISUAL_NOW, { profile: { email: 'tarek.fezai@example.com' } })
+    await mockLoginApis(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    async function prepErrorShell(isMock) {
-      await page.evaluate((mock) => {
-        document.body.style.margin = '0'
-        const formCol = mock
-          ? document.querySelector('div[style*="560px"]')
-          : document.querySelector('.login-form-col')
-        if (formCol) {
-          formCol.style.justifyContent = 'flex-start'
-          formCol.style.paddingTop = '72px'
-        }
-        if (!mock) {
-          document.querySelector('.login-mobile')?.setAttribute('style', 'display:none !important')
-          const shell = document.querySelector('.login-shell')
-          if (shell) {
-            shell.style.width = '1440px'
-            shell.style.height = '900px'
-            shell.style.minHeight = '900px'
-          }
-          const strong = document.querySelector('.login-subtitle--error strong')
-          if (strong) strong.textContent = 'tarek.fezai@example.com'
-        } else {
-          const root = document.querySelector('body div[style*="1440px"]')
-          if (root) {
-            root.style.width = '1440px'
-            root.style.height = '900px'
-          }
-        }
-        // Normalize dynamic blocks so justify/flow matches (exceptions keep text unchecked)
-        const causes = document.querySelector('[data-mock-id="causes"]')
-        if (causes) {
-          causes.style.height = '140px'
-          causes.style.overflow = 'hidden'
-          causes.style.boxSizing = 'border-box'
-        }
-        const contact = document.querySelector('[data-mock-id="contact-support"]')
-        if (contact) {
-          contact.style.height = '44px'
-          contact.style.boxSizing = 'border-box'
-          contact.style.visibility = 'hidden'
-        }
-        const sub = document.querySelector('[data-mock-id="subtitle"]')
-        if (sub) {
-          sub.style.height = '72px'
-          sub.style.overflow = 'hidden'
-          sub.style.boxSizing = 'border-box'
-        }
-      }, isMock)
-    }
-
-    await page.goto('http://127.0.0.1:4174/LoginError.dc.html')
-    await settleFonts(page)
+    await page.goto(`${MOCK_ORIGIN}/LoginError.dc.html`)
     await annotateLoginErrorMockup(page)
-    await prepErrorShell(true)
+    await settleFonts(page)
     const mockMap = await collectMetrics(page, LOGIN_ERROR_IDS)
 
     await page.goto('/login/erreur?reason=not_provisioned')
-    await page.waitForSelector('[data-mock-id="title"]')
+    await page.waitForSelector('text=tarek.fezai@example.com')
     await settleFonts(page)
-    await prepErrorShell(false)
     const appMap = await collectMetrics(page, LOGIN_ERROR_IDS)
 
-    const pageExceptions = {
-      subtitle: {
-        skip: ['text', 'color', 'box', 'lineHeight'],
-        reason:
-          'Sous-titre dynamique (e-mail du jeton + formulation produit) ≠ texte SCIM de la maquette',
-      },
-      footer: {
-        skip: ['color'],
-        reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5',
-      },
-    }
-    const results = compareMetrics(mockMap, appMap, LOGIN_ERROR_IDS, { pageExceptions })
-    await testInfo.attach('structural-error.json', {
-      body: Buffer.from(JSON.stringify(results, null, 2)),
-      contentType: 'application/json',
-    })
-    fs.mkdirSync(outDir, { recursive: true })
-    fs.writeFileSync(path.join(outDir, 'structural-error.json'), JSON.stringify(results, null, 2))
-    const failures = results.filter((r) => r.diffs.length)
-    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+    expectNoStructuralDiffs(compareMetrics(mockMap, appMap, LOGIN_ERROR_IDS))
   })
 
-  test('MobileLogin structural match @ 390×844', async ({ page }, testInfo) => {
-    await mockAuthConfig(page)
-    await page.setViewportSize({ width: 390, height: 844 })
+  test('MobileLogin structural @ 390×844', async ({ page }) => {
+    await mockLoginApis(page)
+    await page.setViewportSize(MOBILE)
 
-    await page.goto('http://127.0.0.1:4174/MobileLogin.dc.html')
-    await page.evaluate(() => {
-      const root = Array.from(document.querySelectorAll('div')).find((d) =>
-        (d.getAttribute('style') || '').includes('390px'),
-      )
-      if (root) {
-        root.style.position = 'fixed'
-        root.style.left = '0'
-        root.style.top = '0'
-        root.style.width = '390px'
-        root.style.height = '844px'
-        root.style.boxSizing = 'border-box'
-      }
-    })
-    await settleFonts(page)
+    await page.goto(`${MOCK_ORIGIN}/MobileLogin.dc.html`)
     await annotateMobileMockup(page)
+    await settleFonts(page)
     const mockMap = await collectMetrics(page, LOGIN_MOBILE_IDS)
 
     await page.goto('/login')
-    await page.waitForSelector('[data-mock-id="mobile-brand-name"]')
-    await page.evaluate(() => {
-      document.body.style.margin = '0'
-      document.querySelector('.login-desktop')?.setAttribute('style', 'display:none !important')
-      const mob = document.querySelector('.login-mobile')
-      if (mob) {
-        mob.style.display = 'flex'
-        mob.style.position = 'fixed'
-        mob.style.left = '0'
-        mob.style.top = '0'
-        mob.style.width = '390px'
-        mob.style.height = '844px'
-        mob.style.minHeight = '844px'
-        mob.style.boxSizing = 'border-box'
-        mob.style.padding = '60px 28px 32px'
-      }
-    })
+    await page.waitForSelector('[data-mock-id="mobile-sso-btn"]')
     await settleFonts(page)
     const appMap = await collectMetrics(page, LOGIN_MOBILE_IDS)
 
-    const results = compareMetrics(mockMap, appMap, LOGIN_MOBILE_IDS)
-    await testInfo.attach('structural-mobile.json', {
-      body: Buffer.from(JSON.stringify(results, null, 2)),
-      contentType: 'application/json',
-    })
-    fs.mkdirSync(outDir, { recursive: true })
-    fs.writeFileSync(path.join(outDir, 'structural-mobile.json'), JSON.stringify(results, null, 2))
-    const failures = results.filter((r) => r.diffs.length)
-    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+    expectNoStructuralDiffs(compareMetrics(mockMap, appMap, LOGIN_MOBILE_IDS))
   })
 })
 
 test.describe('login auth behaviour', () => {
   test('passkey button hidden when passkeyAcrValues empty', async ({ page }) => {
-    await mockAuthConfig(page, { passkeyAcrValues: '' })
+    await mockLoginApis(page, { passkeyAcrValues: '' })
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/login')
     await expect(page.getByRole('button', { name: /clé de sécurité/i })).toHaveCount(0)
@@ -644,7 +293,7 @@ test.describe('login auth behaviour', () => {
   })
 
   test('passkey button present when configured', async ({ page }) => {
-    await mockAuthConfig(page, { passkeyAcrValues: 'phr' })
+    await mockLoginApis(page, { passkeyAcrValues: 'phr' })
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/login')
     await expect(page.getByRole('button', { name: /clé de sécurité/i })).toBeVisible()
