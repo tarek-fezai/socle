@@ -111,7 +111,7 @@
 | 55 | `Shortcuts.dc.html` | Raccourcis clavier | **ABSENT** | — | BE none | |
 | 56 | `ServerError.dc.html` | Erreur serveur | **ABSENT** | — | — | |
 | 57 | `Offline.dc.html` | Hors ligne | **ABSENT** | — | BE none | |
-| 58 | `GeneratePersonalToken.dc.html` | Jeton personnel | **ABSENT** | — | BE schéma `personal_access_tokens` | |
+| 58 | `GeneratePersonalToken.dc.html` | Jeton personnel | **COMPLET** | Modale `/account/tokens/new` + liste / révocation `/account` | BE OK `/api/v1/me/tokens` (V46) | Écart produit : expiration obligatoire ≤ 90 jours (préréglages 7/30/60/90, pas de « 1 an » ni « Sans expiration »). |
 | 59 | `ApiDocs.dc.html` | Portail développeur | **ABSENT** | — | BE none (pas de portal OpenAPI UI) | |
 | 60 | `Changelog.dc.html` | Nouveautés | **ABSENT** | — | BE none | |
 | 61 | `Attestations.dc.html` | Attestations | **ABSENT** | — | BE schéma `attestation_*` (entrée reliability) | Pas d’API ack / campagne. |

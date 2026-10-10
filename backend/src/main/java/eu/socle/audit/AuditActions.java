@@ -152,6 +152,11 @@ public final class AuditActions {
     public static final String LICENCE_IMPORTED = "licence.imported";
     public static final String LICENCE_REJECTED = "licence.rejected";
 
+    /** Jetons d'accès personnels (metadata : name, last4, scope, expiresAt — jamais le secret). */
+    public static final String PAT_CREATED = "pat.created";
+    /** metadata.reason : {@code manual} | {@code user_disabled}. */
+    public static final String PAT_REVOKED = "pat.revoked";
+
     public static final String POLL_CLOSED = "poll.closed";
     public static final String LINK_PREVIEW_FETCHED = "link_preview.fetched";
 

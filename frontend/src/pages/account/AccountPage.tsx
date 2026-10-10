@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
 import { getCachedAuthConfig } from '../../lib/auth'
@@ -13,8 +13,18 @@ import {
   type FontScale,
 } from '../../lib/devicePreferences'
 import { idpAccountConsoleUrl } from '../../lib/idpAccountUrl'
+import {
+  formatExpiry,
+  formatLastUsed,
+  listPersonalTokens,
+  maskedToken,
+  revokePersonalToken,
+  scopeLabel,
+  type PersonalAccessToken,
+} from '../../lib/personalTokens'
 import { formatPlatformRoleLabels, isPlatformAdmin } from '../../lib/platformRoles'
 import { initialsFromName } from '../../components/shell/shellUtils'
+import { PatGenerateModal } from './PatGenerateModal'
 import './account-page.css'
 
 function Toggle({
@@ -45,12 +55,43 @@ function Toggle({
   )
 }
 
-/** Paramètres du compte (Account.dc.html). */
-export function AccountPage() {
+/** Paramètres du compte (Account.dc.html) ; `generateToken` : GeneratePersonalToken.dc.html. */
+export function AccountPage({ generateToken = false }: { generateToken?: boolean }) {
   const { me, logout, organizationName } = useAuth()
+  const navigate = useNavigate()
   const [prefs, setPrefs] = useState<DevicePreferences>(() => loadDevicePreferences())
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [tokens, setTokens] = useState<PersonalAccessToken[] | null>(null)
+  const [tokensError, setTokensError] = useState<string | null>(null)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [revokingId, setRevokingId] = useState<string | null>(null)
+
+  const refreshTokens = useCallback(async () => {
+    try {
+      setTokens(await listPersonalTokens())
+      setTokensError(null)
+    } catch {
+      setTokensError('Jetons indisponibles pour le moment.')
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshTokens()
+  }, [refreshTokens])
+
+  async function confirmRevoke(id: string) {
+    setRevokingId(id)
+    try {
+      await revokePersonalToken(id)
+      setConfirmingId(null)
+      await refreshTokens()
+    } catch {
+      setTokensError('Révocation impossible pour le moment.')
+    } finally {
+      setRevokingId(null)
+    }
+  }
 
   const displayName = me?.displayName ?? ''
   const email = me?.email ?? ''
@@ -315,15 +356,9 @@ export function AccountPage() {
 
           <div className="account-section-head" data-mock-id="account-pat">
             <div className="account-section-title">Jetons d&apos;accès personnels</div>
-            <span
-              className="account-link account-link--disabled"
-              data-visual-mask="account-pat-generate"
-            >
-              + Générer un jeton{' '}
-              <span className="account-soon" data-visual-ignore>
-                Bientôt
-              </span>
-            </span>
+            <Link to="/account/tokens/new" className="account-link" data-testid="pat-generate-link">
+              + Générer un jeton
+            </Link>
           </div>
           <p className="account-row-desc" style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
             Agissent en votre nom avec vos propres permissions — à distinguer des clés API de
@@ -333,13 +368,14 @@ export function AccountPage() {
             </Link>
             .
           </p>
-          <div
-            className="account-empty-pat"
-            data-mock-id="account-pat-list"
-            data-visual-mask="account-pat-list"
-          >
-            Aucun jeton personnel
-          </div>
+          <PatList
+            tokens={tokens}
+            error={tokensError}
+            confirmingId={confirmingId}
+            revokingId={revokingId}
+            onAskRevoke={setConfirmingId}
+            onConfirmRevoke={(id) => void confirmRevoke(id)}
+          />
 
           <div className="account-section-title">Confidentialité &amp; données personnelles</div>
           <div className="account-card-row account-card-row--privacy" data-mock-id="account-privacy">
@@ -394,6 +430,86 @@ export function AccountPage() {
           ) : null}
         </div>
       </div>
+      {generateToken ? (
+        <PatGenerateModal
+          onClose={() => navigate('/account')}
+          onCreated={() => void refreshTokens()}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function PatList({
+  tokens,
+  error,
+  confirmingId,
+  revokingId,
+  onAskRevoke,
+  onConfirmRevoke,
+}: {
+  tokens: PersonalAccessToken[] | null
+  error: string | null
+  confirmingId: string | null
+  revokingId: string | null
+  onAskRevoke: (id: string | null) => void
+  onConfirmRevoke: (id: string) => void
+}) {
+  const visible = (tokens ?? []).filter((t) => t.status !== 'revoked')
+  if (error || tokens === null || visible.length === 0) {
+    return (
+      <div className="account-empty-pat" data-mock-id="account-pat-list" data-testid="pat-list-empty">
+        {error ?? (tokens === null ? 'Chargement…' : 'Aucun jeton personnel')}
+      </div>
+    )
+  }
+  return (
+    <div className="account-card-row account-pat-list" data-mock-id="account-pat-list" data-testid="pat-list">
+      {visible.map((t) => {
+        const confirming = confirmingId === t.id
+        return (
+          <div className="account-pat-row" key={t.id} data-testid="pat-row">
+            <div className="account-row-label">
+              <div className="account-pat-name">{t.name}</div>
+              <div className="account-pat-meta">
+                {[maskedToken(t.last4), scopeLabel(t.scope), formatExpiry(t)].join(' · ')}
+              </div>
+            </div>
+            {confirming ? (
+              <div className="account-pat-confirm" role="group" aria-label={`Révoquer ${t.name}`}>
+                <span className="account-pat-confirm-text">Révoquer ce jeton ?</span>
+                <button
+                  type="button"
+                  className="account-pat-cancel"
+                  onClick={() => onAskRevoke(null)}
+                  disabled={revokingId === t.id}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="account-pat-revoke account-pat-revoke--confirm"
+                  onClick={() => t.id && onConfirmRevoke(t.id)}
+                  disabled={revokingId === t.id}
+                >
+                  {revokingId === t.id ? 'Révocation…' : 'Confirmer'}
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="account-pat-used">{formatLastUsed(t.lastUsedAt)}</span>
+                <button
+                  type="button"
+                  className="account-pat-revoke"
+                  onClick={() => onAskRevoke(t.id ?? null)}
+                >
+                  Révoquer
+                </button>
+              </>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

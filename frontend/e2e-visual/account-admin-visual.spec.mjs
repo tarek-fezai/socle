@@ -14,7 +14,7 @@ import { PNG } from 'pngjs'
 import pixelmatch from 'pixelmatch'
 import { assertFontsLoaded, collectMetrics, compareMetrics } from './structural-compare.mjs'
 import { ME_TAREK, NOTIFICATIONS_SEED, VISUAL_NOW } from './dashboard-fixtures.mjs'
-import { ADMIN_OVERVIEW_SEED } from './account-admin-fixtures.mjs'
+import { ACCOUNT_VISUAL_NOW, ADMIN_OVERVIEW_SEED, PAT_TOKENS_SEED } from './account-admin-fixtures.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const outDir = path.join(__dirname, 'test-results')
@@ -68,30 +68,12 @@ export const NOT_IMPLEMENTED = [
     appImplementedProbe: 'text=Chrome · macOS',
   },
   {
-    id: 'account-pat-list',
-    page: 'account',
-    reason: 'Liste PAT fictive — jusqu’à la PR PAT',
-    backlog: 'ACCOUNT-PAT',
-    mockMask: 'account-pat-list',
-    appPlaceholderSelector: '[data-visual-mask="account-pat-list"]',
-    appImplementedProbe: 'text=pat_••••',
-  },
-  {
     id: 'account-export-history',
     page: 'account',
     reason: 'Historique des exports RGPD — non implémenté',
     backlog: 'ACCOUNT-EXPORT-HISTORY',
     mockMask: 'account-export-history',
     appImplementedProbe: 'text=Demandé le',
-  },
-  {
-    id: 'account-pat-generate',
-    page: 'account',
-    reason: 'Action « + Générer un jeton » — jusqu’à la PR PAT',
-    backlog: 'ACCOUNT-PAT',
-    mockMask: 'account-pat-generate',
-    appPlaceholderSelector: '[data-visual-mask="account-pat-generate"] .account-soon',
-    appImplementedProbe: '[data-mock-id="account-pat"] >> a:has-text("Générer un jeton")',
   },
   {
     id: 'account-notifications-toggles',
@@ -189,9 +171,22 @@ const ACCOUNT_STRUCTURAL_IDS = [
   'account-notifications',
   'account-security',
   'account-pat',
+  'account-pat-list',
   'account-privacy',
   'account-org-admin',
 ]
+
+/**
+ * Masques ciblés hors data-visual-mask applicatif : la maquette est annotée (data-*), l'app est
+ * visée par locator Playwright (aucune modification du DOM de l'app).
+ */
+const PAT_EXPIRY_SEGMENT_MASK = {
+  name: 'account-pat-expiry-segment',
+  reason: 'décision produit : expiration obligatoire ≤ 90 jours',
+  mock: '[data-visual-mask="account-pat-expiry-segment"]',
+  // 2e ligne (lecture + écriture) : « … · expire le 30 déc. 2026 » vs « … · sans expiration »
+  app: '[data-mock-id="account-pat-list"] .account-pat-meta >> nth=1',
+}
 
 const ADMIN_STRUCTURAL_IDS = [
   'admin-home-title',
@@ -215,7 +210,8 @@ const ACCOUNT_PIXEL_SECTIONS = [
     name: 'security',
     masks: ['account-security-2fa', 'account-security-idp'],
   },
-  { id: 'account-pat', name: 'pat', masks: ['account-pat-generate'] },
+  { id: 'account-pat', name: 'pat', masks: [] },
+  { id: 'account-pat-list', name: 'pat-list', masks: [], targeted: [PAT_EXPIRY_SEGMENT_MASK] },
   { id: 'account-privacy', name: 'privacy', masks: [] },
   { id: 'account-org-admin', name: 'org-admin', masks: [] },
 ]
@@ -269,7 +265,7 @@ function pngSize(buf) {
   return { w: img.width, h: img.height }
 }
 
-async function injectOidcSession(page) {
+async function injectOidcSession(page, now = VISUAL_NOW) {
   await page.addInitScript(
     ({ authority, clientId, now }) => {
       Date.now = () => now
@@ -283,7 +279,7 @@ async function injectOidcSession(page) {
         }),
       )
     },
-    { authority: AUTH_CONFIG.authority, clientId: AUTH_CONFIG.clientId, now: VISUAL_NOW },
+    { authority: AUTH_CONFIG.authority, clientId: AUTH_CONFIG.clientId, now },
   )
 }
 
@@ -300,6 +296,7 @@ async function mockApis(page, me) {
   )
   await page.route('**/api/v1/me', (route) => json(route, me))
   await page.route('**/api/v1/me/export', (route) => json(route, { profile: { email: me.email } }))
+  await page.route('**/api/v1/me/tokens', (route) => json(route, PAT_TOKENS_SEED))
   await page.route('**/api/v1/notifications**', (route) => json(route, NOTIFICATIONS_SEED))
   await page.route('**/api/v1/admin/overview', (route) => json(route, ADMIN_OVERVIEW_SEED))
 }
@@ -387,14 +384,15 @@ async function annotateAccountMockup(page) {
     if (patLabel) {
       const head = patLabel.parentElement
       head?.setAttribute('data-mock-id', 'account-pat')
-      head
-        ?.querySelector('a[href="GeneratePersonalToken.dc.html"]')
-        ?.setAttribute('data-visual-mask', 'account-pat-generate')
       let after = head?.nextElementSibling
       if (after?.tagName === 'P') after = after.nextElementSibling
       if (after) {
-        after.setAttribute('data-visual-mask', 'account-pat-list')
         after.setAttribute('data-mock-id', 'account-pat-list')
+        // Ligne « lecture + écriture · sans expiration » : seul segment hors décision produit.
+        const noExpiry = [...after.querySelectorAll('div')].find(
+          (d) => d.childElementCount === 0 && (d.textContent || '').includes('sans expiration'),
+        )
+        noExpiry?.setAttribute('data-visual-mask', 'account-pat-expiry-segment')
       }
     }
 
@@ -472,7 +470,11 @@ async function annotateAdminMockup(page) {
   })
 }
 
-async function shotSection(page, selector, { maskNames = [], label }) {
+/**
+ * @param {{ maskNames?: string[], targeted?: { name: string, selector: string }[], label: string }} opts
+ * `targeted` : masque par locator (un seul élément attendu), surface chiffrée comme les autres.
+ */
+async function shotSection(page, selector, { maskNames = [], targeted = [], label }) {
   const loc = page.locator(selector).first()
   await loc.waitFor({ state: 'visible' })
   await loc.scrollIntoViewIfNeeded()
@@ -480,6 +482,18 @@ async function shotSection(page, selector, { maskNames = [], label }) {
   await page.waitForTimeout(40)
   const box = await loc.boundingBox()
   if (!box || box.width < 1 || box.height < 1) throw new Error(`no box for ${selector}`)
+  const targetedLocators = []
+  for (const t of targeted) {
+    const tl = page.locator(t.selector)
+    const count = await tl.count()
+    if (count !== 1) throw new Error(`${label}: masque ciblé « ${t.name} » → ${count} élément(s), 1 attendu`)
+    const tb = await tl.boundingBox()
+    const areaPx = Math.round((tb?.width ?? 0) * (tb?.height ?? 0))
+    console.log(
+      `MASK ${label} ${t.name}: 1 él., ${areaPx} px (${((areaPx / PAGE_AREA) * 100).toFixed(3)} % page) — ${t.reason}`,
+    )
+    targetedLocators.push(tl)
+  }
   const maskAreas = await page.evaluate(
     ({ sel, names, pageArea }) =>
       names.map((n) => {
@@ -500,7 +514,10 @@ async function shotSection(page, selector, { maskNames = [], label }) {
   }
   const shot = await loc.screenshot({
     animations: 'disabled',
-    mask: maskNames.map((n) => page.locator(`${selector} [data-visual-mask="${n}"]`)),
+    mask: [
+      ...maskNames.map((n) => page.locator(`${selector} [data-visual-mask="${n}"]`)),
+      ...targetedLocators,
+    ],
     // Fond des sections (#FFFFFF) : une zone masquée compte comme fond vide des deux côtés,
     // y compris quand l'élément n'existe que d'un côté (badges Bientôt app).
     maskColor: '#FFFFFF',
@@ -601,7 +618,7 @@ async function assertNotImplementedGuards(page, pageName) {
 
 test.describe('account admin visual', () => {
   test('desktop Account — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
-    await injectOidcSession(page)
+    await injectOidcSession(page, ACCOUNT_VISUAL_NOW)
     await mockApis(page, ME_TAREK)
     await page.setViewportSize({ width: 1440, height: 900 })
 
@@ -614,12 +631,14 @@ test.describe('account admin visual', () => {
     for (const s of ACCOUNT_PIXEL_SECTIONS) {
       mockSec[s.name] = await shotSection(page, `[data-mock-id="${s.id}"]`, {
         maskNames: s.masks,
+        targeted: (s.targeted ?? []).map((t) => ({ ...t, selector: t.mock })),
         label: `account-sec-${s.name}-mock`,
       })
     }
 
     await page.goto('/account')
     await page.waitForSelector('[data-testid="account-page"]')
+    await page.waitForSelector('[data-testid="pat-list"]')
     await settleFonts(page)
     await assertNotImplementedGuards(page, 'account')
 
@@ -627,6 +646,7 @@ test.describe('account admin visual', () => {
     for (const s of ACCOUNT_PIXEL_SECTIONS) {
       const app = await shotSection(page, `[data-mock-id="${s.id}"]`, {
         maskNames: s.masks,
+        targeted: (s.targeted ?? []).map((t) => ({ ...t, selector: t.app })),
         label: `account-sec-${s.name}-app`,
       })
       results.push(
@@ -695,7 +715,7 @@ test.describe('account admin visual', () => {
   })
 
   test('Account structural — sections maquette', async ({ page }) => {
-    await injectOidcSession(page)
+    await injectOidcSession(page, ACCOUNT_VISUAL_NOW)
     await mockApis(page, ME_TAREK)
     await page.setViewportSize({ width: 1440, height: 900 })
 
@@ -706,6 +726,7 @@ test.describe('account admin visual', () => {
 
     await page.goto('/account')
     await page.waitForSelector('[data-testid="account-page"]')
+    await page.waitForSelector('[data-testid="pat-list"]')
     await settleFonts(page)
     const appMetrics = await collectMetrics(page, ACCOUNT_STRUCTURAL_IDS)
 
@@ -737,7 +758,12 @@ test.describe('account admin visual', () => {
       },
       'account-pat': {
         skip: ['box.y'],
-        reason: 'En-tête PAT (titre + Générer) ; liste en NOT_IMPLEMENTED ; box.y cascade ; x/w/h comparés.',
+        reason: 'En-tête PAT (titre + Générer) ; box.y cascade ; x/w/h comparés.',
+      },
+      'account-pat-list': {
+        skip: ['text', 'box.y'],
+        reason:
+          'Ligne 2 : « expire le 30 déc. 2026 » ≠ « sans expiration » maquette (décision produit : expiration obligatoire ≤ 90 jours) ; box.y cascade ; x/w/h comparés.',
       },
       'account-privacy': {
         skip: ['box.y'],

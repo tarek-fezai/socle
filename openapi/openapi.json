@@ -1634,6 +1634,53 @@
         }
       }
     },
+    "/api/v1/me/tokens" : {
+      "get" : {
+        "tags" : [ "pat-controller" ],
+        "operationId" : "listPersonalAccessTokens",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PersonalAccessToken"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "pat-controller" ],
+        "operationId" : "createPersonalAccessToken",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PersonalAccessTokenCreateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PersonalAccessTokenCreated"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/link-previews" : {
       "post" : {
         "tags" : [ "link-preview-controller" ],
@@ -6094,6 +6141,26 @@
         }
       }
     },
+    "/api/v1/me/tokens/{id}" : {
+      "delete" : {
+        "tags" : [ "pat-controller" ],
+        "operationId" : "revokePersonalAccessToken",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/groups/{id}/members/{userId}" : {
       "delete" : {
         "tags" : [ "group-controller" ],
@@ -7440,6 +7507,77 @@
             "type" : "string"
           }
         }
+      },
+      "PersonalAccessTokenCreateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100
+          },
+          "scope" : {
+            "type" : "string",
+            "enum" : [ "read", "read_write" ]
+          },
+          "expiresInDays" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 90,
+            "minimum" : 1
+          }
+        },
+        "required" : [ "expiresInDays", "name", "scope" ]
+      },
+      "PersonalAccessToken" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "last4" : {
+            "type" : "string",
+            "description" : "4 derniers caractères du jeton",
+            "maxLength" : 4,
+            "minLength" : 4
+          },
+          "scope" : {
+            "type" : "string",
+            "enum" : [ "read", "read_write" ]
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lastUsedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "active", "expired", "revoked" ]
+          }
+        }
+      },
+      "PersonalAccessTokenCreated" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "$ref" : "#/components/schemas/PersonalAccessToken"
+          },
+          "plaintext" : {
+            "type" : "string",
+            "description" : "Jeton en clair — renvoyé une seule fois, jamais réaffiché"
+          }
+        },
+        "required" : [ "plaintext" ]
       },
       "FetchRequest" : {
         "type" : "object",

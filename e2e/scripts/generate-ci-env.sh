@@ -9,6 +9,8 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PG_PASS="$(openssl rand -hex 16)"
 OIDC_SECRET="$(openssl rand -hex 24)"
 KC_PASS="$(openssl rand -hex 12)"
+# Valeur de test non secrète, régénérée à chaque exécution (≥ 32 octets).
+PAT_PEPPER="ci-pat-pepper-$(openssl rand -hex 24)"
 
 KEYS_DIR="${ROOT}/e2e/.ci-licence-keys"
 mkdir -p "${KEYS_DIR}"
@@ -71,6 +73,8 @@ OIDC_JWK_SET_URI=http://keycloak:8080/realms/socle/protocol/openid-connect/certs
 OIDC_CLIENT_ID=socle-backend
 OIDC_CLIENT_SECRET=${OIDC_SECRET}
 OIDC_FRONTEND_CLIENT_ID=socle-frontend
+
+SOCLE_PAT_PEPPER=${PAT_PEPPER}
 
 SOCLE_INSTANCE_DISPLAY_NAME=Socle E2E
 CORS_ALLOWED_ORIGINS=http://127.0.0.1,http://localhost

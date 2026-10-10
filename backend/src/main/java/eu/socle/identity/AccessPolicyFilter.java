@@ -73,6 +73,12 @@ public class AccessPolicyFilter extends OncePerRequestFilter {
         }
 
         Jwt jwt = jwtAuth.getToken();
+        if (PatClaims.isPat(jwt)) {
+            // Jeton d'accès personnel : compte existant et actif vérifiés à l'authentification ;
+            // la politique d'admission (domaine, groupe, JIT) ne s'applique qu'aux JWT de l'IdP.
+            chain.doFilter(request, response);
+            return;
+        }
         String subject = claimsMapper.subject(jwt);
         String issuer = claimsMapper.issuer(jwt);
         if (subject == null || issuer == null) {

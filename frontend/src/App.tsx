@@ -67,6 +67,7 @@ export default function App() {
           <Route path="/docs" element={<DocumentsPage />} />
           <Route path="/docs/new" element={<NewDocumentPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/account/tokens/new" element={<AccountPage generateToken />} />
           <Route path="/admin" element={<RequirePlatformAdmin />}>
             <Route index element={<AdminHomePage />} />
             <Route path="templates" element={<TemplatesAdminPage />} />

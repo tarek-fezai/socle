@@ -26,6 +26,12 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `OIDC_CLIENT_SECRET` | `change-me` | yes (prod) | **yes** | Backend OAuth client secret |
 | `OIDC_FRONTEND_CLIENT_ID` | `socle-frontend` | no | no | Public SPA client id (`socle.identity.client-id`) |
 
+## Personal access tokens (`socle.pat`)
+
+| Name | Default | Required | Secret | Description |
+|------|---------|----------|--------|-------------|
+| `SOCLE_PAT_PEPPER` | empty | **yes** (all non-`dev`/`local` profiles) | **yes** | HMAC-SHA256 pepper for personal access tokens, ≥ 32 bytes (`openssl rand -base64 48`). Startup is refused when absent or shorter; `dev`/`local` fall back to an ephemeral random pepper (tokens lost on restart). Changing it invalidates every issued token. Helm: `secrets.patPepper` (required) or key `SOCLE_PAT_PEPPER` in `backend.existingSecret`. |
+
 ## Instance & storage
 
 | Name | Default | Required | Secret | Description |
