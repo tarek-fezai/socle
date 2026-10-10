@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { formatTagAttachFailuresNotice, type TagAttachFailuresNavState } from '../lib/tags'
 
 const getMock = vi.fn()
 const postMock = vi.fn()
@@ -14,6 +15,19 @@ vi.mock('../lib/api', () => ({
 }))
 
 import { NewDocumentPage } from './NewDocumentPage'
+
+/** Stub édition : affiche le flash passé via l'état de navigation (même format que DocumentEditPage). */
+function EditStub() {
+  const { state } = useLocation()
+  const failures = (state as TagAttachFailuresNavState | null)?.tagAttachFailures
+  const notice = failures?.length ? formatTagAttachFailuresNotice(failures) : null
+  return (
+    <div>
+      <div>Page document</div>
+      {notice ? <div data-testid="edit-tag-attach-notice">{notice}</div> : null}
+    </div>
+  )
+}
 
 const SPACES = [
   { id: 's1', name: 'Identité & accès', color: null, canManage: true, isOwner: true, isResponsible: false },
@@ -70,7 +84,7 @@ function renderPage(url = '/docs/new') {
       <MemoryRouter initialEntries={[url]}>
         <Routes>
           <Route path="/docs/new" element={<NewDocumentPage />} />
-          <Route path="/docs/:id/edit" element={<div>Page document</div>} />
+          <Route path="/docs/:id/edit" element={<EditStub />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -320,5 +334,64 @@ describe('NewDocumentPage', () => {
     fireEvent.keyDown(tagInput, { key: 'Enter' })
     fireEvent.click(submitButton())
     expect(await screen.findByText('Page document')).toBeTruthy()
+    expect((await screen.findByTestId('edit-tag-attach-notice')).textContent).toBe(
+      '1 tag(s) non appliqué(s) : Fragile (erreur inattendue)',
+    )
+  })
+
+  it('un tag OK + un tag 409 governed_tag_owner_only → document ouvert et message sur le tag refusé', async () => {
+    postMock.mockImplementation((url: string, body?: { tagId?: string; name?: string }) => {
+      if (url === '/api/v1/documents')
+        return Promise.resolve({ data: { id: 'new-doc', spaceId: 's1', title: 'Ma note' } })
+      if (url === '/api/v1/documents/new-doc/tags') {
+        if (body && 'tagId' in body && body.tagId === 'tag-iam') {
+          return Promise.resolve({ data: { id: 'tag-iam', name: 'IAM' } })
+        }
+        return Promise.reject({
+          response: {
+            status: 409,
+            data: { status: 409, code: 'governed_tag_owner_only' },
+          },
+        })
+      }
+      return Promise.reject(new Error(`unexpected ${url}`))
+    })
+    renderPage('/docs/new?spaceId=s1')
+    await screen.findByRole('option', { name: 'Procédures' })
+    fireEvent.change(screen.getByLabelText('Titre du document'), { target: { value: 'Ma note' } })
+
+    const tagInput = screen.getByLabelText(/Tags/)
+    fireEvent.focus(tagInput)
+    fireEvent.click(await screen.findByRole('button', { name: 'IAM' }))
+    fireEvent.change(tagInput, { target: { value: 'Secret' } })
+    fireEvent.keyDown(tagInput, { key: 'Enter' })
+
+    fireEvent.click(submitButton())
+
+    expect(await screen.findByText('Page document')).toBeTruthy()
+    const notice = await screen.findByTestId('edit-tag-attach-notice')
+    expect(notice.textContent).toBe(
+      '1 tag(s) non appliqué(s) : Secret (réservé au propriétaire du tag)',
+    )
+    expect(notice.textContent).not.toContain('IAM')
+  })
+
+  it('tous les tags rattachés → aucun message sur la page d’édition', async () => {
+    postMock.mockImplementation((url: string) => {
+      if (url === '/api/v1/documents')
+        return Promise.resolve({ data: { id: 'new-doc', spaceId: 's1', title: 'Ma note' } })
+      if (url === '/api/v1/documents/new-doc/tags')
+        return Promise.resolve({ data: { id: 'x', name: 'x' } })
+      return Promise.reject(new Error(`unexpected ${url}`))
+    })
+    renderPage('/docs/new?spaceId=s1')
+    await screen.findByRole('option', { name: 'Procédures' })
+    fireEvent.change(screen.getByLabelText('Titre du document'), { target: { value: 'Ma note' } })
+    const tagInput = screen.getByLabelText(/Tags/)
+    fireEvent.focus(tagInput)
+    fireEvent.click(await screen.findByRole('button', { name: 'IAM' }))
+    fireEvent.click(submitButton())
+    expect(await screen.findByText('Page document')).toBeTruthy()
+    expect(screen.queryByTestId('edit-tag-attach-notice')).toBeNull()
   })
 })

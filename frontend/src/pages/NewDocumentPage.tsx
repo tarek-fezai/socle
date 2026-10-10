@@ -14,7 +14,14 @@ import {
   spaceTreeKey,
 } from '../lib/folders'
 import { listSpaces } from '../lib/spaces'
-import { attachTag, filterTagSuggestions, searchTags } from '../lib/tags'
+import {
+  attachTag,
+  filterTagSuggestions,
+  searchTags,
+  tagAttachFailureReasonLabel,
+  type TagAttachFailure,
+  type TagAttachFailuresNavState,
+} from '../lib/tags'
 import {
   getCreationWarnings,
   listTemplates,
@@ -135,15 +142,26 @@ export function NewDocumentPage() {
         { templateId },
       )
       // Le document existe déjà : un échec de rattachement ne doit pas bloquer l'ouverture.
-      await Promise.allSettled(
+      const settled = await Promise.allSettled(
         tags.map((t) => attachTag(api, doc.id, t.id ? { tagId: t.id } : { name: t.name })),
       )
-      return doc
+      const tagAttachFailures: TagAttachFailure[] = []
+      settled.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          tagAttachFailures.push({
+            name: tags[i]!.name,
+            reasonLabel: tagAttachFailureReasonLabel(r.reason),
+          })
+        }
+      })
+      return { doc, tagAttachFailures }
     },
-    onSuccess: (doc) => {
+    onSuccess: ({ doc, tagAttachFailures }) => {
       void qc.invalidateQueries({ queryKey: spaceTreeKey(activeSpaceId) })
       void qc.invalidateQueries({ queryKey: ['documents'] })
-      navigate(documentEditHref(doc.id))
+      const state: TagAttachFailuresNavState | undefined =
+        tagAttachFailures.length > 0 ? { tagAttachFailures } : undefined
+      navigate(documentEditHref(doc.id), state ? { state } : undefined)
     },
   })
 

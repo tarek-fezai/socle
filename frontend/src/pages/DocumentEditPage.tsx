@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useOutletContext, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Editor } from '@tiptap/react'
 import { useAuth } from '../auth/AuthProvider'
@@ -34,7 +34,13 @@ import {
 } from '../lib/documents'
 import { folderPath, getSpaceTree, spaceTreeKey } from '../lib/folders'
 import { getSpace } from '../lib/spaces'
-import { attachTag, detachTag, sortTags } from '../lib/tags'
+import {
+  attachTag,
+  detachTag,
+  formatTagAttachFailuresNotice,
+  sortTags,
+  type TagAttachFailuresNavState,
+} from '../lib/tags'
 import { placeholderConflictMessage } from '../lib/templates'
 import { fetchApplicableWorkflow } from '../lib/workflows'
 import {
@@ -93,7 +99,19 @@ function minutesSince(iso: string | null | undefined, nowMs = Date.now()): numbe
 
 export function DocumentEditPage() {
   const { id = '' } = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
   const qc = useQueryClient()
+  // Flash non bloquant après création (échecs d'attachTag) — lu une fois puis retiré de l'historique.
+  const [tagAttachNotice] = useState<string | null>(() => {
+    const failures = (location.state as TagAttachFailuresNavState | null)?.tagAttachFailures
+    return failures?.length ? formatTagAttachFailuresNotice(failures) : null
+  })
+  useEffect(() => {
+    if (!tagAttachNotice) return
+    if (!(location.state as TagAttachFailuresNavState | null)?.tagAttachFailures?.length) return
+    navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state: {} })
+  }, [tagAttachNotice, location.pathname, location.search, location.hash, location.state, navigate])
   // Incrémenté après « Abandonner le brouillon » : l'écran repart du contenu publié.
   const [epoch, setEpoch] = useState(0)
   const doc = useQuery({
@@ -659,6 +677,11 @@ function EditSurface({
       />
       {holder && (
         <EditLockBanner name={holder.name} initials={holder.initials} minutes={minutesSince(holder.since)} />
+      )}
+      {tagAttachNotice && (
+        <EditNotice testId="edit-tag-attach-notice" tone="warn">
+          {tagAttachNotice}
+        </EditNotice>
       )}
       {!perms.canEdit && (
         <EditNotice testId="edit-readonly-banner" tone="warn">

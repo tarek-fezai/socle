@@ -1,6 +1,32 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import type { AxiosInstance } from 'axios'
+import { apiErrorCode } from './apiError'
 import type { TagRef } from './documents'
+
+/** Échec de rattachement après création — passé via `navigate(..., { state })`. */
+export type TagAttachFailure = {
+  name: string
+  /** Libellé UI déjà résolu (pas le code API brut). */
+  reasonLabel: string
+}
+
+export type TagAttachFailuresNavState = {
+  tagAttachFailures?: TagAttachFailure[]
+}
+
+/** Raison affichable pour un échec d'`attachTag` (codes connus uniquement). */
+export function tagAttachFailureReasonLabel(error: unknown): string {
+  if (apiErrorCode(error) === 'governed_tag_owner_only') {
+    return 'réservé au propriétaire du tag'
+  }
+  return 'erreur inattendue'
+}
+
+/** Message non bloquant : « N tag(s) non appliqué(s) : Nom (raison), … ». */
+export function formatTagAttachFailuresNotice(failures: TagAttachFailure[]): string {
+  const parts = failures.map((f) => `${f.name} (${f.reasonLabel})`)
+  return `${failures.length} tag(s) non appliqué(s) : ${parts.join(', ')}`
+}
 
 type Api = Pick<AxiosInstance, 'get' | 'post' | 'delete'>
 
