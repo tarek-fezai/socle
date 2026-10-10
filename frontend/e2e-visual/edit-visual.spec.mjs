@@ -2,84 +2,45 @@
 /**
  * Règles : docs/visual-parity.md
  *
- * Document EDIT screen (/docs/:id/edit) vs Edit.dc.html (desktop 1440×900).
- * Pattern: page-visual.spec.mjs (pixel diff ≤ 1 % + data-mock-id structural compare).
+ * Écran Modifier /docs/:id/edit vs Edit.dc.html (desktop 1440×900).
+ *
+ * Pixel honnête (texte inclus, ≤ 1 % par section) ; seul exclu : `mask` Playwright nommé
+ * (`data-visual-mask`). Annotation maquette ET app : attributs `data-*` uniquement
+ * (aucun style / DOM modifié avant capture — plus de normalisation de la maquette).
  *
  * ── Périmètre ─────────────────────────────────────────────────────────────────────────────
- *  - Colonne principale uniquement (x ≥ 268) : la barre latérale est celle du shell, déjà couverte
- *    par les specs Dashboard / Page.
- *  - Glyphes masqués (transparents) dans les diffs pixel ; le texte est couvert par le test structurel.
- *  - Pas de maquette mobile pour l'écran Modifier : aucun test mobile (barre compacte documentée dans
- *    document-edit.css).
+ *  - Colonne principale + assistant (x ≥ 268) : la barre latérale est celle du shell (cf. Dashboard /
+ *    Page).
+ *  - Pas de maquette mobile pour l'écran Modifier : aucun test mobile.
+ *  - Les blocs sans équivalent app (co-édition, poignées, aide « réduire », puces inline, en-tête de bloc
+ *    de code, indicateur de dépôt, aperçu de lien réduit, encadré Note, liste de tâches, carte glossaire)
+ *    sont des zones NOT_IMPLEMENTED : masque nommé côté maquette, jamais comptées comme réussies.
+ *  - Utilisateur courant de la fixture : « Camille Durand » (initiales CD, comme l'avatar de la maquette).
+ *    Le seul détenteur du verrou est cet utilisateur ; la maquette ajoute un second avatar (YM).
+ *  - Le menu « Insérer » est ouvert dans la maquette (état figé, en flux) : il est ouvert dans l'app par
+ *    un clic avant sa capture (interaction utilisateur, pas une mutation du DOM) — mesuré en dernier car il
+ *    recouvre la colonne dans l'app (popover) alors qu'il pousse le contenu dans la maquette.
  *
  * ── Fixture applicative (edit-fixtures.mjs) ──────────────────────────────────────────────
- *  - Le seul éditeur est l'utilisateur courant, qui détient le verrou exclusif ; aucun bandeau de
- *    co-édition (la maquette en montre un : co-édition hors V1, voir « Normalisation »).
- *  - Corps limité aux nœuds du StarterKit (+ zones à compléter, + un bloc `image` et un bloc
- *    `attachment` en fin de corps — la maquette n'en montre pas dans le corps, seulement l'entrée
- *    « Fichier joint » du menu Insérer, masquée ouverte) ; paragraphes de remplissage sous la
- *    ligne de flottaison pour afficher exactement « 1 240 mots · 6 min de lecture ».
+ *  - Corps limité aux nœuds du StarterKit (+ un bloc `image` et un bloc `attachment` en fin de corps) ;
+ *    paragraphes de remplissage sous la ligne de flottaison pour afficher « 1 240 mots · 6 min de lecture ».
  *  - Seuil « paragraphe long » du serveur calé entre le chapeau et le paragraphe « en cours d'édition ».
- *  - Menu « Insérer » fermé (la maquette le montre ouvert) ; le titre du menu « Titre 2 » est obtenu
- *    en plaçant le curseur dans le premier H2.
  *
- * ── Normalisation de la maquette (edit-normalize.mjs) : ce que l'app ne peut pas / ne doit pas montrer ──
- *  N1. Bandeau « Yanis M. modifie également ce document » masqué (co-édition hors V1 ; l'app n'affiche
- *      qu'un bandeau de verrou exclusif réel quand un AUTRE utilisateur détient le verrou).
- *  N2. Avatars de présence : « YM » retiré, « CD » devient l'avatar de l'utilisateur courant « TF ».
- *  N3. Texte d'aide « Un bloc réduit reste dans le document… » et panneau « Insérer » ouvert masqués
- *      (fonction « Réduire les blocs enrichis » non disponible ; menu ouvert = état transitoire).
- *  N4. Poignées de bloc (+ / glisser / réduire) masquées : glisser-déposer et blocs réduits hors V1.
- *  N5. Bulle de sélection flottante, surlignage de sélection, étiquette « Yanis modifie ici » et liseré
- *      de curseur distant retirés (états transitoires de co-édition).
- *  N6. Contour pointillé + curseur factice du paragraphe « en cours d'édition » retirés (focus transitoire).
- *  N7. Puce Jira IAM-482 remplacée par du texte brut (mentions hors V1). La puce date est aussi
- *      aplatie en texte dans la maquette pour coller à la fixture éditeur (compteur de mots +
- *      absence d'icône calendrier côté TipTap) — le nœud `date` est couvert par les tests unitaires
- *      / lecture, pas par le pixel-diff Edit.
- *  N8. Bloc de code : en-tête « bash · script de revue des accès / Copier » retiré (le bloc de code
- *      TipTap n'a pas de langue ni de bouton Copier) ; opacité « déplacement en cours » retirée.
- *  N9. Indicateur de dépôt, aperçu de lien réduit, encadré « Note » et liste de tâches masqués :
- *      blocs hors StarterKit (callout, tâches, liens enrichis) — hors V1 de l'éditeur.
- *  N10. Carte « Terme non conforme » (règle de glossaire) masquée : emplacement réservé, règle
- *      glossaire pas encore livrée côté assistant.
- *
- * ── Exceptions visuelles assumées (app ≠ maquette, hors normalisation) ─────────────────────
- *  E1. Barre d'outils : fonctions encore manquantes (couleur/surlignage, liste de tâches, retraits,
- *      alignements, draw.io, @mention, « Réduire les blocs enrichis ») rendues désactivées
- *      (`aria-disabled`, info-bulle « Bientôt disponible », opacité réduite à 55 %). Souligné, lien,
- *      tableau, image sont actifs. Exception structurelle `edit-toolbar` (skip text) : libellés
- *      agrégés icônes SVG + texte — contrôles comparés par le pixel-diff.
- *  E2. Menu « Insérer » : actifs = Bloc de code, Image, Vidéo, Aperçu de lien, Tableau, Graphique,
- *      Sondage, Date & heure, Bouton, Fichier joint ; Transclure / Schéma restent « bientôt ».
+ * ── Écarts de conception assumés (non masqués — voir `.tmp-design-gaps-page-edit.md`) ───────
+ *  E1. Barre d'outils : fonctions manquantes rendues désactivées (`aria-disabled`, « Bientôt disponible »).
+ *  E2. Menu « Insérer » : popover (maquette : panneau en flux), entrées actives/« bientôt » différentes.
  *  E3. Propriétaire : « Équipe {nom de l'espace} » (maquette : « Équipe Identité »).
- *  E4. Carte « Paragraphe long » : message calculé (« Ce paragraphe dépasse N mots (M) — … ») au lieu
- *      du texte statique « Le paragraphe édité dépasse 60 mots — … » ; bouton « Aller au paragraphe »
- *      ajouté dans l'en-tête de la carte (absent de la maquette).
- *  E5. (retiré) « Gérer → » et « + Champ » mènent à /admin/custom-fields pour ADMINISTRATEUR_SYSTEME.
- *  Ancien commentaire — définitions de
- *      champs n'est pas dans le périmètre de l'écran.
- *  E6. Champs personnalisés : le premier champ de la maquette est en IBM Plex Mono ; l'app utilise
- *      IBM Plex Sans pour tous les champs (type `texte` générique).
- *  E7. Les contrôles de la barre haute sont des <button> (la maquette utilise des <a>) ; mêmes boîtes.
- *  E8. Titre : <textarea> auto-dimensionné (la maquette : <h1 contenteditable>) ; mêmes métriques.
- *  E9. « + Tag » est un bouton ouvrant l'autocomplétion (la maquette : lien vers TagsAdmin).
- *  E10. Fonctionnalités de la maquette absentes : poignées de bloc, glisser-déposer, blocs réduits,
- *       puces inline, callout, liste de tâches, bulle de formatage (voir N4–N9) — listées comme écarts
- *       restants dans le compte rendu.
- *  E11. Barre haute : bouton « Enregistrer la version » (ChangeSummaryPopover, résumé facultatif) absent
- *       de Edit.dc.html — décale présence / Aperçu (~153 px) et agrandit le déclencheur « Envoyer en
- *       révision » (popover). Boîtes des contrôles de la barre haute non comparées ; le pixel-diff
- *       (≤ 1 %, glyphes masqués) couvre le rendu.
- *  Les espaces de mise en forme du source de la maquette (textContent des onglets / de la carte
- *  « Lien cassé ») sont ignorés dans la comparaison structurelle (libellés identiques).
+ *  E4. Carte « Paragraphe long » : message calculé + bouton « Aller au paragraphe ».
+ *  E6. Champs personnalisés : le 1er champ de la maquette est en IBM Plex Mono.
+ *  E7. Les contrôles de la barre haute sont des <button> (la maquette : <a>).
+ *  E8. Titre : <textarea> auto-dimensionné (la maquette : <h1 contenteditable>).
+ *  E11. Barre haute : bouton « Enregistrer la version » absent de Edit.dc.html — décale présence / Aperçu /
+ *       « Envoyer en révision » et comprime le fil d'Ariane.
+ *
+ * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/edit-visual.spec.mjs`
+ * (journalise tous les % / tailles, écrit test-results/edit-before.json, n'échoue pas).
  */
 import { test, expect } from '@playwright/test'
-import fs from 'node:fs'
-import path from 'node:path'
-import { PNG } from 'pngjs'
-import pixelmatch from 'pixelmatch'
-import { fileURLToPath } from 'node:url'
 import {
   EDIT_DESKTOP_IDS,
   annotateEditMockup,
@@ -87,7 +48,6 @@ import {
   collectMetrics,
   compareMetrics,
 } from './structural-compare.mjs'
-import { normalizeEditMockup } from './edit-normalize.mjs'
 import {
   EDIT_APPLICABLE_WORKFLOW,
   EDIT_CUSTOM_FIELDS,
@@ -103,57 +63,326 @@ import {
 } from './edit-fixtures.mjs'
 import { ATTACHMENT_FILE_ID, ATTACHMENT_IMAGE_ID, mockAttachmentRoutes } from './page-fixtures.mjs'
 import { FAVORITES_SEED, NOTIFICATIONS_SEED, SPACE_INFRA, TREE_INFRA } from './dashboard-fixtures.mjs'
+import {
+  AUTH_CONFIG,
+  MOCK_ORIGIN,
+  assertNotImplementedGuards,
+  compareSectionShots,
+  expectNoStructuralDiffs,
+  finishPixelResults,
+  injectOidcSession,
+  json,
+  mockBaseApis,
+  reportNotImplemented,
+  settleFonts,
+  shotSection,
+} from './visual-parity-kit.mjs'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const outDir = path.join(__dirname, 'test-results')
+const MAC_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
-test.use({ timezoneId: 'Europe/Paris' })
+/** Même rendu des deux côtés (couches composées de l'app vs maquette) : texte comparé pixel à pixel. */
+test.use({
+  timezoneId: 'Europe/Paris',
+  userAgent: MAC_UA,
+  launchOptions: { args: ['--disable-lcd-text'] },
+})
 
-const AUTH_CONFIG = {
-  authority: 'http://127.0.0.1:9/realms/socle',
-  clientId: 'socle-frontend',
-  scopes: ['openid', 'profile', 'email'],
-  organizationName: 'Organisation Démo',
-  displayName: 'Organisation Démo',
-  supportContact: 'identite@example.com',
-  passkeyAcrValues: 'phr',
-  idpDisplayName: 'Demo IdP',
+/** Utilisateur courant de la maquette Edit : « CD » (Camille Durand) ; YM est un co-éditeur. */
+const ME_EDIT = { ...ME_TAREK, displayName: 'Camille Durand', givenName: 'Camille', avatarInitials: 'CD' }
+
+/**
+ * Zones maquette sans équivalent app — NON comparées, jamais « passées ».
+ * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
+ */
+export const NOT_IMPLEMENTED = [
+  {
+    id: 'edit-coedit-banner',
+    page: 'edit',
+    reason: 'Bandeau « Yanis M. modifie également ce document » : co-édition temps réel hors V1 (verrou exclusif seul)',
+    backlog: 'EDIT-COEDIT (hors V1)',
+    mockMask: 'edit-coedit-banner',
+    appImplementedProbe: '[data-testid="edit-coedit-banner"]',
+  },
+  {
+    id: 'edit-presence-coeditor',
+    page: 'edit',
+    reason: 'Avatar de présence « YM » (second éditeur) : co-édition hors V1',
+    backlog: 'EDIT-COEDIT (hors V1)',
+    mockMask: 'edit-presence-coeditor',
+    appImplementedProbe: '[data-testid="edit-avatar-coeditor"]',
+  },
+  {
+    id: 'edit-collapse-hint',
+    page: 'edit',
+    reason: 'Texte d’aide « Un bloc réduit reste dans le document… » : blocs enrichis réductibles non disponibles',
+    backlog: 'EDIT-COLLAPSE-BLOCKS',
+    mockMask: 'edit-collapse-hint',
+  },
+  {
+    id: 'edit-lead-coedit',
+    page: 'edit',
+    reason:
+      'Chapeau : bulle de sélection flottante, surlignage de sélection, étiquette « Yanis modifie ici » et curseur distant (co-édition)',
+    backlog: 'EDIT-COEDIT (hors V1)',
+    mockMask: 'edit-lead-coedit',
+  },
+  {
+    id: 'edit-selection-bubble',
+    page: 'edit',
+    reason: 'Bulle de formatage flottante sur la sélection partagée (co-édition) — recouvre le titre dans la maquette',
+    backlog: 'EDIT-COEDIT (hors V1)',
+    mockMask: 'edit-selection-bubble',
+  },
+  {
+    id: 'edit-block-handles',
+    page: 'edit',
+    reason: 'Poignées de bloc visibles (+ / glisser / réduire) : glisser-déposer et blocs réduits hors V1',
+    backlog: 'EDIT-DRAG-DROP',
+    mockMask: 'edit-block-handles',
+  },
+  {
+    id: 'edit-toolbar-soon',
+    page: 'edit',
+    reason:
+      'Boutons de barre d’outils sans fonction (couleur/surlignage, liste de tâches, retraits, alignements, draw.io, @mention, réduire les blocs) : rendus désactivés « Bientôt disponible » dans l’app',
+    backlog: 'EDIT-TOOLBAR-SOON',
+    mockMask: 'edit-toolbar-soon',
+    appPlaceholderSelector: '.edit-toolbar [data-soon="true"]',
+  },
+  {
+    id: 'edit-insert-soon',
+    page: 'edit',
+    reason: 'Entrées du menu « Insérer » sans fonction (Transclure une page, Schéma) : rendues désactivées « Bientôt disponible »',
+    backlog: 'EDIT-INSERT-SOON',
+    mockMask: 'edit-insert-soon',
+  },
+  {
+    id: 'edit-inline-chips',
+    page: 'edit',
+    reason: 'Paragraphe à puces inline (carte Jira IAM-482, date 15 octobre 2026) : mentions / dates inline hors V1',
+    backlog: 'EDIT-INLINE-NODES',
+    mockMask: 'edit-inline-chips',
+  },
+  {
+    id: 'edit-code-header',
+    page: 'edit',
+    reason:
+      'Bloc de code : en-tête « bash · script de revue des accès / Copier » et état « déplacement en cours » (opacité) — le bloc de code TipTap n’a ni langue ni bouton Copier, ni glisser-déposer',
+    backlog: 'EDIT-CODEBLOCK-HEADER',
+    mockMask: 'edit-code-header',
+  },
+  {
+    id: 'edit-drop-line',
+    page: 'edit',
+    reason: 'Indicateur de dépôt (glisser-déposer de blocs) hors V1',
+    backlog: 'EDIT-DRAG-DROP',
+    mockMask: 'edit-drop-line',
+  },
+  {
+    id: 'edit-link-preview-collapsed',
+    page: 'edit',
+    reason: 'Aperçu de lien réduit (bloc enrichi réduit en une ligne) : réduction de blocs hors V1',
+    backlog: 'EDIT-COLLAPSE-BLOCKS',
+    mockMask: 'edit-link-preview-collapsed',
+  },
+  {
+    id: 'edit-callout-note',
+    page: 'edit',
+    reason: 'Encadré « Note » (callout) : nœud absent de l’éditeur',
+    backlog: 'EDIT-CALLOUT',
+    mockMask: 'edit-callout-note',
+  },
+  {
+    id: 'edit-tasklist',
+    page: 'edit',
+    reason: 'Liste de tâches (cases à cocher) : nœud absent de l’éditeur',
+    backlog: 'EDIT-TASKLIST',
+    mockMask: 'edit-tasklist',
+  },
+  {
+    id: 'edit-glossary-card',
+    page: 'edit',
+    reason: 'Carte « Terme non conforme » (règle de glossaire) : règle pas encore livrée côté assistant',
+    backlog: 'EDIT-GLOSSARY-RULE',
+    mockMask: 'edit-glossary-card',
+  },
+]
+
+/** Écarts mesurés (app − maquette) déclarés. */
+const SIZE_EXCEPTIONS = {
+  'edit-desktop-p-editing': {
+    dw: 0,
+    dh: -4,
+    reason:
+      'la maquette montre le paragraphe en état « en cours d’édition » (padding + contour pointillé, caret factice) — état de focus transitoire ; le texte est comparé (zone commune en haut à gauche)',
+  },
 }
 
-const json = (route, body, status = 200) =>
-  route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+/* ------------------------------------------------------------------ */
+/* Sections                                                           */
+/* ------------------------------------------------------------------ */
 
-async function injectOidcSession(page) {
-  await page.addInitScript(
-    ({ authority, clientId, now }) => {
-      Date.now = () => now
-      const key = `oidc.user:${authority}:${clientId}`
-      const user = {
-        id_token: 'visual.id',
-        session_state: 'visual',
-        access_token: 'visual-access-token',
-        refresh_token: 'visual-refresh',
-        token_type: 'Bearer',
-        scope: 'openid profile email',
-        profile: { sub: 'tarek-visual', name: 'Tarek Fezai', preferred_username: 'tarek', given_name: 'Tarek' },
-        expires_at: Math.floor(now / 1000) + 3600,
-      }
-      sessionStorage.setItem(key, JSON.stringify(user))
-      localStorage.setItem(
-        'socle.shell.expandedSpaces',
-        JSON.stringify(['s0000001-0000-4000-8000-000000000001', 's0000001-0000-4000-8000-000000000002']),
+/** id = data-mock-id posé par `annotateSections*` (maquette et app). `lead` / `chips` / `code` : NOT_IMPLEMENTED. */
+const DESKTOP_SECTIONS = [
+  { id: 'ed-meta', name: 'topbar-meta' },
+  // L'avatar « YM » (co-éditeur) chevauche le bord gauche de « CD » dans la maquette (masque = carré, non appliqué ici).
+  { id: 'ed-presence', name: 'presence' },
+  { id: 'ed-preview', name: 'preview' },
+  { id: 'ed-send-review', name: 'send-review' },
+  { id: 'ed-tabs', name: 'tabs' },
+  { id: 'ed-toolbar', name: 'toolbar', masks: ['edit-toolbar-soon'] },
+  {
+    id: 'ed-title',
+    name: 'title',
+    // Bulle de formatage flottante (co-édition) : absolue dans la maquette, recouvre le titre.
+    mockTargeted: [
+      { name: 'edit-selection-bubble', selector: '[data-visual-mask="edit-selection-bubble"]', reason: 'bulle de sélection partagée (NOT_IMPLEMENTED)' },
+    ],
+  },
+  // Nœuds ProseMirror : ProseMirror retire les attributs posés de l'extérieur (observer DOM) → sélecteurs
+  // CSS côté app (côté maquette : data-mock-id).
+  { id: 'ed-h2-principe', name: 'h2-principe', appSelector: '.ProseMirror > :nth-child(2)' },
+  { id: 'ed-p-editing', name: 'p-editing', appSelector: '.ProseMirror > :nth-child(3)' },
+  { id: 'ed-h2-cycle', name: 'h2-cycle', appSelector: '.ProseMirror > :nth-child(6)' },
+  { id: 'ed-ol', name: 'ol', appSelector: '.ProseMirror > :nth-child(7)' },
+  { id: 'ed-hr', name: 'hr', appSelector: '.ProseMirror > :nth-child(8)' },
+  { id: 'ed-assistant-label', name: 'assistant-label' },
+  { id: 'ed-card-long', name: 'card-long' },
+  { id: 'ed-card-link', name: 'card-link' },
+  { id: 'ed-meta-block', name: 'meta-block' },
+]
+/** Menu « Insérer » : mesuré après ouverture dans l'app (voir en-tête). */
+const INSERT_SECTION = { id: 'ed-insert-menu', name: 'insert-menu', masks: ['edit-insert-soon'] }
+
+/* ------------------------------------------------------------------ */
+/* Annotation (data-* uniquement)                                      */
+/* ------------------------------------------------------------------ */
+
+/** Edit.dc.html — sections pixel + masques NOT_IMPLEMENTED (structure d'origine, accès par index). */
+async function annotateSectionsMock(page, soonRects, insertSoonRects) {
+  await page.evaluate(({ soon, insertSoon }) => {
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const mask = (el, name) => el?.setAttribute('data-visual-mask', name)
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    const main = root.children[1]
+    const [topbar, banner, tabs, row] = [...main.children]
+    mask(banner, 'edit-coedit-banner')
+    set(topbar.children[0], 'ed-meta')
+    const actions = topbar.children[1]
+    const presence = actions.children[0]
+    mask(presence.children[0], 'edit-presence-coeditor')
+    set(presence.children[1], 'ed-presence')
+    set(actions.children[1], 'ed-preview')
+    set(actions.children[2], 'ed-send-review')
+    set(tabs, 'ed-tabs')
+
+    const col = row.children[0].children[0]
+    const k = [...col.children]
+    set(k[0], 'ed-toolbar')
+    mask(k[1], 'edit-collapse-hint')
+    set(k[2], 'ed-insert-menu')
+    set(k[3], 'ed-title')
+    mask(k[4], 'edit-lead-coedit')
+    mask(k[4].querySelector('p > span > span:nth-child(2)'), 'edit-selection-bubble')
+    set(k[5], 'ed-h2-principe')
+    set(k[6], 'ed-p-editing')
+    mask(k[7], 'edit-inline-chips')
+    mask(k[8], 'edit-code-header')
+    mask(k[9], 'edit-drop-line')
+    mask(k[10], 'edit-link-preview-collapsed')
+    mask(k[11], 'edit-callout-note')
+    set(k[12], 'ed-h2-cycle')
+    set(k[13], 'ed-ol')
+    mask(k[14], 'edit-tasklist')
+    set(k[15], 'ed-hr')
+
+    const panel = row.children[1]
+    set(panel.children[0], 'ed-assistant-label')
+    set(panel.children[1], 'ed-card-long')
+    set(panel.children[2], 'ed-card-link')
+    mask(panel.children[3], 'edit-glossary-card')
+    set(panel.children[4], 'ed-meta-block')
+
+    // Poignées de bloc réellement visibles (le reste est masqué par le CSS de la maquette).
+    for (const h of document.querySelectorAll('.block-handles')) {
+      const cs = getComputedStyle(h)
+      if (cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0) mask(h, 'edit-block-handles')
+    }
+
+    // Boutons de barre d'outils « bientôt » de l'app : mêmes cases (x, y relatifs à la barre) dans la maquette.
+    const tb = k[0].getBoundingClientRect()
+    for (const b of k[0].querySelectorAll('button')) {
+      const r = b.getBoundingClientRect()
+      const x = r.x - tb.x
+      const y = r.y - tb.y
+      if (soon.some((s) => Math.abs(s.x - x) < 1.5 && Math.abs(s.y - y) < 1.5)) mask(b, 'edit-toolbar-soon')
+    }
+
+    // Entrées « bientôt » du menu Insérer : même case (x, y, w, h relatifs au panneau) que dans l'app.
+    const panelBox = k[2].getBoundingClientRect()
+    for (const el of k[2].querySelectorAll('*')) {
+      const r = el.getBoundingClientRect()
+      const x = r.x - panelBox.x
+      const y = r.y - panelBox.y
+      const hit = insertSoon.some(
+        (s) =>
+          Math.abs(s.x - x) < 1.5 &&
+          Math.abs(s.y - y) < 1.5 &&
+          Math.abs(s.w - r.width) < 1.5 &&
+          Math.abs(s.h - r.height) < 1.5,
       )
-    },
-    { authority: AUTH_CONFIG.authority, clientId: AUTH_CONFIG.clientId, now: VISUAL_NOW },
-  )
+      if (hit && !el.parentElement?.closest('[data-visual-mask="edit-insert-soon"]')) mask(el, 'edit-insert-soon')
+    }
+  }, { soon: soonRects, insertSoon: insertSoonRects })
 }
 
 /**
- * @param {import('@playwright/test').Page} page
- * @param {{ lockHolder?: string|null, putCalls?: Array<Record<string, unknown>> }} [opts]
+ * App /docs/:id/edit — mêmes ids de section (data-* uniquement).
+ * @returns {Promise<{x:number,y:number}[]>} cases (relatives à la barre d'outils) des boutons « bientôt ».
  */
-async function mockEditApis(page, { lockHolder = null, putCalls = [], draftPutCalls = [], tags } = {}) {
+async function annotateSectionsApp(page) {
+  return page.evaluate(() => {
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    set(document.querySelector('.edit-topbar .edit-meta'), 'ed-meta')
+    set(document.querySelector('.edit-presence .edit-avatar'), 'ed-presence')
+    set(document.querySelector('[data-mock-id="edit-preview"]'), 'ed-preview')
+    set(document.querySelector('[data-mock-id="edit-send-review"]'), 'ed-send-review')
+    set(document.querySelector('.doc-tabs'), 'ed-tabs')
+    set(document.querySelector('.edit-toolbar'), 'ed-toolbar')
+    set(document.querySelector('[data-testid="edit-title"]'), 'ed-title')
+    // Corps ProseMirror : 1 chapeau · 2 h2 · 3 paragraphe en cours d'édition · 4 chantier · 5 code · 6 h2 · 7 ol · 8 hr
+    // (sélectionnés par `appSelector`, cf. DESKTOP_SECTIONS).
+    const assistant = document.querySelector('[data-testid="edit-assistant"]')
+    set(assistant.querySelector('.edit-panel-label'), 'ed-assistant-label')
+    const cards = assistant.querySelectorAll('.edit-card')
+    set(cards[0], 'ed-card-long')
+    set(cards[1], 'ed-card-link')
+    set(document.querySelector('[data-testid="edit-meta"]'), 'ed-meta-block')
+
+    const tb = document.querySelector('.edit-toolbar').getBoundingClientRect()
+    return [...document.querySelectorAll('.edit-toolbar [data-soon="true"]')].map((b) => {
+      b.setAttribute('data-visual-mask', 'edit-toolbar-soon')
+      const r = b.getBoundingClientRect()
+      return { x: r.x - tb.x, y: r.y - tb.y }
+    })
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Mocks API                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {{ lockHolder?: string|null, putCalls?: Array<Record<string, unknown>>, draftPutCalls?: Array<Record<string, unknown>>, tags?: unknown[], me?: typeof ME_TAREK }} [opts]
+ */
+async function mockEditApis(
+  page,
+  { lockHolder = null, putCalls = [], draftPutCalls = [], tags, me = ME_EDIT } = {},
+) {
   const doc = tags ? { ...editDocument(), tags } : editDocument()
+  await mockBaseApis(page, { me, notifications: NOTIFICATIONS_SEED, spaces: [SPACE_IDENTITE, SPACE_INFRA] })
   // Brouillon autosave : aucun brouillon à l'ouverture (404) ; PUT = écho + updatedAt.
   await page.route(`**/api/v1/documents/${EDIT_DOC_ID}/draft`, (route) => {
     const req = route.request()
@@ -166,7 +395,6 @@ async function mockEditApis(page, { lockHolder = null, putCalls = [], draftPutCa
     return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
   })
   await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
-  await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
   await mockAttachmentRoutes(page)
   await page.route(`**/api/v1/documents/${EDIT_DOC_ID}`, (route) => {
     const req = route.request()
@@ -209,11 +437,6 @@ async function mockEditApis(page, { lockHolder = null, putCalls = [], draftPutCa
   await page.route('**/api/v1/tags**', (route) => json(route, []))
   await page.route('**/api/v1/favorites/**', (route) => json(route, { favorited: false }))
   await page.route('**/api/v1/favorites', (route) => json(route, FAVORITES_SEED))
-  await page.route('**/api/v1/notifications**', (route) => json(route, NOTIFICATIONS_SEED))
-  await page.route('**/api/v1/spaces', (route) => {
-    if (route.request().method() !== 'GET') return route.continue()
-    return json(route, [SPACE_IDENTITE, SPACE_INFRA])
-  })
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}`, (route) => json(route, SPACE_IDENTITE))
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}/tree**`, (route) => json(route, TREE_IDENTITE))
   await page.route(`**/api/v1/spaces/${SPACE_INFRA.id}/tree**`, (route) => json(route, TREE_INFRA))
@@ -221,40 +444,14 @@ async function mockEditApis(page, { lockHolder = null, putCalls = [], draftPutCa
 }
 
 async function prep(page, opts) {
-  await injectOidcSession(page)
+  await injectOidcSession(page, VISUAL_NOW)
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'socle.shell.expandedSpaces',
+      JSON.stringify(['s0000001-0000-4000-8000-000000000001', 's0000001-0000-4000-8000-000000000002']),
+    )
+  })
   await mockEditApis(page, opts)
-}
-
-function diffRatio(a, b, label) {
-  const imgA = PNG.sync.read(a)
-  const imgB = PNG.sync.read(b)
-  if (imgA.width !== imgB.width || imgA.height !== imgB.height) {
-    throw new Error(`${label}: size mismatch ${imgA.width}x${imgA.height} vs ${imgB.width}x${imgB.height}`)
-  }
-  const diff = new PNG({ width: imgA.width, height: imgA.height })
-  const mismatched = pixelmatch(imgA.data, imgB.data, diff.data, imgA.width, imgA.height, {
-    threshold: 0.2,
-    includeAA: false,
-  })
-  fs.mkdirSync(outDir, { recursive: true })
-  fs.writeFileSync(path.join(outDir, `${label}-maquette.png`), a)
-  fs.writeFileSync(path.join(outDir, `${label}-app.png`), b)
-  fs.writeFileSync(path.join(outDir, `${label}-diff.png`), PNG.sync.write(diff))
-  return mismatched / (imgA.width * imgA.height)
-}
-
-async function settleFonts(page) {
-  await page.evaluate(() => document.fonts.ready)
-}
-
-/** Glyphes transparents : le pixel-diff compare la géométrie / les aplats, pas le rendu des polices. */
-async function maskGlyphs(page) {
-  await page.addStyleTag({
-    content: `* { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; caret-color: transparent !important; }
-      svg text { fill: transparent !important; }
-      input::placeholder, textarea::placeholder { color: transparent !important; }
-      ::selection { background: transparent; }`,
-  })
 }
 
 /** Attend que l'écran soit complet (titre, assistant, métadonnées, compteur de commentaires). */
@@ -269,70 +466,112 @@ async function waitEditReady(page) {
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
   })
-  await page.mouse.move(0, 0)
+  await page.mouse.move(1, 1)
 }
 
-const MOCK = 'http://127.0.0.1:4174'
+/* ------------------------------------------------------------------ */
+/* Pixel                                                              */
+/* ------------------------------------------------------------------ */
+
+async function shoot(page, section, side) {
+  const selector = side === 'app' && section.appSelector ? section.appSelector : `[data-mock-id="${section.id}"]`
+  return shotSection(page, selector, {
+    maskNames: section.masks ?? [],
+    targeted: side === 'mock' ? (section.mockTargeted ?? []) : [],
+    label: `edit-desktop-sec-${section.name}-${side}`,
+  })
+}
 
 test.describe('document edit visual parity', () => {
-  test('desktop Edit vs Edit.dc.html @ 1440×900 (colonne principale)', async ({ page }, testInfo) => {
+  test('desktop Edit vs Edit.dc.html — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
     await prep(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
+    // App d'abord : les boutons « bientôt » de la barre d'outils fixent les cases masquées côté maquette.
     await page.goto(`/docs/${EDIT_DOC_ID}/edit`)
     await waitEditReady(page)
-    await page.evaluate(() => {
-      document.body.style.margin = '0'
-      document.documentElement.style.overflow = 'hidden'
+    const soonRects = await annotateSectionsApp(page)
+    await settleFonts(page)
+    await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'edit')
+    const appSec = {}
+    for (const s of DESKTOP_SECTIONS) {
+      await page.mouse.move(1, 1)
+      appSec[s.name] = await shoot(page, s, 'app')
+    }
+    // Menu « Insérer » : ouvert par clic (état figé ouvert dans la maquette) — en dernier, il recouvre la colonne.
+    await page.getByTestId('edit-insert-btn').click()
+    await page.waitForSelector('[data-testid="edit-insert-panel"]')
+    const insertSoonRects = await page.evaluate(() => {
+      const panel = document.querySelector('[data-testid="edit-insert-panel"]')
+      panel.setAttribute('data-mock-id', 'ed-insert-menu')
+      const pb = panel.getBoundingClientRect()
+      return [...panel.querySelectorAll('[data-soon="true"]')].map((b) => {
+        b.setAttribute('data-visual-mask', 'edit-insert-soon')
+        const r = b.getBoundingClientRect()
+        return { x: r.x - pb.x, y: r.y - pb.y, w: r.width, h: r.height }
+      })
     })
-    await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(150)
-    const clip = { x: 268, y: 0, width: 1172, height: 900 }
-    const appShot = await page.screenshot({ fullPage: false, clip })
+    await page.mouse.move(1, 1)
+    appSec[INSERT_SECTION.name] = await shoot(page, INSERT_SECTION, 'app')
 
-    await page.goto(`${MOCK}/Edit.dc.html`)
-    await annotateEditMockup(page)
-    await normalizeEditMockup(page)
+    await page.goto(`${MOCK_ORIGIN}/Edit.dc.html`)
+    await annotateSectionsMock(page, soonRects, insertSoonRects)
     await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(150)
-    const mockShot = await page.screenshot({ fullPage: false, clip })
+    await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'edit')
+    const mockSec = {}
+    for (const s of [...DESKTOP_SECTIONS, INSERT_SECTION]) mockSec[s.name] = await shoot(page, s, 'mock')
 
-    await testInfo.attach('maquette-edit', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-edit', { body: appShot, contentType: 'image/png' })
-    const ratio = diffRatio(mockShot, appShot, 'edit-desktop')
-    console.log(`edit-desktop pixel diff ratio = ${(ratio * 100).toFixed(3)} %`)
-    expect(ratio, `desktop edit diff ${ratio}`).toBeLessThanOrEqual(0.01)
+    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const results = []
+    for (const s of [...DESKTOP_SECTIONS, INSERT_SECTION]) {
+      results.push(compare(`edit-desktop-${s.name}`, mockSec[s.name].shot, appSec[s.name].shot, testInfo))
+    }
+
+    finishPixelResults('edit', results)
   })
 })
 
+/* ------------------------------------------------------------------ */
+/* Structurel                                                         */
+/* ------------------------------------------------------------------ */
+
 test.describe('document edit structural', () => {
+  const BANNER_Y =
+    'box.y : la maquette porte le bandeau de co-édition « Yanis M. modifie également ce document » (53 px, NOT_IMPLEMENTED edit-coedit-banner) au-dessus ; x / w / h comparés.'
   const desktopExceptions = {
     'edit-toolbar': {
-      skip: ['text'],
-      reason:
-        'E1 : libellés agrégés (icônes SVG + texte) — contrôles comparés par le pixel-diff ; outils encore « bientôt » hors tableau/image',
+      skip: ['text', 'box.y'],
+      reason: `E1 : libellés agrégés (icônes SVG + texte) — contrôles comparés par le pixel. ${BANNER_Y}`,
     },
     'edit-tabs': {
-      skip: ['text'],
-      reason: 'Espaces de mise en forme du source de la maquette entre onglets (textContent) ; libellés identiques',
+      skip: ['text', 'box.y'],
+      reason: `Espaces de mise en forme du source de la maquette entre onglets (textContent) ; libellés identiques. ${BANNER_Y}`,
     },
+    'edit-title': {
+      skip: ['box.y'],
+      reason:
+        'box.y : la maquette pousse le titre de ~508 px (bandeau de co-édition + aide « réduire » + menu « Insérer » ouvert en flux) ; l’app ouvre « Insérer » en popover. x / w / h comparés.',
+    },
+    'edit-assistant': {
+      skip: ['text', 'box'],
+      reason: `Conteneur — textes comparés sur les enfants annotés ; carte glossaire NOT_IMPLEMENTED absente de l’app. box : y décalé (${BANNER_Y}) et hauteur = reste de la fenêtre (900 − y) ; x / w comparés par le pixel (sections).`,
+    },
+    'edit-assistant-label': { skip: ['box.y'], reason: BANNER_Y },
     'edit-card-link': {
-      skip: ['text'],
-      reason: 'Idem : retours à la ligne du source entre titre et message ; libellés identiques',
+      skip: ['text', 'box.y'],
+      reason: `Idem : retours à la ligne du source entre titre et message ; libellés identiques. ${BANNER_Y}`,
     },
+    'edit-card-link-text': { skip: ['box.y'], reason: BANNER_Y },
     'edit-card-long-text': {
-      skip: ['text'],
-      reason: 'E4 : message calculé (« Ce paragraphe dépasse N mots (M) ») au lieu du texte statique',
+      skip: ['text', 'box.y'],
+      reason: `E4 : message calculé (« Ce paragraphe dépasse N mots (M) ») au lieu du texte statique. ${BANNER_Y}`,
     },
     'edit-card-long': {
-      skip: ['text'],
-      reason: 'E4 : bouton « Aller au paragraphe » ajouté dans l’en-tête ; message calculé',
+      skip: ['text', 'box.y'],
+      reason: `E4 : bouton « Aller au paragraphe » ajouté dans l’en-tête ; message calculé. ${BANNER_Y}`,
     },
     'edit-meta-owner': { skip: ['text'], reason: 'E3 : « Équipe {nom de l’espace} » (maquette : « Équipe Identité »)' },
-    'edit-assistant': { skip: ['text'], reason: 'Conteneur — textes comparés sur les enfants annotés (N10 : carte glossaire masquée)' },
-    'edit-meta': { skip: ['text'], reason: 'Conteneur — textes comparés sur les enfants annotés ; E3/E5' },
+    'edit-meta': { skip: ['text'], reason: 'Conteneur — textes comparés sur les enfants annotés ; E3' },
     'edit-topbar': { skip: ['text'], reason: 'Conteneur — textes comparés sur les enfants annotés' },
     'edit-meta-custom-field-1': {
       skip: ['fontFamily'],
@@ -351,8 +590,9 @@ test.describe('document edit structural', () => {
       reason: 'E11 : compteur décalé par « Enregistrer la version » (absent de Edit.dc.html)',
     },
     'edit-presence': {
-      skip: ['box'],
-      reason: 'E11 : présence décalée (~153 px) par « Enregistrer la version »',
+      skip: ['box', 'text'],
+      reason:
+        'Co-édition hors V1 : la maquette montre deux avatars (YM + CD) ; l’app un seul (utilisateur courant). Décalage E11 en plus',
     },
     'edit-preview': {
       skip: ['box'],
@@ -365,14 +605,13 @@ test.describe('document edit structural', () => {
     },
   }
 
-  test('desktop Edit structural match', async ({ page }, testInfo) => {
+  test('desktop Edit structural match', async ({ page }) => {
     await prep(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    await page.goto(`${MOCK}/Edit.dc.html`)
+    await page.goto(`${MOCK_ORIGIN}/Edit.dc.html`)
     await settleFonts(page)
     await annotateEditMockup(page)
-    await normalizeEditMockup(page)
     const mockMap = await collectMetrics(page, EDIT_DESKTOP_IDS)
 
     await page.goto(`/docs/${EDIT_DOC_ID}/edit`)
@@ -385,16 +624,13 @@ test.describe('document edit structural', () => {
     expect(fonts.find((f) => f.family === 'IBM Plex Sans')?.loaded).toBe(true)
 
     const results = compareMetrics(mockMap, appMap, EDIT_DESKTOP_IDS, { pageExceptions: desktopExceptions })
-    fs.mkdirSync(outDir, { recursive: true })
-    fs.writeFileSync(path.join(outDir, 'structural-edit-desktop.json'), JSON.stringify(results, null, 2))
-    await testInfo.attach('structural-edit-desktop.json', {
-      body: Buffer.from(JSON.stringify(results, null, 2)),
-      contentType: 'application/json',
-    })
-    const failures = results.filter((r) => r.diffs.length)
-    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+    expectNoStructuralDiffs(results)
   })
 })
+
+/* ------------------------------------------------------------------ */
+/* Comportement (non visuel)                                           */
+/* ------------------------------------------------------------------ */
 
 test.describe('document edit behaviour', () => {
   test('autosave : une frappe déclenche un seul PUT brouillon après ~1 s (aucune version)', async ({ page }) => {

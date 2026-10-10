@@ -35,6 +35,8 @@ function resolveTemplates(html) {
 const KEEP_HELMET_STYLES = new Set([
   'Diff.dc.html',
   'DiffApproval.dc.html',
+  // .block-handles / .block — sinon les poignées se rendent inline et déplacent le corps
+  'Edit.dc.html',
   // .nav-item.on { background; font-weight } — sinon l'état actif n'existe pas (inline color seule)
   'TagsAdmin.dc.html',
   'CustomFields.dc.html',

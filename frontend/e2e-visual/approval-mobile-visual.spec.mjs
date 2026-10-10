@@ -2,9 +2,11 @@
 /**
  * Règles : docs/visual-parity.md
  *
- * Approbation mobile (/approvals @ 390×844) vs MobileApproval.dc.html.
- * Même schéma que history-mobile-visual : pixel-diff plein écran (glyphes masqués, ≤ 1 %) +
- * comparaison structurelle `data-mock-id`.
+ * Approbation mobile (/approvals/:requestId @ 390×844) vs MobileApproval.dc.html.
+ *
+ * Pixel honnête (texte inclus, ≤ 1 % par section, surfaces rapportées à 390×844) ; aucun masque.
+ * Annotation maquette / app : data-* uniquement (aucune modification de style / DOM avant capture).
+ * Mobile : pas de sidebar des deux côtés → aucune SIZE_EXCEPTION attendue.
  *
  * Exceptions documentées (numérotées, reprises dans la PR) :
  *  - M1  « Étape 1 sur 2 » : le total vient du circuit applicable (`applicable-workflow`) ; sans lui
@@ -16,9 +18,11 @@
  *  - M4  Justification : pas de champ dans la maquette. Un premier appui sur « Rejeter » ouvre le champ,
  *        le second envoie (refus bloqué côté client sans texte). « Approuver » n'exige rien.
  *  - M5  Boutons de la barre du bas : police IBM Plex (app) vs police système (maquette, `<button>` sans
- *        `font-family`) — familles non comparées ; hauteur de barre épinglée par les boîtes (±3 px).
+ *        `font-family`) — familles non comparées en structure ; comparées au pixel (texte inclus).
  *  - M6  Pas de barre d'onglets du bas : la maquette n'en a pas (le shell la masque sur cet écran).
- *  - M7  Glyphes masqués dans les diffs pixel ; le texte est couvert par le test structurel.
+ *
+ * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/approval-mobile-visual.spec.mjs`
+ * (journalise tous les % / tailles, écrit test-results/approval-mobile-before.json, n'échoue pas).
  */
 import { test, expect } from '@playwright/test'
 import {
@@ -34,17 +38,46 @@ import {
   APPR_VERSIONS_MOBILE,
   APPR_WORKFLOW_MOBILE,
 } from './approval-fixtures.mjs'
-import { MOCK, diffRatio, maskGlyphs, prepApproval, settleFonts, writeStructural } from './approval-helpers.mjs'
+import { MOCK, prepApproval, settleFonts, writeStructural } from './approval-helpers.mjs'
+import {
+  compareSectionShots,
+  expectNoStructuralDiffs,
+  finishPixelResults,
+  shotSection,
+} from './visual-parity-kit.mjs'
 
 test.use({ timezoneId: 'Europe/Paris' })
 
 const URL = `/approvals/${APPR_REQUEST_ID}`
+const MOBILE_AREA = 390 * 844
 const MOBILE_OPTS = {
   items: [APPR_ITEM_MOBILE],
   detail: APPR_DETAIL_MOBILE,
   workflow: APPR_WORKFLOW_MOBILE,
   versions: APPR_VERSIONS_MOBILE,
 }
+
+/**
+ * Zones maquette sans donnée / fonctionnalité produit — aucune pour l'instant. Liste conservée vide pour
+ * que toute absence future soit déclarée.
+ * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
+ */
+export const NOT_IMPLEMENTED = []
+
+/** Aucune sidebar sur mobile : tailles attendues identiques, aucune exception. */
+const SIZE_EXCEPTIONS = {}
+
+const PIXEL_SECTIONS = [
+  { id: 'appr-m-page', name: 'page' },
+  { id: 'appr-mobile-top', name: 'top' },
+  { id: 'appr-m-badge', name: 'badge' },
+  { id: 'appr-m-title', name: 'title' },
+  { id: 'appr-m-sub', name: 'sub' },
+  { id: 'appr-m-chain', name: 'chain' },
+  { id: 'appr-m-diff-link', name: 'diff-link' },
+  { id: 'appr-m-quote', name: 'quote' },
+  { id: 'appr-m-bar', name: 'bar' },
+]
 
 async function openMobile(page, opts = {}) {
   await prepApproval(page, { ...MOBILE_OPTS, ...opts })
@@ -55,46 +88,58 @@ async function openMobile(page, opts = {}) {
   await settleFonts(page)
 }
 
-async function pinMockupRoot(page) {
+/** Annotation MobileApproval.dc.html — data-* uniquement. */
+async function annotateMock(page) {
+  await annotateMobileApprovalMockup(page)
   await page.evaluate(() => {
     const root = Array.from(document.querySelectorAll('div')).find((d) =>
       (d.getAttribute('style') || '').includes('390px'),
     )
-    if (root) {
-      root.style.position = 'fixed'
-      root.style.left = '0'
-      root.style.top = '0'
-    }
+    root?.setAttribute('data-mock-id', 'appr-m-page')
+    root?.children[0]?.setAttribute('data-mock-id', 'appr-mobile-top')
+  })
+}
+
+/** Annotation app — data-* uniquement (la page entière = `body`, 390×844 attendus). */
+async function annotateApp(page) {
+  await page.evaluate(() => {
+    document.body.setAttribute('data-mock-id', 'appr-m-page')
   })
 }
 
 test.describe('Approbation mobile — parité visuelle', () => {
-  test('mobile Approbation vs MobileApproval.dc.html @ 390×844', async ({ page }, testInfo) => {
+  test('mobile Approbation vs MobileApproval.dc.html — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
     await prepApproval(page, MOBILE_OPTS)
     await page.setViewportSize({ width: 390, height: 844 })
 
     await page.goto(`${MOCK}/MobileApproval.dc.html`)
-    await pinMockupRoot(page)
+    await annotateMock(page)
     await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(100)
-    const clip = { x: 0, y: 0, width: 390, height: 844 }
-    const mockShot = await page.screenshot({ fullPage: false, clip })
+
+    const mockSec = {}
+    for (const s of PIXEL_SECTIONS) {
+      mockSec[s.name] = await shotSection(page, `[data-mock-id="${s.id}"]`, {
+        label: `approval-mobile-sec-${s.name}-mock`,
+        pageArea: MOBILE_AREA,
+      })
+    }
 
     await page.goto(URL)
     await page.waitForSelector('[data-mock-id="appr-m-quote-text"]')
-    await page.evaluate(() => {
-      document.body.style.margin = '0'
-    })
+    await page.mouse.move(1, 1)
     await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(100)
-    const appShot = await page.screenshot({ fullPage: false, clip })
+    await annotateApp(page)
 
-    await testInfo.attach('maquette-approval-mobile', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-approval-mobile', { body: appShot, contentType: 'image/png' })
-    const ratio = diffRatio(mockShot, appShot, 'approval-mobile')
-    expect(ratio, `mobile approval diff ${ratio}`).toBeLessThanOrEqual(0.01)
+    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const results = []
+    for (const s of PIXEL_SECTIONS) {
+      const app = await shotSection(page, `[data-mock-id="${s.id}"]`, {
+        label: `approval-mobile-sec-${s.name}-app`,
+        pageArea: MOBILE_AREA,
+      })
+      results.push(compare(`approval-mobile-${s.name}`, mockSec[s.name].shot, app.shot, testInfo))
+    }
+    finishPixelResults('approval-mobile', results, { notImplemented: NOT_IMPLEMENTED })
   })
 })
 
@@ -103,12 +148,12 @@ test.describe('Approbation mobile — structure', () => {
     'appr-m-chain': { skip: ['text'], reason: 'Conteneur — étapes comparées séparément' },
     'appr-m-diff-link': { skip: ['text'], reason: 'Conteneur — libellé comparé séparément' },
     'appr-m-quote': { skip: ['text'], reason: 'Conteneur — paragraphe comparé séparément' },
-    'appr-m-reject': { skip: ['fontFamily', 'box'], reason: 'M5 : police système (maquette) vs IBM Plex' },
-    'appr-m-approve': { skip: ['fontFamily', 'box'], reason: 'M5 : police système (maquette) vs IBM Plex' },
-    'appr-m-bar': { skip: ['text', 'box'], reason: 'M5 : hauteur induite par la police des boutons' },
+    'appr-m-reject': { skip: ['fontFamily'], reason: 'M5 : police système (maquette) vs IBM Plex' },
+    'appr-m-approve': { skip: ['fontFamily'], reason: 'M5 : police système (maquette) vs IBM Plex' },
+    'appr-m-bar': { skip: ['text'], reason: 'Conteneur — boutons comparés séparément' },
   }
 
-  test('mobile Approbation structural match', async ({ page }, testInfo) => {
+  test('mobile Approbation structural match', async ({ page }) => {
     await prepApproval(page, MOBILE_OPTS)
     await page.setViewportSize({ width: 390, height: 844 })
 
@@ -124,12 +169,7 @@ test.describe('Approbation mobile — structure', () => {
 
     const results = compareMetrics(mockMap, appMap, APPROVAL_MOBILE_IDS, { pageExceptions: exceptions })
     writeStructural('structural-approval-mobile.json', results)
-    await testInfo.attach('structural-approval-mobile.json', {
-      body: Buffer.from(JSON.stringify(results, null, 2)),
-      contentType: 'application/json',
-    })
-    const failures = results.filter((r) => r.diffs.length)
-    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+    expectNoStructuralDiffs(results)
   })
 })
 

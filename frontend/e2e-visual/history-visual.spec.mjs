@@ -2,24 +2,17 @@
 /**
  * Règles : docs/visual-parity.md
  *
- * Écran Historique (/docs/:id/history) vs History.dc.html @ 1440×900 — colonne principale.
- * Même méthode que edit-visual / page-visual : pixel-diff (glyphes masqués, ≤ 1 %) + comparaison
- * structurelle `data-mock-id` (textes, typographie, couleurs, boîtes ±3 px).
- * Les écrans voisins ont leur propre spec : diff-visual (Diff.dc.html), restore-visual
- * (RestoreVersion.dc.html) et history-mobile-visual (MobileHistory.dc.html).
+ * Écran Historique (/docs/:id/history) vs History.dc.html @ 1440×900.
  *
- * Exceptions documentées (numérotées, reprises dans la PR) :
- *  - H1  Actions de ligne : « Comparer » et « Restaurer » sont groupées à droite. La maquette (v11) les
- *        répartit en `space-between` : « Comparer » flotte au centre de la ligne, ce qui dépend du
- *        nombre de boutons. Boîte de « Comparer » non comparée (x) ; texte, police et couleur le sont.
- *  - H2  « Comparer » est proposé sur toute version non courante qui a une précédente (v10, v9) ;
- *        la maquette ne le montre que sur la v11. Sans effet sur le pixel-diff (lien sans fond).
- *  - H3  « Afficher les versions précédentes » (pagination, 4 versions chargées sur 12) est masqué
- *        dans le pixel-diff : la maquette ne représente pas la pagination.
- *  - H4  Shell (sidebar) : comparaison limitée à la colonne principale (x ≥ 268), comme page-visual.
- *  - H5  Glyphes masqués dans les diffs pixel ; le texte est couvert par le test structurel.
- *  - H6  Aucun écart de libellé : date en `fr-FR` / Europe/Paris, « Système (migration) » + ⚙ pour
- *        un auteur null, badge « Actuelle » sur la version courante.
+ * Pixel honnête (texte inclus, ≤ 1 % par section) ; aucun masque, aucun clip hors sections déclarées.
+ * Annotation maquette : data-* uniquement (aucune modification de style / DOM).
+ * Sections : sidebar, barre haute, onglets, titre, sous-titre, timeline entière et chacune des 4 lignes.
+ *
+ * Les écarts qui subsistent sont des écarts de conception (pas de données manquantes) et restent
+ * ROUGES : voir `.tmp-design-gaps-history.md`. Aucune fonctionnalité absente de l'API n'est en jeu ici.
+ *
+ * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/history-visual.spec.mjs`
+ * (journalise tous les % / tailles, écrit test-results/history-before.json, n'échoue pas).
  */
 import { test, expect } from '@playwright/test'
 import {
@@ -30,12 +23,58 @@ import {
   compareMetrics,
 } from './structural-compare.mjs'
 import { HIST_DOC_ID, HIST_VERSIONS_DESKTOP } from './history-fixtures.mjs'
-import { MOCK, diffRatio, maskGlyphs, prep, settleFonts, writeStructural } from './history-helpers.mjs'
+import { prep, writeStructural } from './history-helpers.mjs'
+import {
+  MOCK_ORIGIN,
+  assertNotImplementedGuards,
+  compareSectionShots,
+  finishPixelResults,
+  reportNotImplemented,
+  settleFonts,
+  shotSection,
+} from './visual-parity-kit.mjs'
 
 test.use({ timezoneId: 'Europe/Paris' })
 
 const HISTORY_URL = `/docs/${HIST_DOC_ID}/history`
-const CLIP = { x: 268, y: 0, width: 1172, height: 900 }
+
+/**
+ * Zones maquette sans équivalent app — NON comparées, jamais « passées ».
+ * Aucune pour l'Historique : toutes les données de la maquette existent dans l'API (versions, auteurs,
+ * lignes +/−, résumé) ; la pagination « Afficher les versions précédentes » de l'app est hors de toute section.
+ * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
+ */
+export const NOT_IMPLEMENTED = []
+
+/** Maquette avec sidebar comme l'app : aucune exception de taille a priori (mesure : tout écart est un échec). */
+const SIZE_EXCEPTIONS = {}
+
+/** [section pixel] nom, sélecteur maquette, sélecteur app. */
+const dm = (id) => `[data-mock-id="${id}"]`
+const PIXEL_SECTIONS = [
+  { name: 'sidebar', mock: dm('hist-sidebar'), app: dm('shell-sidebar') },
+  { name: 'topbar', mock: dm('hist-topbar'), app: dm('hist-topbar') },
+  { name: 'tabs', mock: dm('hist-tabs'), app: dm('hist-tabs') },
+  { name: 'title', mock: dm('hist-title'), app: dm('hist-title') },
+  { name: 'subtitle', mock: dm('hist-subtitle'), app: dm('hist-subtitle') },
+  { name: 'timeline', mock: dm('hist-timeline'), app: '[data-testid="history-timeline"]' },
+  ...[12, 11, 10, 9].map((v, i) => ({
+    name: `row-${i}`,
+    mock: dm(`hist-row-${i}`),
+    app: `[data-testid="history-row-${v}"]`,
+  })),
+]
+
+/** Annotation supplémentaire de History.dc.html — data-* uniquement. */
+async function annotateHistoryExtras(page) {
+  await page.evaluate(() => {
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    root?.children[0]?.setAttribute('data-mock-id', 'hist-sidebar')
+    const timeline = root?.children[1]?.children[2]?.children[0]?.children[2]
+    timeline?.setAttribute('data-mock-id', 'hist-timeline')
+    ;[...(timeline?.children ?? [])].slice(1).forEach((item, i) => item.setAttribute('data-mock-id', `hist-row-${i}`))
+  })
+}
 
 async function openHistory(page, opts) {
   await prep(page, opts)
@@ -47,28 +86,34 @@ async function openHistory(page, opts) {
 }
 
 test.describe('Historique — parité visuelle', () => {
-  test('desktop Historique vs History.dc.html @ 1440×900 (colonne principale)', async ({ page }, testInfo) => {
-    await openHistory(page)
-    await page.evaluate(() => {
-      document.body.style.margin = '0'
-      document.documentElement.style.overflow = 'hidden'
-    })
-    // H3 : pagination non représentée dans la maquette.
-    await page.addStyleTag({ content: '.hist-more { display: none !important; }' })
-    await maskGlyphs(page)
-    await page.waitForTimeout(150)
-    const appShot = await page.screenshot({ fullPage: false, clip: CLIP })
+  test('desktop Historique — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
+    await prep(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
 
-    await page.goto(`${MOCK}/History.dc.html`)
+    await page.goto(`${MOCK_ORIGIN}/History.dc.html`)
+    await annotateHistoryMockup(page)
+    await annotateHistoryExtras(page)
     await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(150)
-    const mockShot = await page.screenshot({ fullPage: false, clip: CLIP })
+    await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'history')
 
-    await testInfo.attach('maquette-history', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-history', { body: appShot, contentType: 'image/png' })
-    const ratio = diffRatio(mockShot, appShot, 'history-desktop')
-    expect(ratio, `history desktop diff ${ratio}`).toBeLessThanOrEqual(0.01)
+    const mockSec = {}
+    for (const s of PIXEL_SECTIONS) {
+      mockSec[s.name] = await shotSection(page, s.mock, { label: `history-sec-${s.name}-mock` })
+    }
+
+    await page.goto(HISTORY_URL)
+    await page.waitForSelector('[data-mock-id="hist-r3-author"]')
+    await settleFonts(page)
+    await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'history')
+    await page.mouse.move(1, 1)
+
+    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const results = []
+    for (const s of PIXEL_SECTIONS) {
+      const app = await shotSection(page, s.app, { label: `history-sec-${s.name}-app` })
+      results.push(compare(`history-${s.name}`, mockSec[s.name].shot, app.shot, testInfo))
+    }
+    finishPixelResults('history', results)
   })
 })
 
@@ -80,13 +125,23 @@ test.describe('Historique — structure', () => {
       skip: ['box'],
       reason: 'H1 : « Comparer » groupé à droite (maquette : centré par space-between)',
     },
+    // box.y : cascade autorisée (docs/visual-parity.md § Exceptions structurales). collectMetrics épingle le
+    // line-height des <button> annotés (« Restaurer ») à 1 mais pas le « Comparer » de la v10 (H2, sans équivalent
+    // maquette) : la mesure de la ligne v10 est 3,5 px plus haute dans l'app, et la v9 suit. Les hauteurs réelles
+    // sont identiques (sections pixel row-2 / row-3 / timeline : mêmes tailles PNG, ≤ 1 %).
+    ...Object.fromEntries(
+      ['dot', 'version', 'date', 'summary', 'avatar', 'author', 'added', 'removed', 'restore'].map((f) => [
+        `hist-r3-${f}`,
+        { skip: ['box.y'], reason: 'cascade box.y depuis la ligne v10 (cf. commentaire) ; x / w / h comparés' },
+      ]),
+    ),
   }
 
   test('desktop Historique structural match', async ({ page }, testInfo) => {
     await prep(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    await page.goto(`${MOCK}/History.dc.html`)
+    await page.goto(`${MOCK_ORIGIN}/History.dc.html`)
     await settleFonts(page)
     await annotateHistoryMockup(page)
     const mockMap = await collectMetrics(page, HISTORY_DESKTOP_IDS)
@@ -94,9 +149,6 @@ test.describe('Historique — structure', () => {
     await page.goto(HISTORY_URL)
     await page.waitForSelector('[data-mock-id="hist-r3-author"]')
     await settleFonts(page)
-    // Les « Comparer » de v10 / v9 (H2) n'ont pas d'équivalent annoté : on les épingle comme les autres
-    // actions (line-height 1) pour que la hauteur des lignes reste comparable.
-    await page.addStyleTag({ content: '.hist-link { line-height: 1 !important; }' })
     const appMap = await collectMetrics(page, HISTORY_DESKTOP_IDS)
 
     const fonts = await assertFontsLoaded(page)

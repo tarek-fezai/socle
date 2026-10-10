@@ -7,12 +7,15 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document` |
-| **À nettoyer** (audit PR #69 — cheats pré-capture : `maskGlyphs` / `maskAdminGlyphs`, forçage DOM, clips pleine page, seuils relâchés, normalizers) | `login`, `dashboard`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin` |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile` |
+| **À nettoyer** (audit PR #69 — cheats pré-capture : `maskGlyphs` / `maskAdminGlyphs`, forçage DOM, clips pleine page, seuils relâchés, normalizers) | `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin` |
 
 ## Décisions produit
 
 - **Spaces : shell avec sidebar conservé** (maquette sans sidebar) — largeur de contenu **1076 px** au lieu de **1344 px** ; décision tf du **2026-10-10**. Les `SIZE_EXCEPTIONS` `spaces-title` / cartes y renvoient explicitement.
+- **Comparaison (Diff) : shell avec sidebar conservé** (maquette `Diff.dc.html` sans sidebar) — colonne principale **1172 px** au lieu de **1440 px** ; même décision que Spaces (2026-10-10). Les `SIZE_EXCEPTIONS` `diff-topbar` / `diff-controls` / blocs `@@` (Δw = −268) et côtés ancien / nouveau des lignes (Δw = −134, 50 % de la boîte de diff) y renvoient explicitement.
+- **Comparaison d’approbation (DiffApproval) : shell avec sidebar conservé** (maquette `DiffApproval.dc.html` sans sidebar) — mêmes largeurs et mêmes `SIZE_EXCEPTIONS` que Diff (`diff-approval-*`).
+- **Approbation (Approval) : shell avec sidebar conservé** (maquette `Approval.dc.html` sans sidebar) — colonne principale **1172 px** au lieu de **1440 px** ; seule la barre haute pleine largeur (`approval-topbar`, Δw = −268) est concernée : colonne centrale (680 px) et rail (349 px) ont la même taille des deux côtés. `MobileApproval.dc.html` n’a pas de sidebar de part et d’autre : aucune exception.
 
 ## Comparaison
 
@@ -71,5 +74,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 ## Specs hérités
 
 Les specs listés « À nettoyer » dans le tableau **État des specs** violent encore ces règles
-(`maskGlyphs`, normalizers, forçage 1440×900, etc.). Tout **nouveau** spec doit suivre
-ce document.
+(`maskGlyphs`, normalizers, forçage 1440×900, etc.). Les écrans document / historique /
+comparaison / approbation / restauration sont passés en méthode honnête (sections + kit) ;
+login, dashboard et admin (branding, custom-fields, tags, retention) restent à migrer.
+Tout **nouveau** spec doit suivre ce document.

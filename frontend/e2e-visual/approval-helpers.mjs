@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Utilitaires des specs Approbation / Comparaison d'approbation / Mobile : session OIDC injectée
- * (horloge figée à APPR_NOW), API mockée. Pixel-diff et glyphes masqués : voir history-helpers.mjs.
+ * (horloge figée à APPR_NOW), API mockée. Pixel-diff : sections du visual-parity-kit (docs/visual-parity.md).
  */
 import { FAVORITES_SEED, NOTIFICATIONS_SEED, SPACE_INFRA, TREE_INFRA } from './dashboard-fixtures.mjs'
 import { ME_TAREK, PAGE_COMMENTS, SPACE_IDENTITE, TREE_IDENTITE, pageDocument } from './page-fixtures.mjs'
@@ -18,7 +18,7 @@ import {
   APPR_WORKFLOW_DESKTOP,
 } from './approval-fixtures.mjs'
 
-export { MOCK, diffRatio, maskGlyphs, settleFonts, writeStructural } from './history-helpers.mjs'
+export { MOCK, settleFonts, writeStructural } from './history-helpers.mjs'
 
 async function injectSession(page) {
   await page.addInitScript(
@@ -125,14 +125,4 @@ export async function mockApprovalApis(page, opts = {}) {
 export async function prepApproval(page, opts) {
   await injectSession(page)
   await mockApprovalApis(page, opts)
-}
-
-/** Normalise une maquette 1440 px sur la colonne principale de l'app (x ≥ 268, largeur 1172). */
-export async function normalizeMockupWidth(page) {
-  await page.evaluate(() => {
-    const root = document.querySelector('body div[style*="1440px"]')
-    if (!root) return
-    root.style.width = '1172px'
-    root.style.marginLeft = '268px'
-  })
 }

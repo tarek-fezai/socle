@@ -3,30 +3,80 @@
  * Règles : docs/visual-parity.md
  *
  * Modale « Restaurer la v11 ? » (ouverte depuis l'Historique) vs RestoreVersion.dc.html @ 1440×900.
- * Pixel-diff limité à la carte de la modale (≤ 1 %, glyphes masqués) + comparaison structurelle.
  *
- * Exceptions documentées (numérotées, reprises dans la PR) :
+ * Pixel honnête (texte inclus, ≤ 1 % par section) ; aucun masque, aucun clip hors sections déclarées.
+ * Annotation maquette : data-* uniquement (aucune modification de style / DOM).
+ * Sections : la carte entière (`restore-modal`), l'en-tête (icône + titre), les deux paragraphes,
+ * l'encart d'avertissement, « Annuler » et « Restaurer cette version ».
+ *
+ * Limites documentées :
  *  - R1  Fond : la maquette dessine un faux squelette de page sous le voile ; l'app a la vraie page.
- *        Seule la carte est comparée (clip = boîte de la carte de la maquette). Les quatre coins arrondis
- *        laissent voir ce fond : l'écart correspondant est borné par le budget de 1 %.
+ *        Seule la carte est comparée ; les 4 coins arrondis laissent voir ce fond (≈ 0,14 % de la carte,
+ *        compté dans le budget de 1 %). L'ombre portée est hors de la boîte de la carte.
  *  - R2  Document en `brouillon` dans la fixture : en `valide`, l'app ajoute un encart « repasse en
  *        en_revue » (information réelle du backend) absent de la maquette.
- *  - R3  « Annuler » / « Restaurer cette version » : <button> au lieu de <a> ; line-height épinglé à 1
- *        des deux côtés. Pas de lien « Annuler → History » : la modale se ferme sur place.
- *  - R4  Résumé de la version courante mis en minuscule initiale dans l'encart d'avertissement
- *        (« clarification du circuit… »), comme la maquette, sauf sigle (« IAM… » reste tel quel).
- *  - R5  Glyphes masqués dans les diffs pixel ; le texte est couvert par le test structurel.
+ *  - R3  « Annuler » / « Restaurer cette version » : <button> au lieu de <a> ; pas de lien « Annuler → History »,
+ *        la modale se ferme sur place.
+ *  - R4  Résumé de la version courante : fixture alignée sur la maquette (HIST_VERSIONS_RESTORE).
+ *
+ * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/restore-visual.spec.mjs`
+ * (journalise tous les % / tailles, écrit test-results/restore-before.json, n'échoue pas).
  */
 import { test, expect } from '@playwright/test'
 import { RESTORE_IDS, annotateRestoreMockup, collectMetrics, compareMetrics } from './structural-compare.mjs'
 import { HIST_DOC_ID, HIST_VERSIONS_RESTORE } from './history-fixtures.mjs'
-import { MOCK, diffRatio, maskGlyphs, prep, settleFonts, writeStructural } from './history-helpers.mjs'
+import { prep, writeStructural } from './history-helpers.mjs'
+import {
+  MOCK_ORIGIN,
+  assertNotImplementedGuards,
+  compareSectionShots,
+  finishPixelResults,
+  reportNotImplemented,
+  settleFonts,
+  shotSection,
+} from './visual-parity-kit.mjs'
 
 test.use({ timezoneId: 'Europe/Paris' })
+
+/**
+ * Anti-crénelage : le texte de la carte (calque composité par `transform`) est rendu en LCD d'un côté et en
+ * niveaux de gris de l'autre. Même rendu des deux côtés (--disable-lcd-text), uniquement pour ce fichier
+ * (même précédent que new-document-visual) ; le texte reste comparé pixel à pixel.
+ */
+test.use({ launchOptions: { args: ['--disable-lcd-text'] } })
 
 // R2 + R4 : document en brouillon, résumé de la v12 identique à celui de la maquette.
 const RESTORE_OPTS = { status: 'brouillon', versions: HIST_VERSIONS_RESTORE }
 const HISTORY_URL = `/docs/${HIST_DOC_ID}/history`
+
+/**
+ * Zones maquette sans équivalent app — NON comparées, jamais « passées ».
+ * Aucune : tout le contenu de la modale est dérivé de données réelles (versions, auteur, dates).
+ * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
+ */
+export const NOT_IMPLEMENTED = []
+
+/** Carte 480 px des deux côtés : aucune exception de taille a priori (mesure : tout écart est un échec). */
+const SIZE_EXCEPTIONS = {}
+
+const dm = (id) => `[data-mock-id="${id}"]`
+const PIXEL_SECTIONS = [
+  { name: 'modal', sel: dm('restore-modal') },
+  { name: 'head', sel: dm('restore-head') },
+  { name: 'text-1', sel: dm('restore-text-1') },
+  { name: 'text-2', sel: dm('restore-text-2') },
+  { name: 'warning', sel: dm('restore-warning') },
+  { name: 'cancel', sel: dm('restore-cancel') },
+  { name: 'confirm', sel: dm('restore-confirm') },
+]
+
+/** Annotation supplémentaire de RestoreVersion.dc.html (en-tête) — data-* uniquement. */
+async function annotateRestoreHead(page) {
+  await page.evaluate(() => {
+    const card = document.querySelector('[data-mock-id="restore-modal"]')
+    card?.children[0]?.setAttribute('data-mock-id', 'restore-head')
+  })
+}
 
 async function openRestoreModal(page) {
   await prep(page, RESTORE_OPTS) // R2
@@ -35,40 +85,36 @@ async function openRestoreModal(page) {
   await page.getByTestId('history-row-11').getByRole('button', { name: 'Restaurer' }).click()
   await page.waitForSelector('[data-mock-id="restore-modal"]')
   await settleFonts(page)
-  await page.evaluate(() => document.activeElement?.blur())
-}
-
-/** Boîte de la carte dans la maquette (référence du clip pour les deux captures). */
-async function mockCardBox(page) {
-  await page.goto(`${MOCK}/RestoreVersion.dc.html`)
-  await settleFonts(page)
-  return page.evaluate(() => {
-    const card = Array.from(document.querySelectorAll('div')).find((d) =>
-      (d.getAttribute('style') || '').includes('width: 480px'),
-    )
-    const r = card.getBoundingClientRect()
-    return { x: Math.floor(r.x), y: Math.floor(r.y), width: Math.ceil(r.width), height: Math.ceil(r.height) }
-  })
 }
 
 test.describe('Restauration — parité visuelle', () => {
-  test('modale Restaurer vs RestoreVersion.dc.html @ 1440×900 (carte)', async ({ page }, testInfo) => {
+  test('modale Restaurer — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await prep(page, RESTORE_OPTS)
-    const clip = await mockCardBox(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(100)
-    const mockShot = await page.screenshot({ fullPage: false, clip })
+
+    await page.goto(`${MOCK_ORIGIN}/RestoreVersion.dc.html`)
+    await annotateRestoreMockup(page)
+    await annotateRestoreHead(page)
+    await settleFonts(page)
+    await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'restore')
+
+    const mockSec = {}
+    for (const s of PIXEL_SECTIONS) {
+      mockSec[s.name] = await shotSection(page, s.sel, { label: `restore-sec-${s.name}-mock` })
+    }
 
     await openRestoreModal(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(150)
-    const appShot = await page.screenshot({ fullPage: false, clip })
+    await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'restore')
+    await page.mouse.move(1, 1)
 
-    await testInfo.attach('maquette-restore', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-restore', { body: appShot, contentType: 'image/png' })
-    const ratio = diffRatio(mockShot, appShot, 'restore-modal')
-    expect(ratio, `restore modal diff ${ratio}`).toBeLessThanOrEqual(0.01)
+    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const results = []
+    for (const s of PIXEL_SECTIONS) {
+      const sel = s.name === 'head' ? '[data-testid="restore-dialog"] .hist-modal-head' : s.sel
+      const app = await shotSection(page, sel, { label: `restore-sec-${s.name}-app` })
+      results.push(compare(`restore-${s.name}`, mockSec[s.name].shot, app.shot, testInfo))
+    }
+    finishPixelResults('restore', results)
   })
 })
 
@@ -81,7 +127,7 @@ test.describe('Restauration — structure', () => {
     await prep(page, RESTORE_OPTS)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    await page.goto(`${MOCK}/RestoreVersion.dc.html`)
+    await page.goto(`${MOCK_ORIGIN}/RestoreVersion.dc.html`)
     await settleFonts(page)
     await annotateRestoreMockup(page)
     const mockMap = await collectMetrics(page, RESTORE_IDS)

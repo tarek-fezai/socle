@@ -8,6 +8,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PNG } from 'pngjs'
 import pixelmatch from 'pixelmatch'
+import { injectOidcSession as injectKitOidcSession } from './visual-parity-kit.mjs'
 import { FAVORITES_SEED, NOTIFICATIONS_SEED, SPACE_INFRA, TREE_INFRA } from './dashboard-fixtures.mjs'
 import { ME_TAREK, PAGE_COMMENTS, SPACE_IDENTITE, TREE_IDENTITE, VISUAL_NOW } from './page-fixtures.mjs'
 import {
@@ -37,29 +38,15 @@ export const AUTH_CONFIG = {
 export const json = (route, body, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 
+/** Session OIDC + horloge figée (kit), et arbres d'espaces dépliés comme dans la maquette (état localStorage). */
 export async function injectOidcSession(page) {
-  await page.addInitScript(
-    ({ authority, clientId, now }) => {
-      Date.now = () => now
-      const key = `oidc.user:${authority}:${clientId}`
-      const user = {
-        id_token: 'visual.id',
-        session_state: 'visual',
-        access_token: 'visual-access-token',
-        refresh_token: 'visual-refresh',
-        token_type: 'Bearer',
-        scope: 'openid profile email',
-        profile: { sub: 'tarek-visual', name: 'Tarek Fezai', preferred_username: 'tarek', given_name: 'Tarek' },
-        expires_at: Math.floor(now / 1000) + 3600,
-      }
-      sessionStorage.setItem(key, JSON.stringify(user))
-      localStorage.setItem(
-        'socle.shell.expandedSpaces',
-        JSON.stringify(['s0000001-0000-4000-8000-000000000001', 's0000001-0000-4000-8000-000000000002']),
-      )
-    },
-    { authority: AUTH_CONFIG.authority, clientId: AUTH_CONFIG.clientId, now: VISUAL_NOW },
-  )
+  await injectKitOidcSession(page, VISUAL_NOW)
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'socle.shell.expandedSpaces',
+      JSON.stringify(['s0000001-0000-4000-8000-000000000001', 's0000001-0000-4000-8000-000000000002']),
+    )
+  })
 }
 
 /**
@@ -86,6 +73,16 @@ export async function mockHistoryApis(page, opts = {}) {
   const base = `**/api/v1/documents/${HIST_DOC_ID}`
 
   await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
+  // Branding par défaut de l'app (nom « Socle », comme le logo de la maquette) : évite l'appel réseau non mocké.
+  await page.route('**/api/v1/public/branding', (route) =>
+    json(route, {
+      instanceName: 'Socle',
+      accentColor: '#3730E0',
+      logoUrl: null,
+      faviconUrl: null,
+      hidePoweredBy: false,
+    }),
+  )
   await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
   await page.route(base, (route) => json(route, doc))
   await page.route(`${base}/resolved`, (route) => json(route, doc))
@@ -150,15 +147,6 @@ export function diffRatio(a, b, label) {
 
 export async function settleFonts(page) {
   await page.evaluate(() => document.fonts.ready)
-}
-
-/** Glyphes transparents : le pixel-diff compare la géométrie / les aplats, pas le rendu des polices. */
-export async function maskGlyphs(page) {
-  await page.addStyleTag({
-    content: `* { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; caret-color: transparent !important; }
-      svg text { fill: transparent !important; }
-      ::selection { background: transparent; }`,
-  })
 }
 
 export function writeStructural(name, results) {

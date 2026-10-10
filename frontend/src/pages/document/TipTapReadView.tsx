@@ -521,7 +521,7 @@ function renderBlock(node: TipTapNode, ctx: Ctx): ReactNode {
       const attrs = (node.attrs ?? {}) as Record<string, unknown>
       if (typeof attrs.id === 'string' && attrs.id) {
         return (
-          <figure className="doc-figure">
+          <figure className="doc-figure doc-figure--image">
             <AttachmentImage
               id={attrs.id}
               alt={typeof attrs.alt === 'string' ? attrs.alt : ''}

@@ -29,6 +29,11 @@ export const OUT_DIR = path.join(__dirname, 'test-results')
 export const PAGE_AREA = 1440 * 900
 export const MOCK_ORIGIN = 'http://127.0.0.1:4174'
 
+/** Surface de page pour % de masque (desktop 1440x900 par defaut ; mobile 390x844). */
+export function pageAreaFor({ width = 1440, height = 900 } = {}) {
+  return width * height
+}
+
 export const AUTH_CONFIG = {
   authority: 'http://127.0.0.1:9/realms/socle',
   clientId: 'socle-frontend',
@@ -182,7 +187,7 @@ export async function measureSelector(page, selector) {
 export async function shotSection(
   page,
   selector,
-  { maskNames = [], targeted = [], label, maskColor = '#FFFFFF' },
+  { maskNames = [], targeted = [], label, maskColor = '#FFFFFF', pageArea = PAGE_AREA },
 ) {
   const loc = page.locator(selector).first()
   await loc.waitFor({ state: 'visible' })
@@ -202,7 +207,7 @@ export async function shotSection(
     const tb = await tl.boundingBox()
     const areaPx = Math.round((tb?.width ?? 0) * (tb?.height ?? 0))
     console.log(
-      `MASK ${label} ${t.name}: 1 él., ${areaPx} px (${((areaPx / PAGE_AREA) * 100).toFixed(3)} % page) — ${t.reason}`,
+      `MASK ${label} ${t.name}: 1 él., ${areaPx} px (${((areaPx / pageArea) * 100).toFixed(3)} % page) — ${t.reason}`,
     )
     targetedLocators.push(tl)
   }
@@ -226,7 +231,7 @@ export async function shotSection(
           pctOfPage: Number(((area / pageArea) * 100).toFixed(3)),
         }
       }),
-    { sels: maskNames.map(maskSel), names: maskNames, pageArea: PAGE_AREA },
+    { sels: maskNames.map(maskSel), names: maskNames, pageArea },
   )
   for (const m of maskAreas) {
     if (m.count === 0) {
@@ -422,7 +427,7 @@ export function finishPixelResults(specName, results, extra = {}) {
 }
 
 /**
- * Assertion structurelle compacte (diffs seulement, sans les m�triques compl�tes).
+ * Assertion structurelle compacte (diffs seulement, sans les m�triques compl�tes).
  * @param {{ id: string, diffs: string[] }[]} results  sortie de compareMetrics
  */
 export function expectNoStructuralDiffs(results) {

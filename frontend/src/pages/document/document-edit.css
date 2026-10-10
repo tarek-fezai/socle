@@ -570,6 +570,10 @@ a.edit-crumb:hover {
   margin-bottom: 6px;
 }
 
+.edit-insert-panel > div:last-child .edit-insert-grid {
+  margin-bottom: 0;
+}
+
 .edit-insert-item {
   display: flex;
   align-items: center;
