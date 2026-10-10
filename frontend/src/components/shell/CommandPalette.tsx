@@ -243,9 +243,17 @@ export function CommandPalette({ open, onClose }: Props) {
                     <span className="cmdk-item-title" data-mock-id={`search-result-${i}-title`}>
                       {hit.title}
                     </span>
-                    {/* Espace + tags : tags absents de SearchHit (NOT_IMPLEMENTED search-result-meta). */}
-                    <span className="cmdk-item-meta" data-visual-mask="search-result-meta">
-                      {hit.spaceName}
+                    {/* Espace + statut (SearchHit) ; mention / tag absents → masque search-result-meta. */}
+                    <span className="cmdk-item-meta">
+                      <span>
+                        {hit.spaceName}
+                        {hit.status && hit.status !== 'valide' ? ` · ${hit.status}` : ''}
+                      </span>
+                      <span
+                        aria-hidden
+                        className="cmdk-meta-nodata"
+                        data-visual-mask="search-result-meta"
+                      />
                     </span>
                   </span>
                   {/* Favori depuis la palette : pas dans SearchHit (NOT_IMPLEMENTED search-result-star). */}

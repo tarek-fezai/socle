@@ -33,4 +33,4 @@ E2E_RUN_BACKUP=1 pnpm test
 
 ## Selectors
 
-UI steps use existing `data-testid` where available (`step-1`…`step-3`, `comments-panel`, `comment-selection-btn`, etc.). Document creation and approval setup use the REST API when faster or more stable.
+UI steps use existing `data-testid` where available (`creation-warnings`, `comments-panel`, `comment-selection-btn`, etc.). Document creation and approval setup use the REST API when faster or more stable.

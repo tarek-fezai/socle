@@ -3,6 +3,17 @@
 Socle doit être **identique à la maquette** (`systeme-documentation-direction-ui/*.dc.html`).
 Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-visual/`.
 
+## État des specs
+
+| État | Specs |
+| --- | --- |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document` |
+| **À nettoyer** (audit PR #69 — cheats pré-capture : `maskGlyphs` / `maskAdminGlyphs`, forçage DOM, clips pleine page, seuils relâchés, normalizers) | `login`, `dashboard`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin` |
+
+## Décisions produit
+
+- **Spaces : shell avec sidebar conservé** (maquette sans sidebar) — largeur de contenu **1076 px** au lieu de **1344 px** ; décision tf du **2026-10-10**. Les `SIZE_EXCEPTIONS` `spaces-title` / cartes y renvoient explicitement.
+
 ## Comparaison
 
 - Par **section** (`data-mock-id`), pas page entière floue.
@@ -59,6 +70,6 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 ## Specs hérités
 
-Certains specs antérieurs violent encore ces règles (`maskGlyphs`, normalizers,
-forçage 1440×900, etc.). Ils sont listés dans l’audit des PR de remédiation ;
-tout **nouveau** spec doit suivre ce document.
+Les specs listés « À nettoyer » dans le tableau **État des specs** violent encore ces règles
+(`maskGlyphs`, normalizers, forçage 1440×900, etc.). Tout **nouveau** spec doit suivre
+ce document.

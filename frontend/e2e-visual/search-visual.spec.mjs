@@ -61,7 +61,7 @@ export const NOT_IMPLEMENTED = [
     id: 'search-result-meta',
     page: 'search',
     reason:
-      'Ligne méta de résultat (« espace · mentionne « … » », « brouillon », tag IAM) : SearchHit n’a pas de tags ni de contexte de correspondance — l’app affiche le nom de l’espace',
+      'Portion méta sans donnée API : contexte « mentionne « … » » et pastille tag (ex. IAM) — SearchHit n’expose ni match context ni tags ; l’app compare espace + statut (SearchHit.status)',
     backlog: 'SEARCH-HIT-TAGS',
     mockMask: 'search-result-meta',
     appPlaceholderSelector: '[data-visual-mask="search-result-meta"]',
@@ -147,7 +147,23 @@ async function annotateSearchMockup(page) {
       a.setAttribute('data-mock-id', `search-result-${i}`)
       const text = a.children[1]
       text?.children[0]?.setAttribute('data-mock-id', `search-result-${i}-title`)
-      text?.children[1]?.setAttribute('data-visual-mask', 'search-result-meta')
+      const meta = text?.children[1]
+      if (meta) {
+        // Masquer uniquement tag + « · mentionne … » ; laisser espace et statut visibles.
+        const tag = [...meta.children].find((c) => c.tagName === 'SPAN')
+        tag?.setAttribute('data-visual-mask', 'search-result-meta')
+        for (const node of [...meta.childNodes]) {
+          if (node.nodeType !== Node.TEXT_NODE) continue
+          const full = node.textContent ?? ''
+          const idx = full.indexOf(' · mentionne')
+          if (idx < 0) continue
+          node.textContent = full.slice(0, idx)
+          const wrap = document.createElement('span')
+          wrap.setAttribute('data-visual-mask', 'search-result-meta')
+          wrap.textContent = full.slice(idx)
+          meta.insertBefore(wrap, tag ?? null)
+        }
+      }
       a.children[2]?.setAttribute('data-visual-mask', 'search-result-star')
     })
     kids.slice(4).forEach((k) => k.setAttribute('data-visual-mask', 'search-groups-extra'))
@@ -243,7 +259,7 @@ test.describe('search (palette) visual', () => {
       'search-result-0': {
         skip: ['text', 'lineHeight'],
         reason:
-          'Texte : ligne méta NOT_IMPLEMENTED. lineHeight : collectMetrics fixe 1 sur un <button> (app) et 1.2 sur un <a> (maquette) — titres comparés séparément.',
+          'Texte : mention/tag méta NOT_IMPLEMENTED (espace + statut comparés en pixel). lineHeight : collectMetrics fixe 1 sur un <button> (app) et 1.2 sur un <a> (maquette) — titres comparés séparément.',
       },
     }
     const results = compareMetrics(mockMetrics, appMetrics, STRUCTURAL_IDS, { pageExceptions })

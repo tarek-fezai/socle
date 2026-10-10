@@ -4,13 +4,13 @@
  *
  * /docs/new vs NewDocument.dc.html @ 1440×900 (desktop uniquement).
  *
- * La maquette est un formulaire unique ; l'app est un assistant en 3 étapes (emplacement →
- * modèle → titre). Chaque section de la maquette est donc comparée à son équivalent sur l'étape
- * où il apparaît : fil d'Ariane / fermer / titre / intro / « Annuler » (étape 1), en-tête
- * « Modèle » + 5 cartes de modèle (étape 2), champ « Titre du document » + CTA (étape 3).
+ * Formulaire unique des deux côtés (aucun assistant) : fil d'Ariane / fermer / titre / intro,
+ * en-tête « Modèle » + 5 cartes, « Espace » (liste native), « Emplacement dans l'arborescence »
+ * (liste native), champ « Titre du document », « Tags (optionnel) », « Annuler » + CTA.
  *
  * Pixel honnête (texte inclus, ≤ 1 % par section) ; seul exclu : `mask` Playwright nommé.
- * Annotation maquette : data-* uniquement.
+ * Annotation maquette : data-* uniquement. « Fiabilité cible » et la mention de visibilité du
+ * brouillon restent masquées (NOT_IMPLEMENTED) ; emplacement et tags sont comparés.
  *
  * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/new-document-visual.spec.mjs`
  * (journalise tous les % / tailles, écrit test-results/new-document-before.json, n'échoue pas).
@@ -42,26 +42,10 @@ export const NOT_IMPLEMENTED = [
     id: 'newdoc-fiabilite',
     page: 'new-document',
     reason:
-      'Champ « Fiabilité cible » (Revue annuelle obligatoire…) : pas de paramètre de fiabilité à la création (createDocument)',
+      'Champ « Fiabilité cible » (Revue annuelle obligatoire…) : pas de paramètre de fiabilité à la création (createDocument) — l’app affiche un champ désactivé « Bientôt »',
     backlog: 'NEWDOC-TARGET-RELIABILITY',
     mockMask: 'newdoc-fiabilite',
-    appImplementedProbe: 'text=/Fiabilité cible/',
-  },
-  {
-    id: 'newdoc-tags',
-    page: 'new-document',
-    reason: 'Champ « Tags (optionnel) » : la création ne prend pas de tags (ajout après création)',
-    backlog: 'NEWDOC-TAGS',
-    mockMask: 'newdoc-tags',
-    appImplementedProbe: 'text=/Ajouter un tag existant/',
-  },
-  {
-    id: 'newdoc-location-selects',
-    page: 'new-document',
-    reason:
-      'Sélecteurs « Espace » et « Emplacement dans l’arborescence » en liste déroulante sur la même page : l’app les présente en étape 1 (listes à choix) — mise en page différente par conception',
-    backlog: 'NEWDOC-SINGLE-PAGE-FORM',
-    mockMask: 'newdoc-location-selects',
+    appPlaceholderSelector: '[data-visual-mask="newdoc-fiabilite"]',
   },
   {
     id: 'newdoc-footer-note',
@@ -75,6 +59,27 @@ export const NOT_IMPLEMENTED = [
 ]
 
 const SIZE_EXCEPTIONS = {}
+
+/** Arbre de l'espace avec deux dossiers racine : l'aide sous la liste cite « (Procédures, Référence…) ». */
+const NEWDOC_TREE_SPEC = {
+  ...NEWDOC_TREE,
+  folders: [
+    ...NEWDOC_TREE.folders,
+    {
+      id: 'f0000001-0000-4000-8000-000000000002',
+      name: 'Référence',
+      parentFolderId: null,
+      position: 1,
+      documentCount: 0,
+      folderCount: 0,
+      documents: [],
+    },
+  ],
+}
+
+/** Étiquette présente dans la maquette (puce « IAM »). */
+const MOCK_TAG = 'IAM'
+const TAGS_SEED = [{ id: 'g0000001-0000-4000-8000-000000000001', name: MOCK_TAG }]
 
 /**
  * Anti-crénelage : le texte blanc sur fond accent du bouton « Créer le document » est rendu
@@ -93,17 +98,20 @@ const TPL_SLUGS = [
   'fiche-fournisseur-externe',
 ]
 
-/** step : étape de l'assistant sur laquelle la section apparaît dans l'app. */
+/** withTitle : le CTA est comparé avec un titre saisi (maquette : bouton actif). */
 const PIXEL_SECTIONS = [
-  { id: 'newdoc-breadcrumb', name: 'breadcrumb', step: 1 },
-  { id: 'newdoc-close', name: 'close', step: 1 },
-  { id: 'newdoc-title', name: 'title', step: 1 },
-  { id: 'newdoc-lead', name: 'lead', step: 1 },
-  { id: 'newdoc-models-head', name: 'models-head', step: 2 },
-  ...TPL_SLUGS.map((s) => ({ id: `newdoc-tpl-${s}`, name: `tpl-${s}`, step: 2 })),
-  { id: 'newdoc-cancel', name: 'cancel', step: 3 },
-  { id: 'newdoc-cta', name: 'cta', step: 3, withTitle: true },
-  { id: 'newdoc-title-field', name: 'title-field', step: 3 },
+  { id: 'newdoc-breadcrumb', name: 'breadcrumb' },
+  { id: 'newdoc-close', name: 'close' },
+  { id: 'newdoc-title', name: 'title' },
+  { id: 'newdoc-lead', name: 'lead' },
+  { id: 'newdoc-models-head', name: 'models-head' },
+  ...TPL_SLUGS.map((s) => ({ id: `newdoc-tpl-${s}`, name: `tpl-${s}` })),
+  { id: 'newdoc-space-select', name: 'space-select' },
+  { id: 'newdoc-folder-select', name: 'folder-select' },
+  { id: 'newdoc-title-field', name: 'title-field' },
+  { id: 'newdoc-tags', name: 'tags', withTag: true },
+  { id: 'newdoc-cancel', name: 'cancel' },
+  { id: 'newdoc-cta', name: 'cta', withTitle: true },
 ]
 
 const STRUCTURAL_IDS = [
@@ -113,16 +121,23 @@ const STRUCTURAL_IDS = [
   'newdoc-models-head',
   'newdoc-tpl-politique',
   'newdoc-tpl-fiche-fournisseur-externe',
+  'newdoc-space-select',
+  'newdoc-folder-select',
   'newdoc-title-field',
+  'newdoc-tags',
 ]
 
 async function mockApis(page) {
   await mockBaseApis(page, { me: ME_TAREK, notifications: NOTIFICATIONS_SEED, spaces: SPACES_SEED })
-  await page.route(/\/api\/v1\/spaces\/[^/]+\/tree/, (route) => json(route, NEWDOC_TREE))
+  await page.route(/\/api\/v1\/spaces\/[^/]+\/tree/, (route) => json(route, NEWDOC_TREE_SPEC))
   await page.route('**/api/v1/templates**', (route) => {
     if (route.request().method() !== 'GET') return route.fallback()
     if (route.request().url().includes('creation-warnings')) return json(route, { warnings: [] })
     return json(route, TEMPLATES_SEED)
+  })
+  await page.route('**/api/v1/tags**', (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    return json(route, TAGS_SEED)
   })
 }
 
@@ -154,12 +169,12 @@ async function annotateNewDocMockup(page) {
       const nameEl = nameBlock?.querySelector('span') ?? nameBlock
       card.setAttribute('data-mock-id', `newdoc-tpl-${slug(nameEl?.textContent ?? '')}`)
     })
-    // Espace (colonne 1) + Emplacement : sélecteurs remplacés par l'étape 1 (NOT_IMPLEMENTED).
-    selects?.children[0]?.setAttribute('data-visual-mask', 'newdoc-location-selects')
+    // Espace et emplacement : comparés (listes natives côté app). Fiabilité cible : NOT_IMPLEMENTED.
+    selects?.children[0]?.setAttribute('data-mock-id', 'newdoc-space-select')
     selects?.children[1]?.setAttribute('data-visual-mask', 'newdoc-fiabilite')
-    location?.setAttribute('data-visual-mask', 'newdoc-location-selects')
+    location?.setAttribute('data-mock-id', 'newdoc-folder-select')
     titleBlock?.setAttribute('data-mock-id', 'newdoc-title-field')
-    tags?.setAttribute('data-visual-mask', 'newdoc-tags')
+    tags?.setAttribute('data-mock-id', 'newdoc-tags')
     footer?.children[0]?.setAttribute('data-visual-mask', 'newdoc-footer-note')
     const [ghost, cta] = [...(footer?.children[1]?.children ?? [])]
     ghost?.setAttribute('data-mock-id', 'newdoc-cancel')
@@ -167,22 +182,21 @@ async function annotateNewDocMockup(page) {
   })
 }
 
-/** Amène l'assistant (app) à l'étape demandée ; Politique sélectionné en étape 2. */
-async function gotoStep(page, step, state) {
-  if (state.step === step) return
-  if (step >= 2 && state.step < 2) {
-    await page.getByRole('button', { name: 'Continuer' }).click()
-    await page.waitForSelector('[data-mock-id="newdoc-tpl-fiche-fournisseur-externe"]')
-    await page.locator('[data-mock-id="newdoc-tpl-politique"]').click()
-    state.step = 2
-  }
-  if (step >= 3 && state.step < 3) {
-    await page.getByRole('button', { name: 'Continuer' }).click()
-    await page.waitForSelector('[data-mock-id="newdoc-title-field"]')
-    state.step = 3
-  }
-  await page.mouse.move(1, 1)
-  await settleFonts(page)
+/** Page app : modèle « Politique » sélectionné et puce « IAM » ajoutée, comme dans la maquette. */
+async function prepareApp(page) {
+  await page.goto(`/docs/new?spaceId=${SPACE_IDENTITE.id}`)
+  await page.waitForSelector('[data-mock-id="newdoc-tpl-fiche-fournisseur-externe"]')
+  await expect(page.getByLabel('Espace')).toHaveValue(SPACE_IDENTITE.id)
+  await page.locator('[data-mock-id="newdoc-tpl-politique"]').click()
+  await expect(page.getByRole('radio', { name: /Politique/ })).toBeChecked()
+}
+
+async function addMockTag(page) {
+  const input = page.locator('#newdoc-tags-input')
+  await input.fill(MOCK_TAG)
+  await input.press('Enter')
+  await expect(page.getByRole('button', { name: `Retirer le tag ${MOCK_TAG}` })).toBeVisible()
+  await input.blur()
 }
 
 test.describe('new document visual', () => {
@@ -207,27 +221,28 @@ test.describe('new document visual', () => {
       })
     }
 
-    await page.goto(`/docs/new?spaceId=${SPACE_IDENTITE.id}`)
-    await page.waitForSelector('[data-testid="step-1"]')
-    await page.waitForSelector('[role="radio"][aria-checked="true"]')
+    await prepareApp(page)
     await settleFonts(page)
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'new-document')
 
     const compare = compareSectionShots(SIZE_EXCEPTIONS)
     const results = []
-    const state = { step: 1 }
+    const title = page.getByLabel('Titre du document')
+    let tagAdded = false
     for (const s of PIXEL_SECTIONS) {
-      await gotoStep(page, s.step, state)
-      if (s.withTitle) {
-        // CTA activé (titre saisi) comme dans la maquette ; le champ est vidé ensuite.
-        await page.getByLabel('Titre du document').fill('Politique de classification')
-        await expect(page.locator('[data-mock-id="newdoc-cta"]')).toBeEnabled()
-        await page.mouse.move(1, 1)
-      } else if (s.step === 3) {
-        await page.getByLabel('Titre du document').fill('')
-        await page.getByLabel('Titre du document').blur()
-        await page.mouse.move(1, 1)
+      if (s.withTag && !tagAdded) {
+        await addMockTag(page)
+        tagAdded = true
       }
+      if (s.withTitle) {
+        // CTA activé (titre saisi) comme dans la maquette.
+        await title.fill('Politique de classification')
+        await expect(page.locator('[data-mock-id="newdoc-cta"]')).toBeEnabled()
+      } else {
+        await title.fill('')
+        await title.blur()
+      }
+      await page.mouse.move(1, 1)
       const app = await shotSection(page, `[data-mock-id="${s.id}"]`, {
         label: `new-document-sec-${s.name}-app`,
       })
@@ -236,7 +251,9 @@ test.describe('new document visual', () => {
     finishPixelResults('new-document', results)
   })
 
-  test('Nouveau document structural — en-tête, cartes, champ titre', async ({ page }) => {
+  test('Nouveau document structural — en-tête, cartes, listes, champ titre, tags', async ({
+    page,
+  }) => {
     await injectOidcSession(page, VISUAL_NOW)
     await mockApis(page)
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -246,24 +263,20 @@ test.describe('new document visual', () => {
     await settleFonts(page)
     const mockMetrics = await collectMetrics(page, STRUCTURAL_IDS)
 
-    await page.goto(`/docs/new?spaceId=${SPACE_IDENTITE.id}`)
-    await page.waitForSelector('[data-testid="step-1"]')
-    await page.waitForSelector('[role="radio"][aria-checked="true"]')
-    const state = { step: 1 }
-    const appMetrics = {}
-    const stepOf = (id) => PIXEL_SECTIONS.find((s) => s.id === id)?.step ?? 1
-    for (const step of [1, 2, 3]) {
-      await gotoStep(page, step, state)
-      const ids = STRUCTURAL_IDS.filter((id) => stepOf(id) === step)
-      if (ids.length) Object.assign(appMetrics, await collectMetrics(page, ids))
-    }
+    await prepareApp(page)
+    await addMockTag(page)
+    await page.mouse.move(1, 1)
+    await settleFonts(page)
+    const appMetrics = await collectMetrics(page, STRUCTURAL_IDS)
 
     const FLOW =
-      'AppShell : colonne centrée dans la zone à droite de la sidebar 268 px (box.x décalé de 134 px) ; assistant 3 étapes et ordre des cartes propres à l’app (box.y / box.x des cartes non comparables) ; typographie et largeur comparées.'
+      'AppShell : colonne centrée dans la zone à droite de la sidebar 268 px (box.x décalé de 134 px) ; ordre des cartes propre à l’app (box.y / box.x des cartes non comparables) ; typographie et largeur comparées.'
     const CONTAINER_TEXT =
       'text : conteneur — l’app n’insère pas d’espace entre blocs (textContent concaténé) ; le texte est vérifié par la comparaison pixel (texte inclus).'
     const BTN_LH =
       'lineHeight : <button> (app) épinglé à 1 par collectMetrics, <div> (maquette) à 1.2.'
+    const FIELD_TEXT =
+      'text : maquette = libellé + faux champ ; app = libellé + <select>/<input> natif (options / placeholder hors textContent) — vérifié par pixel.'
     const pageExceptions = {
       'newdoc-breadcrumb': { skip: ['box.x', 'box.y'], reason: FLOW },
       'newdoc-title': { skip: ['box.x', 'box.y'], reason: FLOW },
@@ -280,24 +293,71 @@ test.describe('new document visual', () => {
         skip: ['text', 'lineHeight', 'box.x', 'box.y'],
         reason: `${FLOW} ${CONTAINER_TEXT} ${BTN_LH}`,
       },
+      'newdoc-space-select': {
+        skip: ['text', 'box.x', 'box.y'],
+        reason: `${FLOW} ${FIELD_TEXT}`,
+      },
+      'newdoc-folder-select': {
+        skip: ['text', 'box.x', 'box.y'],
+        reason: `${FLOW} ${FIELD_TEXT}`,
+      },
       'newdoc-title-field': {
         skip: ['text', 'box.x', 'box.y'],
         reason: `${FLOW} text : maquette = libellé + faux champ (placeholder) ; app = libellé + <input> (placeholder hors textContent) — vérifié par pixel.`,
+      },
+      'newdoc-tags': {
+        skip: ['text', 'box.x', 'box.y'],
+        reason: `${FLOW} ${FIELD_TEXT}`,
       },
     }
     const results = compareMetrics(mockMetrics, appMetrics, STRUCTURAL_IDS, { pageExceptions })
     expectNoStructuralDiffs(results)
   })
 
-  test('assistant : Document vierge / modèle → titre → création', async ({ page }) => {
+  test('formulaire unique : modèle, espace, dossier, titre, tag → création + rattachement', async ({
+    page,
+  }) => {
     await injectOidcSession(page, VISUAL_NOW)
     await mockApis(page)
-    await page.goto(`/docs/new?spaceId=${SPACE_IDENTITE.id}`)
-    await page.waitForSelector('[data-testid="step-1"]')
-    await page.getByRole('button', { name: 'Continuer' }).click()
+    const DOC_ID = 'd0000001-0000-4000-8000-000000000001'
+    const posts = []
+    await page.route('**/api/v1/documents', (route) => {
+      if (route.request().method() !== 'POST') return route.fallback()
+      posts.push({ url: route.request().url(), body: route.request().postDataJSON() })
+      return json(route, { id: DOC_ID, title: 'Politique de test', spaceId: SPACE_IDENTITE.id }, 201)
+    })
+    await page.route(`**/api/v1/documents/${DOC_ID}/tags`, (route) => {
+      posts.push({ url: route.request().url(), body: route.request().postDataJSON() })
+      return json(route, { id: TAGS_SEED[0].id, name: MOCK_TAG }, 201)
+    })
+
+    await page.goto('/docs/new')
+    // Un seul formulaire : aucun assistant.
+    await expect(page.getByRole('button', { name: 'Continuer' })).toHaveCount(0)
     await expect(page.getByRole('radio', { name: /Document vierge/ })).toBeChecked()
+
+    // Les modèles (spécifiques à l'espace) se chargent à la sélection de l'espace.
+    await expect(page.getByLabel('Espace').locator(`option[value="${SPACE_IDENTITE.id}"]`)).toHaveCount(1)
+    await page.getByLabel('Espace').selectOption(SPACE_IDENTITE.id)
+    await expect(page.getByRole('radio', { name: /Politique/ })).toBeVisible()
     await page.getByRole('radio', { name: /Politique/ }).click()
-    await page.getByRole('button', { name: 'Continuer' }).click()
-    await expect(page.getByTestId('recap-template')).toHaveText('Politique')
+    await expect(page.getByRole('radio', { name: /Politique/ })).toBeChecked()
+    await page.getByLabel("Emplacement dans l'arborescence").selectOption({ label: 'Procédures' })
+    await page.getByLabel('Titre du document').fill('Politique de test')
+
+    const tagInput = page.locator('#newdoc-tags-input')
+    await tagInput.focus()
+    await page.getByRole('option', { name: MOCK_TAG }).getByRole('button').click()
+    await expect(page.getByRole('button', { name: `Retirer le tag ${MOCK_TAG}` })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Créer le document' }).click()
+    await expect.poll(() => posts.length).toBe(2)
+    expect(posts[0].body).toMatchObject({
+      title: 'Politique de test',
+      spaceId: SPACE_IDENTITE.id,
+      folderId: NEWDOC_TREE_SPEC.folders[0].id,
+    })
+    expect(posts[1].url).toContain(`/documents/${DOC_ID}/tags`)
+    expect(posts[1].body).toEqual({ tagId: TAGS_SEED[0].id })
   })
 })

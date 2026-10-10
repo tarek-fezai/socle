@@ -71,10 +71,11 @@ const SIZE_EXCEPTIONS = {
   'spaces-title': {
     dw: -268,
     dh: 0,
-    reason: 'bloc h1 pleine largeur : 1344 px maquette (sans sidebar) vs 1076 px app (AppShell)',
+    reason:
+      'docs/visual-parity.md § Décisions produit — Spaces : shell avec sidebar conservé ; 1076 px vs 1344 px maquette',
   },
   // Grille app : 3 colonnes de 346 px (1076 px de contenu, colonnes arrondies au pixel entier) ; la maquette fait 436 px.
-  // Δ mesuré, déclaré carte par carte.
+  // Δ mesuré, déclaré carte par carte — même décision produit (sidebar).
   ...Object.fromEntries(
     [
       [0, -90],
@@ -88,7 +89,7 @@ const SIZE_EXCEPTIONS = {
         dw,
         dh: 0,
         reason:
-          'carte de grille : 436 px maquette (sans sidebar) vs ≈347 px app (AppShell) ; contenu ancré à gauche',
+          'docs/visual-parity.md § Décisions produit — Spaces : shell avec sidebar conservé ; carte ≈347 px vs 436 px maquette',
       },
     ]),
   ),

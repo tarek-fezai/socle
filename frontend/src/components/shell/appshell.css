@@ -828,6 +828,14 @@
   color: #9b9ba1;
 }
 
+/* Emplacement masqué (mention + tag) — SearchHit n’a ni contexte de match ni tags. */
+.cmdk-meta-nodata {
+  display: inline-block;
+  width: 28px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .cmdk-star {
   flex-shrink: 0;
   width: 13px;

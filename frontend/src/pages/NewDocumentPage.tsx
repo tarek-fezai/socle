@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { FormEvent, useMemo, useState, type ReactNode } from 'react'
+import { FormEvent, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
@@ -14,21 +14,16 @@ import {
   spaceTreeKey,
 } from '../lib/folders'
 import { listSpaces } from '../lib/spaces'
+import { attachTag, filterTagSuggestions, searchTags } from '../lib/tags'
 import {
-  filterTemplates,
   getCreationWarnings,
   listTemplates,
   templatesKey,
   type TemplateSummary,
 } from '../lib/templates'
 
-type Step = 1 | 2 | 3
-
-const STEPS: Array<{ n: Step; label: string }> = [
-  { n: 1, label: 'Emplacement' },
-  { n: 2, label: 'Modèle' },
-  { n: 3, label: 'Titre' },
-]
+/** Étiquette choisie : existante (`id`) ou à créer (`name` seul). */
+type TagChoice = { id?: string; name: string }
 
 const sectionLabel = 'mb-2 text-[12px] font-semibold uppercase tracking-[0.05em] text-socle-muted'
 
@@ -39,6 +34,9 @@ const btnGhost =
 const btnCta =
   'flex flex-col justify-start rounded-[7px] bg-socle-accent px-5 py-[9px] text-[13.5px] font-semibold leading-[normal] text-white hover:bg-socle-accent-hover disabled:opacity-60'
 
+/** Champ maquette : bordure 1px #ECECEE, rayon 9, focus #C7C6F5. */
+const fieldBox = 'rounded-[9px] border border-[#ECECEE] bg-white focus-within:border-[#C7C6F5]'
+
 const slug = (s: string) =>
   s
     .normalize('NFD')
@@ -47,18 +45,19 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
 
-/** Assistant de création en 3 étapes : emplacement → modèle → titre (maquette NewDocument). */
+/** Formulaire de création en une page (maquette NewDocument) : modèle, emplacement, titre, tags. */
 export function NewDocumentPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [params] = useSearchParams()
 
-  const [step, setStep] = useState<Step>(1)
   const [spaceId, setSpaceId] = useState(params.get('spaceId') ?? '')
   const [folderId, setFolderId] = useState<string | null>(params.get('folderId') || null)
   const [templateId, setTemplateId] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
   const [title, setTitle] = useState('')
+  const [tags, setTags] = useState<TagChoice[]>([])
+  const [tagQuery, setTagQuery] = useState('')
+  const [tagsOpen, setTagsOpen] = useState(false)
 
   const spaces = useQuery({ queryKey: ['spaces'], queryFn: () => listSpaces(api) })
   const spaceList = useMemo(
@@ -81,18 +80,19 @@ export function NewDocumentPage() {
   const folder = folderId ? folderOptions.find((f) => f.id === folderId) : undefined
   // Un dossier inconnu (lien périmé, autre espace) retombe sur la racine.
   const activeFolderId = tree.data && folderId && !folder ? null : folderId
+  const rootNames = folderOptions.filter((f) => f.depth === 1).map((f) => f.name)
+  const folderHint = `À la racine de l'espace, ou dans un dossier existant${
+    rootNames.length ? ` (${rootNames.slice(0, 2).join(', ')}${rootNames.length > 1 ? '…' : ''})` : ''
+  } pour en faire un sous-élément.`
 
   const templates = useQuery({
     queryKey: templatesKey(activeSpaceId),
     queryFn: () => listTemplates(api, activeSpaceId),
-    enabled: step >= 2 && Boolean(activeSpaceId),
+    enabled: Boolean(activeSpaceId),
   })
-  const visibleTemplates = useMemo(
-    () => filterTemplates(templates.data ?? [], search),
-    [templates.data, search],
-  )
-  const systemTemplates = visibleTemplates.filter((t) => !t.createdBy)
-  const customTemplates = visibleTemplates.filter((t) => t.createdBy)
+  const allTemplates = templates.data ?? []
+  const systemTemplates = allTemplates.filter((t) => !t.createdBy)
+  const customTemplates = allTemplates.filter((t) => t.createdBy)
   const renderTemplate = (t: TemplateSummary) => (
     <TemplateCard
       key={t.id}
@@ -103,25 +103,43 @@ export function NewDocumentPage() {
       description={t.description ?? ''}
     />
   )
-  const selectedTemplate = templates.data?.find((t) => t.id === templateId) ?? null
 
   const warnings = useQuery({
     queryKey: ['template-warnings', templateId, activeSpaceId],
     queryFn: () => getCreationWarnings(api, templateId as string, activeSpaceId),
-    enabled: step === 3 && Boolean(templateId) && Boolean(activeSpaceId),
+    enabled: Boolean(templateId) && Boolean(activeSpaceId),
   })
   const warningList = warnings.data ?? []
 
+  const tagSuggestions = useQuery({
+    queryKey: ['tags', 'search', tagQuery.trim()],
+    queryFn: () => searchTags(api, tagQuery),
+    enabled: tagsOpen,
+  })
+  const suggestions = useMemo(() => {
+    const picked = new Set(tags.map((t) => t.name.toLowerCase()))
+    return filterTagSuggestions(
+      tagSuggestions.data ?? [],
+      tags.flatMap((t) => (t.id ? [{ id: t.id, name: t.name }] : [])),
+    ).filter((s) => !picked.has(s.name.trim().toLowerCase()))
+  }, [tagSuggestions.data, tags])
+
   const create = useMutation({
-    mutationFn: () =>
-      createDocument(
+    mutationFn: async () => {
+      const doc = await createDocument(
         api,
         title.trim(),
         activeSpaceId,
         templateId ? null : emptyDocBody,
         activeFolderId,
         { templateId },
-      ),
+      )
+      // Le document existe déjà : un échec de rattachement ne doit pas bloquer l'ouverture.
+      await Promise.allSettled(
+        tags.map((t) => attachTag(api, doc.id, t.id ? { tagId: t.id } : { name: t.name })),
+      )
+      return doc
+    },
     onSuccess: (doc) => {
       void qc.invalidateQueries({ queryKey: spaceTreeKey(activeSpaceId) })
       void qc.invalidateQueries({ queryKey: ['documents'] })
@@ -134,16 +152,40 @@ export function NewDocumentPage() {
     setSpaceId(id)
     setFolderId(null)
     setTemplateId(null)
-    setSearch('')
+  }
+
+  function addTag(choice: TagChoice) {
+    const name = choice.name.trim()
+    if (name && !tags.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      setTags([...tags, { id: choice.id, name }])
+    }
+    setTagQuery('')
+  }
+
+  function commitTypedTag() {
+    const name = tagQuery.trim()
+    if (!name) return
+    const known = (tagSuggestions.data ?? []).find(
+      (s) => s.name.trim().toLowerCase() === name.toLowerCase(),
+    )
+    addTag(known ? { id: known.id, name: known.name } : { name })
+  }
+
+  function onTagKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      commitTypedTag()
+    } else if (e.key === 'Backspace' && !tagQuery && tags.length > 0) {
+      setTags(tags.slice(0, -1))
+    }
   }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (title.trim() && activeSpaceId) create.mutate()
+    if (title.trim() && activeSpaceId && !create.isPending) create.mutate()
   }
 
   const closeHref = activeSpaceId ? spaceBrowseHref(activeSpaceId) : '/docs'
-  const locationLabel = `${space?.name ?? 'Espace'}${folder ? ` / ${folder.name}` : ' (racine)'}`
 
   return (
     <main className="mx-auto max-w-[840px] px-6 pb-10 pt-8 leading-[normal] md:px-10 md:pt-0">
@@ -185,267 +227,238 @@ export function NewDocumentPage() {
         Choisissez un modèle pour démarrer avec une structure adaptée au type de contenu.
       </p>
 
-      <ol className="mb-8 flex items-center gap-2" aria-label="Étapes de création">
-        {STEPS.map(({ n, label }, i) => {
-          const current = step === n
-          const done = step > n
-          return (
-            <li key={n} className="flex items-center gap-2" aria-current={current ? 'step' : undefined}>
-              {i > 0 && <span className="h-px w-6 bg-socle-line" aria-hidden />}
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                  current
-                    ? 'bg-socle-accent text-white'
-                    : done
-                      ? 'bg-socle-mist text-socle-accent'
-                      : 'border border-socle-line text-socle-muted'
-                }`}
-              >
-                {n}
-              </span>
-              <span
-                className={`text-[13px] ${current ? 'font-semibold text-socle-ink' : 'text-socle-muted'}`}
-              >
-                {label}
-              </span>
-            </li>
-          )
-        })}
-      </ol>
-
-      {step === 1 && (
-        <section aria-labelledby="step1-title" data-testid="step-1">
-          <h2 id="step1-title" className="sr-only">
-            Étape 1 sur 3 : emplacement
-          </h2>
-          <div className={sectionLabel}>Espace</div>
-          {spaces.isLoading && <p className="text-sm text-socle-muted">Chargement…</p>}
-          {spaces.isError && (
-            <p className="text-sm text-socle-danger" role="alert">
-              Impossible de charger les espaces.
-            </p>
-          )}
-          {spaces.data && spaceList.length === 0 && (
-            <p className="rounded-xl border border-dashed border-[#DEDEE1] px-4 py-8 text-center text-sm text-socle-muted">
-              Aucun espace disponible.{' '}
-              <Link to="/spaces" className="font-semibold text-socle-accent hover:underline">
-                Créer un espace
-              </Link>
-            </p>
-          )}
-          <div role="radiogroup" aria-label="Espace" className="grid gap-2 sm:grid-cols-2">
-            {spaceList.map((s) => (
-              <ChoiceRow
-                key={s.id}
-                selected={s.id === activeSpaceId}
-                onSelect={() => chooseSpace(s.id)}
-                label={s.name}
-                swatch={s.color}
-              />
-            ))}
+      <form onSubmit={onSubmit} aria-label="Nouveau document">
+        <div
+          className="mb-[10px] flex items-center justify-between gap-3"
+          data-mock-id="newdoc-models-head"
+        >
+          <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-socle-muted">
+            Modèle
           </div>
-
-          {activeSpaceId && (
-            <div className="mt-6">
-              <div className={sectionLabel}>Emplacement dans l’arborescence</div>
-              {tree.isLoading && <p className="text-sm text-socle-muted">Chargement…</p>}
-              {tree.isError && (
-                <p className="text-sm text-socle-danger" role="alert">
-                  Arborescence indisponible — le document sera créé à la racine.
-                </p>
-              )}
-              <div
-                role="radiogroup"
-                aria-label="Dossier"
-                className="max-h-64 overflow-y-auto rounded-lg border border-socle-line p-1.5"
-              >
-                <ChoiceRow
-                  selected={activeFolderId === null}
-                  onSelect={() => setFolderId(null)}
-                  label={`${space?.name ?? 'Espace'} (racine)`}
-                  root
-                />
-                {folderOptions.map((f) => (
-                  <ChoiceRow
-                    key={f.id}
-                    selected={activeFolderId === f.id}
-                    onSelect={() => setFolderId(f.id)}
-                    label={f.name}
-                    depth={f.depth}
-                  />
-                ))}
-              </div>
-              <p className="mt-1.5 text-[11.5px] text-socle-faint">
-                À la racine de l’espace, ou dans un dossier existant.
-              </p>
-            </div>
-          )}
-
-          <Footer top="mt-[32.5px]">
-            <button type="button" className={`${btnGhost} bg-white`} onClick={() => navigate(closeHref)}>
-              Annuler
-            </button>
-            <button
-              type="button"
-              className={btnCta}
-              disabled={!activeSpaceId}
-              onClick={() => setStep(2)}
-            >
-              Continuer
-            </button>
-          </Footer>
-        </section>
-      )}
-
-      {step === 2 && (
-        <section aria-labelledby="step2-title" data-testid="step-2">
-          <h2 id="step2-title" className="sr-only">
-            Étape 2 sur 3 : modèle
-          </h2>
-          <div
-            className="mb-[10px] flex items-center justify-between gap-3"
-            data-mock-id="newdoc-models-head"
+          <Link
+            to="/admin/templates"
+            className="text-[12px] font-semibold text-socle-accent hover:underline"
           >
-            <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-socle-muted">
-              Modèle
-            </div>
-            <Link
-              to="/admin/templates"
-              className="text-[12px] font-semibold text-socle-accent hover:underline"
-            >
-              Gérer les modèles →
-            </Link>
-          </div>
-          <input
-            type="search"
-            className="field-input mb-4"
-            placeholder="Rechercher un modèle…"
-            aria-label="Rechercher un modèle"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            Gérer les modèles →
+          </Link>
+        </div>
+        {templates.isError && (
+          <p className="mb-3 text-sm text-socle-danger" role="alert">
+            Modèles indisponibles — vous pouvez partir d’un document vierge.
+          </p>
+        )}
+        <div role="radiogroup" aria-label="Modèle" className="mb-7 grid gap-3 sm:grid-cols-2">
+          {/* Ordre maquette : modèles système, « Document vierge », puis modèles personnalisés. */}
+          {systemTemplates.map(renderTemplate)}
+          <TemplateCard
+            blank
+            selected={templateId === null}
+            onSelect={() => setTemplateId(null)}
+            name="Document vierge"
+            description="Partir d'une page blanche, sans structure imposée."
           />
+          {customTemplates.map(renderTemplate)}
+        </div>
 
-          {templates.isLoading && <p className="text-sm text-socle-muted">Chargement…</p>}
-          {templates.isError && (
-            <p className="mb-3 text-sm text-socle-danger" role="alert">
-              Modèles indisponibles — vous pouvez partir d’un document vierge.
-            </p>
-          )}
-
-          <div role="radiogroup" aria-label="Modèle" className="grid gap-3 sm:grid-cols-2">
-            {/* Ordre maquette : modèles système, « Document vierge », puis modèles personnalisés. */}
-            {systemTemplates.map(renderTemplate)}
-            <TemplateCard
-              blank
-              selected={templateId === null}
-              onSelect={() => setTemplateId(null)}
-              name="Document vierge"
-              description="Partir d'une page blanche, sans structure imposée."
-            />
-            {customTemplates.map(renderTemplate)}
+        <div className="mb-[18px] flex gap-[14px]">
+          <div className="min-w-0 flex-1" data-mock-id="newdoc-space-select">
+            <label htmlFor="newdoc-space" className={`${sectionLabel} block`}>
+              Espace
+            </label>
+            <SelectField
+              id="newdoc-space"
+              value={activeSpaceId}
+              onChange={chooseSpace}
+              swatch={space ? (space.color ?? '') : null}
+              disabled={spaces.isLoading || spaceList.length === 0}
+            >
+              {!activeSpaceId && <option value="">Choisir un espace</option>}
+              {spaceList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </SelectField>
           </div>
-          {templates.data && visibleTemplates.length === 0 && (
-            <p className="mt-3 text-sm text-socle-muted">
-              {search.trim() ? 'Aucun modèle ne correspond à la recherche.' : 'Aucun modèle disponible.'}
-            </p>
-          )}
-
-          <Footer>
-            <button type="button" className={btnGhost} onClick={() => setStep(1)}>
-              Retour
-            </button>
-            <button type="button" className={btnCta} onClick={() => setStep(3)}>
-              Continuer
-            </button>
-          </Footer>
-        </section>
-      )}
-
-      {step === 3 && (
-        <form onSubmit={onSubmit} aria-labelledby="step3-title" data-testid="step-3">
-          <h2 id="step3-title" className="sr-only">
-            Étape 3 sur 3 : titre
-          </h2>
-          <dl className="mb-[24.5px] grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl bg-socle-soft px-4 py-3 text-sm">
-            <dt className="text-socle-muted">Emplacement</dt>
-            <dd className="font-medium text-socle-ink" data-testid="recap-location">
-              {locationLabel}
-            </dd>
-            <dt className="text-socle-muted">Modèle</dt>
-            <dd className="font-medium text-socle-ink" data-testid="recap-template">
-              {selectedTemplate?.name ?? 'Document vierge'}
-            </dd>
-          </dl>
-
-          <label className="block" data-mock-id="newdoc-title-field">
-            <span className={`${sectionLabel} block`}>Titre du document</span>
-            <input
-              className="block w-full rounded-[9px] border border-socle-line bg-white px-[14px] pb-[10.203px] pt-[13px] text-[15px] leading-[20.8px] text-socle-ink outline-none placeholder:text-[#C2C2C6] focus:border-[#C7C6F5]"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex. Politique de classification des données"
-              aria-label="Titre du document"
-              autoFocus
-              required
-            />
-          </label>
-
-          {warningList.length > 0 && (
+          {/* Maquette « Fiabilité cible » : pas de paramètre à la création (NOT_IMPLEMENTED). */}
+          <div className="min-w-0 flex-1" data-visual-mask="newdoc-fiabilite">
+            <div className={sectionLabel}>Fiabilité cible</div>
             <div
-              className="mt-5 rounded-lg border border-[#E8D9A8] bg-[#FBF3E4] px-4 py-3 text-sm text-socle-warn"
-              role="alert"
-              data-testid="creation-warnings"
+              className={`${fieldBox} flex items-center justify-between px-[13px] py-[10px] opacity-60`}
+              aria-disabled="true"
             >
-              <p className="font-semibold">
-                {warningList.length > 1 ? 'Points d’attention' : 'Point d’attention'} avant la
-                création
-              </p>
-              <ul className="mt-1.5 list-disc space-y-1 pl-5 text-socle-slate">
-                {warningList.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
+              <span className="text-[13.5px] font-medium leading-[normal] text-socle-muted">
+                Bientôt
+              </span>
+              <Chevron />
             </div>
-          )}
+          </div>
+        </div>
+        {spaces.isError && (
+          <p className="-mt-3 mb-4 text-sm text-socle-danger" role="alert">
+            Impossible de charger les espaces.
+          </p>
+        )}
+        {spaces.data && spaceList.length === 0 && (
+          <p className="-mt-3 mb-4 text-sm text-socle-muted">
+            Aucun espace disponible.{' '}
+            <Link to="/spaces" className="font-semibold text-socle-accent hover:underline">
+              Créer un espace
+            </Link>
+          </p>
+        )}
 
-          {create.isError && (
-            <p className="mt-4 text-sm text-socle-danger" role="alert">
-              {apiErrorMessage(create.error, 'Création refusée — accès editor requis sur l’espace')}
+        <div className="mb-[22px]" data-mock-id="newdoc-folder-select">
+          <label htmlFor="newdoc-folder" className={`${sectionLabel} block`}>
+            {"Emplacement dans l'arborescence"}
+          </label>
+          <SelectField
+            id="newdoc-folder"
+            value={folder?.id ?? ''}
+            onChange={(id) => setFolderId(id || null)}
+            disabled={!activeSpaceId}
+          >
+            <option value="">{`${space?.name ?? 'Espace'} (racine)`}</option>
+            {folderOptions.map((f) => (
+              <option key={f.id} value={f.id ?? ''}>
+                {'\u00A0\u00A0'.repeat(Math.max(0, f.depth - 1))}
+                {f.name}
+              </option>
+            ))}
+          </SelectField>
+          {tree.isError ? (
+            <p className="mt-1.5 text-[11.5px] text-socle-danger" role="alert">
+              Arborescence indisponible — le document sera créé à la racine.
             </p>
+          ) : (
+            <p className="mt-1.5 text-[11.5px] text-socle-faint">{folderHint}</p>
           )}
+        </div>
 
-          <Footer note="Le document sera créé en brouillon." top="mt-[32.016px]">
-            <button
-              type="button"
-              className={`${btnGhost} bg-white`}
-              data-mock-id="newdoc-cancel"
-              onClick={() => navigate(closeHref)}
+        {/* mb 22.02 px : compense la hauteur 45.98 px du champ pour caler la suite sur la maquette (y .5). */}
+        <label className="mb-[22.02px] block" data-mock-id="newdoc-title-field">
+          <span className={`${sectionLabel} block`}>Titre du document</span>
+          <input
+            className="block w-full rounded-[9px] border border-socle-line bg-white px-[14px] pb-[10.203px] pt-[13px] text-[15px] leading-[20.8px] text-socle-ink outline-none placeholder:text-[#C2C2C6] focus:border-[#C7C6F5]"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex. Politique de classification des données"
+            aria-label="Titre du document"
+            required
+          />
+        </label>
+
+        <div className="relative mb-7" data-mock-id="newdoc-tags">
+          <label htmlFor="newdoc-tags-input" className={`${sectionLabel} block`}>
+            Tags <span className="font-normal normal-case text-[#C2C2C6]">(optionnel)</span>
+          </label>
+          <div className={`${fieldBox} flex flex-wrap items-center gap-1.5 px-2.5 py-[9px]`}>
+            {tags.map((t) => (
+              <span
+                key={t.id ?? `new:${t.name}`}
+                className="inline-flex items-center gap-[5px] rounded-md bg-socle-mist py-[3px] pl-[9px] pr-2 text-[12px] font-semibold text-socle-accent"
+              >
+                {t.name}
+                <button
+                  type="button"
+                  aria-label={`Retirer le tag ${t.name}`}
+                  className="text-[#9B95E6] hover:text-socle-accent"
+                  onClick={() => setTags(tags.filter((x) => x !== t))}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <input
+              id="newdoc-tags-input"
+              className="min-w-[200px] flex-1 bg-transparent text-[13.5px] leading-[normal] text-socle-ink outline-none placeholder:text-[#C2C2C6]"
+              placeholder="Ajouter un tag existant ou en créer un…"
+              value={tagQuery}
+              autoComplete="off"
+              onChange={(e) => setTagQuery(e.target.value)}
+              onKeyDown={onTagKeyDown}
+              onFocus={() => setTagsOpen(true)}
+              onBlur={() => setTagsOpen(false)}
+            />
+          </div>
+          {tagsOpen && suggestions.length > 0 && (
+            <ul
+              role="listbox"
+              aria-label="Tags existants"
+              className="absolute left-0 right-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-[9px] border border-[#ECECEE] bg-white p-1 shadow-md"
             >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className={btnCta}
-              data-mock-id="newdoc-cta"
-              disabled={!title.trim() || create.isPending || warnings.isLoading}
-            >
-              {create.isPending
-                ? 'Création…'
-                : warningList.length > 0
-                  ? 'Créer quand même'
-                  : 'Créer le document'}
-            </button>
-          </Footer>
-        </form>
-      )}
+              {suggestions.map((s) => (
+                <li key={s.id} role="option" aria-selected={false}>
+                  <button
+                    type="button"
+                    className="w-full rounded-[6px] px-2.5 py-1.5 text-left text-[13px] text-[#4B4B52] hover:bg-[#F5F5F7]"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addTag({ id: s.id, name: s.name })}
+                  >
+                    {s.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {warningList.length > 0 && (
+          <div
+            className="mb-5 rounded-lg border border-[#E8D9A8] bg-[#FBF3E4] px-4 py-3 text-sm text-socle-warn"
+            role="alert"
+            data-testid="creation-warnings"
+          >
+            <p className="font-semibold">
+              {warningList.length > 1 ? 'Points d’attention' : 'Point d’attention'} avant la création
+            </p>
+            <ul className="mt-1.5 list-disc space-y-1 pl-5 text-socle-slate">
+              {warningList.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {create.isError && (
+          <p className="mb-4 text-sm text-socle-danger" role="alert">
+            {apiErrorMessage(create.error, 'Création refusée — accès editor requis sur l’espace')}
+          </p>
+        )}
+
+        <Footer note="Le document sera créé en brouillon.">
+          <button
+            type="button"
+            className={`${btnGhost} bg-white`}
+            data-mock-id="newdoc-cancel"
+            onClick={() => navigate(closeHref)}
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            className={btnCta}
+            data-mock-id="newdoc-cta"
+            disabled={!title.trim() || !activeSpaceId || create.isPending || warnings.isLoading}
+          >
+            {create.isPending
+              ? 'Création…'
+              : warningList.length > 0
+                ? 'Créer quand même'
+                : 'Créer le document'}
+          </button>
+        </Footer>
+      </form>
     </main>
   )
 }
 
-function Footer({ children, note, top = 'mt-8' }: { children: ReactNode; note?: string; top?: string }) {
+function Footer({ children, note }: { children: ReactNode; note?: string }) {
   return (
-    <div className={`${top} flex items-center justify-between gap-4 pb-12`}>
-      <span className="text-[12.5px] text-socle-muted">{note}</span>
+    <div className="flex items-center justify-between gap-4 pb-12">
+      <span className="text-[12.5px] text-socle-muted" data-visual-mask="newdoc-footer-note">
+        {note}
+      </span>
       <div className="flex shrink-0 gap-2.5" data-mock-id="newdoc-actions">
         {children}
       </div>
@@ -453,43 +466,68 @@ function Footer({ children, note, top = 'mt-8' }: { children: ReactNode; note?: 
   )
 }
 
-function ChoiceRow({
-  label,
-  selected,
-  onSelect,
-  depth = 0,
-  root,
+function Chevron() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#9B9BA1"
+      strokeWidth="2"
+      aria-hidden
+      className="shrink-0"
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  )
+}
+
+/**
+ * <select> natif habillé comme les champs de la maquette (bordure #ECECEE, rayon 9, 10×13, chevron).
+ * `swatch` : `undefined` = pas de pastille ; `null` = pastille vide ; `''` = couleur d'accent.
+ */
+function SelectField({
+  id,
+  value,
+  onChange,
   swatch,
+  disabled,
+  children,
 }: {
-  label: string
-  selected: boolean
-  onSelect: () => void
-  depth?: number
-  root?: boolean
+  id: string
+  value: string
+  onChange: (value: string) => void
   swatch?: string | null
+  disabled?: boolean
+  children: ReactNode
 }) {
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      style={{ paddingLeft: 10 + depth * 16 }}
-      className={`flex w-full items-center gap-2 rounded-[7px] py-[8px] pr-2.5 text-left text-[13.5px] ${
-        selected
-          ? 'bg-socle-mist font-semibold text-socle-accent'
-          : 'text-[#4B4B52] hover:bg-[#F5F5F7]'
-      }`}
-    >
-      <span
-        aria-hidden
-        style={swatch ? { backgroundColor: swatch } : undefined}
-        className={`h-[9px] w-[9px] shrink-0 rounded-[3px] ${
-          swatch || root ? 'bg-socle-accent' : 'border border-socle-faint'
+    <div className="relative">
+      {swatch !== undefined && (
+        <span
+          aria-hidden
+          style={swatch ? { backgroundColor: swatch } : undefined}
+          className={`pointer-events-none absolute left-[13px] top-1/2 h-[9px] w-[9px] -translate-y-1/2 rounded-[3px] ${
+            swatch === null ? 'border border-socle-faint' : swatch === '' ? 'bg-socle-accent' : ''
+          }`}
+        />
+      )}
+      <select
+        id={id}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className={`block w-full cursor-pointer appearance-none truncate rounded-[9px] border border-[#ECECEE] bg-white py-[10px] pr-[34px] text-[13.5px] font-medium leading-[18px] text-socle-ink outline-none focus:border-[#C7C6F5] disabled:cursor-default disabled:opacity-60 ${
+          swatch !== undefined ? 'pl-[31px]' : 'pl-[13px]'
         }`}
-      />
-      <span className="truncate">{label}</span>
-    </button>
+      >
+        {children}
+      </select>
+      <span className="pointer-events-none absolute right-[13px] top-1/2 flex -translate-y-1/2">
+        <Chevron />
+      </span>
+    </div>
   )
 }
 

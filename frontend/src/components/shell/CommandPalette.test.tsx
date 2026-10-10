@@ -100,4 +100,28 @@ describe('CommandPalette', () => {
     const { container } = render(wrap(<CommandPalette open={false} onClose={() => {}} />))
     expect(container.querySelector('[data-testid="command-palette"]')).toBeNull()
   })
+
+  it('affiche le statut SearchHit dans la ligne méta (ex. brouillon)', async () => {
+    searchDocuments.mockResolvedValue({
+      query: 'reg',
+      total: 1,
+      results: [
+        {
+          id: 'doc-3',
+          title: 'Registre',
+          excerpt: '',
+          spaceId: 's1',
+          spaceName: 'Identité & accès',
+          docType: null,
+          status: 'brouillon',
+          updatedAt: null,
+          rank: 1,
+        },
+      ],
+    })
+    render(wrap(<CommandPalette open onClose={() => {}} />))
+    fireEvent.change(screen.getByTestId('command-palette-input'), { target: { value: 'reg' } })
+    await screen.findByText('Registre')
+    expect(screen.getByText(/Identité & accès · brouillon/)).toBeTruthy()
+  })
 })
