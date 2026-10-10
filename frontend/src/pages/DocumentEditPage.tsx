@@ -179,6 +179,7 @@ export function DocumentEditPage() {
       doc={doc.data}
       serverDraft={canEditDoc ? (draftQuery.data ?? null) : null}
       onAbandonDraft={abandonDraft}
+      tagAttachNotice={tagAttachNotice}
     />
   )
 }
@@ -191,11 +192,14 @@ function EditSurface({
   doc,
   serverDraft,
   onAbandonDraft,
+  tagAttachNotice,
 }: {
   doc: DocumentDetail
   /** Brouillon de l'appelant restauré à l'ouverture (null = repart du contenu publié). */
   serverDraft: DocumentDraft | null
   onAbandonDraft: () => Promise<void>
+  /** Flash non bloquant après création (échecs d'attachTag). */
+  tagAttachNotice: string | null
 }) {
   const id = doc.id
   const qc = useQueryClient()
