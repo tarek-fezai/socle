@@ -140,7 +140,7 @@ export function pngSize(buf) {
   return { w: img.width, h: img.height }
 }
 
-export async function measureMaskName(page, name) {
+export async function measureMaskName(page, name, pageArea = PAGE_AREA) {
   return page.evaluate(
     ({ maskName, pageArea }) => {
       let area = 0
@@ -154,7 +154,7 @@ export async function measureMaskName(page, name) {
         pctOfPage: Number(((area / pageArea) * 100).toFixed(3)),
       }
     },
-    { maskName: name, pageArea: PAGE_AREA },
+    { maskName: name, pageArea },
   )
 }
 

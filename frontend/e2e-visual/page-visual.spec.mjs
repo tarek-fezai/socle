@@ -12,7 +12,7 @@
  *  Colonne principale + rail (fil d'Ariane, actions, menu d'export, onglets, statut, attestation,
  *  titre, chapeau, corps, documents liés, retour d'utilité, rail d'infos). La barre latérale (shell)
  *  n'est PAS comparée ici : Main.dc.html montre un arbre de dossiers + boutons Document/Dossier,
- *  l'app le shell Favoris / Espaces / Membres (voir `.tmp-design-gaps-page-edit.md`).
+ *  l'app le shell Favoris / Espaces / Membres (décision tf : shell canonique, docs/visual-parity.md).
  *  Le menu « Imprimer / Exporter » est ouvert dans la maquette (état figé) : il est donc ouvert
  *  dans l'app par un clic avant capture (interaction utilisateur, pas une mutation du DOM).
  *  Les captures « sous la ligne de flottaison » défilent dans la page (maquette : conteneur
@@ -140,11 +140,6 @@ const SIZE_EXCEPTIONS = {
   'page-desktop-figure-2': {
     dw: 0,
     dh: -1,
-    reason: 'arrondi de boîte (fraction de pixel héritée du bloc draw.io NOT_IMPLEMENTED au-dessus)',
-  },
-  'page-mobile-feedback': {
-    dw: 0,
-    dh: -2,
     reason: 'arrondi de boîte (fraction de pixel héritée du bloc draw.io NOT_IMPLEMENTED au-dessus)',
   },
 }
@@ -507,11 +502,6 @@ test.describe('document page structural', () => {
     },
     'doc-tabs': { skip: ['text'], reason: 'Libellés dans les enfants ; Modifier/Accès conditionnels aux droits' },
     'doc-attestation': { skip: ['text'], reason: 'Conteneur — textes comparés sur les enfants annotés' },
-    // Écart de design NON masqué : doc-attestation-cta reste en échec sur fontFamily (maquette = Arial UA,
-    // app = IBM Plex Sans) — voir .tmp-design-gaps-page-edit.md. Seule la géométrie dérivée de cette police est exemptée.
-    'doc-attestation-title': { skip: ['box.width'], reason: 'Largeur du bloc texte = reste de la ligne flex après le CTA (police du CTA : écart de design)' },
-    'doc-attestation-text': { skip: ['box.width'], reason: 'Largeur du bloc texte = reste de la ligne flex après le CTA (police du CTA : écart de design)' },
-    'doc-attestation-cta': { skip: ['box.x', 'box.width'], reason: 'Largeur du bouton dérivée de la police (Arial vs IBM Plex Sans — écart de design, fontFamily reste comparé)' },
     'rail-owner-name': {
       skip: ['text', 'box.width'],
       reason: 'Propriétaire = « Équipe {nom de l’espace} » (maquette : « Équipe Identité ») — donnée réelle, largeur du texte en découle',

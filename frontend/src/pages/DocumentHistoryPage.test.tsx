@@ -400,8 +400,9 @@ describe('DocumentHistoryPage', () => {
     expect(screen.queryByTestId('history-more')).toBeNull()
   })
 
-  it('mobile : liste compacte, « Voir les changements → », « Restaurer cette version »', async () => {
+  it('mobile : liste compacte, « Voir les changements → » seul quand une version précédente existe', async () => {
     mockMobile(true)
+    listVersions.mockResolvedValue({ ...VERSIONS, total: 3 })
     render(wrap(<DocumentHistoryPage />))
     const row11 = await screen.findByTestId('history-row-11')
     expect(within(row11).getByText('Claire Dubois')).toBeTruthy()
@@ -410,11 +411,16 @@ describe('DocumentHistoryPage', () => {
     expect(within(row11).getByText('Voir les changements →').closest('a')!.getAttribute('href')).toBe(
       `/docs/${DOC}/history/compare?from=9&to=11`,
     )
-    expect(within(row11).getByRole('button', { name: 'Restaurer cette version' })).toBeTruthy()
+    expect(within(row11).queryByRole('button', { name: 'Restaurer cette version' })).toBeNull()
+    // plus ancienne version chargée : « Restaurer cette version » seul
+    const row9 = screen.getByTestId('history-row-9')
+    expect(within(row9).queryByText('Voir les changements →')).toBeNull()
+    expect(within(row9).getByRole('button', { name: 'Restaurer cette version' })).toBeTruthy()
     // version courante : « (actuelle) », aucune action
     const row12 = screen.getByTestId('history-row-12')
     expect(within(row12).getByText('· v12 (actuelle)')).toBeTruthy()
     expect(within(row12).queryByText('Voir les changements →')).toBeNull()
+    expect(within(row12).queryByRole('button', { name: 'Restaurer cette version' })).toBeNull()
     // barre d’onglets du bas partagée, Historique actif
     expect(screen.getByRole('navigation', { name: 'Sections du document' })).toBeTruthy()
   })

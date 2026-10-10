@@ -8,12 +8,10 @@
  * aucun clip hors sections déclarées. Annotation maquette : data-* uniquement.
  * Sections : barre haute, 3 lignes (v12 actuelle, v11, v1 système), barre d'onglets du bas (lot #40).
  *
- * Les écarts qui subsistent sont des écarts de conception (pas de données manquantes) et restent
- * ROUGES : voir `.tmp-design-gaps-history.md`.
+ * Actions (maquette, décision tf) : une seule action par ligne — « Voir les changements → » s'il existe
+ * une version précédente, sinon « Restaurer cette version » ; jamais d'action sur la version courante.
  *
- * Écarts de conception connus (numérotés, repris dans la PR) :
- *  - M1  v11 : en plus de « Voir les changements → », l'éditeur dispose de « Restaurer cette version »
- *        (la maquette ne le montre que sur la v1).
+ * Écarts connus :
  *  - M2  v1 (système) : l'app affiche l'heure (« 14 juillet 2026 à 11:00 ») car l'API fournit un
  *        horodatage complet ; la maquette n'affiche que la date.
  *  - M3  Pas de résumé de changement sur mobile (la maquette n'en affiche pas).
@@ -163,6 +161,8 @@ test.describe('Historique mobile — comportement', () => {
   test('« Voir les changements → » ouvre le diff ; « Restaurer cette version » ouvre la modale', async ({ page }) => {
     await openMobile(page)
     await expect(page.getByTestId('history-row-12').getByRole('link')).toHaveCount(0)
+    await expect(page.getByTestId('history-row-12').getByRole('button')).toHaveCount(0)
+    await expect(page.getByTestId('history-row-11').getByRole('button', { name: 'Restaurer cette version' })).toHaveCount(0)
     await page.getByRole('link', { name: 'Voir les changements →' }).click()
     await expect(page).toHaveURL(new RegExp(`/docs/${HIST_DOC_ID}/history/compare\\?from=1&to=11$`))
   })

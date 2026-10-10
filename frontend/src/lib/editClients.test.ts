@@ -102,7 +102,9 @@ describe('assistant de rédaction', () => {
       [3, 121],
     ])
     expect(found[0]!.excerpt.length).toBeLessThanOrEqual(81)
-    expect(longParagraphMessage(found[0]!, 120)).toContain('130')
+    expect(longParagraphMessage(120)).toBe(
+      'Le paragraphe édité dépasse 120 mots — envisagez de le diviser en deux idées.',
+    )
   })
 
   it('applique un seuil personnalisé et ignore les transclusions', () => {

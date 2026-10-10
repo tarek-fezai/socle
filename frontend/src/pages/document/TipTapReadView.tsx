@@ -392,8 +392,9 @@ function renderBlock(node: TipTapNode, ctx: Ctx): ReactNode {
   switch (type) {
     case 'paragraph': {
       if (children(node).length === 0) return null
+      const lead = ctx.analysis.leadParagraph === node
       return (
-        <p data-mock-id={ctx.analysis.leadParagraph === node ? 'doc-lead' : undefined}>
+        <p className={lead ? 'doc-lead' : undefined} data-mock-id={lead ? 'doc-lead' : undefined}>
           <Inline node={node} anchors={ctx.anchors} />
         </p>
       )

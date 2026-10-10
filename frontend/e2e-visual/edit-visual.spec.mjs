@@ -17,6 +17,9 @@
  *    sont des zones NOT_IMPLEMENTED : masque nommé côté maquette, jamais comptées comme réussies.
  *  - Utilisateur courant de la fixture : « Camille Durand » (initiales CD, comme l'avatar de la maquette).
  *    Le seul détenteur du verrou est cet utilisateur ; la maquette ajoute un second avatar (YM).
+ *  - Le paragraphe « en cours d'édition » (contour pointillé de la maquette) : le curseur y est placé par
+ *    un clic + Fin avant sa capture (interaction utilisateur) ; l'app pose alors `is-editing` sur le
+ *    paragraphe (extension EditingParagraph).
  *  - Le menu « Insérer » est ouvert dans la maquette (état figé, en flux) : il est ouvert dans l'app par
  *    un clic avant sa capture (interaction utilisateur, pas une mutation du DOM) — mesuré en dernier car il
  *    recouvre la colonne dans l'app (popover) alors qu'il pousse le contenu dans la maquette.
@@ -24,18 +27,19 @@
  * ── Fixture applicative (edit-fixtures.mjs) ──────────────────────────────────────────────
  *  - Corps limité aux nœuds du StarterKit (+ un bloc `image` et un bloc `attachment` en fin de corps) ;
  *    paragraphes de remplissage sous la ligne de flottaison pour afficher « 1 240 mots · 6 min de lecture ».
- *  - Seuil « paragraphe long » du serveur calé entre le chapeau et le paragraphe « en cours d'édition ».
+ *  - Seuil « paragraphe long » du serveur = 60 (valeur de la maquette) ; un paragraphe de remplissage de
+ *    61 mots sous la ligne de flottaison le dépasse.
  *
- * ── Écarts de conception assumés (non masqués — voir `.tmp-design-gaps-page-edit.md`) ───────
+ * ── Écarts de conception assumés (non masqués) ──────────────────────────────────────────────
  *  E1. Barre d'outils : fonctions manquantes rendues désactivées (`aria-disabled`, « Bientôt disponible »).
  *  E2. Menu « Insérer » : popover (maquette : panneau en flux), entrées actives/« bientôt » différentes.
  *  E3. Propriétaire : « Équipe {nom de l'espace} » (maquette : « Équipe Identité »).
- *  E4. Carte « Paragraphe long » : message calculé + bouton « Aller au paragraphe ».
+ *  E4. Carte « Paragraphe long » : la carte entière mène au paragraphe (nombre de mots dans son titre).
  *  E6. Champs personnalisés : le 1er champ de la maquette est en IBM Plex Mono.
  *  E7. Les contrôles de la barre haute sont des <button> (la maquette : <a>).
  *  E8. Titre : <textarea> auto-dimensionné (la maquette : <h1 contenteditable>).
- *  E11. Barre haute : bouton « Enregistrer la version » absent de Edit.dc.html — décale présence / Aperçu /
- *       « Envoyer en révision » et comprime le fil d'Ariane.
+ *  E11. Barre haute : bouton « Enregistrer » (version explicite, Ctrl/Cmd+S) absent de Edit.dc.html — tient
+ *       dans l'espace libre de la barre : fil d'Ariane, Aperçu et « Envoyer en révision » gardent leur largeur.
  *
  * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/edit-visual.spec.mjs`
  * (journalise tous les % / tailles, écrit test-results/edit-before.json, n'échoue pas).
@@ -108,7 +112,7 @@ export const NOT_IMPLEMENTED = [
     id: 'edit-presence-coeditor',
     page: 'edit',
     reason: 'Avatar de présence « YM » (second éditeur) : co-édition hors V1',
-    backlog: 'EDIT-COEDIT (hors V1)',
+    backlog: 'EDIT-COEDIT-PRESENCE',
     mockMask: 'edit-presence-coeditor',
     appImplementedProbe: '[data-testid="edit-avatar-coeditor"]',
   },
@@ -210,14 +214,7 @@ export const NOT_IMPLEMENTED = [
 ]
 
 /** Écarts mesurés (app − maquette) déclarés. */
-const SIZE_EXCEPTIONS = {
-  'edit-desktop-p-editing': {
-    dw: 0,
-    dh: -4,
-    reason:
-      'la maquette montre le paragraphe en état « en cours d’édition » (padding + contour pointillé, caret factice) — état de focus transitoire ; le texte est comparé (zone commune en haut à gauche)',
-  },
-}
+const SIZE_EXCEPTIONS = {}
 
 /* ------------------------------------------------------------------ */
 /* Sections                                                           */
@@ -243,7 +240,6 @@ const DESKTOP_SECTIONS = [
   // Nœuds ProseMirror : ProseMirror retire les attributs posés de l'extérieur (observer DOM) → sélecteurs
   // CSS côté app (côté maquette : data-mock-id).
   { id: 'ed-h2-principe', name: 'h2-principe', appSelector: '.ProseMirror > :nth-child(2)' },
-  { id: 'ed-p-editing', name: 'p-editing', appSelector: '.ProseMirror > :nth-child(3)' },
   { id: 'ed-h2-cycle', name: 'h2-cycle', appSelector: '.ProseMirror > :nth-child(6)' },
   { id: 'ed-ol', name: 'ol', appSelector: '.ProseMirror > :nth-child(7)' },
   { id: 'ed-hr', name: 'hr', appSelector: '.ProseMirror > :nth-child(8)' },
@@ -252,8 +248,11 @@ const DESKTOP_SECTIONS = [
   { id: 'ed-card-link', name: 'card-link' },
   { id: 'ed-meta-block', name: 'meta-block' },
 ]
+/** Paragraphe « en cours d'édition » : mesuré après un clic qui y place le curseur (voir en-tête). */
+const EDITING_SECTION = { id: 'ed-p-editing', name: 'p-editing', appSelector: '.ProseMirror > :nth-child(3)' }
 /** Menu « Insérer » : mesuré après ouverture dans l'app (voir en-tête). */
 const INSERT_SECTION = { id: 'ed-insert-menu', name: 'insert-menu', masks: ['edit-insert-soon'] }
+const STATEFUL_SECTIONS = [EDITING_SECTION, INSERT_SECTION]
 
 /* ------------------------------------------------------------------ */
 /* Annotation (data-* uniquement)                                      */
@@ -498,6 +497,12 @@ test.describe('document edit visual parity', () => {
       await page.mouse.move(1, 1)
       appSec[s.name] = await shoot(page, s, 'app')
     }
+    // Paragraphe « en cours d'édition » : curseur placé en fin de paragraphe par clic + Fin (interaction).
+    await page.locator(EDITING_SECTION.appSelector).click()
+    await page.keyboard.press('End')
+    await page.waitForSelector(`${EDITING_SECTION.appSelector}.is-editing`)
+    await page.mouse.move(1, 1)
+    appSec[EDITING_SECTION.name] = await shoot(page, EDITING_SECTION, 'app')
     // Menu « Insérer » : ouvert par clic (état figé ouvert dans la maquette) — en dernier, il recouvre la colonne.
     await page.getByTestId('edit-insert-btn').click()
     await page.waitForSelector('[data-testid="edit-insert-panel"]')
@@ -519,11 +524,11 @@ test.describe('document edit visual parity', () => {
     await settleFonts(page)
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'edit')
     const mockSec = {}
-    for (const s of [...DESKTOP_SECTIONS, INSERT_SECTION]) mockSec[s.name] = await shoot(page, s, 'mock')
+    for (const s of [...DESKTOP_SECTIONS, ...STATEFUL_SECTIONS]) mockSec[s.name] = await shoot(page, s, 'mock')
 
     const compare = compareSectionShots(SIZE_EXCEPTIONS)
     const results = []
-    for (const s of [...DESKTOP_SECTIONS, INSERT_SECTION]) {
+    for (const s of [...DESKTOP_SECTIONS, ...STATEFUL_SECTIONS]) {
       results.push(compare(`edit-desktop-${s.name}`, mockSec[s.name].shot, appSec[s.name].shot, testInfo))
     }
 
@@ -562,13 +567,10 @@ test.describe('document edit structural', () => {
       reason: `Idem : retours à la ligne du source entre titre et message ; libellés identiques. ${BANNER_Y}`,
     },
     'edit-card-link-text': { skip: ['box.y'], reason: BANNER_Y },
-    'edit-card-long-text': {
-      skip: ['text', 'box.y'],
-      reason: `E4 : message calculé (« Ce paragraphe dépasse N mots (M) ») au lieu du texte statique. ${BANNER_Y}`,
-    },
+    'edit-card-long-text': { skip: ['box.y'], reason: BANNER_Y },
     'edit-card-long': {
       skip: ['text', 'box.y'],
-      reason: `E4 : bouton « Aller au paragraphe » ajouté dans l’en-tête ; message calculé. ${BANNER_Y}`,
+      reason: `Idem : retours à la ligne du source entre titre et message ; libellés identiques. ${BANNER_Y}`,
     },
     'edit-meta-owner': { skip: ['text'], reason: 'E3 : « Équipe {nom de l’espace} » (maquette : « Équipe Identité »)' },
     'edit-meta': { skip: ['text'], reason: 'Conteneur — textes comparés sur les enfants annotés ; E3' },
@@ -577,31 +579,14 @@ test.describe('document edit structural', () => {
       skip: ['fontFamily'],
       reason: 'E6 : champ en IBM Plex Mono dans la maquette ; IBM Plex Sans dans l’app',
     },
-    'edit-breadcrumb-current': {
-      skip: ['box'],
-      reason: 'E11 : fil d’Ariane compressé par le bouton « Enregistrer la version » (absent de la maquette)',
-    },
-    'edit-save-status': {
-      skip: ['box'],
-      reason: 'E11 : statut décalé par « Enregistrer la version » (absent de Edit.dc.html)',
-    },
-    'edit-word-count': {
-      skip: ['box'],
-      reason: 'E11 : compteur décalé par « Enregistrer la version » (absent de Edit.dc.html)',
-    },
     'edit-presence': {
       skip: ['box', 'text'],
       reason:
-        'Co-édition hors V1 : la maquette montre deux avatars (YM + CD) ; l’app un seul (utilisateur courant). Décalage E11 en plus',
+        'Co-édition hors V1 : la maquette montre deux avatars (YM + CD) ; l’app un seul (utilisateur courant). x décalé par « Enregistrer » (E11)',
     },
     'edit-preview': {
-      skip: ['box'],
-      reason: 'E11 : Aperçu décalé par « Enregistrer la version »',
-    },
-    'edit-send-review': {
-      skip: ['box'],
-      reason:
-        'E11 : déclencheur ChangeSummaryPopover (hauteur/largeur) vs lien plat « Envoyer en révision » de la maquette',
+      skip: ['box.x'],
+      reason: 'E11 : Aperçu décalé vers la gauche par « Enregistrer » (absent de Edit.dc.html) ; y / w / h comparés',
     },
   }
 

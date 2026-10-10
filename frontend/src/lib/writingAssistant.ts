@@ -98,6 +98,6 @@ export function findLongParagraphs(
 }
 
 /** Texte de la carte « Paragraphe long ». */
-export function longParagraphMessage(p: LongParagraph, threshold: number): string {
-  return `Ce paragraphe dépasse ${threshold} mots (${p.wordCount ?? 0}) — envisagez de le diviser en deux idées.`
+export function longParagraphMessage(threshold: number): string {
+  return `Le paragraphe édité dépasse ${threshold} mots — envisagez de le diviser en deux idées.`
 }

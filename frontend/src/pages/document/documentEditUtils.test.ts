@@ -76,8 +76,7 @@ describe('temps de lecture', () => {
   })
 
   it('formate « N mots · M min de lecture »', () => {
-    const s = formatWordStats(1240).replace(/\s/g, ' ')
-    expect(s).toBe('1 240 mots · 6 min de lecture')
+    expect(formatWordStats(1240)).toBe('1\u00a0240 mots · 6 min de lecture')
     expect(formatWordStats(1)).toContain('1 mot ·')
     expect(formatWordStats(0)).toContain('0 mot')
   })

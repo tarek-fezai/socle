@@ -1465,7 +1465,11 @@ ol.doc-list {
   .doc-read p {
     font-size: 14.5px;
     line-height: 1.65;
-    margin: 0 0 20px;
+    margin: 0 0 18px;
+  }
+
+  .doc-read p.doc-lead {
+    margin-bottom: 20px;
   }
 
   .doc-h2 {
@@ -1555,8 +1559,8 @@ ol.doc-list {
   }
 
   .doc-vote {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
   }
 
   .doc-related {

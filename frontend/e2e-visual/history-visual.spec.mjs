@@ -4,12 +4,13 @@
  *
  * Écran Historique (/docs/:id/history) vs History.dc.html @ 1440×900.
  *
- * Pixel honnête (texte inclus, ≤ 1 % par section) ; aucun masque, aucun clip hors sections déclarées.
+ * Pixel honnête (texte inclus, ≤ 1 % par section) ; aucun clip hors sections déclarées.
  * Annotation maquette : data-* uniquement (aucune modification de style / DOM).
- * Sections : sidebar, barre haute, onglets, titre, sous-titre, timeline entière et chacune des 4 lignes.
+ * Sections : barre haute, onglets, titre, sous-titre, timeline entière et chacune des 4 lignes.
  *
- * Les écarts qui subsistent sont des écarts de conception (pas de données manquantes) et restent
- * ROUGES : voir `.tmp-design-gaps-history.md`. Aucune fonctionnalité absente de l'API n'est en jeu ici.
+ * Sidebar : History.dc.html porte l'ancienne sidebar ; le shell de l'app est la référence
+ * (docs/visual-parity.md § Décisions produit). Masque nommé `history-legacy-sidebar` côté maquette,
+ * surface chiffrée et journalisée ; la sidebar n'est pas une section comparée sur cet écran.
  *
  * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/history-visual.spec.mjs`
  * (journalise tous les % / tailles, écrit test-results/history-before.json, n'échoue pas).
@@ -29,6 +30,7 @@ import {
   assertNotImplementedGuards,
   compareSectionShots,
   finishPixelResults,
+  measureMaskName,
   reportNotImplemented,
   settleFonts,
   shotSection,
@@ -46,13 +48,17 @@ const HISTORY_URL = `/docs/${HIST_DOC_ID}/history`
  */
 export const NOT_IMPLEMENTED = []
 
-/** Maquette avec sidebar comme l'app : aucune exception de taille a priori (mesure : tout écart est un échec). */
+/** Aucune exception de taille (mesure : tout écart est un échec). */
 const SIZE_EXCEPTIONS = {}
+
+const LEGACY_SIDEBAR_MASK = {
+  name: 'history-legacy-sidebar',
+  reason: 'décision tf : shell canonique (sidebar de l’app = référence ; History.dc.html porte l’ancienne sidebar)',
+}
 
 /** [section pixel] nom, sélecteur maquette, sélecteur app. */
 const dm = (id) => `[data-mock-id="${id}"]`
 const PIXEL_SECTIONS = [
-  { name: 'sidebar', mock: dm('hist-sidebar'), app: dm('shell-sidebar') },
   { name: 'topbar', mock: dm('hist-topbar'), app: dm('hist-topbar') },
   { name: 'tabs', mock: dm('hist-tabs'), app: dm('hist-tabs') },
   { name: 'title', mock: dm('hist-title'), app: dm('hist-title') },
@@ -70,6 +76,7 @@ async function annotateHistoryExtras(page) {
   await page.evaluate(() => {
     const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
     root?.children[0]?.setAttribute('data-mock-id', 'hist-sidebar')
+    root?.children[0]?.setAttribute('data-visual-mask', 'history-legacy-sidebar')
     const timeline = root?.children[1]?.children[2]?.children[0]?.children[2]
     timeline?.setAttribute('data-mock-id', 'hist-timeline')
     ;[...(timeline?.children ?? [])].slice(1).forEach((item, i) => item.setAttribute('data-mock-id', `hist-row-${i}`))
@@ -95,6 +102,11 @@ test.describe('Historique — parité visuelle', () => {
     await annotateHistoryExtras(page)
     await settleFonts(page)
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'history')
+    const legacy = await measureMaskName(page, LEGACY_SIDEBAR_MASK.name)
+    expect(legacy.areaPx, `masque « ${LEGACY_SIDEBAR_MASK.name} » sans élément`).toBeGreaterThan(0)
+    const legacyDesc = `MASK ${legacy.name}: ${legacy.areaPx} px (${legacy.pctOfPage} % page) — ${LEGACY_SIDEBAR_MASK.reason}`
+    console.log(legacyDesc)
+    testInfo.annotations.push({ type: 'mask', description: legacyDesc })
 
     const mockSec = {}
     for (const s of PIXEL_SECTIONS) {
