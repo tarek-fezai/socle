@@ -81,7 +81,7 @@ export function DocumentReliabilityStatus({
       {computedLabel && (
         <>
           <span className="h-0.5 w-0.5 rounded-full bg-[#DEDEE1]" aria-hidden />
-          <span className="text-socle-faint" data-testid="reliability-computed-at">
+          <span className="text-socle-subtle" data-testid="reliability-computed-at">
             {computedLabel}
           </span>
         </>

@@ -120,7 +120,7 @@ export function TrashPage() {
         </ul>
       )}
 
-      <p className="mt-5 text-[12.5px] text-socle-faint">
+      <p className="mt-5 text-[12.5px] text-socle-subtle">
         Les documents restaurés reviennent à leur emplacement d&apos;origine dans l&apos;arborescence
         de l&apos;espace.
       </p>

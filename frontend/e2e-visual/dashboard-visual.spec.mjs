@@ -28,12 +28,14 @@ import {
 } from './structural-compare.mjs'
 import {
   FAVORITES_SEED,
+  HOME_MOBILE_SEED,
   HOME_SEED,
   ME_TAREK,
   NOTIFICATIONS_SEED,
   SPACE_IDENTITE,
   SPACE_INFRA,
   TREE_IDENTITE,
+  TREE_IDENTITE_MENU,
   TREE_INFRA,
   VISUAL_NOW,
 } from './dashboard-fixtures.mjs'
@@ -141,7 +143,8 @@ const MENU_SECTIONS = [
   { id: 'mobile-menu-user', name: 'user' },
 ]
 
-async function prepHome(page) {
+/** Une fixture par maquette : Dashboard (défaut), MobileDashboard, MobileMenu. */
+async function prepHome(page, { home = HOME_SEED, treeIdentite = TREE_IDENTITE } = {}) {
   await injectOidcSession(page, VISUAL_NOW, { expandedSpaces: [SPACE_IDENTITE.id, SPACE_INFRA.id] })
   await mockBaseApis(page, {
     me: ME_TAREK,
@@ -149,9 +152,9 @@ async function prepHome(page) {
     spaces: [SPACE_IDENTITE, SPACE_INFRA],
   })
   await page.route('**/api/v1/public/branding', (route) => json(route, DEFAULT_PUBLIC_BRANDING))
-  await page.route('**/api/v1/home', (route) => json(route, HOME_SEED))
+  await page.route('**/api/v1/home', (route) => json(route, home))
   await page.route('**/api/v1/favorites**', (route) => json(route, FAVORITES_SEED))
-  await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}/tree**`, (route) => json(route, TREE_IDENTITE))
+  await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}/tree**`, (route) => json(route, treeIdentite))
   await page.route(`**/api/v1/spaces/${SPACE_INFRA.id}/tree**`, (route) => json(route, TREE_INFRA))
 }
 
@@ -239,7 +242,7 @@ test.describe('dashboard visual parity — mobile', () => {
   test.use({ timezoneId: 'Europe/Paris' })
 
   test('mobile Accueil — sections pixel ≤ 1 % @ 390×844', async ({ page }, testInfo) => {
-    await prepHome(page)
+    await prepHome(page, { home: HOME_MOBILE_SEED })
     await page.setViewportSize(MOBILE)
     const area = pageAreaFor(MOBILE)
 
@@ -261,7 +264,7 @@ test.describe('dashboard visual parity — mobile', () => {
   })
 
   test('menu mobile — sections pixel ≤ 1 % @ 390×844', async ({ page }, testInfo) => {
-    await prepHome(page)
+    await prepHome(page, { treeIdentite: TREE_IDENTITE_MENU })
     await page.setViewportSize(MOBILE)
     const area = pageAreaFor(MOBILE)
 
@@ -279,7 +282,7 @@ test.describe('dashboard visual parity — mobile', () => {
   })
 
   test('mobile Accueil structural', async ({ page }) => {
-    await prepHome(page)
+    await prepHome(page, { home: HOME_MOBILE_SEED })
     await page.setViewportSize(MOBILE)
 
     await page.goto(`${MOCK_ORIGIN}/MobileDashboard.dc.html`)
@@ -296,7 +299,7 @@ test.describe('dashboard visual parity — mobile', () => {
   })
 
   test('menu mobile structural', async ({ page }) => {
-    await prepHome(page)
+    await prepHome(page, { treeIdentite: TREE_IDENTITE_MENU })
     await page.setViewportSize(MOBILE)
 
     await page.goto(`${MOCK_ORIGIN}/MobileMenu.dc.html`)

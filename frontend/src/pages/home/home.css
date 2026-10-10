@@ -171,6 +171,16 @@
   font-weight: 600;
 }
 
+.home-activity-row--link:hover strong {
+  text-decoration: underline;
+}
+
+.home-activity-row--link:focus-visible {
+  outline: 2px solid #3730e0;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .home-activity-row em {
   font-style: italic;
   /* Pas de fichier IBM Plex Sans Italic embarqué : oblique synthétique, comme la maquette */
@@ -339,14 +349,5 @@
     width: 18px;
     height: 18px;
     font-size: 8px;
-  }
-
-  /* MobileDashboard.dc.html : 1 carte approbation, 2 lignes d'activité */
-  .home-col-side .home-card.home-card--block ~ .home-card.home-card--block {
-    display: none;
-  }
-
-  .home-activity-row:nth-child(n + 3) {
-    display: none;
   }
 }

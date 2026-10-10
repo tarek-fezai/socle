@@ -273,8 +273,7 @@ test.describe('new document visual', () => {
       'AppShell : colonne centrée dans la zone à droite de la sidebar 268 px (box.x décalé de 134 px) ; ordre des cartes propre à l’app (box.y / box.x des cartes non comparables) ; typographie et largeur comparées.'
     const CONTAINER_TEXT =
       'text : conteneur — l’app n’insère pas d’espace entre blocs (textContent concaténé) ; le texte est vérifié par la comparaison pixel (texte inclus).'
-    const BTN_LH =
-      'lineHeight : <button> (app) épinglé à 1 par collectMetrics, <div> (maquette) à 1.2.'
+
     const FIELD_TEXT =
       'text : maquette = libellé + faux champ ; app = libellé + <select>/<input> natif (options / placeholder hors textContent) — vérifié par pixel.'
     const pageExceptions = {
@@ -286,12 +285,12 @@ test.describe('new document visual', () => {
         reason: `${FLOW} ${CONTAINER_TEXT}`,
       },
       'newdoc-tpl-politique': {
-        skip: ['text', 'lineHeight', 'box.x', 'box.y'],
-        reason: `${FLOW} ${CONTAINER_TEXT} ${BTN_LH}`,
+        skip: ['text', 'box.x', 'box.y'],
+        reason: `${FLOW} ${CONTAINER_TEXT}`,
       },
       'newdoc-tpl-fiche-fournisseur-externe': {
-        skip: ['text', 'lineHeight', 'box.x', 'box.y'],
-        reason: `${FLOW} ${CONTAINER_TEXT} ${BTN_LH}`,
+        skip: ['text', 'box.x', 'box.y'],
+        reason: `${FLOW} ${CONTAINER_TEXT}`,
       },
       'newdoc-space-select': {
         skip: ['text', 'box.x', 'box.y'],

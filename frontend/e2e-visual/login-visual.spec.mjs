@@ -47,6 +47,7 @@ import {
 
 const LOGIN_AUTH_CONFIG = {
   ...AUTH_CONFIG,
+  idpDisplayName: 'Okta',
   supportContact: 'identite@example.com',
   passkeyAcrValues: 'phr',
 }
@@ -69,7 +70,39 @@ export const NOT_IMPLEMENTED = [
     backlog: 'LOGIN-EMAIL-DOMAIN-HINT',
     mockMask: 'login-email-domain-hint',
   },
+  {
+    id: 'login-error-provisioning-conflicts',
+    page: 'login-error',
+    reason:
+      'Troisième cause « 2 conflits de provisioning sont en attente… » : le nombre de conflits n’est exposé par aucune API publique (la page d’erreur est non authentifiée)',
+    backlog: 'LOGIN-ERROR-PROVISIONING-CONFLICTS',
+    mockMask: 'login-error-provisioning-conflicts',
+    appImplementedProbe: '[data-mock-id="cause-2"]',
+  },
 ]
+
+/** Cascade verticale sous la liste des causes (troisième cause NOT_IMPLEMENTED). */
+const CENTERED_CASCADE = {
+  skip: ['box.y'],
+  reason:
+    'box.y : colonne centrée verticalement, plus courte de la cause NOT_IMPLEMENTED (login-error-provisioning-conflicts)',
+}
+
+const ERROR_STRUCT_EXCEPTIONS = {
+  'brand-name': CENTERED_CASCADE,
+  title: CENTERED_CASCADE,
+  subtitle: CENTERED_CASCADE,
+  'causes-title': CENTERED_CASCADE,
+  'cause-0': CENTERED_CASCADE,
+  'cause-1': CENTERED_CASCADE,
+  causes: {
+    skip: ['text', 'box.height', 'box.y'],
+    reason: 'Cadre des causes : troisième cause NOT_IMPLEMENTED (login-error-provisioning-conflicts) ; causes comparées une à une',
+  },
+  'cta-retry': { skip: ['box.y'], reason: 'box.y : cascade sous la cause NOT_IMPLEMENTED' },
+  'contact-support': { skip: ['box.y'], reason: 'box.y : cascade sous la cause NOT_IMPLEMENTED' },
+  footer: { skip: ['box.y'], reason: 'box.y : cascade sous la cause NOT_IMPLEMENTED' },
+}
 
 /** Caret dessiné de la maquette (span 2×16) : l'app a un vrai caret, masqué à la capture. */
 const FAKE_CARET_MASK = {
@@ -104,7 +137,9 @@ const ERROR_SECTIONS = [
   { id: 'login-alert-icon', name: 'alert-icon' },
   { id: 'title', name: 'title' },
   { id: 'subtitle', name: 'subtitle' },
-  { id: 'causes', name: 'causes' },
+  { id: 'causes-title', name: 'causes-title' },
+  { id: 'cause-0', name: 'cause-0' },
+  { id: 'cause-1', name: 'cause-1' },
   { id: 'cta-retry', name: 'retry' },
   { id: 'contact-support', name: 'contact' },
   { id: 'footer', name: 'footer' },
@@ -186,12 +221,14 @@ test.describe('login visual parity', () => {
     await page.goto(`${MOCK_ORIGIN}/LoginError.dc.html`)
     await annotateLoginErrorMockup(page)
     await settleFonts(page)
+    await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'login-error')
     const mockSec = await shootSections(page, ERROR_SECTIONS, 'mock', 'login-error')
 
     await page.goto('/login/erreur?reason=not_provisioned')
     await page.waitForSelector('text=tarek.fezai@example.com')
     await page.mouse.move(1, 1)
     await settleFonts(page)
+    await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'login-error')
     const appSec = await shootSections(page, ERROR_SECTIONS, 'app', 'login-error')
 
     finishPixelResults('login-error', compareAll(ERROR_SECTIONS, mockSec, appSec, 'login-error', testInfo))
@@ -262,7 +299,9 @@ test.describe('login structural typography', () => {
     await settleFonts(page)
     const appMap = await collectMetrics(page, LOGIN_ERROR_IDS)
 
-    expectNoStructuralDiffs(compareMetrics(mockMap, appMap, LOGIN_ERROR_IDS))
+    expectNoStructuralDiffs(
+      compareMetrics(mockMap, appMap, LOGIN_ERROR_IDS, { pageExceptions: ERROR_STRUCT_EXCEPTIONS }),
+    )
   })
 
   test('MobileLogin structural @ 390×844', async ({ page }) => {

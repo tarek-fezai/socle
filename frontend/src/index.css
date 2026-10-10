@@ -55,7 +55,7 @@ html[data-socle-reduce-motion='true'] *::after {
   }
 
   .breadcrumb {
-    @apply flex flex-wrap items-center gap-1.5 text-[13px] text-socle-faint;
+    @apply flex flex-wrap items-center gap-1.5 text-[13px] text-socle-subtle;
   }
 
   .breadcrumb a {

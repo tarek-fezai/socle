@@ -8,6 +8,10 @@
  * l'app l'ouvre par clic sur « Nouveau champ » puis le remplit au clavier (nom, description,
  * type « Liste (unique) », trois valeurs) — jamais par modification du DOM.
  *
+ * APP_EXTRA (DP-2026-10-11 #6) : sélection de l'espace, statut, pastilles × de retrait et champ
+ * « Nouvelle valeur » sont nécessaires au fonctionnement et absents de la maquette → masqués côté
+ * app uniquement, surfaces chiffrées ; placés de façon à ne pas décaler les éléments de la maquette.
+ *
  * Pixel honnête (texte inclus, ≤ 1 % par section) ; seul exclu : `mask` Playwright nommé.
  * Annotation maquette : data-* uniquement (`annotateCustomFieldsAdminMockup`).
  *
@@ -34,6 +38,7 @@ import {
   injectOidcSession,
   json,
   mockBaseApis,
+  reportAppExtras,
   reportNotImplemented,
   settleFonts,
   shotSection,
@@ -41,6 +46,41 @@ import {
 
 /** Toutes les zones de la maquette ont une donnée produit : aucune entrée. */
 export const NOT_IMPLEMENTED = []
+
+const DECISION = 'DP-2026-10-11 #6 — constructeur fonctionnel (portée, statut, édition des valeurs)'
+
+/** @type {import('./visual-parity-kit.mjs').AppExtraZone[]} */
+export const APP_EXTRA = [
+  {
+    id: 'cf-space-select',
+    page: 'custom-fields-admin',
+    appMask: 'cf-space-select',
+    reason: 'choix de l\'espace quand la portée est « Espace spécifique »',
+    decision: DECISION,
+  },
+  {
+    id: 'cf-status',
+    page: 'custom-fields-admin',
+    appMask: 'cf-status',
+    reason: 'statut du champ (brouillon / actif / archivé)',
+    decision: DECISION,
+  },
+  {
+    id: 'cf-choice-remove',
+    page: 'custom-fields-admin',
+    appMask: 'cf-choice-remove',
+    reason: 'pastilles × de retrait d\'une valeur',
+    decision: DECISION,
+  },
+  {
+    id: 'cf-choice-input',
+    page: 'custom-fields-admin',
+    appMask: 'cf-choice-input',
+    reason: 'saisie « Nouvelle valeur »',
+    decision: DECISION,
+  },
+]
+const APP_EXTRA_MASKS = APP_EXTRA.map((z) => z.appMask)
 
 const SIZE_EXCEPTIONS = {}
 
@@ -55,7 +95,7 @@ const PIXEL_SECTIONS = [
   { id: 'custom-fields-table-head', name: 'table-head' },
   ...ROWS.map((i) => ({ id: `custom-fields-row-${i}`, name: `row-${i}` })),
   { id: 'custom-fields-builder-label', name: 'builder-label' },
-  { id: 'custom-fields-builder', name: 'builder' },
+  { id: 'custom-fields-builder', name: 'builder', appOnlyMasks: APP_EXTRA_MASKS },
   { id: 'custom-fields-builder-actions', name: 'builder-actions' },
   { id: 'custom-fields-rail-block-0', name: 'rail-where' },
   { id: 'custom-fields-rail-block-1', name: 'rail-limits' },
@@ -119,6 +159,7 @@ test.describe('custom fields admin visual', () => {
     await openBuilderLikeMockup(page)
     await page.mouse.move(1, 1)
     await settleFonts(page)
+    await reportAppExtras(page, testInfo, APP_EXTRA, 'custom-fields-admin')
     const appSec = await shootSections(page, 'app')
 
     const compare = compareSectionShots(SIZE_EXCEPTIONS)
@@ -147,6 +188,12 @@ test.describe('custom fields admin visual', () => {
     await settleFonts(page)
     const appMetrics = await collectMetrics(page, STRUCTURAL_IDS)
 
-    expectNoStructuralDiffs(compareMetrics(mockMetrics, appMetrics, STRUCTURAL_IDS))
+    expectNoStructuralDiffs(
+      compareMetrics(mockMetrics, appMetrics, STRUCTURAL_IDS, {
+        pageExceptions: {
+          'custom-fields-builder': { skip: ['text'], reason: `${DECISION} : texte des APP_EXTRA` },
+        },
+      }),
+    )
   })
 })

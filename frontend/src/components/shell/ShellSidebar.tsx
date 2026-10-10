@@ -15,7 +15,6 @@ import {
   useBrandingAccent,
   useBrandingInstanceName,
   useBrandingLogoUrl,
-  useHidePoweredBy,
 } from '../../lib/publicBranding'
 
 type Props = {
@@ -108,7 +107,6 @@ export function ShellSidebar({ onOpenSearch }: Props) {
   const logoUrl = useBrandingLogoUrl()
   const accent = useBrandingAccent()
   const brandName = useBrandingInstanceName() || 'Socle'
-  const hidePoweredBy = useHidePoweredBy()
 
   return (
     <aside className="shell-sidebar shell-desktop-only" data-mock-id="shell-sidebar" aria-label="Navigation">
@@ -202,12 +200,6 @@ export function ShellSidebar({ onOpenSearch }: Props) {
           )
         })}
       </div>
-
-      {!hidePoweredBy && (
-        <p className="shell-powered" data-mock-id="shell-powered-by">
-          Propulsé par Socle
-        </p>
-      )}
 
       <ShellUserMenu />
     </aside>

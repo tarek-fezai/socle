@@ -9,8 +9,9 @@
  * comparée, section par section (saisie, filtres, groupe « Documents », 3 résultats, aperçu,
  * pied de palette).
  *
- * Pixel honnête (texte inclus, ≤ 1 % par section) ; seul exclu : `mask` Playwright nommé.
- * Annotation maquette : data-* uniquement.
+ * Pixel honnête (texte inclus, ≤ 1 % par section) ; seuls exclus : `mask` Playwright nommé et
+ * masque de texte par Range (`rangeMasks`, coordonnées mesurées sur un élément existant).
+ * Annotation maquette : data-* uniquement (aucun nœud créé ni texte découpé).
  *
  * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/search-visual.spec.mjs`
  * (journalise tous les % / tailles, écrit test-results/search-before.json, n'échoue pas).
@@ -37,6 +38,8 @@ import {
  * Zones maquette sans donnée produit — NON comparées, jamais « passées ».
  * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
  */
+const MOCK_MENTION = '· mentionne « provisioning »'
+
 export const NOT_IMPLEMENTED = [
   {
     id: 'search-filters',
@@ -61,9 +64,18 @@ export const NOT_IMPLEMENTED = [
     id: 'search-result-meta',
     page: 'search',
     reason:
-      'Portion méta sans donnée API : contexte « mentionne « … » » et pastille tag (ex. IAM) — SearchHit n’expose ni match context ni tags ; l’app compare espace + statut (SearchHit.status)',
+      'Pastille tag (ex. IAM) : SearchHit n’expose pas les tags ; l’app compare espace + statut (SearchHit.status)',
     backlog: 'SEARCH-HIT-TAGS',
     mockMask: 'search-result-meta',
+    appPlaceholderSelector: '[data-visual-mask="search-result-meta"]',
+  },
+  {
+    id: 'search-result-mention',
+    page: 'search',
+    reason:
+      'Contexte « · mentionne « provisioning » » : SearchHit n’expose pas le contexte de correspondance (masque par Range, maquette non modifiée)',
+    backlog: 'SEARCH-HIT-TAGS',
+    mockRange: { selector: '[data-mock-id="search-result-1"]', text: MOCK_MENTION },
     appPlaceholderSelector: '[data-visual-mask="search-result-meta"]',
   },
   {
@@ -107,6 +119,7 @@ const PIXEL_SECTIONS = [
     id: `search-result-${i}`,
     name: `result-${i}`,
     masks: ['search-result-meta', 'search-result-star'],
+    mockRanges: i === 1 ? [{ name: 'search-result-mention', text: MOCK_MENTION }] : [],
   })),
   { id: 'search-preview', name: 'preview', masks: ['search-preview'] },
   { id: 'search-footer', name: 'footer', masks: [] },
@@ -147,23 +160,10 @@ async function annotateSearchMockup(page) {
       a.setAttribute('data-mock-id', `search-result-${i}`)
       const text = a.children[1]
       text?.children[0]?.setAttribute('data-mock-id', `search-result-${i}-title`)
+      // Pastille tag : masque nommé ; « · mentionne … » : masque par Range (MOCK_MENTION).
       const meta = text?.children[1]
-      if (meta) {
-        // Masquer uniquement tag + « · mentionne … » ; laisser espace et statut visibles.
-        const tag = [...meta.children].find((c) => c.tagName === 'SPAN')
-        tag?.setAttribute('data-visual-mask', 'search-result-meta')
-        for (const node of [...meta.childNodes]) {
-          if (node.nodeType !== Node.TEXT_NODE) continue
-          const full = node.textContent ?? ''
-          const idx = full.indexOf(' · mentionne')
-          if (idx < 0) continue
-          node.textContent = full.slice(0, idx)
-          const wrap = document.createElement('span')
-          wrap.setAttribute('data-visual-mask', 'search-result-meta')
-          wrap.textContent = full.slice(idx)
-          meta.insertBefore(wrap, tag ?? null)
-        }
-      }
+      const tag = meta ? [...meta.children].find((c) => c.tagName === 'SPAN') : null
+      tag?.setAttribute('data-visual-mask', 'search-result-meta')
       a.children[2]?.setAttribute('data-visual-mask', 'search-result-star')
     })
     kids.slice(4).forEach((k) => k.setAttribute('data-visual-mask', 'search-groups-extra'))
@@ -207,6 +207,7 @@ test.describe('search (palette) visual', () => {
     for (const s of PIXEL_SECTIONS) {
       mockSec[s.name] = await shotSection(page, `[data-mock-id="${s.id}"]`, {
         maskNames: s.masks,
+        rangeMasks: s.mockRanges ?? [],
         label: `search-sec-${s.name}-mock`,
       })
     }
@@ -257,9 +258,8 @@ test.describe('search (palette) visual', () => {
           'box.y : le pied suit le corps de palette, plus court dans l’app (groupes Espaces/Personnes NOT_IMPLEMENTED). text : l’app n’insère pas d’espace entre les raccourcis (textContent concaténé) — texte vérifié par pixel.',
       },
       'search-result-0': {
-        skip: ['text', 'lineHeight'],
-        reason:
-          'Texte : mention/tag méta NOT_IMPLEMENTED (espace + statut comparés en pixel). lineHeight : collectMetrics fixe 1 sur un <button> (app) et 1.2 sur un <a> (maquette) — titres comparés séparément.',
+        skip: ['text'],
+        reason: 'Texte : mention/tag méta NOT_IMPLEMENTED (espace + statut comparés en pixel).',
       },
     }
     const results = compareMetrics(mockMetrics, appMetrics, STRUCTURAL_IDS, { pageExceptions })

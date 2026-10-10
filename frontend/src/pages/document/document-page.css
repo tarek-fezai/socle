@@ -71,7 +71,7 @@
   align-items: center;
   gap: 7px;
   font-size: 13px;
-  color: #b0b0b5;
+  color: #75757c;
   min-width: 0;
 }
 
@@ -228,7 +228,7 @@ a.doc-crumb:hover {
 .doc-menu-kbd {
   margin-left: auto;
   font-size: 10.5px;
-  color: #b0b0b5;
+  color: #75757c;
 }
 
 .doc-menu-sep {
@@ -597,7 +597,7 @@ ol.doc-list {
   text-align: left;
   font-size: 11.5px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-bottom: 1px solid #ececee;
@@ -1002,7 +1002,6 @@ ol.doc-list {
   border: 1px dashed #dedee1;
   border-radius: 10px;
   background: #fafafb;
-  /* AA sur #FAFAFB (maquette : #B0B0B5, contraste insuffisant) */
   color: #75757c;
   font-size: 13px;
 }
@@ -1155,7 +1154,7 @@ ol.doc-list {
 .doc-rail-label {
   font-size: 11px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 10px;
@@ -1251,7 +1250,7 @@ ol.doc-list {
 
 .doc-rail-sub {
   font-size: 11px;
-  color: #b0b0b5;
+  color: #75757c;
 }
 
 .doc-rail-sub--lg {

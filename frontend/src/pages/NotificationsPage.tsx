@@ -201,7 +201,7 @@ export function NotificationsPage() {
           title="Bientôt disponible"
           data-mock-id="notif-read-all"
           data-visual-mask="notif-read-all"
-          className="cursor-not-allowed border-0 bg-transparent p-0 text-[12.5px] font-semibold text-socle-faint"
+          className="cursor-not-allowed border-0 bg-transparent p-0 text-[12.5px] font-semibold text-socle-subtle"
         >
           Tout marquer comme lu
         </button>
@@ -228,7 +228,7 @@ export function NotificationsPage() {
         {groups.map((g, gi) => (
           <section key={g.label} data-mock-id={`notif-section-${gi}`}>
             <div
-              className={`mb-[10px] text-[11px] font-semibold uppercase tracking-[0.06em] text-socle-faint ${
+              className={`mb-[10px] text-[11px] font-semibold uppercase tracking-[0.06em] text-socle-subtle ${
                 gi === 0 ? '' : 'mt-[22px]'
               }`}
               data-mock-id={`notif-group-${gi}`}
@@ -289,7 +289,7 @@ export function NotificationsPage() {
                         )}
                       </div>
                       <div
-                        className="mt-1 text-[11.5px] text-socle-faint"
+                        className="mt-1 text-[11.5px] text-socle-subtle"
                         data-mock-id={`notif-item-${i}-time`}
                       >
                         {relativeTimeLabel(n.createdAt, now)}

@@ -218,7 +218,7 @@ export function AuditPage() {
         <button type="submit" className="btn-ghost">
           Appliquer les filtres
         </button>
-        <p className="font-mono text-[10px] text-socle-faint" data-testid="audit-api-filters">
+        <p className="font-mono text-[10px] text-socle-subtle" data-testid="audit-api-filters">
           {JSON.stringify(filtersForApi)}
         </p>
       </form>
@@ -238,7 +238,7 @@ export function AuditPage() {
 
       {query.isSuccess && query.data.items.length > 0 && (
         <div className="mt-6 overflow-x-auto rounded-xl border border-socle-line bg-white">
-          <div className="flex border-b border-socle-line bg-socle-soft px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-socle-faint">
+          <div className="flex border-b border-socle-line bg-socle-soft px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-socle-subtle">
             <div className="w-[140px] shrink-0">Horodatage</div>
             <div className="w-[170px] shrink-0">Auteur</div>
             <div className="min-w-[200px] flex-1">Action</div>
@@ -325,7 +325,7 @@ function AuditRow({
             </button>
           </div>
         </div>
-        <div className="w-[110px] shrink-0 font-mono text-socle-faint">
+        <div className="w-[110px] shrink-0 font-mono text-socle-subtle">
           {event.ipAddress ?? '—'}
         </div>
       </div>

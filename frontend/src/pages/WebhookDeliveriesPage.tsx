@@ -120,7 +120,7 @@ export function WebhookDeliveriesPage() {
 
       {page.isSuccess && page.data.items.length > 0 && (
         <div className="mt-4 overflow-x-auto rounded-[10px] border border-socle-line">
-          <div className="flex min-w-[720px] border-b border-socle-line bg-[#FAFAFB] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-socle-faint">
+          <div className="flex min-w-[720px] border-b border-socle-line bg-[#FAFAFB] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-socle-subtle">
             <div className="w-[18%]">Événement</div>
             <div className="w-[22%]">Endpoint</div>
             <div className="w-[14%]">Horodatage</div>

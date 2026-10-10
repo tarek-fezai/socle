@@ -158,7 +158,7 @@
 .shell-tree-section {
   font-size: 11px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 4px 10px 6px;
@@ -202,12 +202,6 @@
   text-align: left;
 }
 
-.shell-powered {
-  margin: 0 2px 8px;
-  font-size: 11px;
-  color: #9b9ba1;
-  font-weight: 500;
-}
 
 .shell-user:hover {
   background: #f5f5f7;
@@ -378,6 +372,7 @@
   background: #ffffff;
 }
 
+
 /* —— Mobile top bar —— */
 .shell-mobile-top {
   display: none;
@@ -459,6 +454,21 @@
   background: rgba(14, 14, 16, 0.4);
 }
 
+/*
+ * Ombre du tiroir peinte sous lui (même géométrie que .shell-drawer) : une box-shadow sur le tiroir
+ * rend son fond non opaque pour Chrome, qui désactive alors l'anticrénelage LCD du texte.
+ */
+.shell-drawer-backdrop::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: 88vw;
+  box-shadow: 8px 0 30px rgba(14, 14, 16, 0.18);
+}
+
 .shell-drawer {
   position: absolute;
   top: 0;
@@ -467,7 +477,6 @@
   width: 320px;
   max-width: 88vw;
   background: #ffffff;
-  box-shadow: 8px 0 30px rgba(14, 14, 16, 0.18);
   display: flex;
   flex-direction: column;
   padding: 20px 18px;
@@ -605,6 +614,19 @@
   padding-left: 22px;
 }
 
+.shell-drawer-link--draft {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  color: #9b9ba1;
+}
+
+.shell-drawer-draft-badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: #75757c;
+}
+
 .shell-drawer-actions {
   display: flex;
   gap: 6px;
@@ -708,7 +730,7 @@
 .cmdk-esc {
   flex-shrink: 0;
   font-size: 11px;
-  color: #b0b0b5;
+  color: #75757c;
   border: 1px solid #ececee;
   border-radius: 5px;
   padding: 2px 6px;
@@ -774,7 +796,7 @@
 .cmdk-group-head {
   font-size: 10.5px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 8px 10px 4px;

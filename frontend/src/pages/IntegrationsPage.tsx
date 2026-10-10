@@ -336,7 +336,7 @@ function SiemForm({
       <label className="block text-xs text-socle-muted">
         {secretMeta.label}
         {initial && (
-          <span className="ml-1 font-normal text-socle-faint">
+          <span className="ml-1 font-normal text-socle-subtle">
             (laisser vide pour conserver{' '}
             {String(initial.config[`${secretMeta.key}_prefix`] ?? '••••')})
           </span>
@@ -581,7 +581,7 @@ function WebhookForm({
           required
         />
       </label>
-      <p className="text-[11.5px] text-socle-faint">
+      <p className="text-[11.5px] text-socle-subtle">
         Un secret sera généré à la création et affiché une seule fois.
       </p>
       {error && <p className="text-sm text-socle-danger">{error}</p>}

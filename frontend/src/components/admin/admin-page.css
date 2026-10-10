@@ -37,7 +37,7 @@
 
 .admin-page__breadcrumb-trail {
   font-size: 13px;
-  color: #b0b0b5;
+  color: #75757c;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -94,7 +94,7 @@
 .admin-subnav__org {
   font-size: 11px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 4px 10px 8px;
@@ -230,7 +230,7 @@
   padding: 10px 16px;
   font-size: 11px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid #ececee;
@@ -253,10 +253,6 @@
 
 .admin-table-row--fields {
   padding: 14px 18px;
-}
-
-.admin-table-row:hover {
-  background: #fafafb;
 }
 
 .admin-table-row:last-child {
@@ -307,6 +303,19 @@
 
 .admin-action--neutral {
   color: #6b6b72;
+}
+
+/* Visible au survol / focus de la ligne ; au repos, retiré du flux mais toujours atteignable au clavier. */
+.admin-table-row:not(:hover):not(:focus-within) .admin-action--row-reveal {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .admin-action--accent {
@@ -701,6 +710,51 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.admin-choice {
+  position: relative;
+}
+
+/* Pastille de retrait superposée au coin : la largeur de la puce reste celle de la maquette. */
+.admin-choice-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #ececee;
+  background: #ffffff;
+  color: #6b6b72;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.admin-choice-input {
+  border: 1px dashed #dedee1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  width: 120px;
+}
+
+.admin-scope-space {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin-bottom: 0;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.admin-builder-status {
+  margin-top: 16px;
 }
 
 .admin-choice-add {

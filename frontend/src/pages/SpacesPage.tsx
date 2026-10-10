@@ -180,7 +180,7 @@ export function SpacesPage() {
           <div className="text-[13.5px] font-semibold text-[#6B6B72]" data-mock-id="spaces-new-title">
             Nouvel espace
           </div>
-          <div className="text-[12px] text-[#B0B0B5]" data-mock-id="spaces-new-sub">
+          <div className="text-[12px] text-[#75757C]" data-mock-id="spaces-new-sub">
             Regrouper des documents par domaine ou équipe
           </div>
         </button>

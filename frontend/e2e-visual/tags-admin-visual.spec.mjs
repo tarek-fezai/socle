@@ -10,7 +10,7 @@
  * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/tags-admin-visual.spec.mjs`
  * (journalise tous les % / tailles, écrit test-results/tags-admin-before.json, n'échoue pas).
  */
-import { test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   TAGS_ADMIN_DESKTOP_IDS,
   annotateTagsAdminMockup,
@@ -60,9 +60,18 @@ async function mockApis(page) {
   await page.route('**/api/v1/admin/tags/**', (route) => json(route, TAGS_ADMIN_LIST.summary))
 }
 
+/** État figé de la maquette : ligne 1 (IAM) survolée, « Exporter » révélé au survol. */
+async function hoverFirstRow(page) {
+  await page.hover('[data-mock-id="tags-row-0"]')
+}
+
 async function shootSections(page, side) {
   const out = {}
   for (const s of PIXEL_SECTIONS) {
+    // Survol uniquement sur la ligne 1 (IAM) : un hover laissé après scrollIntoView
+    // révèlerait « Exporter » sur une autre ligne.
+    if (s.name === 'row-0') await page.hover(`[data-mock-id="${s.id}"]`)
+    else await page.mouse.move(1, 1)
     out[s.name] = await shotSection(page, `[data-mock-id="${s.id}"]`, {
       maskNames: side === 'app' ? (s.appOnlyMasks ?? []) : [],
       label: `tags-admin-sec-${s.name}-${side}`,
@@ -85,7 +94,6 @@ test.describe('tags admin visual', () => {
 
     await page.goto('/admin/tags')
     await page.waitForSelector('[data-mock-id="tags-row-6"]')
-    await page.mouse.move(1, 1)
     await settleFonts(page)
     const appSec = await shootSections(page, 'app')
 
@@ -104,13 +112,34 @@ test.describe('tags admin visual', () => {
     await page.goto(`${MOCK_ORIGIN}/TagsAdmin.dc.html`)
     await annotateTagsAdminMockup(page)
     await settleFonts(page)
+    await hoverFirstRow(page)
     const mockMetrics = await collectMetrics(page, TAGS_ADMIN_DESKTOP_IDS)
 
     await page.goto('/admin/tags')
     await page.waitForSelector('[data-mock-id="tags-row-6"]')
+    await hoverFirstRow(page)
     await settleFonts(page)
     const appMetrics = await collectMetrics(page, TAGS_ADMIN_DESKTOP_IDS)
 
     expectNoStructuralDiffs(compareMetrics(mockMetrics, appMetrics, TAGS_ADMIN_DESKTOP_IDS))
+  })
+
+  test('« Exporter » : masqué au repos, révélé au focus clavier de la ligne', async ({ page }) => {
+    await injectOidcSession(page, VISUAL_NOW)
+    await mockApis(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/admin/tags')
+    await page.waitForSelector('[data-mock-id="tags-row-6"]')
+    await page.mouse.move(1, 1)
+
+    const exportLink = page.locator('[data-mock-id="tags-row-1"]').getByRole('link', { name: 'Exporter' })
+    const rest = await exportLink.boundingBox()
+    expect(rest?.width ?? 0).toBeLessThanOrEqual(1)
+
+    await page.locator('[data-mock-id="tags-row-1"]').getByRole('button', { name: 'Renommer' }).focus()
+    await page.keyboard.press('Shift+Tab')
+    await expect(exportLink).toBeFocused()
+    const focused = await exportLink.boundingBox()
+    expect(focused?.width ?? 0).toBeGreaterThan(20)
   })
 })

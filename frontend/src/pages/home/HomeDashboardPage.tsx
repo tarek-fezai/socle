@@ -4,11 +4,16 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
 import { getHomeDashboard, homeQueryKey } from '../../lib/home'
-import { formatFrInteger, formatShortDateFr } from '../../lib/relativeTime'
+import { formatFrInteger, formatRelativeFr, formatShortDateFr } from '../../lib/relativeTime'
 import { initialsFromName } from '../../components/shell/shellUtils'
 import './home.css'
 
 const ACTIVITY_AVATAR_TONES = 2
+const EDIT_PROPOSED = 'document.edit_proposed'
+
+function relativeOr(iso: string | undefined, fallback: string | undefined): string {
+  return (iso ? formatRelativeFr(iso) : '') || fallback || ''
+}
 
 export function HomeDashboardPage() {
   const { me } = useAuth()
@@ -104,7 +109,7 @@ export function HomeDashboardPage() {
               <div>
                 <div className="home-card-title">{item.title}</div>
                 <div className="home-card-meta">
-                  Brouillon · modifié {item.relativeLabel}
+                  Brouillon · modifié {relativeOr(item.updatedAt, item.relativeLabel)}
                 </div>
               </div>
               <span className="home-card-action">Modifier →</span>
@@ -176,33 +181,52 @@ export function HomeDashboardPage() {
           </div>
           <div className="home-activity" data-mock-id="home-activity">
             {teamActivity.length === 0 && <p className="home-empty">Pas d&apos;activité récente.</p>}
-            {teamActivity.map((a, i) => (
-              <div
-                key={`${a.documentId ?? 'x'}-${a.createdAt}-${i}`}
-                className="home-activity-row"
-                data-mock-id={`home-activity-row-${i}`}
-              >
-                <div className={`home-activity-avatar ${activityAvatars[i].className}`} aria-hidden>
-                  {activityAvatars[i].initials}
+            {teamActivity.map((a, i) => {
+              const relative = relativeOr(a.createdAt, a.relativeLabel)
+              const actor = a.you ? 'Vous avez' : a.actorDisplayName
+              // Proposition de modification : une ligne comme la maquette, titre porté par title / aria-label.
+              const proposal = a.eventType === EDIT_PROPOSED && Boolean(a.documentId)
+              const body = (
+                <>
+                  <div className={`home-activity-avatar ${activityAvatars[i].className}`} aria-hidden>
+                    {activityAvatars[i].initials}
+                  </div>
+                  <span>
+                    {a.you ? (
+                      <>Vous avez {a.actionLabel}</>
+                    ) : (
+                      <>
+                        <strong>{a.actorDisplayName}</strong> {a.actionLabel}
+                      </>
+                    )}
+                    {a.documentTitle && !proposal ? (
+                      <>
+                        {' '}
+                        <em>{a.documentTitle}</em>
+                      </>
+                    ) : null}{' '}
+                    — {relative}
+                  </span>
+                </>
+              )
+              const key = `${a.documentId ?? 'x'}-${a.createdAt}-${i}`
+              return proposal ? (
+                <Link
+                  key={key}
+                  to={`/docs/${a.documentId}`}
+                  className="home-activity-row home-activity-row--link"
+                  data-mock-id={`home-activity-row-${i}`}
+                  title={a.documentTitle ?? undefined}
+                  aria-label={`${actor} ${a.actionLabel}${a.documentTitle ? ` : ${a.documentTitle}` : ''} — ${relative}`}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <div key={key} className="home-activity-row" data-mock-id={`home-activity-row-${i}`}>
+                  {body}
                 </div>
-                <span>
-                  {a.you ? (
-                    <>Vous avez {a.actionLabel}</>
-                  ) : (
-                    <>
-                      <strong>{a.actorDisplayName}</strong> {a.actionLabel}
-                    </>
-                  )}
-                  {a.documentTitle ? (
-                    <>
-                      {' '}
-                      <em>{a.documentTitle}</em>
-                    </>
-                  ) : null}{' '}
-                  — {a.relativeLabel}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>

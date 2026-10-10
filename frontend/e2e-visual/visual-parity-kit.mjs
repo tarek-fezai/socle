@@ -12,6 +12,10 @@
  * - Décalage sous-pixel hérité d'une zone NOT_IMPLEMENTED → `SUBPIXEL_EXCEPTIONS` encadrées
  *   (conditions mesurées par le test, sinon seuil normal 1 %).
  * - Fonctionnalité absente → `NOT_IMPLEMENTED` (jamais comptée comme passée).
+ * - Élément présent dans l'app, absent de la maquette par décision produit → `APP_EXTRA`
+ *   (masque côté app uniquement, surface chiffrée, reason + décision ; échec s'il disparaît).
+ * - Masque de texte partiel → `rangeMasks` : rectangles mesurés (Range sur un élément existant,
+ *   lecture seule, aucune mutation du DOM) peints dans le PNG après capture, surface journalisée.
  *
  * Mode mesure : `VISUAL_BASELINE=1` n'échoue pas sur les écarts mais journalise et écrit
  * `test-results/<spec>-before.json` (sinon `<spec>-measure.json`).
@@ -170,6 +174,49 @@ export async function measureMaskName(page, name, pageArea = PAGE_AREA) {
   )
 }
 
+/**
+ * Rectangles écran d'une sous-chaîne de texte dans un élément existant (Range, lecture seule).
+ * Espaces normalisés (suite d'espaces = un espace). `found: false` si le texte est absent.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} selector  premier élément correspondant
+ * @param {string} text
+ */
+export async function measureTextRange(page, selector, text) {
+  return page.evaluate(
+    ({ sel, needle }) => {
+      const el = document.querySelector(sel)
+      if (!el) return { found: false, rects: [], areaPx: 0 }
+      const chars = []
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let prevSpace = true
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const v = n.nodeValue ?? ''
+        for (let i = 0; i < v.length; i++) {
+          const space = /\s/.test(v[i])
+          if (space && prevSpace) continue
+          chars.push({ c: space ? ' ' : v[i], node: n, offset: i })
+          prevSpace = space
+        }
+      }
+      const hay = chars.map((x) => x.c).join('')
+      const want = needle.replace(/\s+/g, ' ').trim()
+      const at = hay.indexOf(want)
+      if (at < 0 || !want) return { found: false, rects: [], areaPx: 0 }
+      const first = chars[at]
+      const last = chars[at + want.length - 1]
+      const range = document.createRange()
+      range.setStart(first.node, first.offset)
+      range.setEnd(last.node, last.offset + 1)
+      const rects = [...range.getClientRects()]
+        .filter((r) => r.width > 0 && r.height > 0)
+        .map((r) => ({ x: r.x, y: r.y, w: r.width, h: r.height }))
+      const areaPx = Math.round(rects.reduce((a, r) => a + r.w * r.h, 0))
+      return { found: true, rects, areaPx }
+    },
+    { sel: selector, needle: text },
+  )
+}
+
 export async function measureSelector(page, selector) {
   return page.evaluate(
     ({ sel, pageArea }) => {
@@ -199,7 +246,7 @@ export async function measureSelector(page, selector) {
 export async function shotSection(
   page,
   selector,
-  { maskNames = [], targeted = [], label, maskColor = '#FFFFFF', pageArea = PAGE_AREA },
+  { maskNames = [], targeted = [], rangeMasks = [], label, maskColor = '#FFFFFF', pageArea = PAGE_AREA },
 ) {
   const loc = page.locator(selector).first()
   await loc.waitFor({ state: 'visible' })
@@ -252,12 +299,30 @@ export async function shotSection(
     console.log(`MASK ${label} ${m.name}: ${m.count} él., ${m.areaPx} px (${m.pctOfPage} % page)`)
   }
 
+  const rangeRects = []
+  for (const rm of rangeMasks) {
+    const within = rm.within ? `${selector} ${rm.within}` : selector
+    const m = await measureTextRange(page, within, rm.text)
+    if (!m.found) {
+      throw new Error(`${label}: masque de texte « ${rm.name} » — « ${rm.text} » introuvable dans ${within}`)
+    }
+    const sec = await loc.evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      return { x: r.x, y: r.y }
+    })
+    for (const r of m.rects) rangeRects.push({ x: r.x - sec.x, y: r.y - sec.y, w: r.w, h: r.h })
+    console.log(
+      `MASK ${label} ${rm.name}: texte « ${rm.text} », ${m.areaPx} px (${((m.areaPx / pageArea) * 100).toFixed(3)} % page)`,
+    )
+  }
+
   const geo = await measureSectionGeometry(loc)
-  const shot = await loc.screenshot({
+  let shot = await loc.screenshot({
     ...SCREENSHOT_OPTIONS,
     mask: [...maskNames.map((n) => page.locator(maskSel(n))), ...targetedLocators],
     maskColor,
   })
+  if (rangeRects.length) shot = paintRects(shot, rangeRects, maskColor)
   fs.mkdirSync(OUT_DIR, { recursive: true })
   fs.writeFileSync(path.join(OUT_DIR, `${label}.png`), shot)
   return { shot, maskAreas, geo, box: { w: Math.round(box.width), h: Math.round(box.height) } }
@@ -268,6 +333,28 @@ export async function shotSection(
  * l'élément porteur du texte) — base des conditions `SUBPIXEL_EXCEPTIONS`.
  * @param {import('@playwright/test').Locator} loc
  */
+function paintRects(buf, rects, color) {
+  const img = PNG.sync.read(buf)
+  const hex = color.replace('#', '')
+  const rgb = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16))
+  for (const r of rects) {
+    const x0 = Math.max(0, Math.floor(r.x))
+    const y0 = Math.max(0, Math.floor(r.y))
+    const x1 = Math.min(img.width, Math.ceil(r.x + r.w))
+    const y1 = Math.min(img.height, Math.ceil(r.y + r.h))
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = (y * img.width + x) * 4
+        img.data[i] = rgb[0]
+        img.data[i + 1] = rgb[1]
+        img.data[i + 2] = rgb[2]
+        img.data[i + 3] = 255
+      }
+    }
+  }
+  return PNG.sync.write(img)
+}
+
 export async function measureSectionGeometry(loc) {
   return loc.evaluate((el) => {
     const r = el.getBoundingClientRect()
@@ -478,6 +565,7 @@ export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, notImp
  *   backlog: string,
  *   mockMask?: string,
  *   mockMeasureSelector?: string,
+ *   mockRange?: { selector: string, text: string },
  *   appPlaceholderSelector?: string,
  *   appImplementedProbe?: string,
  * }} NotImplementedZone
@@ -503,6 +591,11 @@ export async function reportNotImplemented(page, testInfo, notImplemented, pageN
       const m = await measureSelector(page, z.mockMeasureSelector)
       areaPx = m.areaPx
       pctOfPage = m.pctOfPage
+    } else if (z.mockRange) {
+      const m = await measureTextRange(page, z.mockRange.selector, z.mockRange.text)
+      if (!m.found) throw new Error(`NOT_IMPLEMENTED ${z.id}: texte maquette « ${z.mockRange.text} » introuvable`)
+      areaPx = m.areaPx
+      pctOfPage = Number(((m.areaPx / PAGE_AREA) * 100).toFixed(3))
     }
     rows.push({
       id: z.id,
@@ -542,6 +635,57 @@ export async function assertNotImplementedGuards(page, notImplemented, pageName)
       ).toBe(0)
     }
   }
+}
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   page: string,
+ *   reason: string,
+ *   decision: string,
+ *   appMask?: string,
+ *   appRange?: { selector: string, text: string },
+ * }} AppExtraZone
+ */
+
+/**
+ * APP_EXTRA : élément présent dans l'app, absent de la maquette par décision produit.
+ * Surface mesurée côté app (px et % page) ; garde : échec si l'élément a disparu de l'app
+ * (retirer l'entrée et le masque).
+ * @param {import('@playwright/test').Page} page  page app
+ * @param {import('@playwright/test').TestInfo} testInfo
+ * @param {AppExtraZone[]} appExtras
+ * @param {string} [pageName]
+ */
+export async function reportAppExtras(page, testInfo, appExtras, pageName) {
+  const rows = []
+  for (const z of appExtras.filter((x) => !pageName || x.page === pageName)) {
+    if (!z.reason || !z.decision || (!z.appMask && !z.appRange)) {
+      throw new Error(`APP_EXTRA ${z.id}: reason, decision et appMask ou appRange requis`)
+    }
+    let areaPx = 0
+    let count = 0
+    if (z.appMask) {
+      const m = await measureMaskName(page, z.appMask)
+      count = await page.locator(`[data-visual-mask="${z.appMask}"]`).count()
+      areaPx = m.areaPx
+    } else {
+      const m = await measureTextRange(page, z.appRange.selector, z.appRange.text)
+      count = m.found ? 1 : 0
+      areaPx = m.areaPx
+    }
+    expect(
+      count > 0 && areaPx > 0,
+      `APP_EXTRA ${z.id}: élément absent de l'app — retirer l'entrée APP_EXTRA et son masque`,
+    ).toBe(true)
+    const pctOfPage = Number(((areaPx / PAGE_AREA) * 100).toFixed(3))
+    rows.push({ id: z.id, count, areaPx, pctOfPage, reason: z.reason, decision: z.decision })
+    const desc = `APP_EXTRA ${z.id}: ${count} él., ${areaPx} px (${pctOfPage} % page) — ${z.reason} [${z.decision}]`
+    console.log(desc)
+    testInfo.annotations.push({ type: 'app-extra', description: desc })
+  }
+  console.log('APP_EXTRA JSON:', JSON.stringify(rows))
+  return rows
 }
 
 /**

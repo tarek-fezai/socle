@@ -420,44 +420,57 @@ export function CustomFieldsAdminPage() {
                 >
                   Tous les espaces
                 </button>
+                {builder.scopeMode === 'space' && (
+                  <select
+                    className="admin-form-input admin-scope-space"
+                    value={builder.spaceId || defaultSpaceId}
+                    onChange={(e) => setBuilder({ ...builder, spaceId: e.target.value })}
+                    aria-label="Espace"
+                    data-visual-mask="cf-space-select"
+                  >
+                    {spaces.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
-              {builder.scopeMode === 'space' && (
-                <select
-                  className="admin-form-input"
-                  value={builder.spaceId || defaultSpaceId}
-                  onChange={(e) => setBuilder({ ...builder, spaceId: e.target.value })}
-                  aria-label="Espace"
-                >
-                  {spaces.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              )}
 
-              <label className="admin-toggle-row">
-                <input
-                  type="checkbox"
-                  checked={builder.required}
-                  onChange={(e) => setBuilder({ ...builder, required: e.target.checked })}
-                />
+              <label className="admin-toggle-row" style={{ marginBottom: 0 }}>
+                <span
+                  className={`admin-toggle admin-toggle--sm${builder.required ? ' admin-toggle--on' : ''}`}
+                  role="switch"
+                  aria-checked={builder.required}
+                  tabIndex={0}
+                  onClick={() => setBuilder({ ...builder, required: !builder.required })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setBuilder({ ...builder, required: !builder.required })
+                    }
+                  }}
+                >
+                  <span className="admin-toggle__knob" />
+                </span>
                 Champ obligatoire à la publication
               </label>
 
-              <span className="admin-form-label">Statut</span>
-              <select
-                className="admin-form-input"
-                value={builder.status}
-                onChange={(e) =>
-                  setBuilder({ ...builder, status: e.target.value as FieldStatus })
-                }
-                aria-label="Statut"
-              >
-                <option value="draft">Brouillon</option>
-                <option value="active">Actif</option>
-                <option value="archived">Archivé</option>
-              </select>
+              <div className="admin-builder-status" data-visual-mask="cf-status">
+                <span className="admin-form-label">Statut</span>
+                <select
+                  className="admin-form-input"
+                  value={builder.status}
+                  onChange={(e) =>
+                    setBuilder({ ...builder, status: e.target.value as FieldStatus })
+                  }
+                  aria-label="Statut"
+                >
+                  <option value="draft">Brouillon</option>
+                  <option value="active">Actif</option>
+                  <option value="archived">Archivé</option>
+                </select>
+              </div>
             </div>
 
             <div className="admin-builder__right">
@@ -485,38 +498,33 @@ export function CustomFieldsAdminPage() {
                         {c}
                         <button
                           type="button"
+                          className="admin-choice-remove"
                           aria-label={`Retirer ${c}`}
                           onClick={() => removeChoice(c)}
-                          style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#9B9BA1' }}
+                          data-visual-mask="cf-choice-remove"
                         >
                           ×
                         </button>
                       </span>
                     ))}
-                    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        value={newChoice}
-                        onChange={(e) => setNewChoice(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            addChoice()
-                          }
-                        }}
-                        placeholder="Nouvelle valeur"
-                        style={{
-                          border: '1px dashed #DEDEE1',
-                          borderRadius: 6,
-                          padding: '4px 8px',
-                          fontSize: 11.5,
-                          width: 100,
-                        }}
-                      />
-                      <button type="button" className="admin-choice-add" onClick={addChoice}>
-                        + Valeur
-                      </button>
-                    </span>
+                    <button type="button" className="admin-choice-add" onClick={addChoice}>
+                      + Valeur
+                    </button>
+                    <input
+                      type="text"
+                      className="admin-choice-input"
+                      value={newChoice}
+                      onChange={(e) => setNewChoice(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addChoice()
+                        }
+                      }}
+                      placeholder="Nouvelle valeur"
+                      aria-label="Nouvelle valeur"
+                      data-visual-mask="cf-choice-input"
+                    />
                   </div>
                 </div>
               )}

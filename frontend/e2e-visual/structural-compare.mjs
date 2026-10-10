@@ -5,34 +5,9 @@
 
 /** Explicit exceptions: id → justification (skipped checks listed). */
 export const EXCEPTIONS = {
-  'divider-ou': {
-    skip: ['color'],
-    reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5 (contraste 4,5:1)',
-  },
-  footer: {
-    skip: ['color'],
-    reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5 (contraste 4,5:1)',
-  },
-  'mobile-note': {
-    skip: ['color'],
-    reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5 (contraste 4,5:1)',
-  },
   'email-field': {
     skip: ['text', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'color'],
     reason: 'Champ e-mail : valeur d’un input réel (hors textContent) vs spans de la maquette — boîte comparée',
-  },
-  subtitle: {
-    // only on error page — handled via page-specific skip list
-    skip: [],
-    reason: '',
-  },
-  causes: {
-    skip: ['text', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'color', 'box'],
-    reason: 'Causes d’erreur dynamiques (une vraie reason) ≠ liste SCIM/Okta de la maquette',
-  },
-  'contact-support': {
-    skip: ['text', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'color', 'box'],
-    reason: 'Bouton admin maquette remplacé par mailto Identité & accès',
   },
 }
 
@@ -56,6 +31,9 @@ export const LOGIN_ERROR_IDS = [
   'title',
   'subtitle',
   'causes',
+  'causes-title',
+  'cause-0',
+  'cause-1',
   'cta-retry',
   'contact-support',
   'footer',
@@ -900,10 +878,15 @@ export async function annotateBrandingAdminMockup(page) {
     ]
     ids.forEach((id, i) => kids[i]?.setAttribute('data-mock-id', id))
     main?.querySelector('h1')?.setAttribute('data-mock-id', 'branding-title')
+    // Plan Entreprise / domaine dédié : sans équivalent auto-hébergé (NOT_IMPLEMENTED).
+    kids[0]?.querySelector('span')?.setAttribute('data-visual-mask', 'branding-plan-badge')
+    kids[4]?.setAttribute('data-visual-mask', 'branding-custom-domain')
+    kids[5]?.setAttribute('data-visual-mask', 'branding-custom-domain')
     if (rail) {
       rail.setAttribute('data-mock-id', 'branding-rail')
       const blocks = [...rail.children]
       blocks[0]?.setAttribute('data-mock-id', 'branding-rail-hosting')
+      blocks[0]?.setAttribute('data-visual-mask', 'branding-plan-entreprise')
       blocks[1]?.setAttribute('data-mock-id', 'branding-rail-where')
       blocks[2]?.setAttribute('data-mock-id', 'branding-rail-seealso')
     }
@@ -983,7 +966,13 @@ export async function annotateLoginErrorMockup(page) {
     const causes = Array.from(formCol.querySelectorAll('div')).find((d) =>
       (d.textContent || '').includes('Causes possibles'),
     )
-    if (causes) causes.setAttribute('data-mock-id', 'causes')
+    if (causes) {
+      causes.setAttribute('data-mock-id', 'causes')
+      const [title, ...rows] = [...causes.children]
+      title?.setAttribute('data-mock-id', 'causes-title')
+      rows.forEach((r, i) => r.setAttribute('data-mock-id', `cause-${i}`))
+      rows[2]?.setAttribute('data-visual-mask', 'login-error-provisioning-conflicts')
+    }
     const retry = Array.from(formCol.querySelectorAll('a')).find((a) =>
       (a.textContent || '').includes('Réessayer'),
     )
@@ -1296,8 +1285,11 @@ export async function collectMetrics(page, ids) {
         if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG') return
         // Badges « Bientôt » (et autres) : exclus du texte structural, pas des libellés/ordre.
         if (node.hasAttribute('data-visual-ignore')) return
-        // Texte rendu uniquement : variantes responsive masquées (display:none) exclues.
-        if (getComputedStyle(node).display === 'none') return
+        // Texte affiché uniquement : display:none et éléments visuellement masqués (1×1 px, overflow hidden).
+        const ncs = getComputedStyle(node)
+        if (ncs.display === 'none') return
+        const nr = node.getBoundingClientRect()
+        if (nr.width <= 1 && nr.height <= 1 && ncs.overflow === 'hidden') return
         for (const c of node.childNodes) walk(c)
       }
       walk(el)
@@ -1311,13 +1303,18 @@ export async function collectMetrics(page, ids) {
       const map = { normal: '400', bold: '700' }
       return map[w] || String(w)
     }
-    function normLh(lh, fs) {
-      if (!lh || lh === 'normal') return 'normal'
-      if (lh.endsWith('px') && fs && fs.endsWith('px')) {
-        const ratio = parseFloat(lh) / parseFloat(fs)
-        if (Number.isFinite(ratio)) return `${ratio.toFixed(2)}em`
-      }
-      return lh
+    // Canvas détaché (jamais inséré dans la page) : mesure des métriques de police seulement.
+    const metricsCtx = document.createElement('canvas').getContext('2d')
+    /**
+     * Hauteur de ligne calculée en px. `normal` = ascent + descent de la police (hhea, interligne
+     * nul pour IBM Plex / Instrument Serif), mesurés sur la police réellement chargée.
+     */
+    function lineHeightPx(cs) {
+      const lh = cs.lineHeight
+      if (lh && lh.endsWith('px')) return `${parseFloat(lh).toFixed(2)}px`
+      metricsCtx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+      const m = metricsCtx.measureText('Hg')
+      return `${(m.fontBoundingBoxAscent + m.fontBoundingBoxDescent).toFixed(2)}px`
     }
     const out = {}
     for (const id of idList) {
@@ -1352,7 +1349,7 @@ export async function collectMetrics(page, ids) {
         fontSize: cs.fontSize,
         fontWeight: normWeight(cs.fontWeight),
         fontStyle: cs.fontStyle,
-        lineHeight: normLh(cs.lineHeight, cs.fontSize),
+        lineHeight: lineHeightPx(cs),
         letterSpacing: cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing,
         color: normColor(isSvgText ? cs.fill || el.getAttribute('fill') || cs.color : cs.color),
         box: { x: r.x, y: r.y, width: r.width, height: r.height },
@@ -1410,22 +1407,8 @@ export function compareMetrics(mockMap, appMap, ids, { pageExceptions = {} } = {
       ]
       for (const f of fields) {
         if (skip.has(f)) continue
-        let mv = mock[f]
-        let av = app[f]
-        // UA "normal" vs explicit ratio that equals the default — treat as equal when either side is normal
-        if (f === 'lineHeight' && (mv === 'normal' || av === 'normal')) {
-          if (mv === 'normal' && av === 'normal') continue
-          // 1.00em is an explicit "normal" used on reset buttons
-          if ((mv === 'normal' && av === '1.00em') || (av === 'normal' && mv === '1.00em')) continue
-          if (mv === 'normal' && typeof av === 'string' && av.endsWith('em')) {
-            const r = parseFloat(av)
-            if (r >= 1.0 && r <= 1.55) continue
-          }
-          if (av === 'normal' && typeof mv === 'string' && mv.endsWith('em')) {
-            const r = parseFloat(mv)
-            if (r >= 1.0 && r <= 1.55) continue
-          }
-        }
+        const mv = mock[f]
+        const av = app[f]
         if (String(mv) !== String(av)) {
           diffs.push(`${f}: maquette=${JSON.stringify(mv)} app=${JSON.stringify(av)}`)
         }

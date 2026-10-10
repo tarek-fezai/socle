@@ -159,7 +159,7 @@ export function SaveAsTemplateDialog({
 
               <label className="block text-sm">
                 <span className="section-label">
-                  Description <span className="font-normal normal-case text-socle-faint">(optionnel)</span>
+                  Description <span className="font-normal normal-case text-socle-subtle">(optionnel)</span>
                 </span>
                 <textarea
                   className="field-input mt-1.5 min-h-[72px]"

@@ -10,6 +10,8 @@ export default {
           slate: '#6B6B72',
           muted: '#9B9BA1',
           faint: '#B0B0B5',
+          /** Texte secondaire : #B0B0B5 n'atteint pas le contraste WCAG AA (faint = bordures / fonds). */
+          subtle: '#75757C',
           accent: '#3730E0',
           'accent-hover': '#2C27C7',
           mist: '#F0EFFC',

@@ -218,7 +218,7 @@ export function AccessPage({
         Personnes et équipes ayant accès à cet {resourceLabel} — distinction direct / via groupe /
         hérité.
       </p>
-      <p className="mt-2 font-mono text-xs text-socle-faint">
+      <p className="mt-2 font-mono text-xs text-socle-subtle">
         {objectType}:{objectId}
       </p>
 

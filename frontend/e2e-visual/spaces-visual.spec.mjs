@@ -230,8 +230,8 @@ test.describe('spaces visual', () => {
         reason: `${SHELL} Texte : description / avatars / total NOT_IMPLEMENTED.`,
       },
       'spaces-new-card': {
-        skip: ['text', 'lineHeight', 'box.x', 'box.y', 'box.width'],
-        reason: `${SHELL} Texte comparé via spaces-new-title / spaces-new-sub. lineHeight : collectMetrics fixe 1 sur un <button> (app) et 1.2 sur un <a> (maquette) — les lignes internes sont comparées séparément.`,
+        skip: ['text', 'box.x', 'box.y', 'box.width'],
+        reason: `${SHELL} Texte comparé via spaces-new-title / spaces-new-sub.`,
       },
       'spaces-new-title': { skip: ['box.x', 'box.y'], reason: SHELL },
       'spaces-new-sub': { skip: ['box.x', 'box.y'], reason: SHELL },

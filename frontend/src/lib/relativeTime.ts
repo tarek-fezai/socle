@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 
-/** Format relatif FR court pour l’accueil (maquette). */
+/**
+ * Format relatif FR court de la maquette d'accueil (« il y a 20 min », « il y a 3h », « hier »).
+ * Unités tronquées (1 h 59 → « il y a 1h ») ; horodatage futur (horloge décalée) → « à l’instant ».
+ */
 export function formatRelativeFr(iso: string, now = Date.now()): string {
   const t = Date.parse(iso)
   if (!Number.isFinite(t)) return ''
-  const diffMs = now - t
-  const abs = Math.abs(diffMs)
-  const min = Math.round(abs / 60_000)
-  const hour = Math.round(abs / 3_600_000)
-  const day = Math.round(abs / 86_400_000)
+  const diffMs = Math.max(0, now - t)
+  const min = Math.floor(diffMs / 60_000)
+  const hour = Math.floor(diffMs / 3_600_000)
+  const day = Math.floor(diffMs / 86_400_000)
 
   if (min < 1) return 'à l’instant'
   if (min < 60) return `il y a ${min} min`

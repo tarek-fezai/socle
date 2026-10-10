@@ -71,6 +71,9 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
   )
 
   const otherSpaces = spaceList.filter((s) => s.id !== activeSpace?.id)
+  // MobileMenu.dc.html : documents racine en tête, brouillons racine après les dossiers.
+  const rootDocs = view.documents.filter((d) => d.status !== 'brouillon')
+  const rootDrafts = view.documents.filter((d) => d.status === 'brouillon')
 
   useEffect(() => {
     if (!open) return
@@ -169,7 +172,7 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
         )}
 
         <div className="shell-drawer-nav" data-mock-id="mobile-menu-nav">
-          {view.documents.map((doc, i) => {
+          {rootDocs.map((doc, i) => {
             const active = path === documentHref(doc.id) || path.startsWith(`/docs/${doc.id}/`)
             return (
               <Link
@@ -213,6 +216,18 @@ export function MobileMenu({ open, onClose, onOpenSearch }: Props) {
               </div>
             )
           })}
+
+          {rootDrafts.map((doc) => (
+            <Link
+              key={doc.id}
+              to={documentHref(doc.id)}
+              className={`shell-drawer-link shell-drawer-link--draft${path === documentHref(doc.id) ? ' active' : ''}`}
+              onClick={onClose}
+            >
+              {doc.title}
+              <span className="shell-drawer-draft-badge">brouillon</span>
+            </Link>
+          ))}
 
           {otherSpaces.length > 0 && (
             <>

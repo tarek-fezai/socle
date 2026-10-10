@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
- * Seed data for dashboard visual tests — aligns with Dashboard.dc.html numbers/copy.
+ * Seed data for dashboard visual tests — une fixture par maquette :
+ * Dashboard.dc.html (`HOME_SEED`, `TREE_IDENTITE`), MobileDashboard.dc.html (`HOME_MOBILE_SEED`),
+ * MobileMenu.dc.html (`TREE_IDENTITE_MENU`). Toutes validées AJV (`fixture-contract.test.ts`).
  */
 
 export const VISUAL_NOW = Date.parse('2026-09-10T12:00:00.000Z')
@@ -102,6 +104,19 @@ export const HOME_SEED = {
       createdAt: new Date(VISUAL_NOW - 26 * 60 * 60_000).toISOString(),
       relativeLabel: 'hier',
     },
+  ],
+}
+
+/**
+ * MobileDashboard.dc.html : une approbation, deux activités (titre court « Revue périodique »).
+ * @type {import('../src/lib/api-types.ts').components['schemas']['HomeResponse']}
+ */
+export const HOME_MOBILE_SEED = {
+  ...HOME_SEED,
+  pendingApprovals: [HOME_SEED.pendingApprovals[0]],
+  teamActivity: [
+    { ...HOME_SEED.teamActivity[0], documentTitle: 'Revue périodique' },
+    HOME_SEED.teamActivity[2],
   ],
 }
 
@@ -219,6 +234,27 @@ export const TREE_IDENTITE = {
   ],
 }
 
+/**
+ * MobileMenu.dc.html : document actif à la racine, dossiers Procédures / Référence, brouillon racine
+ * « Registre des accès à privilèges ».
+ * @type {import('../src/lib/api-types.ts').components['schemas']['SpaceTreeResponse']}
+ */
+export const TREE_IDENTITE_MENU = {
+  spaceId: SPACE_IDENTITE.id,
+  spaceName: SPACE_IDENTITE.name,
+  folders: TREE_IDENTITE.folders,
+  documents: [
+    { ...TREE_IDENTITE.documents[0], status: 'valide' },
+    {
+      id: 'd0000001-0000-4000-8000-000000000018',
+      title: 'Registre des accès à privilèges',
+      folderId: null,
+      position: 1,
+      status: 'brouillon',
+    },
+  ],
+}
+
 export const TREE_INFRA = {
   spaceId: SPACE_INFRA.id,
   spaceName: SPACE_INFRA.name,
@@ -241,7 +277,8 @@ export const TREE_INFRA = {
   ],
 }
 
-export const FAVORITES_SEED = { items: [] }
+/** GET /api/v1/favorites : FavoriteItem[] (vide). */
+export const FAVORITES_SEED = []
 
 export const NOTIFICATIONS_SEED = {
   items: [],

@@ -7,12 +7,8 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin` |
-| **À nettoyer** (mutation DOM de la maquette avant capture) | `search` : `annotateSearchMockup` scinde le nœud texte « · mentionne … » et l’enveloppe dans un `<span>` créé pour le masquer |
-
-Les specs `login`, `dashboard`, `tags-admin`, `custom-fields-admin` et `branding-admin` sont propres mais
-**échouent** : sections encore > 1 % (écarts de conception en attente de décision, anticrénelage du
-tiroir mobile). Aucune mutation, aucun masque ajouté pour les faire passer.
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin` |
+| **À nettoyer** | — |
 
 ## Décisions produit
 
@@ -21,9 +17,41 @@ tiroir mobile). Aucune mutation, aucun masque ajouté pour les faire passer.
 - **Comparaison d’approbation (DiffApproval) : shell avec sidebar conservé** (maquette `DiffApproval.dc.html` sans sidebar) — mêmes largeurs et mêmes `SIZE_EXCEPTIONS` que Diff (`diff-approval-*`).
 - **Approbation (Approval) : shell avec sidebar conservé** (maquette `Approval.dc.html` sans sidebar) — colonne principale **1172 px** au lieu de **1440 px** ; seule la barre haute pleine largeur (`approval-topbar`, Δw = −268) est concernée : colonne centrale (680 px) et rail (349 px) ont la même taille des deux côtés. `MobileApproval.dc.html` n’a pas de sidebar de part et d’autre : aucune exception.
 - **Shell canonique : la sidebar de l’app est la référence** (décision tf du **2026-10-10**). `History.dc.html` porte l’ancienne sidebar : elle n’est plus comparée — masque nommé `history-legacy-sidebar` (surface journalisée, ≈ 241 200 px soit 18,6 % de la page 1440×900), motif « décision tf : shell canonique ». Le contenu de la page Historique reste comparé.
-- **Maquettes corrigées : boutons en police héritée (IBM Plex)** (décision tf du **2026-10-10**). Chaque `*.dc.html` porte `button, input, select, textarea { font-family: inherit; }` dans son style de base (seule modification des maquettes) ; `serve-mockups.mjs` conserve cette règle quand il retire le `<helmet>`. Le contournement `font-family: revert` (bouton « Révoquer », #68) est retiré de l’app.
+- **Maquettes corrigées : boutons en police héritée (IBM Plex)** (décision tf du **2026-10-10**). Chaque `*.dc.html` porte `button, input, select, textarea { font-family: inherit; }` dans son style de base ; `serve-mockups.mjs` conserve cette règle quand il retire le `<helmet>`. Le contournement `font-family: revert` (bouton « Révoquer », #68) est retiré de l’app.
 - **Historique : jamais d’action « Restaurer » sur la version courante** (desktop et mobile ; `versionRowActions`, test Vitest). En mobile, une seule action par ligne comme `MobileHistory.dc.html` : « Comparer » s’il existe une version précédente, sinon « Restaurer ».
 - **Modifier : présence du co-éditeur « YM »** = `NOT_IMPLEMENTED` (`edit-presence-coeditor`, backlog `EDIT-COEDIT-PRESENCE`) — co-édition hors V1.
+
+### Décisions du 2026-10-11 (DP-2026-10-11, propriétaire tf + relecteur, revue PR #72)
+
+Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
+
+1. **« Propulsé par Socle » retiré** du login et de la sidebar (identique maquette). Le nom Socle reste
+   dans la licence. L’interrupteur « Masquer la mention » de Personnalisation de marque (présent dans
+   la maquette, champ API `hidePoweredBy`) n’a plus d’effet visible.
+2. **Texte secondaire `#75757C` au lieu de `#B0B0B5` : contraste WCAG AA** (4,6:1 sur blanc).
+   Maquettes du dépôt corrigées **uniquement pour la couleur de texte** (`color:`) : **315 occurrences
+   dans 70 fichiers** `*.dc.html`. Les 30 occurrences de bordures, séparateurs, fonds et icônes
+   (`stroke` 18, `background` 9, `fill` 3) restent `#B0B0B5` ; l’app les suit. Seules modifications des
+   maquettes : celle-ci et la police héritée des boutons (2026-10-10).
+3. **Accueil, activité « a proposé une modification »** : une ligne sans titre du document (comme la
+   maquette) ; le titre est porté par `title` / `aria-label` et la ligne est un lien vers le document.
+4. **Login-error** : liste des causes et libellé du contact identiques à la maquette (cause « conflits de
+   provisioning » sans donnée publique → `NOT_IMPLEMENTED`).
+5. **Tags : « Exporter » visible au survol / focus de ligne uniquement** (masqué visuellement au repos,
+   jamais retiré de l’ordre de tabulation). Le spec reproduit l’état figé par un survol Playwright de la
+   ligne 1 et vérifie l’accès clavier.
+6. **`APP_EXTRA`** (voir ci-dessous) : constructeur de champs personnalisés (sélection d’espace, statut,
+   pastilles ×, « Nouvelle valeur ») ; Personnalisation de marque : **Socle est auto-hébergé, pas de plan
+   SaaS à domaine dédié** → URL publique d’instance, encart auto-hébergé et « Envoyer un e-mail de test »
+   en `APP_EXTRA` ; domaine dédié et plan Entreprise de la maquette en `NOT_IMPLEMENTED`.
+7. **Temps relatif** au format court de la maquette (« il y a 20 min », « il y a 3h », « hier »), calculé
+   côté frontend depuis les horodatages API (`formatRelativeFr`, test Vitest).
+8. **Une fixture par maquette** (desktop / mobile / menu), toutes validées AJV.
+9. **Menu mobile** : aucune propriété de composition au repos sur le tiroir ; l’ombre est peinte sous le
+   tiroir (pseudo-élément) pour que son fond reste opaque et que le texte garde l’anticrénelage LCD.
+10. **`compareMetrics` : hauteur de ligne comparée en px**, sans tolérance « `normal` ≈ 1,0–1,55 em ».
+11. **`collectMetrics` : texte affiché** — accepté (voir Exceptions structurales).
+12. **Search** : plus aucune découpe de texte ni nœud créé dans la maquette ; masque par Range.
 
 ## Comparaison
 
@@ -53,6 +81,21 @@ tiroir mobile). Aucune mutation, aucun masque ajouté pour les faire passer.
 - `maskColor` = fond de la section (en pratique `#FFFFFF` sur fond blanc).
 - Surface masquée **journalisée** des deux côtés (px et % de la page 1440×900).
 - **Échec** si le masque ne trouve aucun élément.
+- **Masque de texte partiel** (`rangeMasks` de `shotSection`) : quand seule une partie du texte d’un
+  élément existant doit être exclue, ses rectangles sont mesurés par un `Range` (lecture seule, aucun
+  nœud créé, aucun texte découpé) puis peints en `maskColor` dans le PNG après capture. Surface
+  journalisée ; **échec** si le texte est introuvable.
+
+## Élément en plus dans l’app (`APP_EXTRA`)
+
+- Élément présent dans l’app, **absent de la maquette par décision produit** : `id`, `appMask` (ou
+  `appRange`), `reason`, `decision` (référence `DP-…`).
+- Masque **côté app uniquement**, surface chiffrée (px / % page) et journalisée.
+- Garde : si l’élément **disparaît** de l’app, le test échoue (retirer l’entrée et le masque).
+- L’élément est placé de façon à ne pas décaler les éléments de la maquette ; sinon la section reste
+  en échec.
+- Une zone couverte en entier des deux côtés (`NOT_IMPLEMENTED` maquette + `APP_EXTRA` app) n’est pas
+  comparée en pixel : ses deux surfaces sont journalisées.
 
 ## Tailles
 
@@ -97,6 +140,11 @@ SUBPIXEL_EXCEPTIONS[sectionId] = { upstreamNotImplemented: '<id NOT_IMPLEMENTED>
 ## Exceptions structurales
 
 - `box.y` : cascade autorisée uniquement (x / w / h comparés).
+- **Texte affiché** (`collectMetrics`) : texte normalisé des seuls nœuds rendus — exclus : éléments en
+  `display: none` et éléments masqués visuellement (1×1 px, `overflow: hidden`), comme l’action
+  « Exporter » révélée au survol.
+- **Hauteur de ligne en px** : valeur calculée ; `normal` est mesuré (canvas détaché, métriques de la
+  police) puis comparé strictement, sans tolérance.
 - Texte : seulement s’il vient de **données réelles** (API / fixtures AJV), pas de
   copie maquette inventée.
 - Seuil pixel : **≤ 1 %** de pixels différents par section (`pixelmatch`, threshold 0.1).
@@ -112,8 +160,5 @@ SUBPIXEL_EXCEPTIONS[sectionId] = { upstreamNotImplemented: '<id NOT_IMPLEMENTED>
 
 ## Specs hérités
 
-Login, dashboard et admin (branding, custom-fields, tags, retention) sont migrés sur le kit :
-plus de `maskGlyphs` / `maskAdminGlyphs`, plus de retrait d’éléments ni de `display: none`, plus
-de forçage de `line-height` dans `collectMetrics`. Le tableau **État des specs** liste les specs
-qui violent encore ces règles.
-Tout **nouveau** spec doit suivre ce document.
+Tous les specs `e2e-visual` suivent ce document (kit, texte inclus, masques nommés, `APP_EXTRA`).
+Tout **nouveau** spec doit le suivre.

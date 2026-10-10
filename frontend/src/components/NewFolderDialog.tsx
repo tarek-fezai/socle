@@ -129,7 +129,7 @@ export function NewFolderDialog({
                   </option>
                 ))}
               </select>
-              <span className="mt-1.5 block text-[11.5px] text-socle-faint">
+              <span className="mt-1.5 block text-[11.5px] text-socle-subtle">
                 Choisissez la racine de l&apos;espace ou un dossier existant pour créer un
                 sous-dossier.
               </span>
