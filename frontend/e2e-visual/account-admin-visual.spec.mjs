@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * /account et /admin vs Account.dc.html & Admin.dc.html @ 1440×900.
  *
  * Pixel honnête : texte inclus, aucun maskGlyphs / crop silencieux / forçage DOM.

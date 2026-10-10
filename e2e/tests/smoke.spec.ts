@@ -58,7 +58,7 @@ test.describe.serial('Socle demo stack smoke', () => {
     expect(space.name).toBe(name)
   })
 
-  test('4. create document from template (API; UI uses data-testid step-1..3)', async () => {
+  test('4. create document from template (API; /docs/new is a single-page form)', async () => {
     const templates = await apiJson<TemplateSummary[]>(
       `/api/v1/templates?spaceId=${spaceId}`,
       tokenA,

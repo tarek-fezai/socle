@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Approbation mobile (/approvals @ 390×844) vs MobileApproval.dc.html.
  * Même schéma que history-mobile-visual : pixel-diff plein écran (glyphes masqués, ≤ 1 %) +
  * comparaison structurelle `data-mock-id`.

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Comparaison d'approbation (/approvals/:requestId/diff) vs DiffApproval.dc.html @ 1440×900.
  * Données : `GET …/versions/12/compare/13?mode=lines` (comparaison ligne à ligne, pas le diff JSON),
  * rendu par le même `DiffView` que Historique → Comparer.

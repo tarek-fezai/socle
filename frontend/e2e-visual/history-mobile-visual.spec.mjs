@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Historique mobile (/docs/:id/history @ 390×844) vs MobileHistory.dc.html.
  * Même schéma que page-visual (PAGE_MOBILE_IDS) : pixel-diff plein écran (glyphes masqués, ≤ 1 %)
  * + comparaison structurelle `data-mock-id`. La barre d'onglets du bas est celle du lot #40.

@@ -11,6 +11,33 @@ type Props = {
   onClose: () => void
 }
 
+const DOC_ICON = (
+  <>
+    <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+    <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z" />
+  </>
+)
+
+/** Pastille de statut : `valide` plein vert, `brouillon` contour, autre statut → ambre. */
+function StatusDot({ status }: { status: string }) {
+  if (status === 'brouillon') {
+    return (
+      <span
+        aria-hidden
+        className="box-content h-[6px] w-[6px] shrink-0 rounded-full border-[1.5px] border-solid border-[#DEDEE1]"
+      />
+    )
+  }
+  return (
+    <span
+      aria-hidden
+      className="h-[6px] w-[6px] shrink-0 rounded-full"
+      style={{ background: status === 'valide' ? '#1E8E5A' : '#B7791F' }}
+    />
+  )
+}
+
+/** Palette Cmd/Ctrl+K — Search.dc.html (760 px). Filtres et aperçu : zones réservées « Bientôt ». */
 export function CommandPalette({ open, onClose }: Props) {
   const navigate = useNavigate()
   const titleId = useId()
@@ -103,6 +130,8 @@ export function CommandPalette({ open, onClose }: Props) {
     }
   }
 
+  const term = q.trim()
+
   return (
     <div
       className="cmdk-overlay"
@@ -116,74 +145,174 @@ export function CommandPalette({ open, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        data-mock-id="command-palette"
+        data-mock-id="search-palette"
         data-testid="command-palette"
       >
         <h2 id={titleId} className="sr-only">
           Rechercher
         </h2>
-        <input
-          ref={inputRef}
-          className="cmdk-input"
-          placeholder="Rechercher des documents…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={onInputKey}
-          aria-autocomplete="list"
-          aria-controls="cmdk-listbox"
-          data-testid="command-palette-input"
-        />
-        <div className="cmdk-list" id="cmdk-listbox" role="listbox" ref={listRef}>
-          {q.trim().length < 2 && (
-            <div className="cmdk-empty">Tapez au moins 2 caractères…</div>
-          )}
-          {q.trim().length >= 2 && search.isFetching && results.length === 0 && (
-            <div className="cmdk-empty">Recherche…</div>
-          )}
-          {q.trim().length >= 2 && !search.isFetching && results.length === 0 && (
-            <div className="cmdk-empty">Aucun résultat</div>
-          )}
-          {results.map((hit, i) => (
+
+        <div className="cmdk-input-row" data-mock-id="search-input">
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#9B9BA1"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden
+            className="shrink-0"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            ref={inputRef}
+            className="cmdk-input"
+            placeholder="Rechercher des documents…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={onInputKey}
+            aria-autocomplete="list"
+            aria-controls="cmdk-listbox"
+            data-testid="command-palette-input"
+          />
+          <span className="cmdk-esc" aria-hidden>
+            esc
+          </span>
+        </div>
+
+        {/* Filtres (domaine, statut, tag, auteur) : pas d'API de facettes → NOT_IMPLEMENTED search-filters. */}
+        <div
+          className="cmdk-filters"
+          data-mock-id="search-filters"
+          data-visual-mask="search-filters"
+          aria-disabled="true"
+        >
+          <span className="cmdk-filters-label">Filtres</span>
+          <span className="cmdk-chip-soon">Bientôt</span>
+        </div>
+
+        <div className="cmdk-body">
+          <div
+            className="cmdk-results cmdk-list"
+            id="cmdk-listbox"
+            role="listbox"
+            ref={listRef}
+            data-mock-id="search-results"
+          >
+            {term.length < 2 && <div className="cmdk-empty">Tapez au moins 2 caractères…</div>}
+            {term.length >= 2 && search.isFetching && results.length === 0 && (
+              <div className="cmdk-empty">Recherche…</div>
+            )}
+            {term.length >= 2 && !search.isFetching && results.length === 0 && (
+              <div className="cmdk-empty">Aucun résultat</div>
+            )}
+            {results.length > 0 && (
+              <div className="cmdk-group-head" data-mock-id="search-results-head">
+                Documents · {results.length}
+              </div>
+            )}
+            {results.map((hit, i) => {
+              const selected = i === active
+              return (
+                <button
+                  key={hit.id}
+                  type="button"
+                  role="option"
+                  className="cmdk-item cmdk-row"
+                  aria-selected={selected}
+                  data-mock-id={`search-result-${i}`}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => select(hit)}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={selected ? '#3730E0' : '#6B6B72'}
+                    strokeWidth="2"
+                    aria-hidden
+                    className="shrink-0"
+                  >
+                    {DOC_ICON}
+                  </svg>
+                  <span className="cmdk-row-text">
+                    <span className="cmdk-item-title" data-mock-id={`search-result-${i}-title`}>
+                      {hit.title}
+                    </span>
+                    {/* Espace + statut (SearchHit) ; mention / tag absents → masque search-result-meta. */}
+                    <span className="cmdk-item-meta">
+                      <span>
+                        {hit.spaceName}
+                        {hit.status && hit.status !== 'valide' ? ` · ${hit.status}` : ''}
+                      </span>
+                      <span
+                        aria-hidden
+                        className="cmdk-meta-nodata"
+                        data-visual-mask="search-result-meta"
+                      />
+                    </span>
+                  </span>
+                  {/* Favori depuis la palette : pas dans SearchHit (NOT_IMPLEMENTED search-result-star). */}
+                  <span aria-hidden className="cmdk-star" data-visual-mask="search-result-star" />
+                  <StatusDot status={hit.status} />
+                </button>
+              )
+            })}
+            {term.length >= 2 && (
+              <button
+                type="button"
+                className="cmdk-item cmdk-row cmdk-row--link"
+                onClick={() => {
+                  onClose()
+                  navigate(`/search?q=${encodeURIComponent(term)}`)
+                }}
+              >
+                <span className="cmdk-row-text">
+                  <span className="cmdk-item-title">Voir tous les résultats pour « {term} »</span>
+                  <span className="cmdk-item-meta">Page recherche</span>
+                </span>
+              </button>
+            )}
             <button
-              key={hit.id}
               type="button"
-              role="option"
-              className="cmdk-item"
-              aria-selected={i === active}
-              onMouseEnter={() => setActive(i)}
-              onClick={() => select(hit)}
-            >
-              <span className="cmdk-item-title">{hit.title}</span>
-              <span className="cmdk-item-meta">
-                {hit.spaceName}
-                {hit.status ? ` · ${hit.status}` : ''}
-              </span>
-            </button>
-          ))}
-          {q.trim().length >= 2 && (
-            <button
-              type="button"
-              className="cmdk-item"
+              className="cmdk-item cmdk-row cmdk-row--link"
               onClick={() => {
                 onClose()
-                navigate(`/search?q=${encodeURIComponent(q.trim())}`)
+                navigate('/spaces')
               }}
             >
-              <span className="cmdk-item-title">Voir tous les résultats pour « {q.trim()} »</span>
-              <span className="cmdk-item-meta">Page recherche</span>
+              <span className="cmdk-row-text">
+                <span className="cmdk-item-title">Tous les espaces</span>
+                <span className="cmdk-item-meta">/spaces</span>
+              </span>
             </button>
-          )}
-          <button
-            type="button"
-            className="cmdk-item"
-            onClick={() => {
-              onClose()
-              navigate('/spaces')
-            }}
+          </div>
+
+          {/* Aperçu rapide : pas d'endpoint d'extrait enrichi → NOT_IMPLEMENTED search-preview. */}
+          <div
+            className="cmdk-preview"
+            data-mock-id="search-preview"
+            data-visual-mask="search-preview"
+            aria-hidden
           >
-            <span className="cmdk-item-title">Tous les espaces</span>
-            <span className="cmdk-item-meta">/spaces</span>
-          </button>
+            <div className="cmdk-preview-soon">Aperçu rapide — bientôt</div>
+          </div>
+        </div>
+
+        <div className="cmdk-footer" data-mock-id="search-footer">
+          <span className="cmdk-hint">
+            <kbd>↑↓</kbd>Naviguer
+          </span>
+          <span className="cmdk-hint">
+            <kbd>↵</kbd>Ouvrir
+          </span>
+          <span className="cmdk-hint cmdk-hint--end">
+            Recherche dans <strong>Socle</strong>
+          </span>
         </div>
       </div>
     </div>

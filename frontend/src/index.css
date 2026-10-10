@@ -132,3 +132,12 @@ span.comment-mention {
   font-weight: 600;
   color: #3730e0;
 }
+
+/* SpacesPage : colonnes entières (pas de demi-pixels → texte net, cartes alignées sur la grille de pixels). */
+@media (min-width: 1024px) {
+  @supports (width: round(down, 10.5px, 1px)) {
+    .grid.spaces-grid-3 {
+      grid-template-columns: repeat(3, round(down, calc((100% - 36px) / 3), 1px));
+    }
+  }
+}
