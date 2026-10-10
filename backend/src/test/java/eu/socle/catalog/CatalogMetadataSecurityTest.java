@@ -65,9 +65,9 @@ import static org.mockito.Mockito.when;
 @EnabledIf("dockerAvailable")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class CatalogMetadataSecurityIT {
+class CatalogMetadataSecurityTest {
 
-    private static final Logger log = LoggerFactory.getLogger(CatalogMetadataSecurityIT.class);
+    private static final Logger log = LoggerFactory.getLogger(CatalogMetadataSecurityTest.class);
     static final String OPENFGA_IMAGE = "openfga/openfga:v1.8.16";
     static final ObjectMapper MAPPER = new ObjectMapper();
 
