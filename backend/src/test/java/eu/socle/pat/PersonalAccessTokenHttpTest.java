@@ -23,6 +23,7 @@ import dev.openfga.sdk.api.client.model.ClientBatchCheckSingleResponse;
 import dev.openfga.sdk.api.client.model.ClientCheckRequest;
 import dev.openfga.sdk.api.client.model.ClientCheckResponse;
 import dev.openfga.sdk.api.client.model.ClientListObjectsResponse;
+import dev.openfga.sdk.api.client.model.ClientListUsersResponse;
 import dev.openfga.sdk.api.client.model.ClientWriteResponse;
 import eu.socle.SocleBackendApplication;
 import eu.socle.audit.AuditActions;
@@ -178,6 +179,9 @@ class PersonalAccessTokenHttpTest {
         ClientListObjectsResponse empty = mock(ClientListObjectsResponse.class);
         when(empty.getObjects()).thenReturn(List.of());
         when(openFgaClient.listObjects(any())).thenReturn(CompletableFuture.completedFuture(empty));
+        ClientListUsersResponse listUsers = mock(ClientListUsersResponse.class);
+        when(listUsers.getUsers()).thenReturn(List.of());
+        when(openFgaClient.listUsers(any())).thenReturn(CompletableFuture.completedFuture(listUsers));
         when(openFgaClient.check(any(ClientCheckRequest.class))).thenAnswer(inv -> {
             ClientCheckResponse r = mock(ClientCheckResponse.class);
             when(r.getAllowed()).thenReturn(fgaAllowed.get());

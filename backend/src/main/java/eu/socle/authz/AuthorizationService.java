@@ -858,13 +858,16 @@ public class AuthorizationService {
      */
     public Set<UUID> listSpaceMemberIds(UUID spaceId) {
         try {
-            var response = openFgaClient.listUsers(new ClientListUsersRequest()
-                            ._object(new FgaObject().type("space").id(spaceId.toString()))
-                            .relation("viewer")
-                            .userFilters(List.of(new UserTypeFilter().type("user"))))
-                    .join();
+            var future = openFgaClient.listUsers(new ClientListUsersRequest()
+                    ._object(new FgaObject().type("space").id(spaceId.toString()))
+                    .relation("viewer")
+                    .userFilters(List.of(new UserTypeFilter().type("user"))));
+            if (future == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible");
+            }
+            var response = future.join();
             Set<UUID> members = new LinkedHashSet<>();
-            if (response.getUsers() == null) {
+            if (response == null || response.getUsers() == null) {
                 return members;
             }
             for (var u : response.getUsers()) {
@@ -879,9 +882,17 @@ public class AuthorizationService {
                 }
             }
             return members;
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (java.util.concurrent.CompletionException e) {
+            log.error("OpenFGA listUsers failed space={}", spaceId, e);
+            if (e.getCause() instanceof ResponseStatusException rse) {
+                throw rse;
+            }
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible", e);
         } catch (Exception e) {
             log.error("OpenFGA listUsers failed space={}", spaceId, e);
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible", e);
         }
     }
 
@@ -949,8 +960,15 @@ public class AuthorizationService {
                         () -> Map.entry(spaceId, listSpaceMemberIds(spaceId)), pool));
             }
             for (var f : futures) {
-                var e = f.join();
-                out.put(e.getKey(), e.getValue());
+                try {
+                    var e = f.join();
+                    out.put(e.getKey(), e.getValue());
+                } catch (java.util.concurrent.CompletionException ex) {
+                    if (ex.getCause() instanceof ResponseStatusException rse) {
+                        throw rse;
+                    }
+                    throw ex;
+                }
             }
         } finally {
             pool.shutdown();
