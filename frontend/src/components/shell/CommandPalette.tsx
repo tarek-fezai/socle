@@ -243,21 +243,38 @@ export function CommandPalette({ open, onClose }: Props) {
                     <span className="cmdk-item-title" data-mock-id={`search-result-${i}-title`}>
                       {hit.title}
                     </span>
-                    {/* Espace + statut (SearchHit) ; mention / tag absents → masque search-result-meta. */}
                     <span className="cmdk-item-meta">
                       <span>
                         {hit.spaceName}
                         {hit.status && hit.status !== 'valide' ? ` · ${hit.status}` : ''}
                       </span>
-                      <span
-                        aria-hidden
-                        className="cmdk-meta-nodata"
-                        data-visual-mask="search-result-meta"
-                      />
+                      {hit.tags?.[0] && (
+                        <span
+                          className="inline-flex items-center rounded px-[5px] py-px text-[10px] font-semibold text-[#3730E0]"
+                          style={{ background: '#E7E5FB' }}
+                        >
+                          {hit.tags[0].name}
+                        </span>
+                      )}
                     </span>
                   </span>
-                  {/* Favori depuis la palette : pas dans SearchHit (NOT_IMPLEMENTED search-result-star). */}
-                  <span aria-hidden className="cmdk-star" data-visual-mask="search-result-star" />
+                  <span
+                    className="cmdk-star"
+                    aria-label={hit.isFavorite ? 'Favori' : undefined}
+                    aria-pressed={hit.isFavorite ? true : undefined}
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill={hit.isFavorite ? '#B7791F' : 'none'}
+                      stroke={hit.isFavorite ? '#B7791F' : '#DEDEE1'}
+                      strokeWidth="1.5"
+                      aria-hidden
+                    >
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </span>
                   <StatusDot status={hit.status} />
                 </button>
               )

@@ -93,7 +93,8 @@ class FavoriteServiceTest {
                 """);
         jdbc.execute("""
                 CREATE TABLE documents (
-                  id UUID PRIMARY KEY, space_id UUID NOT NULL, title TEXT NOT NULL, deleted_at TIMESTAMPTZ
+                  id UUID PRIMARY KEY, space_id UUID NOT NULL, title TEXT NOT NULL,
+                  status TEXT, updated_at TIMESTAMPTZ, deleted_at TIMESTAMPTZ
                 )
                 """);
         // Schéma V1 puis migration V30 (rename resource_* → target_*).
@@ -121,8 +122,12 @@ class FavoriteServiceTest {
 
         jdbc.update("INSERT INTO users (id, email, display_name, status) VALUES (?, 'u@x', 'User', 'active')", USER);
         jdbc.update("INSERT INTO spaces (id, name) VALUES (?, 'Espace')", SPACE);
-        jdbc.update("INSERT INTO documents (id, space_id, title) VALUES (?, ?, 'Doc OK')", DOC_OK, SPACE);
-        jdbc.update("INSERT INTO documents (id, space_id, title) VALUES (?, ?, 'Doc Denied')", DOC_DENIED, SPACE);
+        jdbc.update(
+                "INSERT INTO documents (id, space_id, title, status, updated_at) VALUES (?, ?, 'Doc OK', 'valide', now())",
+                DOC_OK, SPACE);
+        jdbc.update(
+                "INSERT INTO documents (id, space_id, title, status, updated_at) VALUES (?, ?, 'Doc Denied', 'brouillon', now())",
+                DOC_DENIED, SPACE);
     }
 
     @BeforeEach
@@ -161,10 +166,22 @@ class FavoriteServiceTest {
                 .thenReturn(List.of(DOC_OK));
         when(authorizationService.filterByFolderViewer(eq(USER), anyCollection()))
                 .thenReturn(List.of());
+        when(authorizationService.filterBySpaceViewer(eq(USER), anyCollection()))
+                .thenReturn(List.of());
 
         List<FavoriteItem> list = service.list(jwt);
 
-        assertThat(list).extracting(FavoriteItem::targetId).containsExactly(DOC_OK);
+        assertThat(list).hasSize(2);
+        FavoriteItem visible = list.stream().filter(i -> DOC_OK.equals(i.targetId())).findFirst().orElseThrow();
+        assertThat(visible.title()).isEqualTo("Doc OK");
+        assertThat(visible.status()).isEqualTo("valide");
+        assertThat(visible.spaceId()).isEqualTo(SPACE);
+        assertThat(visible.spaceName()).isEqualTo("Espace");
+        FavoriteItem hidden = list.stream().filter(i -> DOC_DENIED.equals(i.targetId())).findFirst().orElseThrow();
+        assertThat(hidden.title()).isNull();
+        assertThat(hidden.status()).isNull();
+        assertThat(hidden.spaceId()).isNull();
+        assertThat(hidden.spaceName()).isNull();
         Integer stillThere = jdbc.queryForObject(
                 "SELECT count(*) FROM favorites WHERE user_id = ?", Integer.class, USER);
         assertThat(stillThere).isEqualTo(2);

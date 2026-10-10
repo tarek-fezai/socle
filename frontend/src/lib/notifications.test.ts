@@ -3,6 +3,20 @@ import { describe, expect, it } from 'vitest'
 import { formatNotificationMessage, notificationResourceLink } from './notifications'
 
 describe('notifications helpers', () => {
+  it('formatNotificationMessage — comment_mention avec acteur', () => {
+    expect(
+      formatNotificationMessage({
+        id: '0',
+        type: 'comment_mention',
+        payload: { document_id: 'd' },
+        documentTitle: 'Politique',
+        actor: { id: 'u', displayName: 'Claire Dubois', initials: 'CD' },
+        readAt: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      }),
+    ).toBe('Claire Dubois vous a mentionné dans Politique')
+  })
+
   it('formatNotificationMessage — approval_chain_exhausted', () => {
     expect(
       formatNotificationMessage({
@@ -14,7 +28,7 @@ describe('notifications helpers', () => {
         createdAt: '2026-01-01T00:00:00Z',
       }),
     ).toBe(
-      'La demande d\'approbation pour « Charte » est restée sans décision après plusieurs étapes.',
+      'La demande d\'approbation pour Charte est restée sans décision après plusieurs étapes.',
     )
   })
 

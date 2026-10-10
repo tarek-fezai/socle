@@ -101,6 +101,33 @@ describe('CommandPalette', () => {
     expect(container.querySelector('[data-testid="command-palette"]')).toBeNull()
   })
 
+  it('affiche le tag SearchHit et l’étoile favori', async () => {
+    searchDocuments.mockResolvedValue({
+      query: 'prov',
+      total: 1,
+      results: [
+        {
+          id: 'doc-4',
+          title: 'Procédure de provisioning',
+          excerpt: '',
+          spaceId: 's1',
+          spaceName: 'Identité & accès',
+          docType: null,
+          status: 'valide',
+          updatedAt: null,
+          rank: 1,
+          tags: [{ id: 't1', name: 'IAM', color: '#3730E0', governed: false }],
+          isFavorite: true,
+        },
+      ],
+    })
+    render(wrap(<CommandPalette open onClose={() => {}} />))
+    fireEvent.change(screen.getByTestId('command-palette-input'), { target: { value: 'prov' } })
+    await screen.findByText('Procédure de provisioning')
+    expect(screen.getByText('IAM')).toBeTruthy()
+    expect(screen.getByLabelText('Favori')).toBeTruthy()
+  })
+
   it('affiche le statut SearchHit dans la ligne méta (ex. brouillon)', async () => {
     searchDocuments.mockResolvedValue({
       query: 'reg',

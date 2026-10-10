@@ -17,6 +17,10 @@ export type Space = {
   isResponsible: boolean
   /** member = relations espace ; public-only = docs organisation lisibles */
   membership?: 'member' | 'public-only' | string
+  description?: string | null
+  documentCount?: number
+  memberPreview?: Array<{ initials: string }>
+  memberExtraCount?: number
 }
 
 export type SpaceOwner = {
@@ -36,7 +40,10 @@ export async function getSpace(api: AxiosInstance, id: string) {
   return data
 }
 
-export async function createSpace(api: AxiosInstance, body: { name: string; color?: string }) {
+export async function createSpace(
+  api: AxiosInstance,
+  body: { name: string; color?: string; description?: string | null },
+) {
   const { data } = await api.post<Space>('/api/v1/spaces', body)
   return data
 }
@@ -50,6 +57,7 @@ export async function updateSpace(
     externalReference?: 'open' | 'restricted' | null
     defaultVisibility?: 'organisation' | 'space' | 'restricted' | null
     commentPolicy?: 'members' | 'all_readers' | null
+    description?: string | null
   },
 ) {
   const { data } = await api.put<Space>(`/api/v1/spaces/${id}`, body)

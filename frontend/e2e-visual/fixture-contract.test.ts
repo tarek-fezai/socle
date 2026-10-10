@@ -313,11 +313,27 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
       }
     })
 
-    it('FAVORITES_LIST_SEED : tableau de FavoriteItem (targetType / targetId), sans spaceName', () => {
+    it('FAVORITES_LIST_SEED : tableau de FavoriteItem (targetType / targetId + méta espace)', () => {
       expect(Array.isArray(FAVORITES_LIST_SEED)).toBe(true)
+      const allowed = new Set([
+        'createdAt',
+        'targetId',
+        'targetType',
+        'title',
+        'status',
+        'updatedAt',
+        'spaceId',
+        'spaceName',
+        'documentCount',
+      ])
       for (const f of FAVORITES_LIST_SEED) {
         validate('FavoriteItem', f)
-        expect(Object.keys(f).sort()).toEqual(['createdAt', 'targetId', 'targetType', 'title'])
+        expect(Object.keys(f).every((k) => allowed.has(k)), `clé inattendue ${Object.keys(f)}`).toBe(
+          true,
+        )
+        expect(f).toHaveProperty('targetType')
+        expect(f).toHaveProperty('targetId')
+        expect(f).toHaveProperty('spaceName')
         expect(['document', 'folder', 'space']).toContain(f.targetType)
       }
     })

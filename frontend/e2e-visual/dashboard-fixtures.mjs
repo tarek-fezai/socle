@@ -129,6 +129,10 @@ export const SPACE_IDENTITE = {
   isOwner: true,
   isResponsible: true,
   membership: 'member',
+  description: null,
+  documentCount: 0,
+  memberPreview: [],
+  memberExtraCount: 0,
 }
 
 export const SPACE_INFRA = {
@@ -140,6 +144,10 @@ export const SPACE_INFRA = {
   isOwner: true,
   isResponsible: true,
   membership: 'member',
+  description: null,
+  documentCount: 0,
+  memberPreview: [],
+  memberExtraCount: 0,
 }
 
 export const TREE_IDENTITE = {

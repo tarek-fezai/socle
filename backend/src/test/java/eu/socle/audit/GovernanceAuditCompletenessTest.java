@@ -118,7 +118,16 @@ class GovernanceAuditCompletenessTest {
         when(jdbc.query(contains("is_responsible"), any(ResultSetExtractor.class), any(), any()))
                 .thenReturn(true);
 
-        new SpaceService(jdbc, userSyncService, authorizationService, auditService)
+        when(authorizationService.listSpaceMemberIds(any(java.util.Collection.class)))
+                .thenReturn(java.util.Map.of());
+        when(authorizationService.filterByDocumentViewer(any(), any(), any()))
+                .thenReturn(java.util.List.of());
+        when(jdbc.query(contains("FROM documents"), any(ResultSetExtractor.class), any(Object[].class)))
+                .thenReturn(null);
+
+        new SpaceService(
+                jdbc, userSyncService, authorizationService, auditService,
+                mock(eu.socle.identity.IdentityFacade.class))
                 .create(jwt(), new CreateSpaceRequest("Espace A", null));
 
         verify(auditService).record(

@@ -12,6 +12,17 @@ public final class FavoriteDtos {
             String targetType,
             UUID targetId,
             Instant createdAt,
-            String title
-    ) {}
+            /** Null si la cible n'est plus visible OpenFGA. */
+            String title,
+            String status,
+            Instant updatedAt,
+            UUID spaceId,
+            String spaceName,
+            /** Documents visibles dans l'espace favori ; null hors espace accessible. */
+            Integer documentCount
+    ) {
+        public FavoriteItem(String targetType, UUID targetId, Instant createdAt, String title) {
+            this(targetType, targetId, createdAt, title, null, null, null, null, null);
+        }
+    }
 }

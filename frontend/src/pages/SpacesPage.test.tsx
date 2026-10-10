@@ -80,8 +80,7 @@ describe('SpacesPage', () => {
     render(wrap(<SpacesPage />))
 
     await waitFor(() => expect(screen.getByText('Espace par défaut')).toBeTruthy())
-    // Stats : nombre d'espaces uniquement (pas de total de documents côté API).
-    expect(screen.getByText('1 espace')).toBeTruthy()
+    expect(screen.getByText('1 espace · 0 document au total')).toBeTruthy()
 
     // Le formulaire est replié : la carte pointillée « Nouvel espace » l'ouvre.
     expect(screen.queryByPlaceholderText(/Identité/i)).toBeNull()
@@ -99,10 +98,10 @@ describe('SpacesPage', () => {
       )
     })
     await waitFor(() => expect(screen.getByText('Identité')).toBeTruthy())
-    expect(screen.getByText('2 espaces')).toBeTruthy()
+    expect(screen.getByText('2 espaces · 0 document au total')).toBeTruthy()
   })
 
-  it('carte : lien vers l’arborescence + réglages, jamais de description / total inventés', async () => {
+  it('carte : description, aperçu membres et total de documents visibles', async () => {
     listSpaces.mockResolvedValue([
       {
         id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -112,15 +111,19 @@ describe('SpacesPage', () => {
         isOwner: false,
         isResponsible: false,
         membership: 'member',
+        description: 'RGPD, audits, registres réglementaires',
+        documentCount: 37,
+        memberPreview: [{ initials: 'YM' }],
+        memberExtraCount: 3,
       },
     ])
     render(wrap(<SpacesPage />))
     const link = await screen.findByRole('link', { name: 'Conformité' })
     expect(link.getAttribute('href')).toBe('/spaces/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/tree')
-    expect(
-      screen.getByRole('link', { name: 'Paramètres de Conformité' }).getAttribute('href'),
-    ).toBe('/spaces/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-    expect(screen.queryByText(/documents au total/)).toBeNull()
-    expect(screen.queryByText(/\d+ documents?$/)).toBeNull()
+    expect(screen.getByText('RGPD, audits, registres réglementaires')).toBeTruthy()
+    expect(screen.getByText('YM')).toBeTruthy()
+    expect(screen.getByText('+3')).toBeTruthy()
+    expect(screen.getByText('37 documents')).toBeTruthy()
+    expect(screen.getByText('1 espace · 37 documents au total')).toBeTruthy()
   })
 })

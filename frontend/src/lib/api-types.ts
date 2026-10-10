@@ -484,6 +484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markAllRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/tokens": {
         parameters: {
             query?: never;
@@ -2540,6 +2556,10 @@ export interface components {
             externalReference?: string;
             defaultVisibility?: string;
             commentPolicy?: string;
+            description?: string;
+        };
+        SpaceMemberPreview: {
+            initials?: string;
         };
         SpaceView: {
             /** Format: uuid */
@@ -2554,6 +2574,12 @@ export interface components {
             isOwner?: boolean;
             isResponsible?: boolean;
             membership?: string;
+            description?: string;
+            /** Format: int32 */
+            documentCount?: number;
+            memberPreview?: components["schemas"]["SpaceMemberPreview"][];
+            /** Format: int32 */
+            memberExtraCount?: number;
         };
         GovernanceView: {
             /** Format: uuid */
@@ -2629,6 +2655,14 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             title?: string;
+            status?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            spaceId?: string;
+            spaceName?: string;
+            /** Format: int32 */
+            documentCount?: number;
         };
         UpdateVisibilityRequest: {
             visibility: string;
@@ -2960,6 +2994,7 @@ export interface components {
         CreateSpaceRequest: {
             name: string;
             color?: string;
+            description?: string;
         };
         AddOwnerRequest: {
             /** Format: uuid */
@@ -2972,6 +3007,12 @@ export interface components {
             httpStatus?: number;
             message?: string;
         };
+        ActorView: {
+            /** Format: uuid */
+            id?: string;
+            displayName?: string;
+            initials?: string;
+        };
         NotificationView: {
             /** Format: uuid */
             id?: string;
@@ -2980,8 +3021,15 @@ export interface components {
                 [key: string]: unknown;
             };
             documentTitle?: string;
+            /** Format: int32 */
+            versionNo?: number;
+            actor?: components["schemas"]["ActorView"];
             readAt?: string;
             createdAt?: string;
+        };
+        MarkAllReadResult: {
+            /** Format: int32 */
+            updated?: number;
         };
         PersonalAccessTokenCreateRequest: {
             name: string;
@@ -3598,6 +3646,8 @@ export interface components {
             updatedAt?: string;
             /** Format: double */
             rank?: number;
+            tags?: components["schemas"]["TagRef"][];
+            isFavorite?: boolean;
         };
         SearchResponse: {
             query?: string;
@@ -5330,6 +5380,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["NotificationView"];
+                };
+            };
+        };
+    };
+    markAllRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MarkAllReadResult"];
                 };
             };
         };

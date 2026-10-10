@@ -145,6 +145,15 @@ class CrossDomainJunctionAuditTest {
                 )
                 """);
         jdbc.execute("""
+                CREATE TABLE favorites (
+                  user_id UUID NOT NULL,
+                  target_type TEXT NOT NULL,
+                  target_id UUID NOT NULL,
+                  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                  PRIMARY KEY (user_id, target_type, target_id)
+                )
+                """);
+        jdbc.execute("""
                 CREATE OR REPLACE FUNCTION documents_rebuild_search_vector(p_document_id UUID)
                 RETURNS void LANGUAGE plpgsql AS $$
                 DECLARE tag_text TEXT;

@@ -33,27 +33,7 @@ import {
  * Zones maquette sans donnée produit — NON comparées, jamais « passées ».
  * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
  */
-export const NOT_IMPLEMENTED = [
-  {
-    id: 'favorites-row-meta',
-    page: 'favorites',
-    reason:
-      'Ligne méta sous le titre (« Validé · révisé le … », « Brouillon · modifié il y a … », « Espace · 14 documents ») : FavoriteItem n’a ni statut ni date de révision — l’app n’affiche que le type de ressource',
-    backlog: 'FAVORITES-META',
-    mockMask: 'favorites-row-meta',
-    appPlaceholderSelector: '[data-visual-mask="favorites-row-meta"]',
-    appImplementedProbe: 'text=/révisé le/',
-  },
-  {
-    id: 'favorites-group-head',
-    page: 'favorites',
-    reason:
-      'Regroupement par espace (« Identité & accès », « Infrastructure ») : FavoriteItem ne porte pas l’espace parent — liste plate dans l’app',
-    backlog: 'FAVORITES-GROUP-BY-SPACE',
-    mockMask: 'favorites-group-head',
-    appImplementedProbe: '[data-mock-id^="favorites-group-"]',
-  },
-]
+export const NOT_IMPLEMENTED = []
 
 /**
  * La maquette ancre le contenu à gauche avec la même largeur de colonne (900 px) : tailles
@@ -66,16 +46,20 @@ const ROWS = [0, 1, 2, 3, 4]
 const PIXEL_SECTIONS = [
   { id: 'favorites-title', name: 'title', masks: [] },
   { id: 'favorites-lead', name: 'lead', masks: [] },
+  { id: 'favorites-group-0', name: 'group-0', masks: [] },
+  { id: 'favorites-group-1', name: 'group-1', masks: [] },
   ...ROWS.map((i) => ({
     id: `favorites-row-${i}`,
     name: `row-${i}`,
-    masks: ['favorites-row-meta'],
+    masks: [],
   })),
 ]
 
 const STRUCTURAL_IDS = [
   'favorites-title',
   'favorites-lead',
+  'favorites-group-0',
+  'favorites-group-1',
   'favorites-row-0',
   'favorites-row-0-title',
   'favorites-row-1',
@@ -101,11 +85,14 @@ async function annotateFavoritesMockup(page) {
       a.setAttribute('data-mock-id', `favorites-row-${i}`)
       const text = a.children[1]
       text?.children[0]?.setAttribute('data-mock-id', `favorites-row-${i}-title`)
-      text?.children[1]?.setAttribute('data-visual-mask', 'favorites-row-meta')
+      text?.children[1]?.setAttribute('data-mock-id', `favorites-row-${i}-meta`)
     })
-    const heads = new Set()
-    rows.forEach((a) => heads.add(a.parentElement?.previousElementSibling))
-    ;[...heads].forEach((h) => h?.setAttribute('data-visual-mask', 'favorites-group-head'))
+    const heads = []
+    rows.forEach((a) => {
+      const h = a.parentElement?.previousElementSibling
+      if (h && !heads.includes(h)) heads.push(h)
+    })
+    heads.forEach((h, i) => h?.setAttribute('data-mock-id', `favorites-group-${i}`))
   })
 }
 
@@ -163,25 +150,12 @@ test.describe('favorites visual', () => {
     await settleFonts(page)
     const appMetrics = await collectMetrics(page, STRUCTURAL_IDS)
 
-    const META =
-      'Position verticale : la maquette intercale des titres de groupe (NOT_IMPLEMENTED favorites-group-head) → box.y décalé pour les lignes suivantes.'
-    const TEXT_NOTE = 'Texte : ligne méta NOT_IMPLEMENTED (titre comparé via -title).'
+    const TEXT_BLOCKS =
+      'textContent concatène titre + méta (blocs adjacents) ; titre comparé via -title, méta en pixel.'
     const pageExceptions = {
-      'favorites-row-0': {
-        skip: ['text', 'box.y'],
-        reason: `${META} ${TEXT_NOTE}`,
-      },
-      'favorites-row-0-title': { skip: ['box.y'], reason: META },
-      'favorites-row-1': {
-        skip: ['text', 'box.y'],
-        reason: `${META} ${TEXT_NOTE}`,
-      },
-      'favorites-row-1-title': { skip: ['box.y'], reason: META },
-      'favorites-row-3': {
-        skip: ['text', 'box.y'],
-        reason: `${META} ${TEXT_NOTE}`,
-      },
-      'favorites-row-3-title': { skip: ['box.y'], reason: META },
+      'favorites-row-0': { skip: ['text'], reason: TEXT_BLOCKS },
+      'favorites-row-1': { skip: ['text'], reason: TEXT_BLOCKS },
+      'favorites-row-3': { skip: ['text'], reason: TEXT_BLOCKS },
     }
     const results = compareMetrics(mockMetrics, appMetrics, STRUCTURAL_IDS, { pageExceptions })
     expectNoStructuralDiffs(results)

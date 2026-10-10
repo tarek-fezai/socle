@@ -1634,6 +1634,24 @@
         }
       }
     },
+    "/api/v1/notifications/read-all" : {
+      "post" : {
+        "tags" : [ "notification-controller" ],
+        "operationId" : "markAllRead",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MarkAllReadResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me/tokens" : {
       "get" : {
         "tags" : [ "pat-controller" ],
@@ -6382,9 +6400,20 @@
           },
           "commentPolicy" : {
             "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
           }
         },
         "required" : [ "name" ]
+      },
+      "SpaceMemberPreview" : {
+        "type" : "object",
+        "properties" : {
+          "initials" : {
+            "type" : "string"
+          }
+        }
       },
       "SpaceView" : {
         "type" : "object",
@@ -6422,6 +6451,23 @@
           },
           "membership" : {
             "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "documentCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "memberPreview" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SpaceMemberPreview"
+            }
+          },
+          "memberExtraCount" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -6618,6 +6664,24 @@
           },
           "title" : {
             "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "spaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "spaceName" : {
+            "type" : "string"
+          },
+          "documentCount" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -7451,6 +7515,9 @@
           },
           "color" : {
             "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
           }
         },
         "required" : [ "name" ]
@@ -7483,6 +7550,21 @@
           }
         }
       },
+      "ActorView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "initials" : {
+            "type" : "string"
+          }
+        }
+      },
       "NotificationView" : {
         "type" : "object",
         "properties" : {
@@ -7500,11 +7582,27 @@
           "documentTitle" : {
             "type" : "string"
           },
+          "versionNo" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "actor" : {
+            "$ref" : "#/components/schemas/ActorView"
+          },
           "readAt" : {
             "type" : "string"
           },
           "createdAt" : {
             "type" : "string"
+          }
+        }
+      },
+      "MarkAllReadResult" : {
+        "type" : "object",
+        "properties" : {
+          "updated" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -9049,6 +9147,15 @@
           "rank" : {
             "type" : "number",
             "format" : "double"
+          },
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagRef"
+            }
+          },
+          "isFavorite" : {
+            "type" : "boolean"
           }
         }
       },

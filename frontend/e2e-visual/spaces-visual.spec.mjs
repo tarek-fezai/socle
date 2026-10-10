@@ -31,37 +31,7 @@ import {
  * Zones maquette sans donnée produit — NON comparées, jamais « passées ».
  * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
  */
-export const NOT_IMPLEMENTED = [
-  {
-    id: 'spaces-stats-documents',
-    page: 'spaces',
-    reason:
-      'Ligne « 5 espaces · 214 documents au total » : pas de total de documents dans l’API — l’app affiche « N espaces » seul (ligne entière masquée des deux côtés)',
-    backlog: 'SPACES-DOC-TOTAL',
-    mockMask: 'spaces-stats',
-    appPlaceholderSelector: '[data-visual-mask="spaces-stats"]',
-    appImplementedProbe: 'text=/documents au total/',
-  },
-  {
-    id: 'spaces-card-desc',
-    page: 'spaces',
-    reason: 'Description d’espace : absente de SpaceView (zone réservée, vide dans l’app)',
-    backlog: 'SPACES-DESCRIPTION',
-    mockMask: 'spaces-card-desc',
-    appPlaceholderSelector: '[data-visual-mask="spaces-card-desc"]',
-    appImplementedProbe: 'text=/gouvernance des habilitations/',
-  },
-  {
-    id: 'spaces-card-meta',
-    page: 'spaces',
-    reason:
-      'Avatars des membres + nombre de documents : absents de SpaceView (l’app y met le rôle réel et « Paramètres »)',
-    backlog: 'SPACES-MEMBERS-DOCCOUNT',
-    mockMask: 'spaces-card-meta',
-    appPlaceholderSelector: '[data-visual-mask="spaces-card-meta"]',
-    appImplementedProbe: 'text=/^\\d+ documents$/',
-  },
-]
+export const NOT_IMPLEMENTED = []
 
 /**
  * Exceptions de taille déclarées (Δ mesurés) : la maquette n'a pas de sidebar (grille 1344 px) ;
@@ -69,6 +39,12 @@ export const NOT_IMPLEMENTED = [
  */
 const SIZE_EXCEPTIONS = {
   'spaces-title': {
+    dw: -268,
+    dh: 0,
+    reason:
+      'docs/visual-parity.md § Décisions produit — Spaces : shell avec sidebar conservé ; 1076 px vs 1344 px maquette',
+  },
+  'spaces-stats': {
     dw: -268,
     dh: 0,
     reason:
@@ -98,10 +74,11 @@ const SIZE_EXCEPTIONS = {
 /** [section pixel] id data-mock-id ↔ nom, masques nommés. */
 const PIXEL_SECTIONS = [
   { id: 'spaces-title', name: 'title', masks: [] },
+  { id: 'spaces-stats', name: 'stats', masks: [] },
   ...[0, 1, 2, 3, 4].map((i) => ({
     id: `spaces-card-${i}`,
     name: `card-${i}`,
-    masks: ['spaces-card-desc', 'spaces-card-meta'],
+    masks: [],
   })),
   { id: 'spaces-new-icon', name: 'new-icon', masks: [] },
   { id: 'spaces-new-title', name: 'new-title', masks: [] },
@@ -132,7 +109,6 @@ async function annotateSpacesMockup(page) {
     h1?.setAttribute('data-mock-id', 'spaces-title')
     const stats = h1?.nextElementSibling
     stats?.setAttribute('data-mock-id', 'spaces-stats')
-    stats?.setAttribute('data-visual-mask', 'spaces-stats')
     const grid = stats?.nextElementSibling
     grid?.setAttribute('data-mock-id', 'spaces-grid')
     ;[...(grid?.children ?? [])].forEach((c, i) => {
@@ -147,8 +123,8 @@ async function annotateSpacesMockup(page) {
       c.setAttribute('data-mock-id', `spaces-card-${i}`)
       c.children[0]?.setAttribute('data-mock-id', `spaces-card-${i}-tile`)
       c.children[1]?.setAttribute('data-mock-id', `spaces-card-${i}-name`)
-      c.children[2]?.setAttribute('data-visual-mask', 'spaces-card-desc')
-      c.children[3]?.setAttribute('data-visual-mask', 'spaces-card-meta')
+      c.children[2]?.setAttribute('data-mock-id', `spaces-card-${i}-desc`)
+      c.children[3]?.setAttribute('data-mock-id', `spaces-card-${i}-meta`)
     })
   })
 }
@@ -212,22 +188,22 @@ test.describe('spaces visual', () => {
     const pageExceptions = {
       'spaces-title': { skip: ['box.x', 'box.y', 'box.width'], reason: SHELL },
       'spaces-stats': {
-        skip: ['text', 'box.x', 'box.y', 'box.width'],
-        reason: `${SHELL} Texte : total de documents NOT_IMPLEMENTED (« N espaces » seul côté app).`,
+        skip: ['box.x', 'box.y', 'box.width'],
+        reason: SHELL,
       },
       'spaces-grid': {
         skip: ['text', 'box.x', 'box.y', 'box.width', 'box.height'],
-        reason: `${SHELL} Texte : descriptions / avatars / totaux NOT_IMPLEMENTED ; comparé par carte.`,
+        reason: `${SHELL} Hauteur de grille : cartes comparées une à une. Texte : concaténation des cartes (blocs).`,
       },
       'spaces-card-0': {
         skip: ['text', 'box.x', 'box.y', 'box.width'],
-        reason: `${SHELL} Texte : description / avatars / total NOT_IMPLEMENTED.`,
+        reason: `${SHELL} Texte : concaténation nom/desc/méta ; nom comparé via -name, carte en pixel.`,
       },
       'spaces-card-0-tile': { skip: ['box.x', 'box.y'], reason: SHELL },
       'spaces-card-0-name': { skip: ['box.x', 'box.y', 'box.width'], reason: SHELL },
       'spaces-card-4': {
         skip: ['text', 'box.x', 'box.y', 'box.width'],
-        reason: `${SHELL} Texte : description / avatars / total NOT_IMPLEMENTED.`,
+        reason: `${SHELL} Texte : concaténation nom/desc/méta ; carte en pixel.`,
       },
       'spaces-new-card': {
         skip: ['text', 'box.x', 'box.y', 'box.width'],

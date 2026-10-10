@@ -5,11 +5,14 @@ import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.authz.DocumentScope;
+import eu.socle.document.DocumentDtos.PersonRef;
 import eu.socle.document.DocumentVisibility;
+import eu.socle.identity.IdentityFacade;
 import eu.socle.space.SpaceDtos.AddOwnerRequest;
 import eu.socle.space.SpaceDtos.CreateSpaceRequest;
 import eu.socle.space.SpaceDtos.GovernanceView;
 import eu.socle.space.SpaceDtos.OwnerView;
+import eu.socle.space.SpaceDtos.SpaceMemberPreview;
 import eu.socle.space.SpaceDtos.SpaceView;
 import eu.socle.space.SpaceDtos.UpdateSpaceRequest;
 import eu.socle.space.ExternalReferencePolicy;
@@ -23,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -38,21 +42,27 @@ import java.util.UUID;
 @Service
 public class SpaceService {
 
+    public static final int MAX_DESCRIPTION_LENGTH = 500;
+    private static final int MEMBER_PREVIEW_CAP = 3;
+
     private final JdbcTemplate jdbc;
     private final UserSyncService userSyncService;
     private final AuthorizationService authorizationService;
     private final AuditService auditService;
+    private final IdentityFacade identityFacade;
 
     public SpaceService(
             JdbcTemplate jdbc,
             UserSyncService userSyncService,
             AuthorizationService authorizationService,
-            AuditService auditService
+            AuditService auditService,
+            IdentityFacade identityFacade
     ) {
         this.jdbc = jdbc;
         this.userSyncService = userSyncService;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
+        this.identityFacade = identityFacade;
     }
 
     @Transactional(readOnly = true)
@@ -82,8 +92,9 @@ public class SpaceService {
 
         String placeholders = String.join(",", visible.stream().map(id -> "?").toList());
         Object[] args = visible.toArray();
-        return jdbc.query("""
-                SELECT id, name, color, created_at, external_reference, default_visibility, comment_policy
+        List<SpaceView> rows = jdbc.query("""
+                SELECT id, name, color, created_at, external_reference, default_visibility,
+                       comment_policy, description
                   FROM spaces
                  WHERE deleted_at IS NULL
                    AND id IN (%s)
@@ -99,10 +110,12 @@ public class SpaceService {
                             rs.getString("external_reference"),
                             rs.getString("default_visibility"),
                             rs.getString("comment_policy"),
+                            rs.getString("description"),
                             user.getId(),
                             membership);
                 },
                 args);
+        return enrichCatalog(rows, user.getId());
     }
 
     @Transactional(readOnly = true)
@@ -130,9 +143,9 @@ public class SpaceService {
         UUID id = UUID.randomUUID();
         String color = blankToNull(request.color());
         jdbc.update(
-                "INSERT INTO spaces (id, name, color, external_reference, default_visibility, comment_policy, created_at) "
-                        + "VALUES (?, ?, ?, 'open', 'organisation', 'members', now())",
-                id, request.name().trim(), color);
+                "INSERT INTO spaces (id, name, color, description, external_reference, default_visibility, comment_policy, created_at) "
+                        + "VALUES (?, ?, ?, ?, 'open', 'organisation', 'members', now())",
+                id, request.name().trim(), color, sanitizeDescription(request.description(), true));
         jdbc.update("""
                 INSERT INTO space_owners (space_id, user_id, is_responsible, created_at)
                 VALUES (?, ?, true, now())
@@ -148,7 +161,7 @@ public class SpaceService {
     public SpaceView update(Jwt jwt, UUID spaceId, UpdateSpaceRequest request) {
         var user = userSyncService.syncFromJwt(jwt);
         requireActive(spaceId);
-        requireOwner(spaceId, user.getId());
+        requireOwnerOrAdmin(jwt, spaceId, user.getId());
 
         String extRef = blankToNull(request.externalReference());
         if (extRef != null && !ExternalReferencePolicy.isValidMode(extRef)) {
@@ -168,13 +181,22 @@ public class SpaceService {
             }
         }
 
+        boolean clearDescription = request.description() != null && request.description().isBlank();
+        String description = request.description() == null
+                ? null
+                : sanitizeDescription(request.description(), true);
         jdbc.update("""
                 UPDATE spaces SET
                   name = ?,
                   color = ?,
                   external_reference = COALESCE(?, external_reference),
                   default_visibility = COALESCE(?, default_visibility),
-                  comment_policy = COALESCE(?, comment_policy)
+                  comment_policy = COALESCE(?, comment_policy),
+                  description = CASE
+                    WHEN ? THEN NULL
+                    WHEN ? IS NOT NULL THEN ?
+                    ELSE description
+                  END
                  WHERE id = ? AND deleted_at IS NULL
                 """,
                 request.name().trim(),
@@ -182,6 +204,9 @@ public class SpaceService {
                 extRef,
                 defaultVis,
                 commentPolicy,
+                clearDescription,
+                description,
+                description,
                 spaceId);
         Map<String, Object> meta = new java.util.LinkedHashMap<>();
         meta.put("name", request.name().trim());
@@ -390,8 +415,9 @@ public class SpaceService {
     }
 
     private SpaceView loadView(UUID spaceId, UUID userId, String membership) {
-        return jdbc.query("""
-                SELECT id, name, color, created_at, external_reference, default_visibility, comment_policy
+        SpaceView view = jdbc.query("""
+                SELECT id, name, color, created_at, external_reference, default_visibility,
+                       comment_policy, description
                   FROM spaces
                  WHERE id = ? AND deleted_at IS NULL
                 """,
@@ -407,10 +433,12 @@ public class SpaceService {
                             rs.getString("external_reference"),
                             rs.getString("default_visibility"),
                             rs.getString("comment_policy"),
+                            rs.getString("description"),
                             userId,
                             membership);
                 },
                 spaceId);
+        return enrichCatalog(List.of(view), userId).getFirst();
     }
 
     /**
@@ -474,6 +502,7 @@ public class SpaceService {
             String externalReference,
             String defaultVisibility,
             String commentPolicy,
+            String description,
             UUID userId,
             String membership
     ) {
@@ -498,7 +527,147 @@ public class SpaceService {
                 owner,
                 owner,
                 responsible,
-                membership == null ? "member" : membership);
+                membership == null ? "member" : membership,
+                description,
+                0,
+                List.of(),
+                0);
+    }
+
+    private void requireOwnerOrAdmin(Jwt jwt, UUID spaceId, UUID userId) {
+        if (identityFacade != null && identityFacade.isSystemAdmin(jwt)) {
+            return;
+        }
+        requireOwner(spaceId, userId);
+    }
+
+    /**
+     * Compteurs et aperçu membres : un BatchCheck documents + ListUsers groupés, puis une lecture users.
+     */
+    private List<SpaceView> enrichCatalog(List<SpaceView> views, UUID userId) {
+        if (views == null || views.isEmpty()) {
+            return views == null ? List.of() : views;
+        }
+        List<UUID> spaceIds = views.stream().map(SpaceView::id).toList();
+        Map<UUID, Integer> counts = visibleDocumentCounts(userId, spaceIds);
+        Map<UUID, List<SpaceMemberPreview>> previews = new HashMap<>();
+        Map<UUID, Integer> extras = new HashMap<>();
+        loadMemberPreviews(spaceIds, previews, extras);
+        List<SpaceView> out = new ArrayList<>(views.size());
+        for (SpaceView v : views) {
+            out.add(new SpaceView(
+                    v.id(), v.name(), v.color(), v.createdAt(), v.externalReference(),
+                    v.defaultVisibility(), v.commentPolicy(), v.canManage(), v.isOwner(),
+                    v.isResponsible(), v.membership(), v.description(),
+                    counts.getOrDefault(v.id(), 0),
+                    previews.getOrDefault(v.id(), List.of()),
+                    extras.getOrDefault(v.id(), 0)));
+        }
+        return out;
+    }
+
+    private Map<UUID, Integer> visibleDocumentCounts(UUID userId, List<UUID> spaceIds) {
+        String placeholders = String.join(",", spaceIds.stream().map(id -> "?").toList());
+        List<Object> args = new ArrayList<>(spaceIds);
+        List<UUID> docIds = new ArrayList<>();
+        Map<UUID, UUID> docToSpace = new HashMap<>();
+        jdbc.query(
+                ("SELECT id, space_id FROM documents WHERE deleted_at IS NULL AND space_id IN (%s)"
+                        .formatted(placeholders)),
+                rs -> {
+                    while (rs.next()) {
+                        UUID docId = (UUID) rs.getObject("id");
+                        UUID spaceId = (UUID) rs.getObject("space_id");
+                        docIds.add(docId);
+                        docToSpace.put(docId, spaceId);
+                    }
+                    return null;
+                },
+                args.toArray());
+        if (docIds.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> visible = authorizationService.filterByDocumentViewer(
+                userId, docIds, "spaces-document-count");
+        Map<UUID, Integer> counts = new HashMap<>();
+        for (UUID docId : visible) {
+            UUID spaceId = docToSpace.get(docId);
+            if (spaceId != null) {
+                counts.merge(spaceId, 1, Integer::sum);
+            }
+        }
+        return counts;
+    }
+
+    private void loadMemberPreviews(
+            List<UUID> spaceIds,
+            Map<UUID, List<SpaceMemberPreview>> previews,
+            Map<UUID, Integer> extras
+    ) {
+        Map<UUID, Set<UUID>> membersBySpace = authorizationService.listSpaceMemberIds(spaceIds);
+        Set<UUID> allUsers = new HashSet<>();
+        for (Set<UUID> ids : membersBySpace.values()) {
+            allUsers.addAll(ids);
+        }
+        Map<UUID, String> initials = loadInitials(allUsers);
+        for (UUID spaceId : spaceIds) {
+            List<UUID> members = new ArrayList<>(membersBySpace.getOrDefault(spaceId, Set.of()));
+            members.sort(UUID::compareTo);
+            int extra = Math.max(0, members.size() - MEMBER_PREVIEW_CAP);
+            int take = extra > 0 ? MEMBER_PREVIEW_CAP - 1 : Math.min(MEMBER_PREVIEW_CAP, members.size());
+            // Maquette : 2 initiales + « +N » s'il reste des membres ; sinon jusqu'à 3 initiales.
+            if (extra > 0) {
+                take = Math.min(2, members.size());
+            }
+            List<SpaceMemberPreview> preview = new ArrayList<>();
+            for (int i = 0; i < take; i++) {
+                String ini = initials.getOrDefault(members.get(i), "?");
+                preview.add(new SpaceMemberPreview(ini));
+            }
+            previews.put(spaceId, preview);
+            extras.put(spaceId, extra > 0 ? members.size() - take : 0);
+        }
+    }
+
+    private Map<UUID, String> loadInitials(Set<UUID> userIds) {
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = String.join(",", userIds.stream().map(id -> "?").toList());
+        Map<UUID, String> out = new HashMap<>();
+        jdbc.query(
+                ("SELECT id, display_name, avatar_initials FROM users WHERE id IN (%s)"
+                        .formatted(placeholders)),
+                rs -> {
+                    while (rs.next()) {
+                        UUID id = (UUID) rs.getObject("id");
+                        String stored = rs.getString("avatar_initials");
+                        String name = rs.getString("display_name");
+                        String initials = stored == null || stored.isBlank()
+                                ? PersonRef.initialsOf(name)
+                                : stored.trim();
+                        out.put(id, initials);
+                    }
+                    return null;
+                },
+                userIds.toArray());
+        return out;
+    }
+
+    private String sanitizeDescription(String raw, boolean allowNull) {
+        if (raw == null || raw.isBlank()) {
+            if (allowNull) {
+                return null;
+            }
+            return null;
+        }
+        String text = raw.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "").trim();
+        if (text.length() > MAX_DESCRIPTION_LENGTH) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "description trop longue (max " + MAX_DESCRIPTION_LENGTH + " caractères)");
+        }
+        return text.isEmpty() ? null : text;
     }
 
     private void requireUserExists(UUID userId) {

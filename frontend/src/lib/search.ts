@@ -11,6 +11,8 @@ export type SearchHit = {
   status: string
   updatedAt: string | null
   rank: number
+  tags?: Array<{ id?: string; name: string; color?: string | null; governed?: boolean }>
+  isFavorite?: boolean
 }
 
 export type SearchResponse = {
