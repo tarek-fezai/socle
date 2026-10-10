@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Branding admin (/admin/branding) vs Branding.dc.html @ 1440×900
  * (maquette annotée : sans badge Entreprise / DNS / socle.app).
  */

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Écran Approbation (/approvals) vs Approval.dc.html @ 1440×900 — colonne principale (x ≥ 268).
  * Même méthode que history-visual : pixel-diff (glyphes masqués, ≤ 1 %) + comparaison structurelle
  * `data-mock-id` (textes, typographie, couleurs, boîtes ±3 px).

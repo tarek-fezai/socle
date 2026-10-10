@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Modale « Restaurer la v11 ? » (ouverte depuis l'Historique) vs RestoreVersion.dc.html @ 1440×900.
  * Pixel-diff limité à la carte de la modale (≤ 1 %, glyphes masqués) + comparaison structurelle.
  *

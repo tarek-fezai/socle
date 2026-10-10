@@ -649,36 +649,48 @@
 }
 
 /* —— Command palette —— */
+/* Palette Cmd/Ctrl+K — Search.dc.html (dialogue 760 px, filtres + résultats + aperçu + pied). */
 .cmdk-overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(14, 14, 16, 0.4);
+  background: rgba(14, 14, 16, 0.45);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 12vh;
+  padding-top: 84px;
 }
 
 .cmdk-dialog {
-  width: min(560px, calc(100vw - 32px));
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 120px);
   background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #ececee;
-  box-shadow: 0 20px 50px rgba(14, 14, 16, 0.18);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(14, 14, 16, 0.28);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  max-height: min(480px, 70vh);
+  line-height: normal;
+  color: #0e0e10;
+}
+
+.cmdk-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #ececee;
 }
 
 .cmdk-input {
-  width: 100%;
-  box-sizing: border-box;
+  flex-grow: 1;
+  min-width: 0;
   border: none;
-  border-bottom: 1px solid #ececee;
-  padding: 16px 18px;
-  font-size: 15px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  font-size: 16px;
+  line-height: normal;
   font-family: inherit;
   outline: none;
   color: #0e0e10;
@@ -688,18 +700,82 @@
   color: #9b9ba1;
 }
 
+.cmdk-esc {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #b0b0b5;
+  border: 1px solid #ececee;
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+.cmdk-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-bottom: 1px solid #ececee;
+}
+
+.cmdk-filters-label {
+  font-size: 11.5px;
+  color: #9b9ba1;
+  margin-right: 2px;
+}
+
+.cmdk-chip-soon {
+  font-size: 12px;
+  color: #9b9ba1;
+  border: 1px dashed #dedee1;
+  border-radius: 6px;
+  padding: 4px 9px;
+}
+
+.cmdk-body {
+  display: flex;
+  min-height: 0;
+}
+
 .cmdk-list {
   overflow: auto;
-  padding: 8px;
   flex: 1;
+  /* Fond opaque : conserve l'anti-crénelage LCD du texte dans la zone défilante. */
+  background: #ffffff;
+}
+
+.cmdk-results {
+  box-sizing: content-box;
+  width: 420px;
+  flex: 0 0 auto;
+  padding: 10px;
+  max-height: 420px;
+  border-right: 1px solid #ececee;
+}
+
+.cmdk-preview {
+  flex-grow: 1;
+  min-width: 0;
+  padding: 22px 24px;
+}
+
+.cmdk-preview-soon {
+  font-size: 12px;
+  color: #9b9ba1;
+  border: 1px dashed #dedee1;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.cmdk-group-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #b0b0b5;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 10px 4px;
 }
 
 .cmdk-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  border-radius: 8px;
   cursor: pointer;
   border: none;
   background: transparent;
@@ -709,19 +785,53 @@
   color: #0e0e10;
 }
 
-.cmdk-item[aria-selected='true'],
-.cmdk-item:hover {
+.cmdk-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.cmdk-row:hover {
+  background: #f5f5f7;
+}
+
+.cmdk-row[aria-selected='true'] {
   background: #f0effc;
 }
 
+.cmdk-row-text {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .cmdk-item-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
+  color: #0e0e10;
+}
+
+.cmdk-row[aria-selected='true'] .cmdk-item-title {
+  font-weight: 600;
 }
 
 .cmdk-item-meta {
-  font-size: 12px;
+  min-height: 15px; /* hauteur de la ligne méta maquette (tag « IAM » inclus) */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
   color: #9b9ba1;
+}
+
+.cmdk-star {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
 }
 
 .cmdk-empty {
@@ -729,6 +839,57 @@
   text-align: center;
   font-size: 13px;
   color: #9b9ba1;
+}
+
+.cmdk-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 22px;
+  border-top: 1px solid #ececee;
+  background: #fafafb;
+}
+
+.cmdk-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: #9b9ba1;
+}
+
+.cmdk-hint kbd {
+  font-family: inherit;
+  font-size: 10.5px;
+  border: 1px solid #dedee1;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.cmdk-hint strong {
+  font-weight: 700;
+  color: #43434a;
+}
+
+.cmdk-hint--end {
+  margin-left: auto;
+}
+
+@media (max-width: 767px) {
+  .cmdk-overlay {
+    padding-top: 12vh;
+  }
+
+  .cmdk-filters,
+  .cmdk-preview {
+    display: none;
+  }
+
+  .cmdk-results {
+    box-sizing: border-box;
+    width: 100%;
+    border-right: none;
+  }
 }
 
 @media (max-width: 767px) {

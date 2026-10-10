@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Custom fields admin (/admin/custom-fields) vs CustomFields.dc.html (liste + rail).
  */
 import { test, expect } from '@playwright/test'

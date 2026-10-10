@@ -131,10 +131,10 @@ describe('NewDocumentPage', () => {
     await screen.findByRole('radio', { name: 'Procédures' })
     fireEvent.click(screen.getByRole('button', { name: 'Continuer' }))
 
-    // Étape 2 : modèles, recherche, page vierge
+    // Étape 2 : modèles, recherche, document vierge
     expect(await screen.findByTestId('step-2')).toBeTruthy()
     expect(await screen.findByRole('radio', { name: /Politique/ })).toBeTruthy()
-    expect(screen.getByRole('radio', { name: /Page vierge/ }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole('radio', { name: /Document vierge/ }).getAttribute('aria-checked')).toBe('true')
     expect(getMock).toHaveBeenCalledWith('/api/v1/templates', { params: { spaceId: 's1' } })
 
     fireEvent.change(screen.getByLabelText('Rechercher un modèle'), { target: { value: 'fournisseur' } })
@@ -170,7 +170,7 @@ describe('NewDocumentPage', () => {
     expect(await screen.findByText('Page document')).toBeTruthy()
   })
 
-  it('page vierge : corps vide, pas de templateId', async () => {
+  it('document vierge : corps vide, pas de templateId', async () => {
     postMock.mockResolvedValue({ data: { id: 'blank', spaceId: 's1', title: 'Note' } })
     renderPage('/docs/new?spaceId=s1')
     await screen.findByRole('radio', { name: 'Procédures' })

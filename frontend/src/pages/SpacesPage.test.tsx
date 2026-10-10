@@ -80,6 +80,12 @@ describe('SpacesPage', () => {
     render(wrap(<SpacesPage />))
 
     await waitFor(() => expect(screen.getByText('Espace par défaut')).toBeTruthy())
+    // Stats : nombre d'espaces uniquement (pas de total de documents côté API).
+    expect(screen.getByText('1 espace')).toBeTruthy()
+
+    // Le formulaire est replié : la carte pointillée « Nouvel espace » l'ouvre.
+    expect(screen.queryByPlaceholderText(/Identité/i)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Nouvel espace/ }))
 
     fireEvent.change(screen.getByPlaceholderText(/Identité/i), {
       target: { value: 'Identité' },
@@ -93,5 +99,28 @@ describe('SpacesPage', () => {
       )
     })
     await waitFor(() => expect(screen.getByText('Identité')).toBeTruthy())
+    expect(screen.getByText('2 espaces')).toBeTruthy()
+  })
+
+  it('carte : lien vers l’arborescence + réglages, jamais de description / total inventés', async () => {
+    listSpaces.mockResolvedValue([
+      {
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        name: 'Conformité',
+        color: '#B7791F',
+        createdAt: '2026-01-01T00:00:00Z',
+        isOwner: false,
+        isResponsible: false,
+        membership: 'member',
+      },
+    ])
+    render(wrap(<SpacesPage />))
+    const link = await screen.findByRole('link', { name: 'Conformité' })
+    expect(link.getAttribute('href')).toBe('/spaces/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/tree')
+    expect(
+      screen.getByRole('link', { name: 'Paramètres de Conformité' }).getAttribute('href'),
+    ).toBe('/spaces/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    expect(screen.queryByText(/documents au total/)).toBeNull()
+    expect(screen.queryByText(/\d+ documents?$/)).toBeNull()
   })
 })

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Tags admin (/admin/tags) vs TagsAdmin.dc.html @ 1440×900.
  */
 import { test, expect } from '@playwright/test'

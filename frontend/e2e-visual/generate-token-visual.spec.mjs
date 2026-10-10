@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * /account/tokens/new vs GeneratePersonalToken.dc.html @ 1440×900.
  *
  * Pixel honnête : texte inclus, aucun maskGlyphs / crop silencieux / forçage DOM de l'app.

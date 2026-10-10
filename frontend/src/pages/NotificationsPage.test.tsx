@@ -34,7 +34,7 @@ vi.mock('../auth/AuthProvider', () => ({
   }),
 }))
 
-import { NotificationsPage } from './NotificationsPage'
+import { NotificationsPage, relativeTimeLabel } from './NotificationsPage'
 import { AppNav } from '../components/AppNav'
 
 const NOTIF_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -175,5 +175,56 @@ describe('AppNav badge', () => {
     await client.invalidateQueries({ queryKey: ['notifications'] })
 
     await waitFor(() => expect(screen.queryByTestId('notif-badge')).toBeNull())
+  })
+})
+
+describe('relativeTimeLabel', () => {
+  const now = new Date('2026-09-10T12:00:00Z')
+
+  it('libellés relatifs fr-FR', () => {
+    expect(relativeTimeLabel('2026-09-10T11:55:00Z', now)).toBe('Il y a 5 minutes')
+    expect(relativeTimeLabel('2026-09-10T11:59:00Z', now)).toBe('Il y a 1 minute')
+    expect(relativeTimeLabel('2026-09-10T10:00:00Z', now)).toBe('Il y a 2 heures')
+    expect(relativeTimeLabel('2026-09-10T11:59:50Z', now)).toBe("À l'instant")
+  })
+
+  it('Hier / jour de semaine avec heure locale', () => {
+    expect(relativeTimeLabel('2026-09-09T12:00:00Z', now)).toMatch(/^Hier à \d{2}:\d{2}$/)
+    expect(relativeTimeLabel('2026-09-07T12:00:00Z', now)).toMatch(/^Lundi à \d{2}:\d{2}$/)
+  })
+})
+
+describe('NotificationsPage — maquette', () => {
+  beforeEach(() => {
+    listNotifications.mockReset()
+    markNotificationRead.mockReset()
+  })
+
+  it('« Tout marquer comme lu » est un placeholder désactivé ; lien Préférences → /account', async () => {
+    listNotifications.mockResolvedValue({
+      items: [
+        {
+          id: NOTIF_ID,
+          type: 'comment_mention',
+          payload: { document_id: DOC },
+          documentTitle: 'Politique accès',
+          readAt: null,
+          createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
+        },
+      ],
+      offset: 0,
+      limit: 50,
+      total: 1,
+      unreadCount: 1,
+    })
+    render(wrap(<NotificationsPage />))
+    const readAll = (await screen.findByRole('button', {
+      name: 'Tout marquer comme lu',
+    })) as HTMLButtonElement
+    expect(readAll.disabled).toBe(true)
+    expect(readAll.getAttribute('data-visual-mask')).toBe('notif-read-all')
+    expect(screen.getByRole('link', { name: /Préférences/ }).getAttribute('href')).toBe('/account')
+    expect(await screen.findByText("Aujourd'hui")).toBeTruthy()
+    expect(await screen.findByText('Il y a 20 minutes')).toBeTruthy()
   })
 })

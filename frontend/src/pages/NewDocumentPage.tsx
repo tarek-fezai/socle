@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
+import { organizationDisplayName } from '../lib/auth'
 import { createDocument, emptyDocBody } from '../lib/documents'
 import {
   documentEditHref,
@@ -17,8 +18,8 @@ import {
   filterTemplates,
   getCreationWarnings,
   listTemplates,
-  scopeLabel,
   templatesKey,
+  type TemplateSummary,
 } from '../lib/templates'
 
 type Step = 1 | 2 | 3
@@ -30,6 +31,21 @@ const STEPS: Array<{ n: Step; label: string }> = [
 ]
 
 const sectionLabel = 'mb-2 text-[12px] font-semibold uppercase tracking-[0.05em] text-socle-muted'
+
+/** Boutons NewDocument.dc.html : ghost 13.5/500 (9×16) et CTA 13.5/600 (9×20), rayon 7. */
+/** Alignement vertical maquette NewDocument (padding 9×16 / 9×20, leading UA). */
+const btnGhost =
+  'flex flex-col justify-start rounded-[7px] border border-socle-line px-4 py-[9px] text-[13.5px] font-medium leading-[normal] text-[#43434A] hover:bg-[#F5F5F7] disabled:opacity-60'
+const btnCta =
+  'flex flex-col justify-start rounded-[7px] bg-socle-accent px-5 py-[9px] text-[13.5px] font-semibold leading-[normal] text-white hover:bg-socle-accent-hover disabled:opacity-60'
+
+const slug = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
 
 /** Assistant de création en 3 étapes : emplacement → modèle → titre (maquette NewDocument). */
 export function NewDocumentPage() {
@@ -75,6 +91,18 @@ export function NewDocumentPage() {
     () => filterTemplates(templates.data ?? [], search),
     [templates.data, search],
   )
+  const systemTemplates = visibleTemplates.filter((t) => !t.createdBy)
+  const customTemplates = visibleTemplates.filter((t) => t.createdBy)
+  const renderTemplate = (t: TemplateSummary) => (
+    <TemplateCard
+      key={t.id}
+      template={t}
+      selected={templateId === t.id}
+      onSelect={() => setTemplateId(t.id)}
+      name={t.name}
+      description={t.description ?? ''}
+    />
+  )
   const selectedTemplate = templates.data?.find((t) => t.id === templateId) ?? null
 
   const warnings = useQuery({
@@ -118,17 +146,17 @@ export function NewDocumentPage() {
   const locationLabel = `${space?.name ?? 'Espace'}${folder ? ` / ${folder.name}` : ' (racine)'}`
 
   return (
-    <main className="mx-auto max-w-[760px] px-6 py-10 md:px-10">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="serif-title">Créer un document</h1>
-          <p className="mt-1.5 text-sm text-socle-muted">
-            Choisissez où le ranger, puis un modèle pour démarrer avec une structure adaptée.
-          </p>
+    <main className="mx-auto max-w-[840px] px-6 pb-10 pt-8 leading-[normal] md:px-10 md:pt-0">
+      <div className="mb-6 flex items-center justify-between gap-4 md:-mb-[7px] md:h-[59px]">
+        <div className="breadcrumb gap-[7px] text-[13px]" data-mock-id="newdoc-breadcrumb">
+          <Link to="/">Accueil</Link>{' '}
+          <span className="text-[#DEDEE1]">→</span>{' '}
+          <span className="font-medium text-socle-ink">Nouveau document</span>
         </div>
         <Link
           to={closeHref}
           aria-label="Fermer"
+          data-mock-id="newdoc-close"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-socle-slate hover:bg-[#F5F5F7]"
         >
           <svg
@@ -146,6 +174,16 @@ export function NewDocumentPage() {
           </svg>
         </Link>
       </div>
+
+      <h1
+        className="mb-1.5 font-display text-[36px] font-normal leading-[normal] text-socle-ink"
+        data-mock-id="newdoc-title"
+      >
+        Créer un document
+      </h1>
+      <p className="mb-[30px] text-[14px] text-socle-muted" data-mock-id="newdoc-lead">
+        Choisissez un modèle pour démarrer avec une structure adaptée au type de contenu.
+      </p>
 
       <ol className="mb-8 flex items-center gap-2" aria-label="Étapes de création">
         {STEPS.map(({ n, label }, i) => {
@@ -243,13 +281,13 @@ export function NewDocumentPage() {
             </div>
           )}
 
-          <Footer>
-            <Link to={closeHref} className="btn-ghost">
+          <Footer top="mt-[32.5px]">
+            <button type="button" className={`${btnGhost} bg-white`} onClick={() => navigate(closeHref)}>
               Annuler
-            </Link>
+            </button>
             <button
               type="button"
-              className="btn-primary"
+              className={btnCta}
               disabled={!activeSpaceId}
               onClick={() => setStep(2)}
             >
@@ -264,13 +302,16 @@ export function NewDocumentPage() {
           <h2 id="step2-title" className="sr-only">
             Étape 2 sur 3 : modèle
           </h2>
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div
+            className="mb-[10px] flex items-center justify-between gap-3"
+            data-mock-id="newdoc-models-head"
+          >
             <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-socle-muted">
               Modèle
             </div>
             <Link
               to="/admin/templates"
-              className="text-xs font-semibold text-socle-accent hover:underline"
+              className="text-[12px] font-semibold text-socle-accent hover:underline"
             >
               Gérer les modèles →
             </Link>
@@ -287,29 +328,21 @@ export function NewDocumentPage() {
           {templates.isLoading && <p className="text-sm text-socle-muted">Chargement…</p>}
           {templates.isError && (
             <p className="mb-3 text-sm text-socle-danger" role="alert">
-              Modèles indisponibles — vous pouvez partir d’une page vierge.
+              Modèles indisponibles — vous pouvez partir d’un document vierge.
             </p>
           )}
 
           <div role="radiogroup" aria-label="Modèle" className="grid gap-3 sm:grid-cols-2">
+            {/* Ordre maquette : modèles système, « Document vierge », puis modèles personnalisés. */}
+            {systemTemplates.map(renderTemplate)}
             <TemplateCard
               blank
               selected={templateId === null}
               onSelect={() => setTemplateId(null)}
-              name="Page vierge"
-              description="Partir d’une page blanche, sans structure imposée."
+              name="Document vierge"
+              description="Partir d'une page blanche, sans structure imposée."
             />
-            {visibleTemplates.map((t) => (
-              <TemplateCard
-                key={t.id}
-                selected={templateId === t.id}
-                onSelect={() => setTemplateId(t.id)}
-                name={t.name}
-                description={t.description ?? ''}
-                badge={scopeLabel(t.scope)}
-                docType={t.docType}
-              />
-            ))}
+            {customTemplates.map(renderTemplate)}
           </div>
           {templates.data && visibleTemplates.length === 0 && (
             <p className="mt-3 text-sm text-socle-muted">
@@ -318,10 +351,10 @@ export function NewDocumentPage() {
           )}
 
           <Footer>
-            <button type="button" className="btn-ghost" onClick={() => setStep(1)}>
+            <button type="button" className={btnGhost} onClick={() => setStep(1)}>
               Retour
             </button>
-            <button type="button" className="btn-primary" onClick={() => setStep(3)}>
+            <button type="button" className={btnCta} onClick={() => setStep(3)}>
               Continuer
             </button>
           </Footer>
@@ -333,21 +366,21 @@ export function NewDocumentPage() {
           <h2 id="step3-title" className="sr-only">
             Étape 3 sur 3 : titre
           </h2>
-          <dl className="mb-6 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl bg-socle-soft px-4 py-3 text-sm">
+          <dl className="mb-[24.5px] grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl bg-socle-soft px-4 py-3 text-sm">
             <dt className="text-socle-muted">Emplacement</dt>
             <dd className="font-medium text-socle-ink" data-testid="recap-location">
               {locationLabel}
             </dd>
             <dt className="text-socle-muted">Modèle</dt>
             <dd className="font-medium text-socle-ink" data-testid="recap-template">
-              {selectedTemplate?.name ?? 'Page vierge'}
+              {selectedTemplate?.name ?? 'Document vierge'}
             </dd>
           </dl>
 
-          <label className="block">
+          <label className="block" data-mock-id="newdoc-title-field">
             <span className={`${sectionLabel} block`}>Titre du document</span>
             <input
-              className="field-input px-3.5 py-3 text-[15px]"
+              className="block w-full rounded-[9px] border border-socle-line bg-white px-[14px] pb-[10.203px] pt-[13px] text-[15px] leading-[20.8px] text-socle-ink outline-none placeholder:text-[#C2C2C6] focus:border-[#C7C6F5]"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex. Politique de classification des données"
@@ -381,13 +414,19 @@ export function NewDocumentPage() {
             </p>
           )}
 
-          <Footer note="Le document sera créé en brouillon.">
-            <button type="button" className="btn-ghost" onClick={() => setStep(2)}>
-              Retour
+          <Footer note="Le document sera créé en brouillon." top="mt-[32.016px]">
+            <button
+              type="button"
+              className={`${btnGhost} bg-white`}
+              data-mock-id="newdoc-cancel"
+              onClick={() => navigate(closeHref)}
+            >
+              Annuler
             </button>
             <button
               type="submit"
-              className="btn-primary"
+              className={btnCta}
+              data-mock-id="newdoc-cta"
               disabled={!title.trim() || create.isPending || warnings.isLoading}
             >
               {create.isPending
@@ -403,11 +442,13 @@ export function NewDocumentPage() {
   )
 }
 
-function Footer({ children, note }: { children: ReactNode; note?: string }) {
+function Footer({ children, note, top = 'mt-8' }: { children: ReactNode; note?: string; top?: string }) {
   return (
-    <div className="mt-8 flex items-center justify-between gap-4 border-t border-socle-line pt-5">
+    <div className={`${top} flex items-center justify-between gap-4 pb-12`}>
       <span className="text-[12.5px] text-socle-muted">{note}</span>
-      <div className="flex shrink-0 gap-2.5">{children}</div>
+      <div className="flex shrink-0 gap-2.5" data-mock-id="newdoc-actions">
+        {children}
+      </div>
     </div>
   )
 }
@@ -452,30 +493,83 @@ function ChoiceRow({
   )
 }
 
+/** Icône de modèle (maquette) : selon le type de document, ou étiquette pour un modèle personnalisé. */
+function TemplateIcon({ template, blank }: { template?: TemplateSummary; blank?: boolean }) {
+  if (blank) {
+    return (
+      <>
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </>
+    )
+  }
+  if (template?.createdBy) {
+    return (
+      <>
+        <path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2.59 12.58a2 2 0 0 1 0-2.83L9.76 2.58A2 2 0 0 1 11.17 2H18a2 2 0 0 1 2 2v6.83a2 2 0 0 1-.59 1.41z" />
+        <line x1="7" y1="7" x2="7.01" y2="7" />
+      </>
+    )
+  }
+  switch (template?.docType) {
+    case 'politique':
+      return (
+        <>
+          <path d="M9 12l2 2 4-4" />
+          <circle cx="12" cy="12" r="9" />
+        </>
+      )
+    case 'procedure':
+      return <path d="M9 18l6-6-6-6" />
+    case 'guide':
+      return (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <circle cx="12" cy="16" r="0.5" fill="currentColor" />
+        </>
+      )
+    default:
+      return (
+        <>
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 3 14 8 19 8" />
+        </>
+      )
+  }
+}
+
 function TemplateCard({
   name,
   description,
   selected,
   onSelect,
   blank,
-  badge,
-  docType,
+  template,
 }: {
   name: string
   description: string
   selected: boolean
   onSelect: () => void
   blank?: boolean
-  badge?: string
-  docType?: string | null
+  template?: TemplateSummary
 }) {
+  // Badge : uniquement pour un modèle personnalisé (créé par un utilisateur, `createdBy` renseigné).
+  const badge = template?.createdBy
+    ? template.scope === 'space'
+      ? 'Espace'
+      : organizationDisplayName()
+    : undefined
+  const custom = Boolean(template?.createdBy)
+  const iconSize = blank ? 14 : 15
   return (
     <button
       type="button"
       role="radio"
       aria-checked={selected}
       onClick={onSelect}
-      className={`rounded-xl border-[1.5px] px-[18px] py-4 text-left transition ${
+      data-mock-id={`newdoc-tpl-${slug(name)}`}
+      className={`flex flex-col items-start justify-start rounded-xl border-[1.5px] px-[18px] py-4 text-left transition ${
         selected
           ? 'border-socle-accent bg-socle-mist'
           : blank
@@ -487,15 +581,17 @@ function TemplateCard({
         aria-hidden
         className={`mb-3 flex h-[30px] w-[30px] items-center justify-center rounded-lg ${
           blank
-            ? 'border-[1.5px] border-dashed border-[#DEDEE1] text-socle-muted'
+            ? 'box-content border-[1.5px] border-dashed border-[#DEDEE1] text-socle-muted'
             : selected
               ? 'bg-socle-accent text-white'
-              : 'bg-[#F0EFEA] text-[#6B6862]'
+              : custom
+                ? 'bg-socle-mist text-socle-accent'
+                : 'bg-[#F0EFEA] text-[#6B6862]'
         }`}
       >
         <svg
-          width="14"
-          height="14"
+          width={iconSize}
+          height={iconSize}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -503,27 +599,16 @@ function TemplateCard({
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          {blank ? (
-            <>
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </>
-          ) : (
-            <>
-              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 3 14 8 19 8" />
-            </>
-          )}
+          <TemplateIcon template={template} blank={blank} />
         </svg>
       </div>
-      <div className="mb-1 flex flex-wrap items-center gap-1.5">
-        <span className="text-sm font-semibold text-socle-ink">{name}</span>
+      <div className="mb-1 flex items-center gap-1.5">
+        <span className="text-[14px] font-semibold text-socle-ink">{name}</span>
         {badge && (
           <span className="rounded bg-socle-mist px-[5px] py-px text-[9.5px] font-semibold text-socle-accent">
             {badge}
           </span>
         )}
-        {docType && <span className="text-[10.5px] text-socle-muted">{docType}</span>}
       </div>
       {description && <p className="text-[12.5px] leading-normal text-socle-slate">{description}</p>}
     </button>

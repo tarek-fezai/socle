@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
+ * Règles : docs/visual-parity.md
+ *
  * Vue de comparaison vs Diff.dc.html @ 1440x900.
  * Exceptions D1-D10 (voir commentaire historique / PR).
  * D10: hauteur controles fige a 58px des deux cotes.

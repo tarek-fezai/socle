@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
+/**
+ * Règles : docs/visual-parity.md
+ */
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'

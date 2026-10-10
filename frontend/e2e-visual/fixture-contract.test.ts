@@ -28,6 +28,14 @@ import {
   pageDocument,
 } from './page-fixtures.mjs'
 import { ACCOUNT_VISUAL_NOW, ADMIN_OVERVIEW_SEED, PAT_TOKENS_SEED } from './account-admin-fixtures.mjs'
+import {
+  FAVORITES_LIST_SEED,
+  NOTIFICATIONS_LIST_SEED,
+  SEARCH_SEED,
+  SPACES_SEED,
+  TEMPLATES_SEED,
+  VISUAL_NOW as FIVE_SCREENS_NOW,
+} from './five-screens-fixtures.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const openapi = JSON.parse(readFileSync(resolve(root, 'openapi/openapi.json'), 'utf8'))
@@ -186,6 +194,60 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
       expect(Date.parse(t.createdAt!)).toBeLessThanOrEqual(ACCOUNT_VISUAL_NOW)
     }
     expect(PAT_TOKENS_SEED.some((t) => t.scope === 'read_write')).toBe(true)
+  })
+
+  describe('cinq écrans parité visuelle (Spaces / Search / Notifications / Favorites / NewDocument)', () => {
+    it('SPACES_SEED : 5 SpaceView', () => {
+      expect(SPACES_SEED).toHaveLength(5)
+      for (const s of SPACES_SEED) validate('SpaceView', s)
+      expect(SPACES_SEED.map((s) => s.name)).toEqual([
+        'Identité & accès',
+        'Infrastructure',
+        'Conformité',
+        'Produit',
+        'Ressources humaines',
+      ])
+    })
+
+    it('NOTIFICATIONS_LIST_SEED : NotificationPage, types réels uniquement', () => {
+      validate('NotificationPage', NOTIFICATIONS_LIST_SEED)
+      for (const n of NOTIFICATIONS_LIST_SEED.items ?? []) validate('NotificationView', n)
+      const real = new Set([
+        'comment_mention',
+        'approval_chain_exhausted',
+        'pat_expiring',
+        'external_reference_first',
+      ])
+      for (const n of NOTIFICATIONS_LIST_SEED.items ?? []) {
+        expect(real.has(n.type as string), `type ${n.type}`).toBe(true)
+      }
+      const unread = (NOTIFICATIONS_LIST_SEED.items ?? []).filter((n) => !n.readAt).length
+      expect(NOTIFICATIONS_LIST_SEED.unreadCount).toBe(unread)
+      expect(NOTIFICATIONS_LIST_SEED.total).toBe(NOTIFICATIONS_LIST_SEED.items?.length)
+      // Fenêtre relative figée : toutes les notifications précèdent VISUAL_NOW.
+      for (const n of NOTIFICATIONS_LIST_SEED.items ?? []) {
+        expect(Date.parse(n.createdAt as string)).toBeLessThanOrEqual(FIVE_SCREENS_NOW)
+      }
+    })
+
+    it('FAVORITES_LIST_SEED : tableau de FavoriteItem (targetType / targetId), sans spaceName', () => {
+      expect(Array.isArray(FAVORITES_LIST_SEED)).toBe(true)
+      for (const f of FAVORITES_LIST_SEED) {
+        validate('FavoriteItem', f)
+        expect(Object.keys(f).sort()).toEqual(['createdAt', 'targetId', 'targetType', 'title'])
+        expect(['document', 'folder', 'space']).toContain(f.targetType)
+      }
+    })
+
+    it('SEARCH_SEED : SearchResponse + SearchHit', () => {
+      validate('SearchResponse', SEARCH_SEED)
+      for (const h of SEARCH_SEED.results ?? []) validate('SearchHit', h)
+      expect(SEARCH_SEED.query).toBe('provisioning')
+    })
+
+    it('TEMPLATES_SEED : TemplateSummary[]', () => {
+      for (const t of TEMPLATES_SEED) validate('TemplateSummary', t)
+    })
   })
 })
 
