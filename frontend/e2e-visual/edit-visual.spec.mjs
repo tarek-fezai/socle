@@ -493,8 +493,11 @@ async function waitEditReady(page) {
   await page.waitForSelector('[data-mock-id="edit-meta-custom-field-2"]')
   await page.waitForSelector('[data-mock-id="edit-meta-tag"]')
   await page.waitForFunction(() => /3/.test(document.querySelector('[data-mock-id="edit-tabs"]')?.textContent ?? ''))
-  // « Titre 2 » dans le menu de style : curseur dans le premier H2
+  // « Titre 2 » dans le menu de style : curseur dans le premier H2. Polices chargées avant le clic,
+  // sinon la mise en page bouge encore et le clic tombe dans un paragraphe (libellé « Paragraphe »).
+  await settleFonts(page)
   await page.click('.ProseMirror h2')
+  await expect(page.getByRole('button', { name: 'Style de titre' })).toHaveText(/Titre 2/)
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
   })
