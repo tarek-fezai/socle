@@ -80,7 +80,7 @@ const sampleItem = {
 describe('trash helpers', () => {
   it('formate le temps restant avant purge', () => {
     const now = new Date('2026-09-28T10:00:00Z')
-    expect(formatPurgeRemaining('2026-10-10T10:00:00Z', now).label).toBe('purgé dans 12 jours')
+    expect(formatPurgeRemaining('2026-10-10T10:00:00Z', now).label).toBe('12 jours restants')
     expect(formatPurgeRemaining('2026-09-30T10:00:00Z', now).urgent).toBe(true)
   })
 

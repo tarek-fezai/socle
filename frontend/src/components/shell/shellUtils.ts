@@ -11,7 +11,7 @@ export function isApplePlatform(): boolean {
 /**
  * `/docs/:id` (page de lecture) — porte sa propre barre haute (breadcrumb + actions) et ses
  * onglets mobiles : le shell masque alors `ShellHeader`, `MobileTopBar` et `MobileTabBar`.
- * `/docs`, `/docs/new`, `/docs/:id/edit|history|export|view` ne sont pas concernés.
+ * `/docs`, `/docs/new`, `/docs/:id/edit|history|view` ne sont pas concernés.
  */
 export function isDocumentReadPath(pathname: string): boolean {
   const m = /^\/docs\/([^/]+)\/?$/.exec(pathname)
@@ -34,6 +34,15 @@ export function isDocumentEditPath(pathname: string): boolean {
  */
 export function isDocumentHistoryPath(pathname: string): boolean {
   return /^\/(?:docs|documents)\/(?!new\/?$)[^/]+\/history(?:\/compare)?\/?$/.test(pathname)
+}
+
+/** Export document / dossier / tag — barre haute « Fermer » fournie par la page. */
+export function isExportPath(pathname: string): boolean {
+  return (
+    /^\/docs\/(?!new\/?$)[^/]+\/export\/?$/.test(pathname) ||
+    /^\/folders\/[^/]+\/export\/?$/.test(pathname) ||
+    /^\/tags\/[^/]+\/export\/?$/.test(pathname)
+  )
 }
 
 /**
@@ -64,6 +73,7 @@ export function hasOwnDocumentChrome(pathname: string): boolean {
     isDocumentReadPath(pathname) ||
     isDocumentEditPath(pathname) ||
     isDocumentHistoryPath(pathname) ||
+    isExportPath(pathname) ||
     isApprovalsPath(pathname) ||
     isAdminWorkspacePath(pathname) ||
     isAccountPath(pathname)

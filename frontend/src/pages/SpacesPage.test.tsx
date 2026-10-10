@@ -13,6 +13,7 @@ const createSpace = vi.fn()
 vi.mock('../lib/spaces', () => ({
   listSpaces: (...args: unknown[]) => listSpaces(...args),
   createSpace: (...args: unknown[]) => createSpace(...args),
+  updateSpace: vi.fn(),
 }))
 
 import { SpacesPage } from './SpacesPage'
@@ -86,10 +87,10 @@ describe('SpacesPage', () => {
     expect(screen.queryByPlaceholderText(/Identité/i)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Nouvel espace/ }))
 
-    fireEvent.change(screen.getByPlaceholderText(/Identité/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Sécurité/i), {
       target: { value: 'Identité' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Créer un espace' }))
+    fireEvent.click(screen.getByRole('button', { name: "Créer l'espace" }))
 
     await waitFor(() => {
       expect(createSpace).toHaveBeenCalledWith(

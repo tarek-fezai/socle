@@ -5,7 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
-vi.mock('../lib/api', () => ({ api: {} }))
+vi.mock('../lib/api', () => ({
+  api: { get: () => Promise.resolve({ data: { instanceName: 'Organisation Démo' } }) },
+}))
+
+vi.mock('../lib/spaces', () => ({
+  getSpace: () => Promise.resolve({ id: '00000000-0000-0000-0000-000000000001', name: 'Identité & accès' }),
+}))
 
 const listAccess = vi.fn()
 const grantAccess = vi.fn()

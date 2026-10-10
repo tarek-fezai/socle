@@ -7,8 +7,17 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin` |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export` |
+| **Nouveaux, sections > 1 % laissées** (méthode respectée, chiffres + cause dans le spec) | `create-space` (title 4,674 %, submit 5,577 %, cancel 3,164 % — anticrénelage glyphes), `trash` (delete 8,067 % — anticrénelage « Supprimer définitivement »), `export-folder` / `export-tag` (download 5,664 %, format-pdf 4,144 % — ZIP maquette vs PDF fusionné API), `space-settings` (audit 1,903 %, trash 1,598 % — anticrénelage 13,5 px + Δw +1) |
 | **À nettoyer** | — |
+
+## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
+
+- **Access.dc.html** = accès **document** (visibilité + personnes) → `/documents/:id/access`. `/spaces/:id/access` est l’ACL espace (autre UI) : pas de spec supplémentaire. Pas de variante dossier/tag dans la maquette.
+- **Export dossier / étiquette** : l’API `exportFolder` / `exportTag` renvoie un **PDF fusionné**. Les maquettes disent « ZIP de PDF » / « Télécharger l’archive (.zip) ». Pas de mensonge ZIP dans l’app ; sections download / format laissées en échec.
+- **Trash.dc.html** = corbeille **d’espace** ; l’app est globale `/trash` (`NOT_IMPLEMENTED` `trash-space-chrome`).
+- **SpaceSettings.dc.html** = arbre 420 px + paramètres 620 px ; `/spaces/:id` = paramètres seuls (arbre = `/spaces/:id/tree`).
+- **CreateSpace.dc.html** = modale 480 px ouverte depuis `/spaces` (interaction Playwright).
 
 ## Décisions produit
 
