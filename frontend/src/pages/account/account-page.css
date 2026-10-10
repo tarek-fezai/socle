@@ -421,7 +421,9 @@
   margin-right: 16px;
 }
 
+/* Police UA du <button> comme Account.dc.html (pas de preflight côté maquette) */
 .account-pat-revoke {
+  font-family: revert;
   font-size: 12px;
   color: #b54708;
   border: none;
