@@ -4,7 +4,7 @@ import type { components } from './api-types'
 import type { TipTapNode } from './documents'
 
 /** Seuil client par défaut (aligné sur socle.writing-assistant.long-paragraph-words). */
-export const DEFAULT_LONG_PARAGRAPH_WORDS = 120
+export const DEFAULT_LONG_PARAGRAPH_WORDS = 60
 
 /** Libellé fixe renvoyé par le serveur quand aucune ancre source n'est disponible. */
 export const INACCESSIBLE_LABEL = 'Document inaccessible'

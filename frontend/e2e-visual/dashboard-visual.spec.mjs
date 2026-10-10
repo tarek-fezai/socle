@@ -3,6 +3,7 @@
  * Règles : docs/visual-parity.md
  */
 import { test, expect } from '@playwright/test'
+import { SCREENSHOT_OPTIONS } from './visual-parity-kit.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { PNG } from 'pngjs'
@@ -230,6 +231,7 @@ test.describe('dashboard visual parity', () => {
     await maskDashboardGlyphs(page, 'app')
     await page.waitForTimeout(120)
     const appShot = await page.screenshot({
+      ...SCREENSHOT_OPTIONS,
       fullPage: false,
       clip: { x: 0, y: 0, width: 1440, height: 900 },
     })
@@ -247,6 +249,7 @@ test.describe('dashboard visual parity', () => {
     await maskDashboardGlyphs(page, 'mock')
     await page.waitForTimeout(120)
     const mockShot = await page.screenshot({
+      ...SCREENSHOT_OPTIONS,
       fullPage: false,
       clip: { x: 0, y: 0, width: 1440, height: 900 },
     })
@@ -278,7 +281,7 @@ test.describe('dashboard visual parity', () => {
     await settleFonts(page)
     await maskDashboardGlyphs(page, 'mock')
     await page.waitForTimeout(100)
-    const mockShot = await page.locator('div[style*="390px"]').first().screenshot()
+    const mockShot = await page.locator('div[style*="390px"]').first().screenshot(SCREENSHOT_OPTIONS)
 
     await page.goto('/')
     await page.waitForSelector('[data-mock-id="home-greeting"]')
@@ -299,7 +302,7 @@ test.describe('dashboard visual parity', () => {
     await settleFonts(page)
     await maskDashboardGlyphs(page, 'app')
     await page.waitForTimeout(100)
-    const appShot = await page.locator('.shell-root').screenshot()
+    const appShot = await page.locator('.shell-root').screenshot(SCREENSHOT_OPTIONS)
 
     const ratio = diffRatio(mockShot, appShot, 'dashboard-mobile')
     expect(ratio, `mobile dashboard diff ${ratio}`).toBeLessThanOrEqual(0.03)
@@ -326,6 +329,7 @@ test.describe('dashboard visual parity', () => {
     await maskDashboardGlyphs(page, 'app')
     await page.waitForTimeout(100)
     const appShot = await page.screenshot({
+      ...SCREENSHOT_OPTIONS,
       fullPage: false,
       clip: { x: 0, y: 0, width: 390, height: 844 },
     })
@@ -347,6 +351,7 @@ test.describe('dashboard visual parity', () => {
     await maskDashboardGlyphs(page, 'mock')
     await page.waitForTimeout(100)
     const mockShot = await page.screenshot({
+      ...SCREENSHOT_OPTIONS,
       fullPage: false,
       clip: { x: 0, y: 0, width: 390, height: 844 },
     })

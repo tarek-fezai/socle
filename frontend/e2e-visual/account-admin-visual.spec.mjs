@@ -9,6 +9,7 @@
  * Annotation maquette : data-* uniquement.
  */
 import { test, expect } from '@playwright/test'
+import { SCREENSHOT_OPTIONS } from './visual-parity-kit.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -515,7 +516,7 @@ async function shotSection(page, selector, { maskNames = [], targeted = [], labe
     console.log(`MASK ${label} ${m.name}: ${m.count} él., ${m.areaPx} px (${m.pctOfPage} % page)`)
   }
   const shot = await loc.screenshot({
-    animations: 'disabled',
+    ...SCREENSHOT_OPTIONS,
     mask: [
       ...maskNames.map((n) => page.locator(`${selector} [data-visual-mask="${n}"]`)),
       ...targetedLocators,

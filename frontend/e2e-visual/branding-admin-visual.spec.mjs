@@ -6,6 +6,7 @@
  * (maquette annotée : sans badge Entreprise / DNS / socle.app).
  */
 import { test, expect } from '@playwright/test'
+import { SCREENSHOT_OPTIONS } from './visual-parity-kit.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -125,6 +126,7 @@ test.describe('branding admin visual', () => {
     await maskAdminGlyphs(page)
     await page.waitForTimeout(120)
     const appShot = await page.screenshot({
+      ...SCREENSHOT_OPTIONS,
       fullPage: false,
       clip: { x: 0, y: 0, width: 1440, height: 900 },
     })
@@ -142,6 +144,7 @@ test.describe('branding admin visual', () => {
     await maskAdminGlyphs(page)
     await page.waitForTimeout(120)
     const mockShot = await page.screenshot({
+      ...SCREENSHOT_OPTIONS,
       fullPage: false,
       clip: { x: 0, y: 0, width: 1440, height: 900 },
     })

@@ -76,6 +76,7 @@ import {
   finishPixelResults,
   injectOidcSession,
   json,
+  measureSubpixelUpstreams,
   mockBaseApis,
   reportNotImplemented,
   settleFonts,
@@ -216,6 +217,32 @@ export const NOT_IMPLEMENTED = [
 /** Écarts mesurés (app − maquette) déclarés. */
 const SIZE_EXCEPTIONS = {}
 
+/**
+ * Décalage sous-pixel hérité du chapeau de co-édition NOT_IMPLEMENTED (maquette : bulle, étiquette et
+ * curseur distant rallongent le bloc à une hauteur fractionnaire). Appliqué seulement si les conditions du
+ * kit sont mesurées vraies (docs/visual-parity.md § Sous-pixel).
+ * @type {Record<string, import('./visual-parity-kit.mjs').SubpixelException>}
+ */
+const SUBPIXEL_EXCEPTIONS = {
+  'edit-desktop-h2-principe': {
+    upstreamNotImplemented: 'edit-lead-coedit',
+    maxPixel: 0.08,
+    reason: 'fraction de y héritée du chapeau de co-édition NOT_IMPLEMENTED au-dessus',
+  },
+  'edit-desktop-p-editing': {
+    upstreamNotImplemented: 'edit-lead-coedit',
+    maxPixel: 0.08,
+    reason: 'fraction de y héritée du chapeau de co-édition NOT_IMPLEMENTED au-dessus',
+  },
+}
+
+/** Caret dessiné de la maquette (span 2×16) : l'app a un vrai caret, masqué à la capture. */
+const FAKE_CARET_MASK = {
+  name: 'edit-mock-fake-caret',
+  selector: '[data-visual-mask="edit-mock-fake-caret"]',
+  reason: 'caret dessiné de la maquette (le caret réel de l’app est masqué par la capture)',
+}
+
 /* ------------------------------------------------------------------ */
 /* Sections                                                           */
 /* ------------------------------------------------------------------ */
@@ -249,7 +276,12 @@ const DESKTOP_SECTIONS = [
   { id: 'ed-meta-block', name: 'meta-block' },
 ]
 /** Paragraphe « en cours d'édition » : mesuré après un clic qui y place le curseur (voir en-tête). */
-const EDITING_SECTION = { id: 'ed-p-editing', name: 'p-editing', appSelector: '.ProseMirror > :nth-child(3)' }
+const EDITING_SECTION = {
+  id: 'ed-p-editing',
+  name: 'p-editing',
+  appSelector: '.ProseMirror > :nth-child(3)',
+  mockTargeted: [FAKE_CARET_MASK],
+}
 /** Menu « Insérer » : mesuré après ouverture dans l'app (voir en-tête). */
 const INSERT_SECTION = { id: 'ed-insert-menu', name: 'insert-menu', masks: ['edit-insert-soon'] }
 const STATEFUL_SECTIONS = [EDITING_SECTION, INSERT_SECTION]
@@ -286,6 +318,7 @@ async function annotateSectionsMock(page, soonRects, insertSoonRects) {
     mask(k[4].querySelector('p > span > span:nth-child(2)'), 'edit-selection-bubble')
     set(k[5], 'ed-h2-principe')
     set(k[6], 'ed-p-editing')
+    mask(k[6].querySelector('span[style*="width: 2px"][style*="height: 16px"]'), 'edit-mock-fake-caret')
     mask(k[7], 'edit-inline-chips')
     mask(k[8], 'edit-code-header')
     mask(k[9], 'edit-drop-line')
@@ -489,8 +522,9 @@ test.describe('document edit visual parity', () => {
     // App d'abord : les boutons « bientôt » de la barre d'outils fixent les cases masquées côté maquette.
     await page.goto(`/docs/${EDIT_DOC_ID}/edit`)
     await waitEditReady(page)
-    const soonRects = await annotateSectionsApp(page)
+    // Polices chargées avant toute mesure de cases (masques « bientôt » reportés sur la maquette).
     await settleFonts(page)
+    const soonRects = await annotateSectionsApp(page)
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'edit')
     const appSec = {}
     for (const s of DESKTOP_SECTIONS) {
@@ -506,6 +540,8 @@ test.describe('document edit visual parity', () => {
     // Menu « Insérer » : ouvert par clic (état figé ouvert dans la maquette) — en dernier, il recouvre la colonne.
     await page.getByTestId('edit-insert-btn').click()
     await page.waitForSelector('[data-testid="edit-insert-panel"]')
+    // Graisses chargées à l'ouverture du panneau : mesurer après leur chargement (sinon cases décalées).
+    await settleFonts(page)
     const insertSoonRects = await page.evaluate(() => {
       const panel = document.querySelector('[data-testid="edit-insert-panel"]')
       panel.setAttribute('data-mock-id', 'ed-insert-menu')
@@ -520,16 +556,26 @@ test.describe('document edit visual parity', () => {
     appSec[INSERT_SECTION.name] = await shoot(page, INSERT_SECTION, 'app')
 
     await page.goto(`${MOCK_ORIGIN}/Edit.dc.html`)
-    await annotateSectionsMock(page, soonRects, insertSoonRects)
     await settleFonts(page)
+    await annotateSectionsMock(page, soonRects, insertSoonRects)
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'edit')
+    const upstreams = await measureSubpixelUpstreams(page, SUBPIXEL_EXCEPTIONS, NOT_IMPLEMENTED)
     const mockSec = {}
     for (const s of [...DESKTOP_SECTIONS, ...STATEFUL_SECTIONS]) mockSec[s.name] = await shoot(page, s, 'mock')
 
-    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const compare = compareSectionShots(SIZE_EXCEPTIONS, {
+      subpixel: SUBPIXEL_EXCEPTIONS,
+      notImplemented: NOT_IMPLEMENTED,
+      upstreams,
+    })
     const results = []
     for (const s of [...DESKTOP_SECTIONS, ...STATEFUL_SECTIONS]) {
-      results.push(compare(`edit-desktop-${s.name}`, mockSec[s.name].shot, appSec[s.name].shot, testInfo))
+      results.push(
+        compare(`edit-desktop-${s.name}`, mockSec[s.name].shot, appSec[s.name].shot, testInfo, {
+          mock: mockSec[s.name].geo,
+          app: appSec[s.name].geo,
+        }),
+      )
     }
 
     finishPixelResults('edit', results)

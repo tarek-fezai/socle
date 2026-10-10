@@ -27,6 +27,9 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 - **Texte inclus** (aucun masquage global des glyphes).
 - Viewport desktop **1440×900** ; mobile **390×844** uniquement pour les specs mobiles existants.
 - Même Chromium pour maquette (`serve-mockups` :4174) et app (preview :4173).
+- Captures avec les **mêmes options des deux côtés** : `SCREENSHOT_OPTIONS` du kit
+  (`{ caret: 'hide', animations: 'disabled' }`), y compris dans les specs hérités.
+- **Aucun retry** (`playwright.config.mjs`, dédiée à `e2e-visual/`) : un écart instable échoue.
 - États figés de la maquette (menu ouvert, paragraphe en cours d’édition) : reproduits dans l’app par
   **interaction Playwright** (clic, placement du curseur), jamais par modification du DOM.
 
@@ -60,6 +63,32 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 - Garde : si la feature apparaît dans l’app (`appImplementedProbe`), le test échoue
   (retirer l’entrée quand elle est livrée).
 - Placeholder app optionnel (`appPlaceholderSelector`) pour ancrer la zone « Bientôt ».
+
+## Sous-pixel (`SUBPIXEL_EXCEPTIONS`)
+
+Un bloc `NOT_IMPLEMENTED` de hauteur fractionnaire au-dessus d’une section (SVG draw.io 243,55 px,
+bloc co-édition 152,34 px) décale la **fraction** de `y` de la maquette : les glyphes sont alors
+rastérisés sur une autre phase de pixel, à texte et boîte identiques.
+
+```js
+SUBPIXEL_EXCEPTIONS[sectionId] = { upstreamNotImplemented: '<id NOT_IMPLEMENTED>', maxPixel: 0.08, reason }
+```
+
+- `maxPixel` **≤ 0,08** (8 %) ; `reason` et `upstreamNotImplemented` obligatoires.
+- Appliquée **seulement si les trois conditions sont mesurées** par le test (sinon seuil 1 %) :
+  1. correspondance structurelle : texte normalisé, `font-family`, `font-size`, `font-weight`,
+     `line-height`, `box.w` et `box.h` (± 0,01 px) identiques maquette / app ;
+  2. `|frac(y_maquette) − frac(y_app)| ≥ 0,25 px` (distance circulaire des fractions) ;
+  3. la zone amont existe dans `NOT_IMPLEMENTED` et se situe **au-dessus** de la section dans la maquette.
+- Garde : si la zone amont est retirée de `NOT_IMPLEMENTED`, le test **échoue** tant que l’entrée existe.
+- Une entrée **inutile** (section ≤ 1 % sans elle) fait échouer le test : la retirer.
+- Journal : `y` maquette / app au 1/100 px, fractions, `|Δfrac|`, bas et hauteur de la zone amont, %
+  obtenu, appliquée ou non (avec la condition manquante).
+
+| Section | Zone amont `NOT_IMPLEMENTED` |
+|---|---|
+| `page-desktop-h2-flux`, `page-desktop-p-flux` | `page-drawio` (Fig. 1 draw.io) |
+| `edit-desktop-h2-principe`, `edit-desktop-p-editing` | `edit-lead-coedit` (bloc co-édition) |
 
 ## Exceptions structurales
 

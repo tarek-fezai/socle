@@ -15,6 +15,7 @@
  *        /account. Comparaison par sections de la carte (précédent RestoreVersion), surface hors carte chiffrée.
  */
 import { test, expect } from '@playwright/test'
+import { SCREENSHOT_OPTIONS } from './visual-parity-kit.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -185,7 +186,7 @@ async function shot(page, id, maskNames, label) {
     console.log(`MASK ${label} ${n}: ${m.count} él., ${m.areaPx} px (${m.pctOfPage} % page) — ${EXPIRY_MASK.reason}`)
   }
   const buf = await loc.screenshot({
-    animations: 'disabled',
+    ...SCREENSHOT_OPTIONS,
     mask: maskNames.map((n) => page.locator(`[data-visual-mask="${n}"]`)),
     maskColor: '#FFFFFF',
   })
@@ -269,7 +270,7 @@ test.describe('Générer un jeton — comportement', () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     const created = await openApp(page)
     fs.mkdirSync(outDir, { recursive: true })
-    await page.screenshot({ path: path.join(outDir, 'pat-generate-screen.png') })
+    await page.screenshot({ ...SCREENSHOT_OPTIONS, path: path.join(outDir, 'pat-generate-screen.png') })
 
     const presets = page.getByRole('radio', { name: /jours/ })
     await expect(presets).toHaveText(['7 jours', '30 jours', '60 jours', '90 jours'])
@@ -279,7 +280,7 @@ test.describe('Générer un jeton — comportement', () => {
     await expect(page.getByTestId('pat-plaintext')).toHaveText(PLAINTEXT)
     await expect(page.getByText('Copiez ce jeton maintenant : il ne sera plus affiché.')).toBeVisible()
     expect(created.calls).toEqual([{ name: 'Jeton — sans nom', scope: 'read', expiresInDays: 90 }])
-    await page.screenshot({ path: path.join(outDir, 'pat-token-once.png') })
+    await page.screenshot({ ...SCREENSHOT_OPTIONS, path: path.join(outDir, 'pat-token-once.png') })
 
     await page.getByRole('button', { name: 'Copier' }).click()
     await expect(page.getByRole('button', { name: 'Copié' })).toBeVisible()
@@ -290,6 +291,6 @@ test.describe('Générer un jeton — comportement', () => {
     await expect(page.getByTestId('pat-plaintext')).toHaveCount(0)
     await expect(page.getByText(PLAINTEXT)).toHaveCount(0)
     await page.locator('[data-mock-id="account-pat"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
-    await page.screenshot({ path: path.join(outDir, 'pat-account-list.png') })
+    await page.screenshot({ ...SCREENSHOT_OPTIONS, path: path.join(outDir, 'pat-account-list.png') })
   })
 })

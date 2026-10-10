@@ -66,6 +66,7 @@ import {
   injectOidcSession,
   json,
   measureMaskName,
+  measureSubpixelUpstreams,
   mockBaseApis,
   pageAreaFor,
   reportNotImplemented,
@@ -141,6 +142,25 @@ const SIZE_EXCEPTIONS = {
     dw: 0,
     dh: -1,
     reason: 'arrondi de boîte (fraction de pixel héritée du bloc draw.io NOT_IMPLEMENTED au-dessus)',
+  },
+}
+
+/**
+ * Décalage sous-pixel hérité des figures draw.io NOT_IMPLEMENTED (Fig. 1 : SVG responsive de hauteur
+ * fractionnaire dans la maquette ; placeholder de hauteur entière dans l'app). Appliqué seulement si les
+ * conditions du kit sont mesurées vraies (docs/visual-parity.md § Sous-pixel).
+ * @type {Record<string, import('./visual-parity-kit.mjs').SubpixelException>}
+ */
+const SUBPIXEL_EXCEPTIONS = {
+  'page-desktop-h2-flux': {
+    upstreamNotImplemented: 'page-drawio',
+    maxPixel: 0.08,
+    reason: 'fraction de y héritée de la figure draw.io (Fig. 1) NOT_IMPLEMENTED au-dessus',
+  },
+  'page-desktop-p-flux': {
+    upstreamNotImplemented: 'page-drawio',
+    maxPixel: 0.08,
+    reason: 'fraction de y héritée de la figure draw.io (Fig. 1) NOT_IMPLEMENTED au-dessus',
   },
 }
 
@@ -420,6 +440,7 @@ test.describe('document page visual parity', () => {
     await annotateSectionsMock(page)
     await settleFonts(page)
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'page')
+    const upstreams = await measureSubpixelUpstreams(page, SUBPIXEL_EXCEPTIONS, NOT_IMPLEMENTED)
     const mockSec = await shootAll(page, DESKTOP_SECTIONS, 'page-desktop', 'mock')
 
     await page.goto(`/docs/${PAGE_DOC_ID}`)
@@ -429,7 +450,11 @@ test.describe('document page visual parity', () => {
     await settleFonts(page)
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'page')
 
-    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const compare = compareSectionShots(SIZE_EXCEPTIONS, {
+      subpixel: SUBPIXEL_EXCEPTIONS,
+      notImplemented: NOT_IMPLEMENTED,
+      upstreams,
+    })
     const results = []
     // Haut de page d'abord (sections sticky / menu), puis le corps, puis le rail.
     for (const s of DESKTOP_SECTIONS) {
@@ -438,7 +463,12 @@ test.describe('document page visual parity', () => {
         maskNames: s.masks ?? [],
         label: `page-desktop-sec-${s.name}-app`,
       })
-      results.push(compare(`page-desktop-${s.name}`, mockSec[s.name].shot, app.shot, testInfo))
+      results.push(
+        compare(`page-desktop-${s.name}`, mockSec[s.name].shot, app.shot, testInfo, {
+          mock: mockSec[s.name].geo,
+          app: app.geo,
+        }),
+      )
     }
     finishPixelResults('page', results)
   })
