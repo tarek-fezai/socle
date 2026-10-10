@@ -51,6 +51,8 @@ jobs:
           node-version: "20"
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Encodage UTF-8 (double encodage interdit)
+        run: node ../tools/check-encoding.mjs
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Test
