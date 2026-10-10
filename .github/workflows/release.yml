@@ -122,7 +122,7 @@ jobs:
           path: sbom-${{ matrix.image }}.spdx.json
 
       - name: Scan image (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
           format: table
@@ -131,7 +131,7 @@ jobs:
           exit-code: "1"
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.7.0
+        uses: sigstore/cosign-installer@v3.10.1
 
       - name: Sign image (keyless)
         env:
