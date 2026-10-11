@@ -189,6 +189,10 @@ jobs:
               - '.github/workflows/ci.yml'
               - 'e2e/**'
               - 'infra/keycloak/**'
+              - 'backend/**'
+              - 'frontend/**'
+              - 'webhook-worker/**'
+              - 'openapi/**'
 
       - name: Skip when paths do not match (PR/push only)
         if: |
