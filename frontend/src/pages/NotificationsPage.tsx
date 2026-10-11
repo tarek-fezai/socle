@@ -5,9 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
 import {
-  formatNotificationMessage,
   listNotifications,
+  markAllNotificationsRead,
   markNotificationRead,
+  notificationMessageParts,
   notificationResourceLink,
   type NotificationItem,
 } from '../lib/notifications'
@@ -149,6 +150,13 @@ export function NotificationsPage() {
     },
   })
 
+  const markAll = useMutation({
+    mutationFn: () => markAllNotificationsRead(api),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+
   async function onOpen(n: NotificationItem) {
     if (!n.readAt) {
       try {
@@ -194,14 +202,12 @@ export function NotificationsPage() {
         >
           Notifications
         </h1>
-        {/* Pas d'API « tout marquer comme lu » → placeholder désactivé (NOT_IMPLEMENTED notif-read-all). */}
         <button
           type="button"
-          disabled
-          title="Bientôt disponible"
+          disabled={markAll.isPending || !page.data?.unreadCount}
+          onClick={() => markAll.mutate()}
           data-mock-id="notif-read-all"
-          data-visual-mask="notif-read-all"
-          className="cursor-not-allowed border-0 bg-transparent p-0 text-[12.5px] font-semibold text-socle-subtle"
+          className="border-0 bg-transparent p-0 text-[12.5px] font-semibold text-socle-accent disabled:text-socle-subtle"
         >
           Tout marquer comme lu
         </button>
@@ -243,7 +249,8 @@ export function NotificationsPage() {
                 const unread = !n.readAt
                 const isApproval = n.type.includes('approval')
                 const { bg, icon } = typeIcon(n.type)
-                const message = formatNotificationMessage(n)
+                const parts = notificationMessageParts(n)
+                const actorInitials = n.actor?.initials?.trim()
                 return (
                   <li
                     key={n.id}
@@ -264,12 +271,15 @@ export function NotificationsPage() {
                     <div
                       aria-hidden
                       className="ml-[14px] flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full"
-                      style={{ background: bg }}
+                      style={{
+                        background: actorInitials ? '#EEEDFD' : bg,
+                        color: actorInitials ? '#3730E0' : undefined,
+                        fontSize: actorInitials ? 11 : undefined,
+                        fontWeight: actorInitials ? 600 : undefined,
+                      }}
                       data-mock-id={`notif-item-${i}-icon`}
-                      // Hors approbation : la maquette montre l'avatar de l'auteur (NOT_IMPLEMENTED).
-                      data-visual-mask={isApproval ? undefined : 'notif-item-icon'}
                     >
-                      {icon}
+                      {actorInitials || icon}
                     </div>
                     <div className="grow">
                       <div
@@ -282,10 +292,14 @@ export function NotificationsPage() {
                             onClick={() => void onOpen(n)}
                             className="after:absolute after:inset-0 after:rounded-[10px]"
                           >
-                            {message}
+                            {parts.map((p, pi) =>
+                              p.emphasis ? <strong key={pi}>{p.text}</strong> : <span key={pi}>{p.text}</span>,
+                            )}
                           </Link>
                         ) : (
-                          message
+                          parts.map((p, pi) =>
+                            p.emphasis ? <strong key={pi}>{p.text}</strong> : <span key={pi}>{p.text}</span>,
+                          )
                         )}
                       </div>
                       <div

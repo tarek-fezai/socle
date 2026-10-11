@@ -20,6 +20,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +123,7 @@ public class SearchService {
 
         List<SearchHit> hits = accepted.isEmpty()
                 ? List.of()
-                : loadHeadlines(accepted, query);
+                : loadHeadlines(accepted, query, user.getId());
 
         return new SearchResponse(query, hits, estimatedTotal, true, warning);
     }
@@ -236,7 +237,7 @@ public class SearchService {
         return idx;
     }
 
-    private List<SearchHit> loadHeadlines(List<Candidate> accepted, String query) {
+    private List<SearchHit> loadHeadlines(List<Candidate> accepted, String query, UUID userId) {
         List<UUID> ids = accepted.stream().map(Candidate::id).toList();
         Map<UUID, String> excerpts = new HashMap<>();
         jdbc.query("""
@@ -258,6 +259,9 @@ public class SearchService {
             return null;
         });
 
+        Map<UUID, List<eu.socle.document.DocumentDtos.TagRef>> tags = loadTags(ids);
+        Set<UUID> favoriteIds = loadFavoriteDocumentIds(userId, ids);
+
         List<SearchHit> hits = new ArrayList<>(accepted.size());
         for (Candidate c : accepted) {
             hits.add(new SearchHit(
@@ -269,9 +273,57 @@ public class SearchService {
                     c.docType(),
                     c.status(),
                     c.updatedAt(),
-                    c.rank()));
+                    c.rank(),
+                    tags.getOrDefault(c.id(), List.of()),
+                    favoriteIds.contains(c.id())));
         }
         return hits;
+    }
+
+    private Map<UUID, List<eu.socle.document.DocumentDtos.TagRef>> loadTags(List<UUID> documentIds) {
+        if (documentIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, List<eu.socle.document.DocumentDtos.TagRef>> out = new HashMap<>();
+        jdbc.query("""
+                SELECT dt.document_id, t.id, t.name, t.color
+                  FROM document_tags dt
+                  JOIN tags t ON t.id = dt.tag_id
+                 WHERE dt.document_id = ANY (?)
+                 ORDER BY t.name ASC
+                """, ps -> {
+            Array arr = ps.getConnection().createArrayOf("uuid", documentIds.toArray());
+            ps.setArray(1, arr);
+        }, (rs, i) -> {
+            UUID docId = (UUID) rs.getObject("document_id");
+            out.computeIfAbsent(docId, k -> new ArrayList<>()).add(
+                    new eu.socle.document.DocumentDtos.TagRef(
+                            (UUID) rs.getObject("id"),
+                            rs.getString("name"),
+                            rs.getString("color"),
+                            false));
+            return null;
+        });
+        return out;
+    }
+
+    private Set<UUID> loadFavoriteDocumentIds(UUID userId, List<UUID> documentIds) {
+        if (documentIds.isEmpty()) {
+            return Set.of();
+        }
+        Set<UUID> out = new HashSet<>();
+        jdbc.query("""
+                SELECT target_id FROM favorites
+                 WHERE user_id = ? AND target_type = 'document' AND target_id = ANY (?)
+                """, ps -> {
+            ps.setObject(1, userId);
+            Array arr = ps.getConnection().createArrayOf("uuid", documentIds.toArray());
+            ps.setArray(2, arr);
+        }, (rs, i) -> {
+            out.add((UUID) rs.getObject("target_id"));
+            return null;
+        });
+        return out;
     }
 
     /** Rebuild explicite (tests / backfill) — les triggers couvrent le chemin nominal. */

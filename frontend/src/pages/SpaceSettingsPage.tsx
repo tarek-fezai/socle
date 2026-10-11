@@ -17,6 +17,7 @@ export function SpaceSettingsPage() {
   const { spaceId = '' } = useParams()
   const qc = useQueryClient()
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [externalReference, setExternalReference] = useState<'open' | 'restricted'>('open')
   const [defaultVisibility, setDefaultVisibility] = useState<
     'organisation' | 'space' | 'restricted'
@@ -30,6 +31,7 @@ export function SpaceSettingsPage() {
     queryFn: async () => {
       const s = await getSpace(api, spaceId)
       setName(s.name)
+      setDescription(s.description ?? '')
       setExternalReference(s.externalReference === 'restricted' ? 'restricted' : 'open')
       const dv = s.defaultVisibility
       setDefaultVisibility(
@@ -51,6 +53,7 @@ export function SpaceSettingsPage() {
     mutationFn: () =>
       updateSpace(api, spaceId, {
         name: name.trim(),
+        description: space.data?.canManage ? description : undefined,
         externalReference: space.data?.canManage ? externalReference : undefined,
         defaultVisibility: space.data?.canManage ? defaultVisibility : undefined,
         commentPolicy: space.data?.canManage ? commentPolicy : undefined,
@@ -145,6 +148,16 @@ export function SpaceSettingsPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+          <label className="block text-sm">
+            <span className="text-socle-muted">Description</span>
+            <textarea
+              className="mt-1 w-full rounded-lg border border-socle-line bg-white px-3 py-2"
+              rows={3}
+              maxLength={500}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </label>
           <label className="block text-sm">
             <span className="text-socle-muted">Références externes (transclusion entrante)</span>
             <select

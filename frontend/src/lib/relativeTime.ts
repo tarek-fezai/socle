@@ -30,6 +30,17 @@ export function formatShortDateFr(iso: string): string {
   }).format(d)
 }
 
+/** « 12 septembre 2026 » — ligne méta favoris (maquette). */
+export function formatLongDateFr(iso: string): string {
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return ''
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(d)
+}
+
 /** « 4 302 » : séparateur de milliers insécable de la largeur d'une espace (U+202F d'Intl trop étroit). */
 export function formatFrInteger(n: number): string {
   return new Intl.NumberFormat('fr-FR').format(Math.round(n)).replace(/\u202f/g, '\u00a0')

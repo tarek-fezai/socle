@@ -28,10 +28,12 @@ import org.springframework.web.server.ResponseStatusException;
 import java.sql.Array;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -856,13 +858,16 @@ public class AuthorizationService {
      */
     public Set<UUID> listSpaceMemberIds(UUID spaceId) {
         try {
-            var response = openFgaClient.listUsers(new ClientListUsersRequest()
-                            ._object(new FgaObject().type("space").id(spaceId.toString()))
-                            .relation("viewer")
-                            .userFilters(List.of(new UserTypeFilter().type("user"))))
-                    .join();
+            var future = openFgaClient.listUsers(new ClientListUsersRequest()
+                    ._object(new FgaObject().type("space").id(spaceId.toString()))
+                    .relation("viewer")
+                    .userFilters(List.of(new UserTypeFilter().type("user"))));
+            if (future == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible");
+            }
+            var response = future.join();
             Set<UUID> members = new LinkedHashSet<>();
-            if (response.getUsers() == null) {
+            if (response == null || response.getUsers() == null) {
                 return members;
             }
             for (var u : response.getUsers()) {
@@ -877,9 +882,17 @@ public class AuthorizationService {
                 }
             }
             return members;
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (java.util.concurrent.CompletionException e) {
+            log.error("OpenFGA listUsers failed space={}", spaceId, e);
+            if (e.getCause() instanceof ResponseStatusException rse) {
+                throw rse;
+            }
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible", e);
         } catch (Exception e) {
             log.error("OpenFGA listUsers failed space={}", spaceId, e);
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible", e);
         }
     }
 
@@ -906,6 +919,61 @@ public class AuthorizationService {
         }
         Set<UUID> allowed = runBatchedChecks(fgaUser, checks);
         return distinct.stream().filter(allowed::contains).toList();
+    }
+
+    /** BatchCheck {@code space#viewer} — pas de Check unitaire par espace. */
+    public List<UUID> filterBySpaceViewer(UUID userId, Collection<UUID> spaceIds) {
+        if (spaceIds == null || spaceIds.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> distinct = spaceIds.stream().distinct().toList();
+        String fgaUser = user(userId);
+        List<ClientBatchCheckItem> checks = new ArrayList<>(distinct.size());
+        for (UUID id : distinct) {
+            checks.add(new ClientBatchCheckItem()
+                    .user(fgaUser)
+                    .relation("viewer")
+                    ._object(space(id))
+                    .correlationId(id.toString()));
+        }
+        Set<UUID> allowed = runBatchedChecks(fgaUser, checks);
+        return distinct.stream().filter(allowed::contains).toList();
+    }
+
+    /**
+     * Membres ({@code space#viewer}) de plusieurs espaces — ListUsers en parallèle borné.
+     */
+    public Map<UUID, Set<UUID>> listSpaceMemberIds(Collection<UUID> spaceIds) {
+        if (spaceIds == null || spaceIds.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> distinct = spaceIds.stream().distinct().toList();
+        Map<UUID, Set<UUID>> out = new HashMap<>();
+        int parallelism = Math.min(batchCheckParallelism, Math.max(1, distinct.size()));
+        java.util.concurrent.ExecutorService pool =
+                java.util.concurrent.Executors.newFixedThreadPool(parallelism);
+        try {
+            List<java.util.concurrent.CompletableFuture<Map.Entry<UUID, Set<UUID>>>> futures =
+                    new ArrayList<>();
+            for (UUID spaceId : distinct) {
+                futures.add(java.util.concurrent.CompletableFuture.supplyAsync(
+                        () -> Map.entry(spaceId, listSpaceMemberIds(spaceId)), pool));
+            }
+            for (var f : futures) {
+                try {
+                    var e = f.join();
+                    out.put(e.getKey(), e.getValue());
+                } catch (java.util.concurrent.CompletionException ex) {
+                    if (ex.getCause() instanceof ResponseStatusException rse) {
+                        throw rse;
+                    }
+                    throw ex;
+                }
+            }
+        } finally {
+            pool.shutdown();
+        }
+        return out;
     }
 
     public List<UUID> listDirectAccessDocumentIds(UUID userId) {

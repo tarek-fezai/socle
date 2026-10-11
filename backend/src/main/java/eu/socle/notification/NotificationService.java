@@ -3,6 +3,7 @@ package eu.socle.notification;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.socle.document.DocumentDtos.PersonRef;
 import eu.socle.user.UserSyncService;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,8 +12,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -97,12 +102,26 @@ public class NotificationService {
                 user.getId());
 
         return new NotificationPage(
-                items,
+                attachActors(items),
                 safeOffset,
                 safeLimit,
                 total != null ? total : 0,
                 unreadCount != null ? unreadCount : 0
         );
+    }
+
+    /**
+     * Marque toutes les notifications non lues de l'appelant. N'affecte aucun autre utilisateur.
+     */
+    public MarkAllReadResult markAllRead(Jwt jwt) {
+        var user = userSyncService.syncFromJwt(jwt);
+        int updated = jdbcTemplate.update("""
+                UPDATE notifications
+                   SET read_at = now()
+                 WHERE user_id = ? AND read_at IS NULL
+                """,
+                user.getId());
+        return new MarkAllReadResult(updated);
     }
 
     /**
@@ -134,7 +153,7 @@ public class NotificationService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification introuvable");
         }
         // updated == 0 si déjà lue : OK idempotent
-        return rows.getFirst();
+        return attachActors(rows).getFirst();
     }
 
     private NotificationView mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
@@ -146,9 +165,100 @@ public class NotificationService {
                 rs.getString("type"),
                 payload,
                 rs.getString("document_title"),
+                versionNoOf(payload),
+                null,
                 readAt != null ? readAt.toInstant().toString() : null,
                 createdAt != null ? createdAt.toInstant().toString() : null
         );
+    }
+
+    private List<NotificationView> attachActors(List<NotificationView> items) {
+        if (items == null || items.isEmpty()) {
+            return items == null ? List.of() : items;
+        }
+        Set<UUID> actorIds = new HashSet<>();
+        for (NotificationView n : items) {
+            UUID id = actorIdOf(n.payload());
+            if (id != null) {
+                actorIds.add(id);
+            }
+        }
+        Map<UUID, ActorView> actors = loadActors(actorIds);
+        List<NotificationView> out = new ArrayList<>(items.size());
+        for (NotificationView n : items) {
+            UUID actorId = actorIdOf(n.payload());
+            ActorView actor = actorId == null ? null : actors.get(actorId);
+            out.add(new NotificationView(
+                    n.id(), n.type(), n.payload(), n.documentTitle(), n.versionNo(),
+                    actor, n.readAt(), n.createdAt()));
+        }
+        return out;
+    }
+
+    private Map<UUID, ActorView> loadActors(Set<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = String.join(",", ids.stream().map(id -> "?").toList());
+        Map<UUID, ActorView> out = new HashMap<>();
+        jdbcTemplate.query(
+                ("SELECT id, display_name, avatar_initials FROM users WHERE id IN (%s)"
+                        .formatted(placeholders)),
+                rs -> {
+                    while (rs.next()) {
+                        UUID id = (UUID) rs.getObject("id");
+                        String name = rs.getString("display_name");
+                        String stored = rs.getString("avatar_initials");
+                        String initials = stored == null || stored.isBlank()
+                                ? PersonRef.initialsOf(name)
+                                : stored.trim();
+                        if (name != null && !name.isBlank()) {
+                            out.put(id, new ActorView(id, name.trim(), initials));
+                        }
+                    }
+                    return null;
+                },
+                ids.toArray());
+        return out;
+    }
+
+    private static UUID actorIdOf(Map<String, Object> payload) {
+        if (payload == null) {
+            return null;
+        }
+        Object raw = payload.get("mentioned_by");
+        if (raw == null) {
+            raw = payload.get("actor_id");
+        }
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return UUID.fromString(raw.toString());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static Integer versionNoOf(Map<String, Object> payload) {
+        if (payload == null) {
+            return null;
+        }
+        Object raw = payload.get("version_no");
+        if (raw == null) {
+            raw = payload.get("versionNo");
+        }
+        if (raw instanceof Number n) {
+            return n.intValue();
+        }
+        if (raw instanceof String s) {
+            try {
+                return Integer.parseInt(s);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private Map<String, Object> parsePayload(String json) {
@@ -162,14 +272,27 @@ public class NotificationService {
         }
     }
 
+    public record ActorView(UUID id, String displayName, String initials) {}
+
     public record NotificationView(
             UUID id,
             String type,
             Map<String, Object> payload,
             String documentTitle,
+            Integer versionNo,
+            ActorView actor,
             String readAt,
             String createdAt
-    ) {}
+    ) {
+        public NotificationView(
+                UUID id, String type, Map<String, Object> payload, String documentTitle,
+                String readAt, String createdAt
+        ) {
+            this(id, type, payload, documentTitle, null, null, readAt, createdAt);
+        }
+    }
+
+    public record MarkAllReadResult(int updated) {}
 
     public record NotificationPage(
             List<NotificationView> items,

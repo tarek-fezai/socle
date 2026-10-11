@@ -61,30 +61,12 @@ export const NOT_IMPLEMENTED = [
     appImplementedProbe: 'text=/Ouvrir le document/',
   },
   {
-    id: 'search-result-meta',
-    page: 'search',
-    reason:
-      'Pastille tag (ex. IAM) : SearchHit n’expose pas les tags ; l’app compare espace + statut (SearchHit.status)',
-    backlog: 'SEARCH-HIT-TAGS',
-    mockMask: 'search-result-meta',
-    appPlaceholderSelector: '[data-visual-mask="search-result-meta"]',
-  },
-  {
     id: 'search-result-mention',
     page: 'search',
     reason:
       'Contexte « · mentionne « provisioning » » : SearchHit n’expose pas le contexte de correspondance (masque par Range, maquette non modifiée)',
-    backlog: 'SEARCH-HIT-TAGS',
+    backlog: 'SEARCH-HIT-MENTION',
     mockRange: { selector: '[data-mock-id="search-result-1"]', text: MOCK_MENTION },
-    appPlaceholderSelector: '[data-visual-mask="search-result-meta"]',
-  },
-  {
-    id: 'search-result-star',
-    page: 'search',
-    reason: 'Étoile favori dans la palette : état favori absent de SearchHit',
-    backlog: 'SEARCH-HIT-FAVORITE',
-    mockMask: 'search-result-star',
-    appPlaceholderSelector: '[data-visual-mask="search-result-star"]',
   },
   {
     id: 'search-groups-extra',
@@ -118,7 +100,7 @@ const PIXEL_SECTIONS = [
   ...ROWS.map((i) => ({
     id: `search-result-${i}`,
     name: `result-${i}`,
-    masks: ['search-result-meta', 'search-result-star'],
+    masks: [],
     mockRanges: i === 1 ? [{ name: 'search-result-mention', text: MOCK_MENTION }] : [],
   })),
   { id: 'search-preview', name: 'preview', masks: ['search-preview'] },
@@ -160,11 +142,7 @@ async function annotateSearchMockup(page) {
       a.setAttribute('data-mock-id', `search-result-${i}`)
       const text = a.children[1]
       text?.children[0]?.setAttribute('data-mock-id', `search-result-${i}-title`)
-      // Pastille tag : masque nommé ; « · mentionne … » : masque par Range (MOCK_MENTION).
-      const meta = text?.children[1]
-      const tag = meta ? [...meta.children].find((c) => c.tagName === 'SPAN') : null
-      tag?.setAttribute('data-visual-mask', 'search-result-meta')
-      a.children[2]?.setAttribute('data-visual-mask', 'search-result-star')
+      // « · mentionne … » : masque par Range (MOCK_MENTION). Tag et étoile comparés.
     })
     kids.slice(4).forEach((k) => k.setAttribute('data-visual-mask', 'search-groups-extra'))
   })
@@ -259,7 +237,7 @@ test.describe('search (palette) visual', () => {
       },
       'search-result-0': {
         skip: ['text'],
-        reason: 'Texte : mention/tag méta NOT_IMPLEMENTED (espace + statut comparés en pixel).',
+        reason: 'Texte : concatenation espace + pastille tag (textContent) ; tag et titre comparés en pixel.',
       },
     }
     const results = compareMetrics(mockMetrics, appMetrics, STRUCTURAL_IDS, { pageExceptions })

@@ -1,12 +1,22 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
+export type NotificationActor = {
+  id: string
+  displayName: string
+  initials: string
+}
+
 export type NotificationItem = {
   id: string
   type: string
   payload: Record<string, unknown>
   documentTitle: string | null
+  versionNo?: number | null
+  actor?: NotificationActor | null
   readAt: string | null
   createdAt: string
 }
+
+export type MessagePart = { text: string; emphasis?: boolean }
 
 export type NotificationPage = {
   items: NotificationItem[]
@@ -39,25 +49,48 @@ export async function markNotificationRead(
   return data
 }
 
-/** Texte humain — seuls les types réellement produits côté backend. */
-export function formatNotificationMessage(n: NotificationItem): string {
+export async function markAllNotificationsRead(
+  api: { post: <T>(url: string, body?: unknown) => Promise<{ data: T }> },
+) {
+  const { data } = await api.post<{ updated: number }>('/api/v1/notifications/read-all')
+  return data
+}
+
+/** Texte humain — composés des champs structurés (acteur, titre, version). Pas de HTML. */
+export function notificationMessageParts(n: NotificationItem): MessagePart[] {
+  const actor = n.actor?.displayName?.trim()
+  const title = n.documentTitle?.trim()
+  const version = n.versionNo != null ? `v${n.versionNo}` : null
+  if (n.type === 'comment_mention') {
+    const parts: MessagePart[] = []
+    if (actor) {
+      parts.push({ text: actor, emphasis: true })
+      parts.push({ text: ' vous a mentionné dans ' })
+    } else {
+      parts.push({ text: 'Vous avez été mentionné dans ' })
+    }
+    parts.push({ text: title || 'un commentaire', emphasis: Boolean(title) })
+    if (version) parts.push({ text: ` — ${version}` })
+    return parts
+  }
   if (n.type === 'approval_chain_exhausted') {
-    const title = n.documentTitle?.trim() || 'un document'
-    return `La demande d'approbation pour « ${title} » est restée sans décision après plusieurs étapes.`
+    const parts: MessagePart[] = [
+      { text: "La demande d'approbation pour " },
+      { text: title || 'un document', emphasis: Boolean(title) },
+      { text: ' est restée sans décision après plusieurs étapes.' },
+    ]
+    if (version) parts.splice(2, 0, { text: ` (${version})` })
+    return parts
   }
   if (n.type === 'external_reference_first') {
     const msg = n.payload?.message
-    if (typeof msg === 'string' && msg.trim()) return msg
+    if (typeof msg === 'string' && msg.trim()) return [{ text: msg.trim() }]
     const source = String(n.payload?.source_space_name ?? 'un autre espace')
-    return `Première référence externe depuis « ${source} » vers votre espace.`
-  }
-  if (n.type === 'comment_mention') {
-    // L'utilisateur a été notifié uniquement s'il peut lire le document —
-    // le titre joint est donc autorisé ; jamais d'extrait de commentaire ici.
-    const title = n.documentTitle?.trim()
-    return title
-      ? `Vous avez été mentionné dans un commentaire sur « ${title} ».`
-      : 'Vous avez été mentionné dans un commentaire.'
+    return [
+      { text: 'Première référence externe depuis « ' },
+      { text: source, emphasis: true },
+      { text: ' » vers votre espace.' },
+    ]
   }
   if (n.type === 'pat_expiring') {
     const name = String(n.payload?.name ?? '').trim() || 'sans nom'
@@ -67,11 +100,24 @@ export function formatNotificationMessage(n: NotificationItem): string {
     const date = Number.isNaN(at)
       ? 'dans 7 jours'
       : `le ${new Date(at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`
-    return `Votre jeton d'accès personnel « ${name} » (…${last4}) expire ${date}.`
+    return [
+      { text: 'Votre jeton d’accès personnel « ' },
+      { text: name, emphasis: true },
+      { text: ` » (…${last4}) expire ${date}.` },
+    ]
   }
   const msg = n.payload?.message
-  if (typeof msg === 'string' && msg.trim()) return msg
-  return `Notification (${n.type})`
+  if (typeof msg === 'string' && msg.trim()) return [{ text: msg.trim() }]
+  if (actor && title) {
+    return [{ text: actor, emphasis: true }, { text: ' — ' }, { text: title, emphasis: true }]
+  }
+  return [{ text: `Notification (${n.type})` }]
+}
+
+export function formatNotificationMessage(n: NotificationItem): string {
+  return notificationMessageParts(n)
+    .map((p) => p.text)
+    .join('')
 }
 
 export function notificationResourceLink(n: NotificationItem): string | null {

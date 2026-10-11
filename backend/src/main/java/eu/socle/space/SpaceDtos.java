@@ -11,7 +11,11 @@ public final class SpaceDtos {
 
     private SpaceDtos() {}
 
-    public record CreateSpaceRequest(@NotBlank String name, String color) {}
+    public record CreateSpaceRequest(@NotBlank String name, String color, String description) {
+        public CreateSpaceRequest(String name, String color) {
+            this(name, color, null);
+        }
+    }
 
     public record UpdateSpaceRequest(
             @NotBlank String name,
@@ -21,20 +25,31 @@ public final class SpaceDtos {
             /** {@code organisation} | {@code space} | {@code restricted} — null = inchangé. */
             String defaultVisibility,
             /** {@code members} | {@code all_readers} — null = inchangé. */
-            String commentPolicy
+            String commentPolicy,
+            /** Texte brut ; {@code null} = inchangé ; vide = effacer. */
+            String description
     ) {
         public UpdateSpaceRequest(String name, String color) {
-            this(name, color, null, null, null);
+            this(name, color, null, null, null, null);
         }
 
         public UpdateSpaceRequest(String name, String color, String externalReference) {
-            this(name, color, externalReference, null, null);
+            this(name, color, externalReference, null, null, null);
         }
 
         public UpdateSpaceRequest(String name, String color, String externalReference, String defaultVisibility) {
-            this(name, color, externalReference, defaultVisibility, null);
+            this(name, color, externalReference, defaultVisibility, null, null);
+        }
+
+        public UpdateSpaceRequest(
+                String name, String color, String externalReference, String defaultVisibility, String commentPolicy
+        ) {
+            this(name, color, externalReference, defaultVisibility, commentPolicy, null);
         }
     }
+
+    /** Aperçu membre : initiales uniquement (pas d'e-mail). */
+    public record SpaceMemberPreview(String initials) {}
 
     public record SpaceView(
             UUID id,
@@ -54,8 +69,33 @@ public final class SpaceDtos {
              * {@code member} — accès via relations espace ;
              * {@code public-only} — uniquement via documents organisation lisibles.
              */
-            String membership
+            String membership,
+            /** Texte brut ; null si absent. */
+            String description,
+            /** Documents visibles par l'appelant (OpenFGA viewer). */
+            int documentCount,
+            /** Jusqu'à 3 initiales ; le client affiche « +N » via {@code memberExtraCount}. */
+            List<SpaceMemberPreview> memberPreview,
+            int memberExtraCount
     ) {
+        /** Compat sans catalogue (description / compteurs). */
+        public SpaceView(
+                UUID id,
+                String name,
+                String color,
+                String createdAt,
+                String externalReference,
+                String defaultVisibility,
+                String commentPolicy,
+                boolean canManage,
+                boolean isOwner,
+                boolean isResponsible,
+                String membership
+        ) {
+            this(id, name, color, createdAt, externalReference, defaultVisibility, commentPolicy,
+                    canManage, isOwner, isResponsible, membership, null, 0, List.of(), 0);
+        }
+
         /** Compat sans commentPolicy / membership. */
         public SpaceView(
                 UUID id,
@@ -70,7 +110,7 @@ public final class SpaceDtos {
                 String membership
         ) {
             this(id, name, color, createdAt, externalReference, defaultVisibility, "members",
-                    canManage, isOwner, isResponsible, membership);
+                    canManage, isOwner, isResponsible, membership, null, 0, List.of(), 0);
         }
 
         /** Compat sans membership (défaut member). */
@@ -86,7 +126,7 @@ public final class SpaceDtos {
                 boolean isResponsible
         ) {
             this(id, name, color, createdAt, externalReference, defaultVisibility, "members",
-                    canManage, isOwner, isResponsible, "member");
+                    canManage, isOwner, isResponsible, "member", null, 0, List.of(), 0);
         }
 
         /** Compat sans defaultVisibility. */
@@ -101,7 +141,7 @@ public final class SpaceDtos {
                 boolean isResponsible
         ) {
             this(id, name, color, createdAt, externalReference, "organisation", "members",
-                    canManage, isOwner, isResponsible, "member");
+                    canManage, isOwner, isResponsible, "member", null, 0, List.of(), 0);
         }
     }
 

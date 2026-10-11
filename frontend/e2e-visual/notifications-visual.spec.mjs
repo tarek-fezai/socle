@@ -40,21 +40,12 @@ import {
  */
 export const NOT_IMPLEMENTED = [
   {
-    id: 'notif-read-all',
-    page: 'notifications',
-    reason: '« Tout marquer comme lu » : aucune API de marquage en masse — bouton désactivé dans l’app',
-    backlog: 'NOTIF-READ-ALL',
-    mockMask: 'notif-read-all',
-    appPlaceholderSelector: '[data-visual-mask="notif-read-all"][disabled]',
-  },
-  {
     id: 'notif-item-text',
     page: 'notifications',
     reason:
-      'Phrase de la notification (auteur en gras, titre du document, version) : le backend ne fournit ni acteur ni phrase structurée — l’app affiche formatNotificationMessage()',
-    backlog: 'NOTIF-ACTOR-RICH-TEXT',
+      'Phrase : types backend réels (approval_chain_exhausted, comment_mention…) ≠ phrases de la maquette ; acteur et champs structurés livrés, pas de HTML',
+    backlog: 'NOTIF-TYPES',
     mockMask: 'notif-item-text',
-    appImplementedProbe: 'text=/Claire Dubois|Yanis M\\./',
   },
   {
     id: 'notif-item-extra',
@@ -65,13 +56,12 @@ export const NOT_IMPLEMENTED = [
     appImplementedProbe: 'text=/SLA 48h/',
   },
   {
-    id: 'notif-item-icon-actor',
+    id: 'notif-item-icon-non-actor',
     page: 'notifications',
     reason:
-      'Pastille « initiales de l’auteur » / coche « publié » : pas d’acteur dans l’API — l’app affiche l’icône du type de notification',
-    backlog: 'NOTIF-ACTOR-AVATAR',
+      'Pastille des items sans acteur API (PAT, référence externe) : icône de type vs initiales / coche de la maquette',
+    backlog: 'NOTIF-TYPES',
     mockMask: 'notif-item-icon',
-    appPlaceholderSelector: '[data-visual-mask="notif-item-icon"]',
   },
   {
     id: 'notif-unproduced-rows',
@@ -95,17 +85,13 @@ const PIXEL_SECTIONS = [
   { id: 'notif-breadcrumb', name: 'breadcrumb', masks: [] },
   { id: 'notif-prefs', name: 'prefs', masks: [] },
   { id: 'notif-title', name: 'title', masks: [] },
-  { id: 'notif-read-all', name: 'read-all', masks: ['notif-read-all'] },
+  { id: 'notif-read-all', name: 'read-all', masks: [] },
   { id: 'notif-group-0', name: 'group-0', masks: [] },
   { id: 'notif-group-1', name: 'group-1', masks: [] },
   { id: 'notif-item-0-dot', name: 'item-0-dot', masks: [] },
   { id: 'notif-item-1-dot', name: 'item-1-dot', masks: [] },
   { id: 'notif-item-0-icon', name: 'item-0-icon', masks: [] },
-  ...[1, 2, 3].map((i) => ({
-    id: `notif-item-${i}-icon`,
-    name: `item-${i}-icon`,
-    masks: ['notif-item-icon'],
-  })),
+  { id: 'notif-item-1-icon', name: 'item-1-icon', masks: [] },
   ...APP_ITEMS.map((i) => ({ id: `notif-item-${i}-time`, name: `item-${i}-time`, masks: [] })),
 ]
 
@@ -136,7 +122,6 @@ async function annotateNotificationsMockup(page, mockToApp) {
     prefs?.parentElement?.firstElementChild?.setAttribute('data-mock-id', 'notif-breadcrumb')
     document.querySelector('h1')?.setAttribute('data-mock-id', 'notif-title')
     document.querySelector('span.link')?.setAttribute('data-mock-id', 'notif-read-all')
-    document.querySelector('span.link')?.setAttribute('data-visual-mask', 'notif-read-all')
 
     const leaf = (txt) =>
       [...document.querySelectorAll('div')].find(
@@ -158,7 +143,7 @@ async function annotateNotificationsMockup(page, mockToApp) {
       item.querySelector(':scope > span')?.setAttribute('data-mock-id', `notif-item-${i}-dot`)
       const [icon, content] = [...item.children].filter((c) => c.tagName === 'DIV')
       icon.setAttribute('data-mock-id', `notif-item-${i}-icon`)
-      if (i >= 1) icon.setAttribute('data-visual-mask', 'notif-item-icon')
+      if (i >= 2) icon.setAttribute('data-visual-mask', 'notif-item-icon')
       const lines = [...content.children]
       lines[0].setAttribute('data-visual-mask', 'notif-item-text')
       if (lines.length === 3) lines[1].setAttribute('data-visual-mask', 'notif-item-extra')
@@ -232,14 +217,25 @@ test.describe('notifications visual', () => {
     expectNoStructuralDiffs(results)
   })
 
-  test('« Tout marquer comme lu » est désactivé ; « Préférences → » mène à /account', async ({
+  test('« Tout marquer comme lu » appelle POST /read-all ; « Préférences → » mène à /account', async ({
     page,
   }) => {
     await injectOidcSession(page, VISUAL_NOW)
     await mockApis(page)
+    let readAll = false
+    await page.route('**/api/v1/notifications/read-all', (route) => {
+      if (route.request().method() === 'POST') {
+        readAll = true
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '{"updated":4}' })
+      }
+      return route.fallback()
+    })
     await page.goto('/notifications')
     await page.waitForSelector('[data-mock-id="notif-item-0"]')
-    await expect(page.getByRole('button', { name: 'Tout marquer comme lu' })).toBeDisabled()
+    const btn = page.getByRole('button', { name: 'Tout marquer comme lu' })
+    await expect(btn).toBeEnabled()
+    await btn.click()
+    await expect.poll(() => readAll).toBe(true)
     await expect(page.getByRole('link', { name: 'Préférences →' })).toHaveAttribute('href', '/account')
   })
 })

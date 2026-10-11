@@ -10,6 +10,7 @@ vi.mock('../lib/api', () => ({ api: {} }))
 
 const listNotifications = vi.fn()
 const markNotificationRead = vi.fn()
+const markAllNotificationsRead = vi.fn()
 
 vi.mock('../lib/notifications', async () => {
   const actual = await vi.importActual<typeof import('../lib/notifications')>(
@@ -19,6 +20,7 @@ vi.mock('../lib/notifications', async () => {
     ...actual,
     listNotifications: (...args: unknown[]) => listNotifications(...args),
     markNotificationRead: (...args: unknown[]) => markNotificationRead(...args),
+    markAllNotificationsRead: (...args: unknown[]) => markAllNotificationsRead(...args),
   }
 })
 
@@ -76,6 +78,7 @@ describe('NotificationsPage', () => {
   beforeEach(() => {
     listNotifications.mockReset()
     markNotificationRead.mockReset()
+    markAllNotificationsRead.mockReset()
   })
 
   it('affiche le message humain et marque comme lue après action (rafraîchissement backend)', async () => {
@@ -198,9 +201,10 @@ describe('NotificationsPage — maquette', () => {
   beforeEach(() => {
     listNotifications.mockReset()
     markNotificationRead.mockReset()
+    markAllNotificationsRead.mockReset()
   })
 
-  it('« Tout marquer comme lu » est un placeholder désactivé ; lien Préférences → /account', async () => {
+  it('« Tout marquer comme lu » appelle l’API ; lien Préférences → /account', async () => {
     listNotifications.mockResolvedValue({
       items: [
         {
@@ -208,6 +212,7 @@ describe('NotificationsPage — maquette', () => {
           type: 'comment_mention',
           payload: { document_id: DOC },
           documentTitle: 'Politique accès',
+          actor: { id: 'u-cd', displayName: 'Claire Dubois', initials: 'CD' },
           readAt: null,
           createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
         },
@@ -217,14 +222,19 @@ describe('NotificationsPage — maquette', () => {
       total: 1,
       unreadCount: 1,
     })
+    markAllNotificationsRead.mockResolvedValue({ updated: 1 })
     render(wrap(<NotificationsPage />))
+    expect(await screen.findByText('CD')).toBeTruthy()
     const readAll = (await screen.findByRole('button', {
       name: 'Tout marquer comme lu',
     })) as HTMLButtonElement
-    expect(readAll.disabled).toBe(true)
-    expect(readAll.getAttribute('data-visual-mask')).toBe('notif-read-all')
+    expect(readAll.disabled).toBe(false)
+    expect(readAll.getAttribute('data-visual-mask')).toBeNull()
+    expect(screen.getByText('Claire Dubois')).toBeTruthy()
     expect(screen.getByRole('link', { name: /Préférences/ }).getAttribute('href')).toBe('/account')
     expect(await screen.findByText("Aujourd'hui")).toBeTruthy()
     expect(await screen.findByText('Il y a 20 minutes')).toBeTruthy()
+    fireEvent.click(readAll)
+    await waitFor(() => expect(markAllNotificationsRead).toHaveBeenCalled())
   })
 })

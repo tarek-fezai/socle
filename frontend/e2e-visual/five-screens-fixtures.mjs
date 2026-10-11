@@ -23,30 +23,52 @@ const iso = (ms) => new Date(ms).toISOString()
  * @type {import('../src/lib/api-types.ts').components['schemas']['SpaceView'][]}
  */
 export const SPACES_SEED = [
-  { ...SPACE_IDENTITE },
+  {
+    ...SPACE_IDENTITE,
+    description: 'IAM, IGA, gouvernance des habilitations',
+    documentCount: 24,
+    memberPreview: [{ initials: 'TF' }, { initials: 'CD' }],
+    memberExtraCount: 9,
+  },
   {
     ...SPACE_IDENTITE,
     id: 's0000001-0000-4000-8000-000000000002',
     name: 'Infrastructure',
     color: '#0D8A7C',
+    description: 'Réseau, continuité, exploitation',
+    documentCount: 41,
+    memberPreview: [{ initials: 'RL' }],
+    memberExtraCount: 5,
   },
   {
     ...SPACE_IDENTITE,
     id: 's0000001-0000-4000-8000-000000000003',
     name: 'Conformité',
     color: '#B7791F',
+    description: 'RGPD, audits, registres réglementaires',
+    documentCount: 37,
+    memberPreview: [{ initials: 'YM' }],
+    memberExtraCount: 3,
   },
   {
     ...SPACE_IDENTITE,
     id: 's0000001-0000-4000-8000-000000000004',
     name: 'Produit',
     color: '#7C3AED',
+    description: 'Spécifications fonctionnelles et techniques',
+    documentCount: 68,
+    memberPreview: [{ initials: 'SL' }],
+    memberExtraCount: 7,
   },
   {
     ...SPACE_IDENTITE,
     id: 's0000001-0000-4000-8000-000000000005',
     name: 'Ressources humaines',
     color: '#1E8E5A',
+    description: 'Onboarding, politiques internes',
+    documentCount: 44,
+    memberPreview: [{ initials: 'NB' }],
+    memberExtraCount: 4,
   },
 ]
 
@@ -56,6 +78,7 @@ export const SPACES_SEED = [
 
 const DOC_POLITIQUE = 'd0000001-0000-4000-8000-000000000001'
 const APPROVAL_REQUEST = 'a0000001-0000-4000-8000-000000000001'
+const ACTOR_CLAIRE = 'u0000001-0000-4000-8000-0000000000cd'
 
 /**
  * Types réellement produits par le backend uniquement. Horodatages relatifs à VISUAL_NOW
@@ -76,8 +99,9 @@ export const NOTIFICATIONS_LIST_SEED = {
     {
       id: 'n0000001-0000-4000-8000-000000000002',
       type: 'comment_mention',
-      payload: { document_id: DOC_POLITIQUE },
+      payload: { document_id: DOC_POLITIQUE, mentioned_by: ACTOR_CLAIRE },
       documentTitle: 'Politique de gestion des accès',
+      actor: { id: ACTOR_CLAIRE, displayName: 'Claire Dubois', initials: 'CD' },
       readAt: null,
       createdAt: iso(VISUAL_NOW - 20 * 60_000),
     },
@@ -110,7 +134,7 @@ export const NOTIFICATIONS_LIST_SEED = {
 
 /**
  * Réponse réelle de `FavoriteController#list` : tableau de `FavoriteItem`
- * `{ targetType, targetId, createdAt, title }` — aucun `spaceName` / statut / date de révision.
+ * `{ targetType, targetId, createdAt, title, status, updatedAt, spaceId, spaceName, documentCount }`.
  * @type {import('../src/lib/api-types.ts').components['schemas']['FavoriteItem'][]}
  */
 export const FAVORITES_LIST_SEED = [
@@ -119,30 +143,49 @@ export const FAVORITES_LIST_SEED = [
     targetId: 'd0000001-0000-4000-8000-000000000001',
     createdAt: iso(VISUAL_NOW - 1 * 86_400_000),
     title: 'Politique de gestion des accès',
+    status: 'valide',
+    updatedAt: '2026-09-12T10:00:00.000Z',
+    spaceId: SPACE_IDENTITE.id,
+    spaceName: 'Identité & accès',
   },
   {
     targetType: 'document',
     targetId: 'd0000001-0000-4000-8000-000000000014',
     createdAt: iso(VISUAL_NOW - 2 * 86_400_000),
     title: 'Procédure de provisioning',
+    status: 'valide',
+    updatedAt: '2026-09-03T10:00:00.000Z',
+    spaceId: SPACE_IDENTITE.id,
+    spaceName: 'Identité & accès',
   },
   {
     targetType: 'document',
     targetId: 'd0000001-0000-4000-8000-000000000015',
     createdAt: iso(VISUAL_NOW - 3 * 86_400_000),
     title: 'Registre des accès à privilèges',
+    status: 'brouillon',
+    updatedAt: iso(VISUAL_NOW - 20 * 60_000),
+    spaceId: SPACE_IDENTITE.id,
+    spaceName: 'Identité & accès',
   },
   {
     targetType: 'space',
     targetId: SPACE_IDENTITE.id,
     createdAt: iso(VISUAL_NOW - 4 * 86_400_000),
     title: 'Identité & accès',
+    spaceId: SPACE_IDENTITE.id,
+    spaceName: 'Identité & accès',
+    documentCount: 14,
   },
   {
     targetType: 'document',
     targetId: 'd0000001-0000-4000-8000-000000000002',
     createdAt: iso(VISUAL_NOW - 5 * 86_400_000),
     title: "Plan de reprise d'activité",
+    status: 'valide',
+    updatedAt: '2026-08-18T10:00:00.000Z',
+    spaceId: 's0000001-0000-4000-8000-000000000002',
+    spaceName: 'Infrastructure',
   },
   // 6ᵉ favori hors maquette (rangs 0-4 comparés) : la phrase d'intro de la maquette
   // annonce « 5 documents et 1 espace » (alors qu'elle n'en liste que 4 + 1).
@@ -151,6 +194,10 @@ export const FAVORITES_LIST_SEED = [
     targetId: 'd0000001-0000-4000-8000-000000000016',
     createdAt: iso(VISUAL_NOW - 6 * 86_400_000),
     title: 'Architecture réseau',
+    status: 'valide',
+    updatedAt: '2026-09-02T10:00:00.000Z',
+    spaceId: 's0000001-0000-4000-8000-000000000002',
+    spaceName: 'Infrastructure',
   },
 ]
 
@@ -172,6 +219,15 @@ export const SEARCH_SEED = {
       status: 'valide',
       updatedAt: iso(VISUAL_NOW - 3 * 86_400_000),
       rank: 0.9,
+      tags: [
+        {
+          id: 't0000001-0000-4000-8000-000000000001',
+          name: 'IAM',
+          color: '#3730E0',
+          governed: false,
+        },
+      ],
+      isFavorite: true,
     },
     {
       id: 'd0000001-0000-4000-8000-000000000001',
@@ -183,6 +239,15 @@ export const SEARCH_SEED = {
       status: 'valide',
       updatedAt: iso(VISUAL_NOW - 5 * 86_400_000),
       rank: 0.6,
+      tags: [
+        {
+          id: 't0000001-0000-4000-8000-000000000001',
+          name: 'IAM',
+          color: '#3730E0',
+          governed: false,
+        },
+      ],
+      isFavorite: false,
     },
     {
       id: 'd0000001-0000-4000-8000-000000000015',
@@ -194,6 +259,15 @@ export const SEARCH_SEED = {
       status: 'brouillon',
       updatedAt: iso(VISUAL_NOW - 20 * 60_000),
       rank: 0.3,
+      tags: [
+        {
+          id: 't0000001-0000-4000-8000-000000000001',
+          name: 'IAM',
+          color: '#3730E0',
+          governed: false,
+        },
+      ],
+      isFavorite: false,
     },
   ],
   total: 3,

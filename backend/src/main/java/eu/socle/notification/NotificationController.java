@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.notification;
 
+import eu.socle.notification.NotificationService.MarkAllReadResult;
 import eu.socle.notification.NotificationService.NotificationPage;
 import eu.socle.notification.NotificationService.NotificationView;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,6 +33,11 @@ public class NotificationController {
             @RequestParam(defaultValue = "50") int limit
     ) {
         return notificationService.list(jwt, unreadOnly, offset, limit);
+    }
+
+    @PostMapping("/read-all")
+    public MarkAllReadResult markAllRead(@AuthenticationPrincipal Jwt jwt) {
+        return notificationService.markAllRead(jwt);
     }
 
     @PostMapping("/{id}/read")

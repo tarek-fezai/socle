@@ -31,6 +31,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,12 +83,14 @@ class SpaceServiceTest {
         jdbc.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
         jdbc.execute("""
                 CREATE TABLE users (
-                  id UUID PRIMARY KEY, email TEXT NOT NULL, display_name TEXT NOT NULL, status TEXT NOT NULL
+                  id UUID PRIMARY KEY, email TEXT NOT NULL, display_name TEXT NOT NULL,
+                  avatar_initials TEXT, status TEXT NOT NULL
                 )
                 """);
         jdbc.execute("""
                 CREATE TABLE spaces (
                   id UUID PRIMARY KEY, name TEXT NOT NULL, color TEXT,
+                  description TEXT,
                   external_reference TEXT NOT NULL DEFAULT 'open',
                   default_visibility TEXT NOT NULL DEFAULT 'organisation',
                   comment_policy TEXT NOT NULL DEFAULT 'members',
@@ -133,7 +136,10 @@ class SpaceServiceTest {
         jdbc.update("DELETE FROM folders");
         jdbc.update("DELETE FROM space_owners");
         jdbc.update("DELETE FROM spaces WHERE id <> ?", SEED);
-        service = new SpaceService(jdbc, userSyncService, authorizationService, mock(eu.socle.audit.AuditService.class));
+        service = new SpaceService(
+                jdbc, userSyncService, authorizationService,
+                mock(eu.socle.audit.AuditService.class),
+                mock(eu.socle.identity.IdentityFacade.class));
         when(userSyncService.syncFromJwt(any())).thenAnswer(inv -> {
             Jwt jwt = inv.getArgument(0);
             return user(UUID.fromString(jwt.getSubject()));
@@ -145,6 +151,8 @@ class SpaceServiceTest {
         when(authorizationService.readableScope(any()))
                 .thenReturn(new ReadableScope(List.of(), List.of(), List.of(), List.of()));
         when(authorizationService.listViewableDocumentIds(any(), any())).thenReturn(List.of());
+        when(authorizationService.filterByDocumentViewer(any(), any(), any())).thenReturn(List.of());
+        when(authorizationService.listSpaceMemberIds(any(java.util.Collection.class))).thenReturn(Map.of());
     }
 
     @Test
@@ -271,6 +279,43 @@ class SpaceServiceTest {
 
         SpaceView view = service.get(jwt(USER_B), spaceId);
         assertThat(view.membership()).isEqualTo("public-only");
+    }
+
+    @Test
+    void update_description_plainTextBounded_visibleOnList() {
+        when(authorizationService.hasRelation(eq(USER_A), eq("space"), any(), eq("owner"))).thenReturn(true);
+        when(authorizationService.hasRelation(eq(USER_A), eq("space"), any(), eq("viewer"))).thenReturn(true);
+        SpaceView space = service.create(jwt(USER_A), new CreateSpaceRequest("Nommé", null, "IAM, IGA"));
+        assertThat(space.description()).isEqualTo("IAM, IGA");
+
+        String tooLong = "x".repeat(SpaceService.MAX_DESCRIPTION_LENGTH + 1);
+        assertThatThrownBy(() -> service.update(
+                jwt(USER_A), space.id(),
+                new SpaceDtos.UpdateSpaceRequest("Nommé", null, null, null, null, tooLong)))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void list_documentCount_onlyVisibleDocuments() {
+        UUID spaceId = UUID.randomUUID();
+        UUID visible = UUID.randomUUID();
+        UUID hidden = UUID.randomUUID();
+        jdbc.update("INSERT INTO spaces (id, name, color) VALUES (?,?,?)", spaceId, "Comptage", null);
+        jdbc.update("INSERT INTO space_owners (space_id, user_id, is_responsible) VALUES (?,?,true)",
+                spaceId, USER_B);
+        jdbc.update("INSERT INTO documents (id, space_id, title) VALUES (?, ?, 'V'), (?, ?, 'H')",
+                visible, spaceId, hidden, spaceId);
+        when(authorizationService.listViewableSpaceIds(USER_B)).thenReturn(List.of(spaceId));
+        when(authorizationService.filterByDocumentViewer(eq(USER_B), any(), eq("spaces-document-count")))
+                .thenReturn(List.of(visible));
+
+        List<SpaceView> listed = service.list(jwt(USER_B));
+        assertThat(listed).anySatisfy(s -> {
+            assertThat(s.id()).isEqualTo(spaceId);
+            assertThat(s.documentCount()).isEqualTo(1);
+        });
     }
 
     @Test

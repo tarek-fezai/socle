@@ -40,7 +40,17 @@ describe('normalizeFavoritesPayload', () => {
       ]),
     ).toEqual({
       items: [
-        { resourceType: 'document', resourceId: DOC, title: 'Doc', createdAt: '2026-09-01T00:00:00Z' },
+        {
+          resourceType: 'document',
+          resourceId: DOC,
+          title: 'Doc',
+          createdAt: '2026-09-01T00:00:00Z',
+          status: undefined,
+          updatedAt: undefined,
+          spaceId: undefined,
+          spaceName: undefined,
+          documentCount: undefined,
+        },
       ],
     })
   })
@@ -63,13 +73,30 @@ describe('FavoritesPage', () => {
     deleteMock.mockReset()
   })
 
-  it('liste les favoris (tableau API), phrase d’accroche issue des décomptes réels, type seul en méta', async () => {
+  it('liste les favoris groupés, accroche réelle, méta statut / espace', async () => {
     getMock.mockImplementation((url: string) => {
       if (url === '/api/v1/favorites')
         return Promise.resolve({
           data: [
-            { targetType: 'document', targetId: DOC, createdAt: '2026-09-01T00:00:00Z', title: 'Politique' },
-            { targetType: 'space', targetId: SPACE, createdAt: '2026-09-02T00:00:00Z', title: 'Identité' },
+            {
+              targetType: 'document',
+              targetId: DOC,
+              createdAt: '2026-09-01T00:00:00Z',
+              title: 'Politique',
+              status: 'valide',
+              updatedAt: '2026-09-12T10:00:00.000Z',
+              spaceId: SPACE,
+              spaceName: 'Identité & accès',
+            },
+            {
+              targetType: 'space',
+              targetId: SPACE,
+              createdAt: '2026-09-02T00:00:00Z',
+              title: 'Identité',
+              spaceId: SPACE,
+              spaceName: 'Identité & accès',
+              documentCount: 14,
+            },
           ],
         })
       if (url === '/api/v1/spaces') return Promise.resolve({ data: [{ id: SPACE, name: 'Identité', color: '#0D8A7C' }] })
@@ -78,8 +105,9 @@ describe('FavoritesPage', () => {
     renderPage()
     expect(await screen.findByText('Politique')).toBeTruthy()
     expect(screen.getByText('1 document et 1 espace que vous avez marqués comme favoris.')).toBeTruthy()
-    expect(screen.getByText('Document')).toBeTruthy()
-    expect(screen.getByText('Espace')).toBeTruthy()
+    expect(screen.getByText('Identité & accès')).toBeTruthy()
+    expect(screen.getByText('Validé · révisé le 12 septembre 2026')).toBeTruthy()
+    expect(screen.getByText('Espace · 14 documents')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Politique' }).getAttribute('href')).toBe(`/docs/${DOC}`)
   })
 

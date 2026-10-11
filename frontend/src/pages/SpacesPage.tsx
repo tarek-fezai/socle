@@ -4,19 +4,32 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
-import { createSpace, listSpaces, type Space } from '../lib/spaces'
+import { createSpace, listSpaces } from '../lib/spaces'
 
-function roleLabel(s: Space): string {
-  if (s.isResponsible) return 'Responsible'
-  if (s.isOwner) return 'Owner'
-  if (s.membership === 'public-only') return 'Lecture publique'
-  return 'Membre'
+function mixWithWhite(hex: string, whiteRatio: number): string {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return '#F1EFEA'
+  const ch = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16))
+  return `#${ch
+    .map((c) => Math.round(c * (1 - whiteRatio) + 255 * whiteRatio).toString(16).padStart(2, '0'))
+    .join('')}`
+}
+
+function memberChipStyle(
+  spaceColor: string | null,
+  index: number,
+  namedCount: number,
+): { background: string; color: string } {
+  const color = spaceColor || '#3730E0'
+  if (namedCount >= 2 && index === 0) {
+    return { background: '#0E0E10', color: '#FFFFFF' }
+  }
+  return { background: mixWithWhite(color, 0.88), color }
 }
 
 /**
  * Espaces — grille 3 colonnes de Spaces.dc.html.
- * Description, avatars des membres et nombre de documents n'existent pas dans `SpaceView` :
- * zones réservées (`data-visual-mask`, NOT_IMPLEMENTED côté spec), jamais de valeur inventée.
+ * Description, aperçu membres et documentCount viennent de SpaceView (filtrés OpenFGA).
  */
 export function SpacesPage() {
   const qc = useQueryClient()
@@ -44,6 +57,10 @@ export function SpacesPage() {
   }
 
   const count = spaces.data?.length ?? 0
+  const docs = (spaces.data ?? []).reduce((n, s) => n + (s.documentCount ?? 0), 0)
+  const stats = spaces.data
+    ? `${count} espace${count > 1 ? 's' : ''} · ${docs} document${docs > 1 ? 's' : ''} au total`
+    : '\u00A0'
 
   return (
     <main className="px-6 pt-8 leading-[normal] md:px-12 md:pt-11">
@@ -56,9 +73,8 @@ export function SpacesPage() {
       <p
         className="mb-8 text-[14.5px] text-socle-muted"
         data-mock-id="spaces-stats"
-        data-visual-mask="spaces-stats"
       >
-        {spaces.data ? `${count} espace${count > 1 ? 's' : ''}` : '\u00A0'}
+        {stats}
       </p>
 
       {formOpen && (
@@ -131,27 +147,40 @@ export function SpacesPage() {
                 {s.name}
               </Link>
             </div>
-            {/* Description absente de SpaceView → zone réservée (NOT_IMPLEMENTED spaces-card-desc). */}
             <div
-              aria-hidden
-              className="mb-[18px] text-[12.5px] text-socle-muted"
-              data-visual-mask="spaces-card-desc"
+              className="mb-[18px] min-h-[17px] text-[12.5px] text-socle-muted"
+              data-mock-id={`spaces-card-${i}-desc`}
             >
-              {'\u00A0'}
+              {s.description?.trim() || '\u00A0'}
             </div>
-            {/* Avatars + nombre de documents absents de SpaceView → rôle réel + lien réglages. */}
             <div
-              className="relative z-10 flex h-[26px] items-center justify-between"
-              data-visual-mask="spaces-card-meta"
+              className="relative z-10 flex h-[25px] items-center justify-between"
+              data-mock-id={`spaces-card-${i}-meta`}
             >
-              <span className="text-xs text-socle-muted">{roleLabel(s)}</span>
-              <Link
-                to={`/spaces/${s.id}`}
-                className="text-xs font-semibold text-socle-accent hover:underline"
-                aria-label={`Paramètres de ${s.name}`}
-              >
-                Paramètres
-              </Link>
+              <div className="flex" aria-hidden>
+                {(s.memberPreview ?? []).map((m, mi) => (
+                  <div
+                    key={`${s.id}-m-${mi}`}
+                    className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold"
+                    style={{
+                      marginLeft: mi === 0 ? 0 : -6,
+                      ...memberChipStyle(s.color, mi, s.memberPreview?.length ?? 0),
+                    }}
+                  >
+                    {m.initials}
+                  </div>
+                ))}
+                {(s.memberExtraCount ?? 0) > 0 && (
+                  <div
+                    className="ml-[-6px] flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 border-white bg-[#F1EFEA] text-[9px] font-semibold text-[#6B6862]"
+                  >
+                    +{s.memberExtraCount}
+                  </div>
+                )}
+              </div>
+              <span className="text-xs text-socle-muted">
+                {s.documentCount ?? 0} document{(s.documentCount ?? 0) > 1 ? 's' : ''}
+              </span>
             </div>
           </div>
         ))}

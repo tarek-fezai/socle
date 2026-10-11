@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import type { AxiosInstance } from 'axios'
+import { formatLongDateFr, formatRelativeFr } from './relativeTime'
 
 export type FavoriteResourceType = 'document' | 'folder' | 'space'
 
@@ -9,6 +10,11 @@ export type FavoriteItem = {
   resourceId: string
   title: string
   createdAt: string
+  status?: string | null
+  updatedAt?: string | null
+  spaceId?: string | null
+  spaceName?: string | null
+  documentCount?: number | null
 }
 
 export type FavoritesList = {
@@ -24,6 +30,11 @@ type ApiFavoriteItem = {
   resourceId?: string
   title?: string | null
   createdAt?: string
+  status?: string | null
+  updatedAt?: string | null
+  spaceId?: string | null
+  spaceName?: string | null
+  documentCount?: number | null
 }
 
 function isResourceType(v: unknown): v is FavoriteResourceType {
@@ -34,7 +45,17 @@ export function normalizeFavorite(raw: ApiFavoriteItem): FavoriteItem | null {
   const type = raw.targetType ?? raw.resourceType
   const id = raw.targetId ?? raw.resourceId
   if (!isResourceType(type) || !id) return null
-  return { resourceType: type, resourceId: id, title: raw.title ?? '', createdAt: raw.createdAt ?? '' }
+  return {
+    resourceType: type,
+    resourceId: id,
+    title: raw.title ?? '',
+    createdAt: raw.createdAt ?? '',
+    status: raw.status,
+    updatedAt: raw.updatedAt,
+    spaceId: raw.spaceId,
+    spaceName: raw.spaceName,
+    documentCount: raw.documentCount,
+  }
 }
 
 /** Accepte le tableau réel de l'API ou l'enveloppe `{ items }` historique. */
@@ -94,6 +115,59 @@ export const favoriteKey = (type: FavoriteResourceType, id: string) =>
   ['favorites', type, id] as const
 
 /** « 4 documents et 1 espace que vous avez marqués comme favoris. » — décomptes réels uniquement. */
+export function favoriteMetaLine(item: FavoriteItem, now = Date.now()): string {
+  if (!item.title && !item.status && !item.spaceName) {
+    return 'Indisponible'
+  }
+  if (item.resourceType === 'space') {
+    const n = item.documentCount
+    return n == null ? 'Espace' : `Espace · ${n} document${n > 1 ? 's' : ''}`
+  }
+  if (item.resourceType === 'folder') {
+    return item.spaceName ? `Dossier · ${item.spaceName}` : 'Dossier'
+  }
+  const status = item.status?.toLowerCase()
+  const label =
+    status === 'valide' || status === 'published'
+      ? 'Validé'
+      : status === 'brouillon' || status === 'draft'
+        ? 'Brouillon'
+        : status === 'en_revue' || status === 'review'
+          ? 'En revue'
+          : item.status || 'Document'
+  if (!item.updatedAt) return label
+  if (status === 'brouillon' || status === 'draft') {
+    const rel = formatRelativeFr(item.updatedAt, now)
+    return rel ? `${label} · modifié ${rel}` : label
+  }
+  const date = formatLongDateFr(item.updatedAt)
+  return date ? `${label} · révisé le ${date}` : label
+}
+
+export function groupFavoritesBySpace(items: FavoriteItem[]): Array<{
+  key: string
+  label: string
+  items: FavoriteItem[]
+}> {
+  const order: string[] = []
+  const map = new Map<string, FavoriteItem[]>()
+  for (const item of items) {
+    const label = item.spaceName?.trim() || (item.resourceType === 'space' ? item.title : '') || 'Autres'
+    const key = item.spaceId || label
+    if (!map.has(key)) {
+      map.set(key, [])
+      order.push(key)
+    }
+    map.get(key)!.push(item)
+  }
+  return order.map((key) => ({
+    key,
+    label: map.get(key)![0].spaceName?.trim()
+      || (map.get(key)![0].resourceType === 'space' ? map.get(key)![0].title : 'Autres'),
+    items: map.get(key)!,
+  }))
+}
+
 export function favoritesLead(items: FavoriteItem[]): string {
   if (items.length === 0) return 'Aucun favori pour le moment.'
   const count = (t: FavoriteResourceType) => items.filter((i) => i.resourceType === t).length
