@@ -3,11 +3,7 @@
  * Règles : docs/visual-parity.md
  *
  * ExportTag.dc.html vs /tags/:id/export @ 1440×900.
- * Mesure : `VISUAL_BASELINE=1 npx playwright test e2e-visual/export-tag-visual.spec.mjs`
- *
- * Écart de conception (laissé échouer, pas de mensonge ZIP) : l’API exportTag
- * renvoie un PDF fusionné ; la maquette affiche « ZIP de PDF » / « Télécharger
- * l’archive (.zip) ». download 5.664 %, format-pdf 4.144 %.
+ * Download / format : NOT_IMPLEMENTED (EXPORT-ZIP, décision tf) — libellés app restent PDF.
  */
 import { test } from '@playwright/test'
 import { VISUAL_NOW } from './dashboard-fixtures.mjs'
@@ -19,10 +15,30 @@ import {
   compareSectionShots,
   finishPixelResults,
   injectOidcSession,
+  reportAppExtras,
   reportNotImplemented,
   settleFonts,
   shotSection,
 } from './visual-parity-kit.mjs'
+
+const DECISION = 'DP-2026-10-11-tf — Word / Markdown hors ZIP (lignes app, pas de téléchargement)'
+
+export const APP_EXTRA = [
+  {
+    id: 'export-format-word',
+    page: 'export-tag',
+    appMask: 'export-format-word',
+    reason: 'ligne Word (pas d’API)',
+    decision: DECISION,
+  },
+  {
+    id: 'export-format-markdown',
+    page: 'export-tag',
+    appMask: 'export-format-markdown',
+    reason: 'ligne Markdown (pas d’API)',
+    decision: DECISION,
+  },
+]
 
 export const NOT_IMPLEMENTED = [
   {
@@ -33,28 +49,34 @@ export const NOT_IMPLEMENTED = [
     mockMask: 'export-preview',
     appImplementedProbe: '[data-mock-id="export-preview"]',
   },
+  {
+    id: 'export-download',
+    page: 'export-tag',
+    reason: 'Maquette ZIP / « Télécharger l’archive (.zip) » ; l’API renvoie un PDF fusionné (PR ZIP suivante)',
+    backlog: 'EXPORT-ZIP',
+    mockMask: 'export-download',
+  },
+  {
+    id: 'export-format-pdf',
+    page: 'export-tag',
+    reason: 'Maquette « ZIP de PDF » ; l’app affiche PDF (pas de mensonge ZIP)',
+    backlog: 'EXPORT-ZIP',
+    mockMask: 'export-format-pdf',
+  },
 ]
 
-const PIXEL_SECTIONS = [
-  { id: 'export-close', name: 'close', masks: [] },
-  { id: 'export-download', name: 'download', masks: [] },
-  { id: 'export-format-pdf', name: 'format-pdf', masks: [] },
-]
+const PIXEL_SECTIONS = [{ id: 'export-close', name: 'close', masks: [] }]
 
 test.describe('export-tag visual', () => {
   test.use({ timezoneId: 'Europe/Paris' })
 
   test('desktop ExportTag — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
-    test.fail(
-      true,
-      'download 5.664 %, format-pdf 4.144 % — ZIP maquette vs PDF fusionné API (pas de mensonge ZIP)',
-    )
     await injectOidcSession(page, VISUAL_NOW)
     await mockParityApis(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
     await page.goto(`${MOCK_ORIGIN}/ExportTag.dc.html`)
-    await annotateExportMockup(page, { crumbCurrent: 'Exporter le tag' })
+    await annotateExportMockup(page, { crumbCurrent: 'Exporter le tag', maskZipFormats: true })
     await settleFonts(page)
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'export-tag')
 
@@ -67,10 +89,11 @@ test.describe('export-tag visual', () => {
     }
 
     await page.goto(`/tags/${EXPORT_TAG_ID}/export`)
-    await page.waitForSelector('[data-mock-id="export-download"]')
+    await page.waitForSelector('[data-mock-id="export-close"]')
     await page.mouse.move(1, 1)
     await settleFonts(page)
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'export-tag')
+    await reportAppExtras(page, testInfo, APP_EXTRA, 'export-tag')
 
     const compare = compareSectionShots({})
     const results = []

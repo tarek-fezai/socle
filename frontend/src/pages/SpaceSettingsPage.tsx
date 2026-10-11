@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
 import { SPACE_SWATCHES } from '../lib/spaceColors'
+import { documentHref, folderHref, getSpaceTree, spaceTreeKey } from '../lib/folders'
 import { listTrash } from '../lib/trash'
 import {
   addSpaceOwner,
@@ -58,6 +59,15 @@ export function SpaceSettingsPage() {
     queryFn: () => listTrash(api, { limit: 50, offset: 0 }),
     enabled: Boolean(space.data?.canManage),
   })
+
+  const tree = useQuery({
+    queryKey: spaceTreeKey(spaceId),
+    queryFn: () => getSpaceTree(api, spaceId),
+    enabled: Boolean(spaceId),
+  })
+  const treeDocs = tree.data?.documents ?? []
+  const treeFolders = tree.data?.folders ?? []
+  const docCount = treeDocs.length
 
   const save = useMutation({
     mutationFn: () =>
@@ -115,7 +125,62 @@ export function SpaceSettingsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-[621px] px-0 pt-9 leading-[normal]" style={{ width: 621 }}>
+    <div className="flex min-h-[calc(100vh-60px)] leading-[normal]">
+      <aside className="flex w-[420px] shrink-0 flex-col border-r border-socle-line px-6 py-7">
+        <div className="mb-[22px] flex items-center gap-2.5">
+          <div
+            className="h-[30px] w-[30px] shrink-0 rounded-lg"
+            style={{ background: space.data.color || '#3730E0' }}
+          />
+          <div>
+            <div className="text-base font-bold leading-[normal] text-socle-ink">{space.data.name}</div>
+            <div className="text-[11.5px] leading-[normal] text-[#9B9BA1]">
+              {docCount} document{docCount === 1 ? '' : 's'}
+            </div>
+          </div>
+        </div>
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#75757C]">
+          Arborescence
+        </div>
+        <nav className="mb-4 min-h-0 flex-1 overflow-hidden" aria-label="Arborescence de l'espace">
+          {treeFolders.map((f) => (
+            <Link
+              key={f.id}
+              to={folderHref(f.id)}
+              className="flex items-center gap-[7px] rounded-md px-2 py-1.5 text-[13.5px] text-socle-ink hover:bg-[#F5F5F7]"
+            >
+              {f.name}
+            </Link>
+          ))}
+          {treeDocs
+            .filter((d) => !d.folderId)
+            .map((d) => (
+              <Link
+                key={d.id}
+                to={documentHref(d.id)}
+                className="flex items-center gap-[7px] rounded-md px-2 py-1.5 text-[13.5px] text-socle-ink hover:bg-[#F5F5F7]"
+              >
+                {d.title}
+              </Link>
+            ))}
+        </nav>
+        <div className="mt-auto flex flex-col gap-px">
+          <Link
+            to={`/docs/new?spaceId=${encodeURIComponent(spaceId)}`}
+            className="rounded-md px-2 py-2 text-[13px] font-semibold text-socle-accent hover:bg-[#F5F5F7]"
+          >
+            + Nouveau document
+          </Link>
+          <Link
+            to={`/spaces/${spaceId}/tree`}
+            className="rounded-md px-2 py-2 text-[13px] font-semibold text-socle-accent hover:bg-[#F5F5F7]"
+          >
+            + Nouveau dossier
+          </Link>
+        </div>
+      </aside>
+      <main className="flex min-w-0 flex-1 justify-center px-10 pt-9">
+        <div className="w-[621px]" style={{ WebkitFontSmoothing: 'auto' }}>
       <div className="breadcrumb mb-6">
         <Link to="/">Accueil</Link>
         <span className="text-[#DEDEE1]">→</span>
@@ -255,7 +320,7 @@ export function SpaceSettingsPage() {
             save.mutate()
           }}
         >
-          <label className="mb-[22px] block text-sm">
+          <label className="mb-[22px] block text-sm" data-visual-mask="settings-description">
             <span className="text-socle-muted">Description</span>
             <textarea
               className="mt-1 w-full rounded-lg border border-socle-line bg-white px-3 py-2"
@@ -265,7 +330,7 @@ export function SpaceSettingsPage() {
               onChange={(e) => setDescription(e.target.value)}
             />
           </label>
-          <label className="mb-[22px] block text-sm">
+          <label className="mb-[22px] block text-sm" data-visual-mask="settings-refs">
             <span className="text-socle-muted">Références externes (transclusion entrante)</span>
             <select
               className="mt-1 w-full rounded-lg border border-socle-line bg-white px-3 py-2"
@@ -277,7 +342,7 @@ export function SpaceSettingsPage() {
               <option value="restricted">Restreint — casse les transclusions inter déjà en place</option>
             </select>
           </label>
-          <label className="block text-sm">
+          <label className="block text-sm" data-visual-mask="settings-comment-policy">
             <span className="text-socle-muted">Qui peut commenter</span>
             <select
               className="mt-1 w-full rounded-lg border border-socle-line bg-white px-3 py-2"
@@ -302,13 +367,17 @@ export function SpaceSettingsPage() {
               accessible ». L&apos;accès direct OpenFGA aux documents n&apos;est pas modifié.
             </p>
           ) : null}
-          <button type="submit" className="btn-primary" disabled={save.isPending}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={save.isPending}
+            data-visual-mask="settings-save"
+          >
             Enregistrer
           </button>
         </form>
       )}
 
-      <p className="mt-1.5 font-mono text-xs text-socle-muted">{spaceId}</p>
       <div className="mt-4 flex flex-wrap gap-3 text-sm">
         <Link to={`/spaces/${spaceId}/tree`} className="font-semibold text-socle-accent hover:underline">
           Parcourir l&apos;arborescence →
@@ -328,7 +397,7 @@ export function SpaceSettingsPage() {
       </div>
 
       {space.data.canManage && (
-        <section className="mt-8">
+        <section className="mt-8" data-visual-mask="settings-owners">
           <h2 className="text-base font-semibold">Owners &amp; responsible</h2>
           <p className="mt-1 text-xs text-socle-muted">
             Seul un responsible ajoute/retire des owners. Les owners gèrent les accès des pages.
@@ -343,8 +412,8 @@ export function SpaceSettingsPage() {
               }}
             >
               <input
-                className="min-w-[280px] flex-1 rounded-lg border border-socle-line px-3 py-2 font-mono text-xs"
-                placeholder="UUID utilisateur"
+                className="min-w-[280px] flex-1 rounded-lg border border-socle-line px-3 py-2 text-xs"
+                placeholder="Identifiant utilisateur"
                 value={ownerId}
                 onChange={(e) => setOwnerId(e.target.value)}
               />
@@ -393,6 +462,8 @@ export function SpaceSettingsPage() {
       )}
 
       {error && <p className="mt-4 text-sm text-socle-danger">{error}</p>}
-    </main>
+        </div>
+      </main>
+    </div>
   )
 }

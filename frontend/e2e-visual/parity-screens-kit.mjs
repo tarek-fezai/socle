@@ -2,7 +2,7 @@
 /**
  * Annotations maquette (data-* uniquement) + routes API des specs Access / Settings / Trash / Export / CreateSpace.
  */
-import { ME_TAREK, NOTIFICATIONS_SEED, SPACE_IDENTITE } from './dashboard-fixtures.mjs'
+import { ME_TAREK, NOTIFICATIONS_SEED, SPACE_IDENTITE, TREE_IDENTITE } from './dashboard-fixtures.mjs'
 import { SPACES_SEED } from './five-screens-fixtures.mjs'
 import { json, mockBaseApis } from './visual-parity-kit.mjs'
 import {
@@ -24,6 +24,7 @@ export async function mockParityApis(page) {
     if (route.request().method() !== 'GET') return route.continue()
     return json(route, TRASH_SEED)
   })
+  await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}/tree**`, (route) => json(route, TREE_IDENTITE))
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}/owners`, (route) => json(route, SPACE_OWNERS_SEED))
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}`, (route) => {
     if (route.request().method() !== 'GET') return route.continue()
@@ -134,13 +135,11 @@ export async function annotateSettingsMockup(page) {
     trash?.setAttribute('data-mock-id', 'settings-trash')
     const archive = trash?.nextElementSibling
     archive?.setAttribute('data-visual-mask', 'settings-archive')
-    const tree = [...document.querySelectorAll('div')].find((d) => d.style && d.style.width === '420px')
-    tree?.setAttribute('data-visual-mask', 'settings-tree')
   })
 }
 
-export async function annotateExportMockup(page, { crumbCurrent }) {
-  await page.evaluate(({ crumbCurrent }) => {
+export async function annotateExportMockup(page, { crumbCurrent, maskZipFormats = false } = {}) {
+  await page.evaluate(({ crumbCurrent, maskZipFormats }) => {
     const topbar = document.querySelector('div[style*="height: 60px"]')
     topbar?.setAttribute('data-mock-id', 'export-topbar')
     const crumb = topbar?.children[0]
@@ -167,5 +166,9 @@ export async function annotateExportMockup(page, { crumbCurrent }) {
         (el) => (el.textContent ?? '').trim().startsWith('PDF') && el.children.length === 2,
       )
     pdf?.setAttribute('data-mock-id', 'export-format-pdf')
-  }, { crumbCurrent })
+    if (maskZipFormats) {
+      download?.setAttribute('data-visual-mask', 'export-download')
+      pdf?.setAttribute('data-visual-mask', 'export-format-pdf')
+    }
+  }, { crumbCurrent, maskZipFormats })
 }

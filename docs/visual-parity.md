@@ -7,17 +7,17 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export` |
-| **Nouveaux, sections > 1 % laissées** (méthode respectée, chiffres + cause dans le spec) | `create-space` (title 4,674 %, submit 5,577 %, cancel 3,164 % — anticrénelage glyphes), `trash` (delete 8,067 % — anticrénelage « Supprimer définitivement »), `export-folder` / `export-tag` (download 5,664 %, format-pdf 4,144 % — ZIP maquette vs PDF fusionné API), `space-settings` (audit 1,903 %, trash 1,598 % — anticrénelage 13,5 px + Δw +1) |
-| **À nettoyer** | — |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `trash` |
+| **Sections > 1 % (échec CI, pas de test.fail)** | `create-space` (title 4,674 %, submit 5,577 %, cancel 3,164 % — calque `transform:translateX(-50%)` sur la modale maquette, absent de l’app), `space-settings` (audit 1,903 %, trash 1,598 % après SIZE_EXCEPTION Δw=+1 — anticrénelage cartes, aucun calque de composition) |
 
 ## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
 
 - **Access.dc.html** = accès **document** (visibilité + personnes) → `/documents/:id/access`. `/spaces/:id/access` est l’ACL espace (autre UI) : pas de spec supplémentaire. Pas de variante dossier/tag dans la maquette.
-- **Export dossier / étiquette** : l’API `exportFolder` / `exportTag` renvoie un **PDF fusionné**. Les maquettes disent « ZIP de PDF » / « Télécharger l’archive (.zip) ». Pas de mensonge ZIP dans l’app ; sections download / format laissées en échec.
-- **Trash.dc.html** = corbeille **d’espace** ; l’app est globale `/trash` (`NOT_IMPLEMENTED` `trash-space-chrome`).
-- **SpaceSettings.dc.html** = arbre 420 px + paramètres 620 px ; `/spaces/:id` = paramètres seuls (arbre = `/spaces/:id/tree`).
-- **CreateSpace.dc.html** = modale 480 px ouverte depuis `/spaces` (interaction Playwright).
+- **Export dossier / étiquette** : l’API `exportFolder` / `exportTag` renvoie un **PDF fusionné**. Les maquettes disent « ZIP de PDF » / « Télécharger l’archive (.zip) ». Décision tf **2026-10-11** : l’export ZIP est la cible (PR suivante, backlog `EXPORT-ZIP`). En attendant, sections download / format → `NOT_IMPLEMENTED` ; libellés app restent **PDF** (pas de mensonge ZIP). Word / Markdown → `APP_EXTRA`.
+- **Trash.dc.html** = corbeille **d’espace**. Décision tf **2026-10-11** : vue par espace (maquette) **et** `/trash` globale conservée. `GET /api/v1/trash` n’accepte que `resourceType` / `offset` / `limit` (pas de `spaceId`) → vue d’espace `NOT_IMPLEMENTED` (backlog `TRASH-PER-SPACE`). Filtres de type sur `/trash` → `APP_EXTRA`.
+- **SpaceSettings.dc.html** = arbre 420 px + paramètres 620 px ; `/spaces/:id` reprend cette mise en page. `NOT_IMPLEMENTED` : membres, archivage. `APP_EXTRA` (relecteur) : description, politique de commentaires, propriétaires, Enregistrer. Pas d’affichage d’UUID.
+- **CreateSpace.dc.html** = modale 480 px ouverte depuis `/spaces` (interaction Playwright). Le bouton × figure dans la maquette : comparé (`create-close`).
+- **Accès** : liste des personnes, « Inviter », onglets document → `NOT_IMPLEMENTED` (backlog `ACCESS-PEOPLE-PICKER`, prioritaire). Formulaire d’octroi conservé sans affichage d’UUID → `APP_EXTRA` provisoire.
 
 ## Décisions produit
 
@@ -62,6 +62,13 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 11. **`collectMetrics` : texte affiché** — accepté (voir Exceptions structurales).
 12. **Search** : plus aucune découpe de texte ni nœud créé dans la maquette ; masque par Range.
 
+### Décisions du 2026-10-11 (revue PR #75, propriétaire tf)
+
+13. **Export dossier / étiquette en ZIP** comme la maquette — PR suivante (`EXPORT-ZIP`). En attendant, download / format `NOT_IMPLEMENTED` ; libellés PDF inchangés.
+14. **Corbeille par espace** (maquette) **et** `/trash` globale conservée. Sans filtre `spaceId` API : vue d’espace `NOT_IMPLEMENTED` (`TRASH-PER-SPACE`).
+15. **Accès** : people picker / Inviter / onglets document `NOT_IMPLEMENTED` (`ACCESS-PEOPLE-PICKER`, prioritaire). Formulaire UUID conservé sans affichage d’UUID (`APP_EXTRA` provisoire).
+16. **Une section > seuil fait échouer la CI.** Interdit : `test.fail()`, `test.fixme()`, skip conditionnel pour rendre un écart « attendu ».
+
 ## Comparaison
 
 - Par **section** (`data-mock-id`), pas page entière floue.
@@ -71,6 +78,7 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 - Captures avec les **mêmes options des deux côtés** : `SCREENSHOT_OPTIONS` du kit
   (`{ caret: 'hide', animations: 'disabled' }`), y compris dans les specs hérités.
 - **Aucun retry** (`playwright.config.mjs`, dédiée à `e2e-visual/`) : un écart instable échoue.
+- Une section au-dessus du seuil **échoue** : pas de `test.fail` / `test.fixme` / skip pour en faire un succès.
 - États figés de la maquette (menu ouvert, paragraphe en cours d’édition) : reproduits dans l’app par
   **interaction Playwright** (clic, placement du curseur), jamais par modification du DOM.
 

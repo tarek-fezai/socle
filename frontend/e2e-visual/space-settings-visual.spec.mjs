@@ -2,13 +2,10 @@
 /**
  * Règles : docs/visual-parity.md
  *
- * SpaceSettings.dc.html = arbre 420 px + panneau paramètres.
- * Route app : /spaces/:id = formulaire paramètres (arbre = /spaces/:id/tree).
+ * SpaceSettings.dc.html = arbre 420 px + panneau paramètres 620 px.
+ * Route app : /spaces/:id (même mise en page).
  *
  * Mesure : `VISUAL_BASELINE=1 npx playwright test e2e-visual/space-settings-visual.spec.mjs`
- *
- * Sections encore > 1 % après polish (laissées échouer) : audit ≈ 1.90 %, trash ≈ 1.60 %
- * (crop TL 621×66, Δw=+1 déclaré) — anticrénelage 13,5 px + décalage justify-between 1 px.
  */
 import { test } from '@playwright/test'
 import { SPACE_IDENTITE, VISUAL_NOW } from './dashboard-fixtures.mjs'
@@ -19,20 +16,48 @@ import {
   compareSectionShots,
   finishPixelResults,
   injectOidcSession,
+  probeCompositionLayers,
+  reportAppExtras,
   reportNotImplemented,
   settleFonts,
   shotSection,
 } from './visual-parity-kit.mjs'
 
-export const NOT_IMPLEMENTED = [
+const DECISION =
+  'DP-2026-10-11-tf — description, politique de commentaires, propriétaires, Enregistrer (relecteur)'
+
+export const APP_EXTRA = [
   {
-    id: 'settings-tree',
+    id: 'settings-description',
     page: 'space-settings',
-    reason:
-      'Colonne arbre + barre d’actions (sélection, nouveau document/dossier) : livrée sur /spaces/:id/tree, pas sur /spaces/:id',
-    backlog: 'SETTINGS-SPLIT-TREE',
-    mockMask: 'settings-tree',
+    appMask: 'settings-description',
+    reason: 'champ description (API, hors maquette paramètres comparée)',
+    decision: DECISION,
   },
+  {
+    id: 'settings-comment-policy',
+    page: 'space-settings',
+    appMask: 'settings-comment-policy',
+    reason: 'politique de commentaires',
+    decision: DECISION,
+  },
+  {
+    id: 'settings-save',
+    page: 'space-settings',
+    appMask: 'settings-save',
+    reason: 'bouton Enregistrer',
+    decision: DECISION,
+  },
+  {
+    id: 'settings-owners',
+    page: 'space-settings',
+    appMask: 'settings-owners',
+    reason: 'owners / responsible (pas le bloc Membres maquette)',
+    decision: DECISION,
+  },
+]
+
+export const NOT_IMPLEMENTED = [
   {
     id: 'settings-members',
     page: 'space-settings',
@@ -58,7 +83,7 @@ const SIZE_EXCEPTIONS = Object.fromEntries(
       dw: 1,
       dh: 0,
       reason:
-        'Colonne maquette mesurée 621 px (CSS 620, centrage sous-pixel) ; app width:621 mesurée 622 (getBoundingClientRect)',
+        'Colonne maquette mesurée 621 px (CSS 620, centrage sous-pixel) ; app width 621 mesurée 622',
     },
   ]),
 )
@@ -76,10 +101,6 @@ test.describe('space-settings visual', () => {
   test.use({ timezoneId: 'Europe/Paris' })
 
   test('desktop SpaceSettings — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
-    test.fail(
-      true,
-      'audit 1.903 %, trash 1.598 % — anticrénelage 13,5 px + décalage justify-between 1 px (Δw=+1)',
-    )
     await injectOidcSession(page, VISUAL_NOW)
     await mockParityApis(page)
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -87,6 +108,11 @@ test.describe('space-settings visual', () => {
     await page.goto(`${MOCK_ORIGIN}/SpaceSettings.dc.html`)
     await annotateSettingsMockup(page)
     await settleFonts(page)
+    await probeCompositionLayers(
+      page,
+      ['[data-mock-id="settings-audit"]', '[data-mock-id="settings-trash"]'],
+      'space-settings-mock',
+    )
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'space-settings')
 
     const mockSec = {}
@@ -101,7 +127,13 @@ test.describe('space-settings visual', () => {
     await page.waitForSelector('[data-mock-id="settings-title"]')
     await page.mouse.move(1, 1)
     await settleFonts(page)
+    await probeCompositionLayers(
+      page,
+      ['[data-mock-id="settings-audit"]', '[data-mock-id="settings-trash"]'],
+      'space-settings-app',
+    )
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'space-settings')
+    await reportAppExtras(page, testInfo, APP_EXTRA, 'space-settings')
 
     const compare = compareSectionShots(SIZE_EXCEPTIONS)
     const results = []

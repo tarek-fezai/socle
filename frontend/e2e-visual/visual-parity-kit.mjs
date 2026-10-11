@@ -91,6 +91,58 @@ export async function settleFonts(page) {
 }
 
 /**
+ * Calques de composition (élément + ancêtres) : transform, opacity&lt;1, will-change, filter,
+ * backdrop-filter, animation. Journalisé pour le rapport AA — ne mute pas le DOM.
+ * @param {import('@playwright/test').Page} page
+ * @param {string[]} selectors
+ * @param {string} side
+ */
+export async function probeCompositionLayers(page, selectors, side) {
+  const found = await page.evaluate((sels) => {
+    const hitsOf = (cs) => {
+      const hits = []
+      if (cs.transform && cs.transform !== 'none') hits.push(`transform=${cs.transform}`)
+      if (cs.opacity && cs.opacity !== '1') hits.push(`opacity=${cs.opacity}`)
+      if (cs.willChange && cs.willChange !== 'auto') hits.push(`will-change=${cs.willChange}`)
+      if (cs.filter && cs.filter !== 'none') hits.push(`filter=${cs.filter}`)
+      const bf = cs.backdropFilter || cs.webkitBackdropFilter
+      if (bf && bf !== 'none') hits.push(`backdrop-filter=${bf}`)
+      if (cs.animationName && cs.animationName !== 'none') hits.push(`animation=${cs.animationName}`)
+      return hits
+    }
+    const walk = (el) => {
+      const layers = []
+      let n = el
+      let depth = 0
+      while (n && n.nodeType === 1 && depth < 24) {
+        const hits = hitsOf(getComputedStyle(n))
+        if (hits.length) {
+          layers.push({
+            depth,
+            tag: n.tagName.toLowerCase(),
+            mockId: n.getAttribute('data-mock-id') || '',
+            cls: String(n.className || '').slice(0, 96),
+            hits,
+          })
+        }
+        n = n.parentElement
+        depth++
+      }
+      return layers
+    }
+    const out = {}
+    for (const s of sels) {
+      const el = document.querySelector(s)
+      out[s] = el ? walk(el) : 'MISSING'
+    }
+    return out
+  }, selectors)
+  const line = `COMPOSITION ${side}: ${JSON.stringify(found)}`
+  console.log(line)
+  return found
+}
+
+/**
  * Routes communes du shell (config OIDC, branding, /me, cloche notifications, arbres d'espaces vides).
  * À appeler AVANT les routes propres à l'écran (Playwright applique la dernière enregistrée en premier).
  */

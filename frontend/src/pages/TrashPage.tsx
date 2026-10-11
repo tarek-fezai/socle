@@ -124,7 +124,7 @@ export function TrashPage() {
         de l&apos;espace.
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-6 flex flex-wrap gap-2" data-visual-mask="trash-type-filters">
         {TYPE_FILTERS.map((f) => {
           const active = resourceType === f.value
           return (
@@ -214,15 +214,20 @@ function TrashRow({
         >
           {restoring ? 'Restauration…' : 'Restaurer'}
         </button>
-        <button
-          type="button"
+        <a
+          href="#purge"
+          role="button"
           data-mock-id={`trash-row-${index}-delete`}
-          disabled={restoring || purging}
-          onClick={onPurge}
-          className="appearance-none border-0 bg-transparent px-2.5 py-1.5 text-[12.5px] font-semibold leading-[normal] text-[#B54708] hover:underline disabled:opacity-60"
+          aria-disabled={restoring || purging}
+          onClick={(e) => {
+            e.preventDefault()
+            if (!restoring && !purging) onPurge()
+          }}
+          className="px-2.5 py-1.5 text-[12.5px] font-semibold leading-[normal] text-[#B54708] hover:underline"
+          style={{ WebkitFontSmoothing: 'auto' }}
         >
           {purging ? 'Suppression…' : 'Supprimer définitivement'}
-        </button>
+        </a>
       </div>
     </li>
   )

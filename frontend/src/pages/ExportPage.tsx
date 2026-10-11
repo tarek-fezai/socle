@@ -85,6 +85,20 @@ function ExportShell({ scope, backTo, backLabel, fallbackFilename }: Props) {
               <span className="text-[13.5px] font-semibold leading-[normal] text-socle-ink">PDF</span>
               <span className="text-[11px] leading-[normal] text-[#6B6B72]">Mise en page fixe</span>
             </div>
+            <div
+              data-visual-mask="export-format-word"
+              className="flex items-center justify-between rounded-[9px] border border-socle-line px-3.5 py-[11px]"
+            >
+              <span className="text-[13.5px] font-medium leading-[normal] text-socle-ink">Word</span>
+              <span className="text-[11px] leading-[normal] text-[#9B9BA1]">Bientôt</span>
+            </div>
+            <div
+              data-visual-mask="export-format-markdown"
+              className="flex items-center justify-between rounded-[9px] border border-socle-line px-3.5 py-[11px]"
+            >
+              <span className="text-[13.5px] font-medium leading-[normal] text-socle-ink">Markdown</span>
+              <span className="text-[11px] leading-[normal] text-[#9B9BA1]">Bientôt</span>
+            </div>
           </div>
 
           <div className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#9B9BA1]">

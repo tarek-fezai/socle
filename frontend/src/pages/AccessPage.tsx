@@ -76,11 +76,11 @@ function AccessEntryRow({
           </span>
           <span className="text-xs text-socle-muted">{entry.subjectType}</span>
         </div>
-        <p className="truncate font-mono text-xs text-socle-ink">{entry.subject}</p>
+        <p className="truncate text-xs text-socle-ink">
+          {entry.subjectType === 'group' ? 'Groupe' : 'Personne'}
+        </p>
         {entry.inheritedFrom && (
-          <p className="text-xs text-socle-slate">
-            Hérité de <span className="font-mono">{entry.inheritedFrom}</span>
-          </p>
+          <p className="text-xs text-socle-slate">Hérité d&apos;un parent</p>
         )}
         {source === 'group' && (
           <p className="text-xs text-socle-slate">
@@ -178,7 +178,7 @@ export function AccessPage({
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!subjectId.trim()) {
-      setError(subjectType === 'group' ? 'Sélectionnez un groupe' : 'UUID utilisateur requis')
+      setError(subjectType === 'group' ? 'Sélectionnez un groupe' : 'Identifiant utilisateur requis')
       return
     }
     setError(null)
@@ -248,6 +248,7 @@ export function AccessPage({
         {perms.isSuccess && perms.data.canManage && (
           <form
             onSubmit={onSubmit}
+            data-visual-mask="access-grant-form"
             className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-socle-line bg-white p-4"
           >
             <label className="flex flex-col gap-1 text-sm">
@@ -292,12 +293,12 @@ export function AccessPage({
               </label>
             ) : (
               <label className="flex min-w-[16rem] flex-1 flex-col gap-1 text-sm">
-                <span className="text-socle-muted">UUID utilisateur</span>
+                <span className="text-socle-muted">Identifiant utilisateur</span>
                 <input
                   value={subjectId}
                   onChange={(e) => setSubjectId(e.target.value)}
-                  placeholder="id utilisateur"
-                  className="field-input font-mono text-xs"
+                  placeholder="Identifiant"
+                  className="field-input text-xs"
                 />
               </label>
             )}
@@ -349,9 +350,6 @@ export function AccessPage({
       <p className="mt-2 text-sm text-socle-muted">
         Personnes et équipes ayant accès à cet {resourceLabel} — distinction direct / via groupe /
         hérité.
-      </p>
-      <p className="mt-2 font-mono text-xs text-socle-subtle">
-        {objectType}:{objectId}
       </p>
       <p className="mt-8 text-xs text-socle-muted">
         Seuls les accès <strong className="text-socle-slate">directs</strong> ou{' '}

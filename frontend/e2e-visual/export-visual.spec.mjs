@@ -15,10 +15,30 @@ import {
   compareSectionShots,
   finishPixelResults,
   injectOidcSession,
+  reportAppExtras,
   reportNotImplemented,
   settleFonts,
   shotSection,
 } from './visual-parity-kit.mjs'
+
+const DECISION = 'DP-2026-10-11-tf — Word / Markdown hors ZIP (lignes app, pas de téléchargement)'
+
+export const APP_EXTRA = [
+  {
+    id: 'export-format-word',
+    page: 'export',
+    appMask: 'export-format-word',
+    reason: 'ligne Word (pas d’API)',
+    decision: DECISION,
+  },
+  {
+    id: 'export-format-markdown',
+    page: 'export',
+    appMask: 'export-format-markdown',
+    reason: 'ligne Markdown (pas d’API)',
+    decision: DECISION,
+  },
+]
 
 export const NOT_IMPLEMENTED = [
   {
@@ -65,6 +85,7 @@ test.describe('export visual', () => {
     await page.mouse.move(1, 1)
     await settleFonts(page)
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'export')
+    await reportAppExtras(page, testInfo, APP_EXTRA, 'export')
 
     const compare = compareSectionShots(SIZE_EXCEPTIONS)
     const results = []

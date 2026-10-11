@@ -18,10 +18,23 @@ import {
   compareSectionShots,
   finishPixelResults,
   injectOidcSession,
+  reportAppExtras,
   reportNotImplemented,
   settleFonts,
   shotSection,
 } from './visual-parity-kit.mjs'
+
+const DECISION = 'DP-2026-10-11-tf — formulaire grant conservé sans affichage d’UUID (provisoire)'
+
+export const APP_EXTRA = [
+  {
+    id: 'access-grant-form',
+    page: 'access',
+    appMask: 'access-grant-form',
+    reason: 'formulaire d’octroi (identifiant, pas d’UUID affiché)',
+    decision: DECISION,
+  },
+]
 
 export const NOT_IMPLEMENTED = [
   {
@@ -29,14 +42,14 @@ export const NOT_IMPLEMENTED = [
     page: 'access',
     reason:
       'Chrome document (onglets Lire / Modifier / Historique / Commentaires / Accès) : AccessPage est une route isolée, pas DocumentChrome',
-    backlog: 'ACCESS-DOC-CHROME',
+    backlog: 'ACCESS-PEOPLE-PICKER',
     mockMask: 'access-doc-tabs',
   },
   {
     id: 'access-invite',
     page: 'access',
-    reason: 'Bouton « + Inviter » : pas d’API d’invitation nominative (grant = UUID)',
-    backlog: 'ACCESS-INVITE',
+    reason: 'Bouton « + Inviter » : pas d’API d’invitation nominative',
+    backlog: 'ACCESS-PEOPLE-PICKER',
     mockMask: 'access-invite',
   },
   {
@@ -44,7 +57,7 @@ export const NOT_IMPLEMENTED = [
     page: 'access',
     reason:
       'Lignes personnes : AccessEntry n’a ni displayName, ni initiales, ni last-active, ni rôle « Approbatrice »',
-    backlog: 'ACCESS-ENTRY-META',
+    backlog: 'ACCESS-PEOPLE-PICKER',
     mockMask: 'access-people-rows',
   },
   {
@@ -93,6 +106,7 @@ test.describe('access visual', () => {
     await page.mouse.move(1, 1)
     await settleFonts(page)
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'access')
+    await reportAppExtras(page, testInfo, APP_EXTRA, 'access')
 
     const compare = compareSectionShots(SIZE_EXCEPTIONS)
     const results = []

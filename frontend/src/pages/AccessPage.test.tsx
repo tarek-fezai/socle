@@ -122,7 +122,7 @@ describe('AccessPage', () => {
       expect(screen.getByText('Via groupe')).toBeTruthy()
       expect(screen.getByText('Hérité')).toBeTruthy()
     })
-    expect(screen.getByText(/Hérité de/)).toBeTruthy()
+    expect(screen.getByText(/Hérité d/)).toBeTruthy()
     expect(screen.getByText('Non révocable ici')).toBeTruthy()
   })
 
@@ -155,7 +155,7 @@ describe('AccessPage', () => {
     render(wrap(<AccessPage objectType="space" />))
     await waitFor(() => expect(screen.getByText(/Aucun accès/)).toBeTruthy())
 
-    fireEvent.change(screen.getByPlaceholderText(/id utilisateur/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Identifiant/i), {
       target: { value: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Accorder' }))
@@ -190,7 +190,7 @@ describe('AccessPage', () => {
     render(wrap(<AccessPage objectType="space" />))
     await waitFor(() => expect(screen.getByText(/Aucun accès/)).toBeTruthy())
 
-    fireEvent.change(screen.getByPlaceholderText(/id utilisateur/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Identifiant/i), {
       target: { value: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Accorder' }))
