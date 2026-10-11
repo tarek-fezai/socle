@@ -11,10 +11,12 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background: #ffffff;
   color: #0e0e10;
   font-family: 'IBM Plex Sans', sans-serif;
+  /* Maquettes admin : aucun line-height déclaré (défaut navigateur), pas le 1.5 du preflight */
+  line-height: normal;
   overflow: hidden;
 }
 
@@ -35,7 +37,7 @@
 
 .admin-page__breadcrumb-trail {
   font-size: 13px;
-  color: #b0b0b5;
+  color: #75757c;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -92,7 +94,7 @@
 .admin-subnav__org {
   font-size: 11px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 4px 10px 8px;
@@ -129,7 +131,9 @@
 .admin-main {
   box-sizing: content-box;
   flex-grow: 1;
-  overflow: hidden;
+  /* Seule zone défilante : l'outlet admin est en overflow hidden, sous-nav et rail restent fixes. */
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 40px 48px 0;
   min-width: 0;
 }
@@ -226,7 +230,7 @@
   padding: 10px 16px;
   font-size: 11px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid #ececee;
@@ -249,10 +253,6 @@
 
 .admin-table-row--fields {
   padding: 14px 18px;
-}
-
-.admin-table-row:hover {
-  background: #fafafb;
 }
 
 .admin-table-row:last-child {
@@ -303,6 +303,19 @@
 
 .admin-action--neutral {
   color: #6b6b72;
+}
+
+/* Visible au survol / focus de la ligne ; au repos, retiré du flux mais toujours atteignable au clavier. */
+.admin-table-row:not(:hover):not(:focus-within) .admin-action--row-reveal {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .admin-action--accent {
@@ -481,7 +494,6 @@
   font-family: 'IBM Plex Sans', sans-serif;
   font-size: 13.5px;
   font-weight: 500;
-  line-height: 1.2em;
   color: #43434a;
   cursor: pointer;
 }
@@ -582,6 +594,10 @@
   margin-bottom: 6px;
 }
 
+.admin-form-label--group {
+  margin-bottom: 8px;
+}
+
 .admin-form-input {
   width: 100%;
   box-sizing: border-box;
@@ -608,7 +624,7 @@
 
 .admin-scope-chip {
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 500;
   border-radius: 7px;
   padding: 7px 13px;
   cursor: pointer;
@@ -618,9 +634,10 @@
 }
 
 .admin-scope-chip--on {
+  font-weight: 600;
   color: #3730e0;
   background: #f0effc;
-  border-color: transparent;
+  border: none;
 }
 
 .admin-toggle-row {
@@ -681,7 +698,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
 }
 
 .admin-choice {
@@ -694,6 +710,51 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.admin-choice {
+  position: relative;
+}
+
+/* Pastille de retrait superposée au coin : la largeur de la puce reste celle de la maquette. */
+.admin-choice-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #ececee;
+  background: #ffffff;
+  color: #6b6b72;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.admin-choice-input {
+  border: 1px dashed #dedee1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  width: 120px;
+}
+
+.admin-scope-space {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin-bottom: 0;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.admin-builder-status {
+  margin-top: 16px;
 }
 
 .admin-choice-add {
@@ -712,6 +773,10 @@
   justify-content: flex-end;
   gap: 10px;
   padding-bottom: 32px;
+}
+
+.admin-form-actions .admin-cta {
+  padding: 9px 18px;
 }
 
 .admin-btn-ghost {

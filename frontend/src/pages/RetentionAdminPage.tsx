@@ -144,8 +144,7 @@ export function RetentionAdminPage() {
       <h1 className="admin-title" data-mock-id="retention-title" style={{ marginBottom: 6 }}>
         Rétention &amp; conformité
       </h1>
-      {/* Compensation mesurée : lead 22px (maquette 28) pour annuler cascade box.y Δ=6 sous durées. */}
-      <p className="admin-lead" data-mock-id="retention-lead" style={{ marginBottom: 22 }}>
+      <p className="admin-lead" data-mock-id="retention-lead" style={{ marginBottom: 28 }}>
         Durées de conservation et politiques réglementaires applicables à l&apos;ensemble de
         l&apos;organisation.
       </p>
@@ -188,6 +187,7 @@ export function RetentionAdminPage() {
         style={{ marginBottom: 28 }}
       >
         <RetentionRow
+          mockId="retention-durations-row-0"
           title="Journal d'audit"
           hint="Actions tracées sur la documentation"
           value={
@@ -227,6 +227,7 @@ export function RetentionAdminPage() {
           }
         />
         <RetentionRow
+          mockId="retention-durations-row-1"
           title="Historique des versions"
           hint="Révisions publiées d'un document"
           value={
@@ -267,6 +268,7 @@ export function RetentionAdminPage() {
           }
         />
         <RetentionRow
+          mockId="retention-durations-row-2"
           title="Documents archivés"
           hint="Espaces archivés depuis leurs paramètres"
           last
@@ -310,6 +312,7 @@ export function RetentionAdminPage() {
 
       <div
         className="admin-section-label"
+        data-mock-id="retention-compliance-label"
         style={{
           fontSize: 12,
           fontWeight: 600,
@@ -343,7 +346,7 @@ export function RetentionAdminPage() {
         data-mock-id="retention-compliance"
         style={{ marginBottom: 28 }}
       >
-        <div className="admin-table-row" style={{ padding: '13px 16px' }}>
+        <div className="admin-table-row" style={{ padding: '13px 16px' }} data-mock-id="retention-compliance-row-0">
           <div style={{ flexGrow: 1 }}>
             <div style={{ fontSize: 13.5, fontWeight: 500, color: '#0E0E10' }}>
               Résidence des données
@@ -372,7 +375,7 @@ export function RetentionAdminPage() {
           ) : null}
         </div>
 
-        <div className="admin-table-row" style={{ padding: '13px 16px' }}>
+        <div className="admin-table-row" style={{ padding: '13px 16px' }} data-mock-id="retention-compliance-row-1">
           <div style={{ flexGrow: 1 }}>
             <div style={{ fontSize: 13.5, fontWeight: 500, color: '#0E0E10' }}>
               Suspension légale (legal hold)
@@ -405,7 +408,11 @@ export function RetentionAdminPage() {
           </span>
         </div>
 
-        <div className="admin-table-row" style={{ padding: '13px 16px', borderBottom: 'none' }}>
+        <div
+          className="admin-table-row"
+          style={{ padding: '13px 16px', borderBottom: 'none' }}
+          data-mock-id="retention-compliance-row-2"
+        >
           <div style={{ flexGrow: 1 }}>
             <div style={{ fontSize: 13.5, fontWeight: 500, color: '#0E0E10' }}>
               Registre des traitements à jour
@@ -480,6 +487,7 @@ export function RetentionAdminPage() {
       )}
 
       <div
+        data-mock-id="retention-reports-label"
         style={{
           fontSize: 12,
           fontWeight: 600,
@@ -618,11 +626,13 @@ export function RetentionAdminPage() {
 }
 
 function RetentionRow({
+  mockId,
   title,
   hint,
   value,
   last,
 }: {
+  mockId?: string
   title: string
   hint: string
   value: ReactNode
@@ -631,6 +641,7 @@ function RetentionRow({
   return (
     <div
       className="admin-table-row"
+      data-mock-id={mockId}
       style={{
         padding: '13px 16px',
         borderBottom: last ? 'none' : undefined,

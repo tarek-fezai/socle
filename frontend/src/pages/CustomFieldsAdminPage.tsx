@@ -37,6 +37,75 @@ type BuilderState = {
 
 const LIST_TYPES = new Set<CustomFieldType>(['liste', 'multi_selection'])
 
+function FieldTypeIcon({ type, muted }: { type: string; muted: boolean }) {
+  const props = {
+    width: 10,
+    height: 10,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: muted ? '#9B9BA1' : '#6B6B72',
+    strokeWidth: 2.4,
+    'aria-hidden': true,
+  } as const
+  switch (type) {
+    case 'texte':
+      return (
+        <svg {...props}>
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="14" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+        </svg>
+      )
+    case 'liste':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="9" />
+          <polyline points="9 12 11 14 15 10" />
+        </svg>
+      )
+    case 'multi_selection':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="9" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+        </svg>
+      )
+    case 'date':
+      return (
+        <svg {...props}>
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      )
+    case 'lien':
+      return (
+        <svg {...props}>
+          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+        </svg>
+      )
+    case 'nombre':
+      return (
+        <svg {...props}>
+          <line x1="4" y1="9" x2="20" y2="9" />
+          <line x1="4" y1="15" x2="20" y2="15" />
+          <line x1="10" y1="3" x2="8" y2="21" />
+          <line x1="16" y1="3" x2="14" y2="21" />
+        </svg>
+      )
+    case 'personne':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+        </svg>
+      )
+    default:
+      return null
+  }
+}
+
 function emptyBuilder(spaceId: string): BuilderState {
   return {
     id: null,
@@ -188,7 +257,7 @@ export function CustomFieldsAdminPage() {
       innerWide
       rightRail={
         <aside className="admin-rail admin-rail--fields" data-mock-id="custom-fields-rail">
-          <div>
+          <div data-mock-id="custom-fields-rail-block-0">
             <div className="admin-rail__label">Où apparaissent les champs</div>
             <p className="admin-rail__para">
               Les champs actifs s&apos;affichent dans le panneau « Métadonnées » de l&apos;éditeur,
@@ -196,14 +265,14 @@ export function CustomFieldsAdminPage() {
               et de workflow.
             </p>
           </div>
-          <div>
+          <div data-mock-id="custom-fields-rail-block-1">
             <div className="admin-rail__label">Limites</div>
             <div className="admin-rail__limits">
               <span>20 champs actifs maximum par organisation</span>
               <span>50 valeurs maximum par liste</span>
             </div>
           </div>
-          <div className="admin-rail__divider">
+          <div className="admin-rail__divider" data-mock-id="custom-fields-rail-block-2">
             <div className="admin-rail__label">Voir aussi</div>
             <Link to="/admin/tags" className="admin-rail__link">
               Tags →
@@ -215,7 +284,7 @@ export function CustomFieldsAdminPage() {
         </aside>
       }
     >
-      <div className="admin-title-row">
+      <div className="admin-title-row" data-mock-id="custom-fields-title-row">
         <h1 className="admin-title" data-mock-id="custom-fields-title">
           Champs personnalisés
         </h1>
@@ -239,7 +308,7 @@ export function CustomFieldsAdminPage() {
       )}
 
       <div className="admin-table-wrap admin-table-wrap--rounded12" data-mock-id="custom-fields-table">
-        <div className="admin-table-head admin-table-head--fields">
+        <div className="admin-table-head admin-table-head--fields" data-mock-id="custom-fields-table-head">
           <div style={{ flex: 2 }}>Champ</div>
           <div style={{ flex: 1.1 }}>Type</div>
           <div style={{ flex: 1.6 }}>Portée</div>
@@ -247,12 +316,13 @@ export function CustomFieldsAdminPage() {
           <div style={{ flex: 0.9 }}>Utilisation</div>
           <div style={{ flex: 0.6, textAlign: 'right' }}>Statut</div>
         </div>
-        {fields.map((field) => {
+        {fields.map((field, index) => {
           const st = statusColors(field.status)
           const selected = builder?.id === field.id
           return (
             <div
               key={field.id}
+              data-mock-id={`custom-fields-row-${index}`}
               className={`admin-table-row admin-table-row--fields admin-row-click${selected ? ' admin-row-click--selected' : ''}`}
               onClick={() => openEdit(field)}
               onKeyDown={(e) => {
@@ -273,6 +343,7 @@ export function CustomFieldsAdminPage() {
                 <span
                   className={`admin-type-chip${field.status === 'draft' ? ' admin-type-chip--muted' : ''}`}
                 >
+                  <FieldTypeIcon type={field.fieldType} muted={field.status === 'draft'} />
                   {fieldTypeLabel(field.fieldType)}
                 </span>
               </div>
@@ -309,8 +380,8 @@ export function CustomFieldsAdminPage() {
           <div className="admin-builder-label" data-mock-id="custom-fields-builder-label">
             {builderTitle}
           </div>
-          <form data-mock-id="custom-fields-builder" onSubmit={onSubmit}>
-            <div className="admin-builder">
+          <form onSubmit={onSubmit}>
+            <div className="admin-builder" data-mock-id="custom-fields-builder">
             <div className="admin-builder__left">
               <label className="admin-form-label" htmlFor="cf-name">
                 Nom du champ
@@ -333,7 +404,7 @@ export function CustomFieldsAdminPage() {
                 onChange={(e) => setBuilder({ ...builder, helpText: e.target.value })}
               />
 
-              <span className="admin-form-label">Portée</span>
+              <span className="admin-form-label admin-form-label--group">Portée</span>
               <div className="admin-scope-toggle">
                 <button
                   type="button"
@@ -349,48 +420,61 @@ export function CustomFieldsAdminPage() {
                 >
                   Tous les espaces
                 </button>
+                {builder.scopeMode === 'space' && (
+                  <select
+                    className="admin-form-input admin-scope-space"
+                    value={builder.spaceId || defaultSpaceId}
+                    onChange={(e) => setBuilder({ ...builder, spaceId: e.target.value })}
+                    aria-label="Espace"
+                    data-visual-mask="cf-space-select"
+                  >
+                    {spaces.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
-              {builder.scopeMode === 'space' && (
-                <select
-                  className="admin-form-input"
-                  value={builder.spaceId || defaultSpaceId}
-                  onChange={(e) => setBuilder({ ...builder, spaceId: e.target.value })}
-                  aria-label="Espace"
-                >
-                  {spaces.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              )}
 
-              <label className="admin-toggle-row">
-                <input
-                  type="checkbox"
-                  checked={builder.required}
-                  onChange={(e) => setBuilder({ ...builder, required: e.target.checked })}
-                />
+              <label className="admin-toggle-row" style={{ marginBottom: 0 }}>
+                <span
+                  className={`admin-toggle admin-toggle--sm${builder.required ? ' admin-toggle--on' : ''}`}
+                  role="switch"
+                  aria-checked={builder.required}
+                  tabIndex={0}
+                  onClick={() => setBuilder({ ...builder, required: !builder.required })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setBuilder({ ...builder, required: !builder.required })
+                    }
+                  }}
+                >
+                  <span className="admin-toggle__knob" />
+                </span>
                 Champ obligatoire à la publication
               </label>
 
-              <span className="admin-form-label">Statut</span>
-              <select
-                className="admin-form-input"
-                value={builder.status}
-                onChange={(e) =>
-                  setBuilder({ ...builder, status: e.target.value as FieldStatus })
-                }
-                aria-label="Statut"
-              >
-                <option value="draft">Brouillon</option>
-                <option value="active">Actif</option>
-                <option value="archived">Archivé</option>
-              </select>
+              <div className="admin-builder-status" data-visual-mask="cf-status">
+                <span className="admin-form-label">Statut</span>
+                <select
+                  className="admin-form-input"
+                  value={builder.status}
+                  onChange={(e) =>
+                    setBuilder({ ...builder, status: e.target.value as FieldStatus })
+                  }
+                  aria-label="Statut"
+                >
+                  <option value="draft">Brouillon</option>
+                  <option value="active">Actif</option>
+                  <option value="archived">Archivé</option>
+                </select>
+              </div>
             </div>
 
             <div className="admin-builder__right">
-              <span className="admin-form-label">Type de champ</span>
+              <span className="admin-form-label admin-form-label--group">Type de champ</span>
               <div className="admin-type-grid">
                 {FIELD_TYPE_META.map((meta) => (
                   <button
@@ -407,45 +491,40 @@ export function CustomFieldsAdminPage() {
 
               {LIST_TYPES.has(builder.fieldType) && (
                 <div style={{ marginTop: 16 }}>
-                  <span className="admin-form-label">Valeurs de la liste</span>
+                  <span className="admin-form-label admin-form-label--group">Valeurs de la liste</span>
                   <div className="admin-choice-list">
                     {builder.choices.map((c) => (
                       <span key={c} className="admin-choice">
                         {c}
                         <button
                           type="button"
+                          className="admin-choice-remove"
                           aria-label={`Retirer ${c}`}
                           onClick={() => removeChoice(c)}
-                          style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#9B9BA1' }}
+                          data-visual-mask="cf-choice-remove"
                         >
                           ×
                         </button>
                       </span>
                     ))}
-                    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        value={newChoice}
-                        onChange={(e) => setNewChoice(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            addChoice()
-                          }
-                        }}
-                        placeholder="Nouvelle valeur"
-                        style={{
-                          border: '1px dashed #DEDEE1',
-                          borderRadius: 6,
-                          padding: '4px 8px',
-                          fontSize: 11.5,
-                          width: 100,
-                        }}
-                      />
-                      <button type="button" className="admin-choice-add" onClick={addChoice}>
-                        + Valeur
-                      </button>
-                    </span>
+                    <button type="button" className="admin-choice-add" onClick={addChoice}>
+                      + Valeur
+                    </button>
+                    <input
+                      type="text"
+                      className="admin-choice-input"
+                      value={newChoice}
+                      onChange={(e) => setNewChoice(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addChoice()
+                        }
+                      }}
+                      placeholder="Nouvelle valeur"
+                      aria-label="Nouvelle valeur"
+                      data-visual-mask="cf-choice-input"
+                    />
                   </div>
                 </div>
               )}
@@ -458,7 +537,7 @@ export function CustomFieldsAdminPage() {
               </p>
             )}
 
-            <div className="admin-form-actions">
+            <div className="admin-form-actions" data-mock-id="custom-fields-builder-actions">
               <button type="button" className="admin-btn-ghost" onClick={cancelBuilder}>
                 Annuler
               </button>

@@ -150,7 +150,7 @@ export function SpaceTreeSidebar({ spaceId, currentDocumentId, currentFolderId }
       <div className="flex items-center justify-between gap-2">
         <Link
           to={spaceBrowseHref(spaceId)}
-          className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.06em] text-socle-faint hover:text-socle-accent"
+          className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.06em] text-socle-subtle hover:text-socle-accent"
           title={tree.data?.spaceName}
         >
           {tree.data?.spaceName || 'Espace'}
@@ -339,7 +339,7 @@ function DocumentRow({
         }`}
       >
         <span className="min-w-0 flex-1 truncate">{doc.title || 'Sans titre'}</span>
-        {status && <span className="ml-2 shrink-0 text-[10px] text-socle-faint">{status}</span>}
+        {status && <span className="ml-2 shrink-0 text-[10px] text-socle-subtle">{status}</span>}
       </Link>
     </li>
   )

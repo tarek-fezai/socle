@@ -79,11 +79,5 @@ export function useBrandingInstanceName(): string | null {
   return name || null
 }
 
-export function useHidePoweredBy(): boolean {
-  const b = usePublicBranding()
-  // Tant que non chargé : ne pas afficher (évite de casser les maquettes login).
-  if (!b) return true
-  return b.hidePoweredBy
-}
 
 export { DEFAULT_ACCENT, resolveAssetUrl }

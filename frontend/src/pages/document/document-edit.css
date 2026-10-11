@@ -38,7 +38,7 @@
   align-items: center;
   gap: 7px;
   font-size: 13px;
-  color: #b0b0b5;
+  color: #75757c;
   min-width: 0;
 }
 
@@ -84,7 +84,7 @@ a.edit-crumb:hover {
 
 .edit-status,
 .edit-words {
-  color: #b0b0b5;
+  color: #75757c;
   white-space: nowrap;
 }
 
@@ -553,13 +553,13 @@ a.edit-crumb:hover {
 }
 
 .edit-insert-search input::placeholder {
-  color: #b0b0b5;
+  color: #75757c;
 }
 
 .edit-insert-title {
   font-size: 10.5px;
   font-weight: 600;
-  color: #b0b0b5;
+  color: #75757c;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 6px;
@@ -637,7 +637,7 @@ a.edit-crumb:hover {
 }
 
 .edit-title::placeholder {
-  color: #b0b0b5;
+  color: #75757c;
 }
 
 /* —— Contenu ProseMirror —— */
@@ -668,7 +668,7 @@ a.edit-crumb:hover {
 
 .edit-prose p.is-editor-empty:first-child::before,
 .edit-prose > p:only-child:empty::before {
-  color: #b0b0b5;
+  color: #75757c;
 }
 
 .edit-prose h1 {

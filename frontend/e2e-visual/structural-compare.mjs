@@ -5,34 +5,9 @@
 
 /** Explicit exceptions: id → justification (skipped checks listed). */
 export const EXCEPTIONS = {
-  'divider-ou': {
-    skip: ['color'],
-    reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5 (contraste 4,5:1)',
-  },
-  footer: {
-    skip: ['color'],
-    reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5 (contraste 4,5:1)',
-  },
-  'mobile-note': {
-    skip: ['color'],
-    reason: 'Texte informatif AA : app #75757C au lieu de maquette #B0B0B5 (contraste 4,5:1)',
-  },
   'email-field': {
-    skip: ['text', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'color', 'box'],
-    reason: 'Champ e-mail : input réel vs spans décoratifs de la maquette',
-  },
-  subtitle: {
-    // only on error page — handled via page-specific skip list
-    skip: [],
-    reason: '',
-  },
-  causes: {
-    skip: ['text', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'color', 'box'],
-    reason: 'Causes d’erreur dynamiques (une vraie reason) ≠ liste SCIM/Okta de la maquette',
-  },
-  'contact-support': {
-    skip: ['text', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'color', 'box'],
-    reason: 'Bouton admin maquette remplacé par mailto Identité & accès',
+    skip: ['text', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'color'],
+    reason: 'Champ e-mail : valeur d’un input réel (hors textContent) vs spans de la maquette — boîte comparée',
   },
 }
 
@@ -56,6 +31,9 @@ export const LOGIN_ERROR_IDS = [
   'title',
   'subtitle',
   'causes',
+  'causes-title',
+  'cause-0',
+  'cause-1',
   'cta-retry',
   'contact-support',
   'footer',
@@ -382,9 +360,6 @@ export const APPROVAL_MOBILE_IDS = [
   'appr-m-approve',
 ]
 
-/** Actions pinned à line-height 1 des deux côtés (maquette : <a>/<span> ; app : <a>/<button>). */
-const ACTION_ID_RE =
-  /^(hist-back|hist-r\d+-(compare|restore)|hist-m-(compare|restore)-\d+|diff-(back|restore|seg-\w+)|restore-(cancel|confirm)|appr-(comments|approve|reject|m-reject|m-approve)|adiff-(back|approve))$/
 
 export const MOBILE_MENU_IDS = [
   'mobile-menu',
@@ -465,10 +440,24 @@ export async function annotateDashboardMockup(page) {
         for (const t of titles) {
           const text = (t.textContent || '').trim()
           if (text === 'Reprendre') t.setAttribute('data-mock-id', 'home-section-resume')
+          if (text === 'Récemment publié') t.setAttribute('data-mock-id', 'home-section-published')
           if (text.startsWith('En attente')) t.setAttribute('data-mock-id', 'home-section-approvals')
           if (text.startsWith('Activité')) t.setAttribute('data-mock-id', 'home-section-activity')
         }
+        const [colMain, colSide] = [...(kpiRow?.nextElementSibling?.children ?? [])]
+        const cards = (col) => [...(col?.querySelectorAll(':scope > a') ?? [])]
+        const main = cards(colMain)
+        main.slice(0, 2).forEach((a, i) => a.setAttribute('data-mock-id', `home-resume-card-${i}`))
+        main.slice(2, 4).forEach((a, i) => a.setAttribute('data-mock-id', `home-published-card-${i}`))
+        cards(colSide).forEach((a, i) => a.setAttribute('data-mock-id', `home-approval-card-${i}`))
+        const activity = colSide?.lastElementChild
+        activity?.setAttribute('data-mock-id', 'home-activity')
+        ;[...(activity?.children ?? [])].forEach((r, i) => r.setAttribute('data-mock-id', `home-activity-row-${i}`))
       }
+    }
+    if (sidebar) {
+      const tree = [...sidebar.children].find((c) => c.tagName === 'DIV')
+      tree?.setAttribute('data-mock-id', 'shell-tree')
     }
   })
 }
@@ -517,7 +506,14 @@ export async function annotateMobileDashboardMockup(page) {
         const text = (t.textContent || '').trim()
         if (text === 'Reprendre') t.setAttribute('data-mock-id', 'home-section-resume')
         if (text.startsWith('En attente')) t.setAttribute('data-mock-id', 'home-section-approvals')
+        if (text.startsWith('Activité')) t.setAttribute('data-mock-id', 'home-section-activity')
       }
+      const links = [...content.querySelectorAll(':scope > a')]
+      links.slice(0, 2).forEach((a, i) => a.setAttribute('data-mock-id', `home-resume-card-${i}`))
+      links.slice(2, 3).forEach((a, i) => a.setAttribute('data-mock-id', `home-approval-card-${i}`))
+      const activity = content.lastElementChild
+      activity?.setAttribute('data-mock-id', 'home-activity')
+      ;[...(activity?.children ?? [])].forEach((r, i) => r.setAttribute('data-mock-id', `home-activity-row-${i}`))
     }
   })
 }
@@ -542,6 +538,15 @@ export async function annotateMobileMenuMockup(page) {
         (a.textContent || '').includes('Tarek'),
       )
       if (user) user.setAttribute('data-mock-id', 'mobile-menu-user')
+      const [head, search, , nav, actions, trash] = [...drawer.children]
+      head?.setAttribute('data-mock-id', 'mobile-menu-head')
+      search?.setAttribute('data-mock-id', 'mobile-menu-search')
+      nav?.setAttribute('data-mock-id', 'mobile-menu-nav')
+      nav?.children[0]?.setAttribute('data-mock-id', 'mobile-menu-active-doc')
+      const folders = [...(nav?.children ?? [])].filter((a) => a.querySelector('svg'))
+      folders.forEach((f, i) => f.setAttribute('data-mock-id', `mobile-menu-folder-${i}`))
+      actions?.setAttribute('data-mock-id', 'mobile-menu-actions')
+      trash?.setAttribute('data-mock-id', 'mobile-menu-trash')
     }
   })
 }
@@ -710,9 +715,8 @@ export async function annotateEditMockup(page) {
 }
 
 /**
- * Alignement nav admin produit ↔ maquette :
- * - annote « Facturation » / « Licence » avec data-mock-id=admin-nav-licence
- *   (exception texte : Socle auto-hébergé, licence signée pas de facturation)
+ * Nav admin maquette : annote « Facturation » / « Licence » avec data-mock-id=admin-nav-licence
+ * (data-* uniquement).
  */
 export function normalizeAdminMockupNavInDocument() {
   const subnav =
@@ -727,61 +731,54 @@ export function normalizeAdminMockupNavInDocument() {
   }
 }
 
-/** Annotate TagsAdmin.dc.html with data-mock-id. */
+/**
+ * Chrome commun des maquettes admin (fil d'Ariane, sous-nav, entrée active) — data-* uniquement.
+ * Structure : root > [breadcrumb, body > [subnav, …]].
+ * @returns {Promise<void>}
+ */
+async function annotateAdminChromeMockup(page, navHref, navMockId) {
+  await page.evaluate(
+    ({ navHref, navMockId }) => {
+      const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+      if (!root) return
+      const [breadcrumb, body] = [...root.children]
+      breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
+      const subnav = body?.children[0]
+      subnav?.setAttribute('data-mock-id', 'admin-subnav')
+      subnav?.querySelector(`a[href="${navHref}"]`)?.setAttribute('data-mock-id', navMockId)
+      for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
+        const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
+        if (t === 'Facturation' || t === 'Licence') a.setAttribute('data-mock-id', 'admin-nav-licence')
+      }
+    },
+    { navHref, navMockId },
+  )
+}
+
+/** Annotate TagsAdmin.dc.html with data-mock-id (data-* uniquement). */
 export async function annotateTagsAdminMockup(page) {
+  await annotateAdminChromeMockup(page, 'TagsAdmin.dc.html', 'admin-nav-tags')
   await page.evaluate(() => {
     const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
-    if (!root) return
-    const [breadcrumb, body] = [...root.children]
-    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
-    const subnav = body?.children[0]
-    subnav?.setAttribute('data-mock-id', 'admin-subnav')
-    subnav?.querySelector('a[href="TagsAdmin.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-tags')
-    // inline normalize (page.evaluate scope has no module imports)
-    for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
-      const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Facturation' || t === 'Licence') {
-        a.setAttribute('data-mock-id', 'admin-nav-licence')
-      }
-    }
+    const body = root?.children[1]
     const main = body?.children[1]
     const rail = body?.children[2]
-    main?.querySelector('h1')?.setAttribute('data-mock-id', 'tags-title')
+    const h1 = main?.querySelector('h1')
+    h1?.parentElement?.setAttribute('data-mock-id', 'tags-title-row')
+    h1?.setAttribute('data-mock-id', 'tags-title')
     main?.querySelector('a.cta')?.setAttribute('data-mock-id', 'tags-cta')
     main?.querySelector('p')?.setAttribute('data-mock-id', 'tags-stats')
     const table = main?.querySelector('div[style*="border: 1px solid"]')
     table?.setAttribute('data-mock-id', 'tags-table')
-    // Maquette n'illustre « Exporter » que sur IAM ; l'app l'offre dès qu'il y a des docs.
-    // Normaliser pour que la comparaison textuelle reflète le comportement produit.
-    table?.querySelectorAll('.row').forEach((row) => {
-      const cells = row.children
-      if (!cells || cells.length < 4) return
-      const docs = Number.parseInt((cells[1].textContent || '').trim(), 10)
-      const actions = cells[3]
-      if (!Number.isFinite(docs) || docs <= 0 || !actions) return
-      const hasExport = [...actions.querySelectorAll('a')].some((a) =>
-        (a.textContent || '').includes('Exporter'),
-      )
-      if (hasExport) return
-      const exportLink = document.createElement('a')
-      exportLink.className = 'action'
-      exportLink.href = 'ExportTag.dc.html'
-      exportLink.textContent = 'Exporter'
-      exportLink.setAttribute(
-        'style',
-        'font-size: 12.5px; font-weight: 600; color: #6B6B72;',
-      )
-      actions.insertBefore(exportLink, actions.firstChild)
-      // Éviter le retour à la ligne (maquette Obsolète = 200px sans Exporter).
-      if ((actions.getAttribute('style') || '').includes('200px')) {
-        actions.style.width = '240px'
-      }
-    })
+    table?.children[0]?.setAttribute('data-mock-id', 'tags-table-head')
+    ;[...(table?.querySelectorAll('.row') ?? [])].forEach((row, i) => row.setAttribute('data-mock-id', `tags-row-${i}`))
     const callout = main?.querySelector('div[style*="border-left: 3px"]')
-    ;(callout?.querySelector('p') || callout)?.setAttribute('data-mock-id', 'tags-merge-callout')
+    callout?.setAttribute('data-mock-id', 'tags-callout')
+    callout?.querySelector('p')?.setAttribute('data-mock-id', 'tags-merge-callout')
     if (rail) {
       rail.setAttribute('data-mock-id', 'tags-rail')
-      const blocks = rail.children
+      const blocks = [...rail.children]
+      blocks.forEach((b, i) => b.setAttribute('data-mock-id', `tags-rail-block-${i}`))
       blocks[0]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-count')
       blocks[1]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-tagged')
       blocks[2]?.children[1]?.setAttribute('data-mock-id', 'tags-rail-policy')
@@ -789,230 +786,110 @@ export async function annotateTagsAdminMockup(page) {
   })
 }
 
-/** Annotate CustomFields.dc.html (liste + rail) with data-mock-id. */
+/**
+ * Annotate CustomFields.dc.html (liste + constructeur ouvert + rail) — data-* uniquement.
+ * Le constructeur « Aperçu du constructeur — nouveau champ » est un état figé : l'app l'ouvre par
+ * interaction (« Nouveau champ »).
+ */
 export async function annotateCustomFieldsAdminMockup(page) {
+  await annotateAdminChromeMockup(page, 'CustomFields.dc.html', 'admin-nav-custom-fields')
   await page.evaluate(() => {
     const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
-    if (!root) return
-    const [breadcrumb, body] = [...root.children]
-    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
-    const subnav = body?.children[0]
-    subnav?.setAttribute('data-mock-id', 'admin-subnav')
-    subnav?.querySelector('a[href="CustomFields.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-custom-fields')
-    for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
-      const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Facturation' || t === 'Licence') {
-        a.setAttribute('data-mock-id', 'admin-nav-licence')
-      }
-    }
-    const split = body?.children[1]
+    const split = root?.children[1]?.children[1]
     const main = split?.children[0]
     const rail = split?.children[1]
-    main?.querySelector('h1')?.setAttribute('data-mock-id', 'custom-fields-title')
-    // CTA d'en-tête « Nouveau champ » (pas le bouton « Créer le champ » du constructeur).
-    const titleRow = main?.querySelector('h1')?.parentElement
-    const headerCta = [...(titleRow?.querySelectorAll('span') ?? [])].find((s) =>
+    const h1 = main?.querySelector('h1')
+    h1?.parentElement?.setAttribute('data-mock-id', 'custom-fields-title-row')
+    h1?.setAttribute('data-mock-id', 'custom-fields-title')
+    const headerCta = [...(h1?.parentElement?.querySelectorAll('span') ?? [])].find((s) =>
       (s.textContent || '').includes('Nouveau champ'),
     )
     headerCta?.setAttribute('data-mock-id', 'custom-fields-cta')
     main?.querySelector('p')?.setAttribute('data-mock-id', 'custom-fields-stats')
     const table = main?.querySelector('div[style*="border: 1px solid"]')
     table?.setAttribute('data-mock-id', 'custom-fields-table')
-    rail?.setAttribute('data-mock-id', 'custom-fields-rail')
-    // Masquer le constructeur pour la comparaison liste (hors viewport maquette).
-    const builder = [...(main?.querySelectorAll('div') ?? [])].find((d) =>
-      (d.textContent || '').includes('Aperçu du constructeur'),
+    table?.children[0]?.setAttribute('data-mock-id', 'custom-fields-table-head')
+    ;[...(table?.querySelectorAll('.row') ?? [])].forEach((row, i) =>
+      row.setAttribute('data-mock-id', `custom-fields-row-${i}`),
     )
-    if (builder) builder.style.display = 'none'
+    const kids = [...(main?.children ?? [])]
+    const labelIdx = kids.findIndex((d) => (d.textContent || '').trim().startsWith('Aperçu du constructeur'))
+    if (labelIdx >= 0) {
+      kids[labelIdx].setAttribute('data-mock-id', 'custom-fields-builder-label')
+      kids[labelIdx + 1]?.setAttribute('data-mock-id', 'custom-fields-builder')
+      kids[labelIdx + 2]?.setAttribute('data-mock-id', 'custom-fields-builder-actions')
+    }
+    if (rail) {
+      rail.setAttribute('data-mock-id', 'custom-fields-rail')
+      ;[...rail.children].forEach((b, i) => b.setAttribute('data-mock-id', `custom-fields-rail-block-${i}`))
+    }
   })
 }
 
-/** Annotate Retention.dc.html with data-mock-id. */
+/** Annotate Retention.dc.html with data-mock-id (data-* uniquement). */
 export async function annotateRetentionAdminMockup(page) {
+  await annotateAdminChromeMockup(page, 'Retention.dc.html', 'admin-nav-retention')
   await page.evaluate(() => {
     const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
-    if (!root) return
-    const [breadcrumb, body] = [...root.children]
-    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
-    const subnav = body?.children[0]
-    subnav?.setAttribute('data-mock-id', 'admin-subnav')
-    subnav?.querySelector('a[href="Retention.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-retention')
-    for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
-      const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Facturation' || t === 'Licence') {
-        a.setAttribute('data-mock-id', 'admin-nav-licence')
-      }
-    }
-    const main = body?.children[1]
+    const main = root?.children[1]?.children[1]
     const inner = main?.querySelector('div[style*="max-width"]') || main
-    inner?.querySelector('h1')?.setAttribute('data-mock-id', 'retention-title')
-    const lead = inner?.querySelector('p')
-    lead?.setAttribute('data-mock-id', 'retention-lead')
-    // Compensation mesurée : aligner sur l'app (lead 22px) pour annuler cascade box.y.
-    if (lead) lead.style.marginBottom = '22px'
-    const boxes = [...(inner?.querySelectorAll('div[style*="border: 1px solid"]') ?? [])]
-    boxes[0]?.setAttribute('data-mock-id', 'retention-durations')
-    boxes[1]?.setAttribute('data-mock-id', 'retention-compliance')
-    const reports = [...(inner?.querySelectorAll('a[style*="border: 1px solid"]') ?? [])]
-    reports[0]?.setAttribute('data-mock-id', 'retention-report-health')
-    reports[1]?.setAttribute('data-mock-id', 'retention-report-export')
+    const kids = [...(inner?.children ?? [])]
+    const ids = [
+      'retention-title',
+      'retention-lead',
+      'retention-durations-label',
+      'retention-durations',
+      'retention-compliance-label',
+      'retention-compliance',
+      'retention-reports-label',
+      'retention-report-health',
+      'retention-report-export',
+    ]
+    ids.forEach((id, i) => kids[i]?.setAttribute('data-mock-id', id))
+    for (const box of ['retention-durations', 'retention-compliance']) {
+      const el = inner?.querySelector(`[data-mock-id="${box}"]`)
+      ;[...(el?.children ?? [])].forEach((row, i) => row.setAttribute('data-mock-id', `${box}-row-${i}`))
+    }
   })
 }
 
 /**
- * Annotate Branding.dc.html and normalize product gaps:
- * - remove Entreprise badge
- * - replace DNS / socle.app domain block with read-only public URL + reverse-proxy note
- * - replace « Réservé au plan Entreprise » rail with auto-hébergé copy
+ * Annotate Branding.dc.html — data-* uniquement. La maquette n'est pas modifiée : badge
+ * « Entreprise », domaine personnalisé / DNS et encart « plan Entreprise » restent visibles et
+ * comparés tels quels (écarts de conception déclarés dans le spec).
  */
 export async function annotateBrandingAdminMockup(page) {
+  await annotateAdminChromeMockup(page, 'Branding.dc.html', 'admin-nav-branding')
   await page.evaluate(() => {
     const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
-    if (!root) return
-    const [breadcrumb, body] = [...root.children]
-    breadcrumb?.setAttribute('data-mock-id', 'admin-breadcrumb')
-    const subnav = body?.children[0]
-    subnav?.setAttribute('data-mock-id', 'admin-subnav')
-    subnav?.querySelector('a[href="Branding.dc.html"]')?.setAttribute('data-mock-id', 'admin-nav-branding')
-    for (const a of [...(subnav?.querySelectorAll('a, .nav-item') ?? [])]) {
-      const t = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      if (t === 'Facturation' || t === 'Licence') {
-        a.setAttribute('data-mock-id', 'admin-nav-licence')
-      }
-    }
-    const split = body?.children[1]
+    const split = root?.children[1]?.children[1]
     const main = split?.children[0]
     const rail = split?.children[1]
-
-    // Padding maquette inchangé (36). Exceptions y titre/lead si compensation locale.
-    // (paddingTop forcé retiré — provoquait Δ4 sur titre tout en alignant le bas.)
-    void main
-
-    // Remove Entreprise badge next to title.
-    const titleRow = main?.querySelector('h1')?.parentElement
-    titleRow?.querySelectorAll('span').forEach((s) => {
-      if ((s.textContent || '').includes('Entreprise')) s.remove()
-    })
+    const kids = [...(main?.children ?? [])]
+    const ids = [
+      'branding-title-row',
+      'branding-lead',
+      'branding-logo-label',
+      'branding-identity',
+      'branding-domain-label',
+      'branding-domain',
+      'branding-email-label',
+      'branding-email',
+    ]
+    ids.forEach((id, i) => kids[i]?.setAttribute('data-mock-id', id))
     main?.querySelector('h1')?.setAttribute('data-mock-id', 'branding-title')
-
-    const lead = main?.querySelector('p')
-    if (lead) {
-      lead.setAttribute('data-mock-id', 'branding-lead')
-      lead.textContent =
-        "Adaptez Socle à l'identité visuelle de Organisation Démo — logo, couleurs, URL publique et expéditeur des e-mails."
-    }
-
-    const sectionLabels = [...(main?.querySelectorAll('div') ?? [])].filter((d) => {
-      const t = (d.textContent || '').trim()
-      return (
-        d.children.length === 0 &&
-        (t === 'Logo & identité visuelle' ||
-          t === 'Logo & identité visuelle'.replace('&', '&') ||
-          t.includes('Logo') ||
-          t === 'Domaine personnalisé' ||
-          t === 'E-mails sortants')
-      )
-    })
-
-    // Identity card (first bordered box).
-    const cards = [...(main?.querySelectorAll(':scope > div[style*="border: 1px solid"]') ?? [])]
-    // Fallback: any direct-ish bordered cards under main.
-    const allCards = cards.length
-      ? cards
-      : [...(main?.querySelectorAll('div[style*="border: 1px solid"][style*="border-radius: 12px"]') ?? [])]
-
-    const identity = allCards[0]
-    identity?.setAttribute('data-mock-id', 'branding-identity')
-    // Cascade mesurée : app identité pousse domaine/e-mail de +4/+7px — aligner la maquette.
-    if (identity) identity.style.marginBottom = '32px'
-
-    // Domain section → replace with public URL (no DNS / socle.app).
-    const domainCard = allCards[1]
-    if (domainCard) {
-      domainCard.setAttribute('data-mock-id', 'branding-domain')
-      domainCard.style.marginBottom = '31px'
-      domainCard.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <div data-mock-id="branding-public-url" style="font-size: 14px; font-weight: 600; color: #0E0E10; margin-bottom: 3px;">docs.example.com</div>
-            <div data-mock-id="branding-public-note" style="font-size: 12.5px; color: #6B6B72;">Défini par la variable d'environnement SOCLE_PUBLIC_BASE_URL (non modifiable depuis l'interface).</div>
-          </div>
-          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #1E8E5A; background: #E7F5EA; border-radius: 7px; padding: 5px 12px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1E8E5A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Configurée
-          </span>
-        </div>
-      `
-    }
-
-    // Relabel « Domaine personnalisé » → « URL publique ».
-    ;[...(main?.querySelectorAll('div') ?? [])].forEach((d) => {
-      if (d.children.length === 0 && (d.textContent || '').trim() === 'Domaine personnalisé') {
-        d.textContent = 'URL publique'
-        d.setAttribute('data-mock-id', 'branding-domain-label')
-      }
-      if (
-        d.children.length === 0 &&
-        ((d.textContent || '').includes('Logo') && (d.textContent || '').includes('identité'))
-      ) {
-        d.setAttribute('data-mock-id', 'branding-logo-label')
-      }
-      if (d.children.length === 0 && (d.textContent || '').trim() === 'E-mails sortants') {
-        d.setAttribute('data-mock-id', 'branding-email-label')
-      }
-    })
-
-    const emailCard = allCards[2]
-    if (emailCard) {
-      emailCard.setAttribute('data-mock-id', 'branding-email')
-      // Add test-email link to match app (product feature absent from mockup).
-      const left = emailCard.children[0]
-      if (left && !left.querySelector('[data-mock-id="branding-test-email"]')) {
-        const btn = document.createElement('a')
-        btn.href = 'Branding.dc.html'
-        btn.setAttribute('data-mock-id', 'branding-test-email')
-        btn.textContent = 'Envoyer un e-mail de test →'
-        btn.setAttribute(
-          'style',
-          'font-size: 12.5px; color: #3730E0; font-weight: 600; margin-top: 12px; display: inline-block;',
-        )
-        left.appendChild(btn)
-      }
-    }
-
+    // Plan Entreprise / domaine dédié : sans équivalent auto-hébergé (NOT_IMPLEMENTED).
+    kids[0]?.querySelector('span')?.setAttribute('data-visual-mask', 'branding-plan-badge')
+    kids[4]?.setAttribute('data-visual-mask', 'branding-custom-domain')
+    kids[5]?.setAttribute('data-visual-mask', 'branding-custom-domain')
     if (rail) {
       rail.setAttribute('data-mock-id', 'branding-rail')
       const blocks = [...rail.children]
-      const first = blocks[0]
-      if (first) {
-        first.setAttribute('data-mock-id', 'branding-rail-hosting')
-        const label = first.children[0]
-        const para = first.children[1]
-        if (label) label.textContent = 'Instance auto-hébergée'
-        if (para) {
-          para.innerHTML =
-            "La personnalisation de marque s'applique à cette instance. L'URL publique est définie par reverse-proxy via <span style=\"font-family:'IBM Plex Mono',monospace\">SOCLE_PUBLIC_BASE_URL</span> (non modifiable ici)."
-        }
-      }
+      blocks[0]?.setAttribute('data-mock-id', 'branding-rail-hosting')
+      blocks[0]?.setAttribute('data-visual-mask', 'branding-plan-entreprise')
       blocks[1]?.setAttribute('data-mock-id', 'branding-rail-where')
       blocks[2]?.setAttribute('data-mock-id', 'branding-rail-seealso')
-      // Align « Voir aussi » with app (Administration →, Identité muted).
-      const see = blocks[2]
-      if (see) {
-        ;[...see.querySelectorAll('a')].forEach((a) => a.remove())
-        const admin = document.createElement('a')
-        admin.href = 'TagsAdmin.dc.html'
-        admin.textContent = 'Administration →'
-        admin.setAttribute('style', 'display: block; font-size: 13px; color: #3730E0; font-weight: 500; padding: 4px 0;')
-        const sso = document.createElement('span')
-        sso.textContent = 'Identité & SSO →'
-        sso.setAttribute('style', 'display: block; font-size: 13px; color: #9B9BA1; font-weight: 500; padding: 4px 0;')
-        see.appendChild(admin)
-        see.appendChild(sso)
-      }
     }
-
-    void sectionLabels
   })
 }
 
@@ -1060,6 +937,15 @@ export async function annotateLoginMockup(page) {
       (t) => (t.textContent || '').trim() === 'Socle',
     )
     if (svgSocle) svgSocle.setAttribute('data-mock-id', 'svg-socle')
+    brand?.parentElement?.setAttribute('data-mock-id', 'login-brand')
+    // Champ figé : « tarek.fezai » saisi + suggestion de domaine grisée + caret dessiné.
+    const [, domainHint, fakeCaret] = [...(emailBox?.children ?? [])]
+    domainHint?.setAttribute('data-visual-mask', 'login-email-domain-hint')
+    fakeCaret?.setAttribute('data-visual-mask', 'login-mock-fake-caret')
+    ou?.parentElement?.setAttribute('data-mock-id', 'login-divider')
+    ssoSpans[0]?.parentElement?.setAttribute('data-mock-id', 'sso-org-btn')
+    ssoSpans[1]?.parentElement?.setAttribute('data-mock-id', 'sso-passkey-btn')
+    formCol.nextElementSibling?.setAttribute('data-mock-id', 'login-visual')
   })
 }
 
@@ -1080,7 +966,13 @@ export async function annotateLoginErrorMockup(page) {
     const causes = Array.from(formCol.querySelectorAll('div')).find((d) =>
       (d.textContent || '').includes('Causes possibles'),
     )
-    if (causes) causes.setAttribute('data-mock-id', 'causes')
+    if (causes) {
+      causes.setAttribute('data-mock-id', 'causes')
+      const [title, ...rows] = [...causes.children]
+      title?.setAttribute('data-mock-id', 'causes-title')
+      rows.forEach((r, i) => r.setAttribute('data-mock-id', `cause-${i}`))
+      rows[2]?.setAttribute('data-visual-mask', 'login-error-provisioning-conflicts')
+    }
     const retry = Array.from(formCol.querySelectorAll('a')).find((a) =>
       (a.textContent || '').includes('Réessayer'),
     )
@@ -1105,6 +997,9 @@ export async function annotateLoginErrorMockup(page) {
       (t.textContent || '').includes('non provisionné'),
     )
     if (svgNp) svgNp.setAttribute('data-mock-id', 'svg-not-provisioned')
+    brand?.parentElement?.setAttribute('data-mock-id', 'login-brand')
+    brand?.parentElement?.nextElementSibling?.setAttribute('data-mock-id', 'login-alert-icon')
+    formCol.nextElementSibling?.setAttribute('data-mock-id', 'login-visual')
   })
 }
 
@@ -1130,6 +1025,8 @@ export async function annotateMobileMockup(page) {
       (d) => (d.textContent || '').includes("Besoin d'aide") && d.children.length <= 1,
     )
     if (help) help.setAttribute('data-mock-id', 'mobile-help')
+    name?.parentElement?.setAttribute('data-mock-id', 'mobile-brand-block')
+    sso?.parentElement?.setAttribute('data-mock-id', 'mobile-sso-btn')
   })
 }
 
@@ -1354,28 +1251,8 @@ export async function annotateMobileApprovalMockup(page) {
     set(bar?.children[1], 'appr-m-approve')
   })
 }
+/** Lecture seule : styles calculés et boîtes, aucune écriture dans le DOM ni dans les styles. */
 export async function collectMetrics(page, ids) {
-  // Pin line-height so glyph box heights are comparable across UA defaults
-  await page.evaluate(
-    ({ idList, actionRe }) => {
-      const re = new RegExp(actionRe)
-      for (const id of idList) {
-        const el = document.querySelector(`[data-mock-id="${id}"]`)
-        if (!el) continue
-        if (el.tagName.toLowerCase() === 'text') continue
-        const isAction =
-          el.matches('button, a.cta, a.ghost, .login-cta, .login-cta--error') ||
-          id.startsWith('cta-') ||
-          id.startsWith('sso-') ||
-          id.endsWith('-cta') ||
-          id.startsWith('edit-meta-add-') ||
-          id === 'mobile-sso' ||
-          re.test(id)
-        el.style.lineHeight = isAction ? '1' : '1.2'
-      }
-    },
-    { idList: ids, actionRe: ACTION_ID_RE.source },
-  )
   return page.evaluate((idList) => {
     function firstFamily(ff) {
       return (ff || '')
@@ -1408,6 +1285,11 @@ export async function collectMetrics(page, ids) {
         if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG') return
         // Badges « Bientôt » (et autres) : exclus du texte structural, pas des libellés/ordre.
         if (node.hasAttribute('data-visual-ignore')) return
+        // Texte affiché uniquement : display:none et éléments visuellement masqués (1×1 px, overflow hidden).
+        const ncs = getComputedStyle(node)
+        if (ncs.display === 'none') return
+        const nr = node.getBoundingClientRect()
+        if (nr.width <= 1 && nr.height <= 1 && ncs.overflow === 'hidden') return
         for (const c of node.childNodes) walk(c)
       }
       walk(el)
@@ -1421,13 +1303,18 @@ export async function collectMetrics(page, ids) {
       const map = { normal: '400', bold: '700' }
       return map[w] || String(w)
     }
-    function normLh(lh, fs) {
-      if (!lh || lh === 'normal') return 'normal'
-      if (lh.endsWith('px') && fs && fs.endsWith('px')) {
-        const ratio = parseFloat(lh) / parseFloat(fs)
-        if (Number.isFinite(ratio)) return `${ratio.toFixed(2)}em`
-      }
-      return lh
+    // Canvas détaché (jamais inséré dans la page) : mesure des métriques de police seulement.
+    const metricsCtx = document.createElement('canvas').getContext('2d')
+    /**
+     * Hauteur de ligne calculée en px. `normal` = ascent + descent de la police (hhea, interligne
+     * nul pour IBM Plex / Instrument Serif), mesurés sur la police réellement chargée.
+     */
+    function lineHeightPx(cs) {
+      const lh = cs.lineHeight
+      if (lh && lh.endsWith('px')) return `${parseFloat(lh).toFixed(2)}px`
+      metricsCtx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+      const m = metricsCtx.measureText('Hg')
+      return `${(m.fontBoundingBoxAscent + m.fontBoundingBoxDescent).toFixed(2)}px`
     }
     const out = {}
     for (const id of idList) {
@@ -1446,7 +1333,10 @@ export async function collectMetrics(page, ids) {
         id.startsWith('retention-') ||
         id.startsWith('branding-') ||
         id.startsWith('account-') ||
-        id.startsWith('pat-generate-')
+        id.startsWith('pat-generate-') ||
+        id.startsWith('shell-') ||
+        id.startsWith('home-') ||
+        id.startsWith('mobile-menu')
       out[id] = {
         text: useSpaced
           ? visibleText(el)
@@ -1459,7 +1349,7 @@ export async function collectMetrics(page, ids) {
         fontSize: cs.fontSize,
         fontWeight: normWeight(cs.fontWeight),
         fontStyle: cs.fontStyle,
-        lineHeight: normLh(cs.lineHeight, cs.fontSize),
+        lineHeight: lineHeightPx(cs),
         letterSpacing: cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing,
         color: normColor(isSvgText ? cs.fill || el.getAttribute('fill') || cs.color : cs.color),
         box: { x: r.x, y: r.y, width: r.width, height: r.height },
@@ -1517,22 +1407,8 @@ export function compareMetrics(mockMap, appMap, ids, { pageExceptions = {} } = {
       ]
       for (const f of fields) {
         if (skip.has(f)) continue
-        let mv = mock[f]
-        let av = app[f]
-        // UA "normal" vs explicit ratio that equals the default — treat as equal when either side is normal
-        if (f === 'lineHeight' && (mv === 'normal' || av === 'normal')) {
-          if (mv === 'normal' && av === 'normal') continue
-          // 1.00em is an explicit "normal" used on reset buttons
-          if ((mv === 'normal' && av === '1.00em') || (av === 'normal' && mv === '1.00em')) continue
-          if (mv === 'normal' && typeof av === 'string' && av.endsWith('em')) {
-            const r = parseFloat(av)
-            if (r >= 1.0 && r <= 1.55) continue
-          }
-          if (av === 'normal' && typeof mv === 'string' && mv.endsWith('em')) {
-            const r = parseFloat(mv)
-            if (r >= 1.0 && r <= 1.55) continue
-          }
-        }
+        const mv = mock[f]
+        const av = app[f]
         if (String(mv) !== String(av)) {
           diffs.push(`${f}: maquette=${JSON.stringify(mv)} app=${JSON.stringify(av)}`)
         }

@@ -332,7 +332,7 @@ export function CommentsPanel({
               onKeyDown={onComposerKeyDown}
               rows={2}
               placeholder="Ajouter un commentaire…"
-              className="max-h-28 min-h-[40px] flex-1 resize-none border-0 bg-transparent text-[13px] text-socle-ink outline-none placeholder:text-socle-faint"
+              className="max-h-28 min-h-[40px] flex-1 resize-none border-0 bg-transparent text-[13px] text-socle-ink outline-none placeholder:text-socle-subtle"
               data-testid="comment-composer"
             />
             <button
@@ -361,7 +361,7 @@ export function CommentsPanel({
               </ul>
             )}
           </div>
-          <p className="text-[10px] text-socle-faint">Markdown limité · @mention · Ctrl+Entrée</p>
+          <p className="text-[10px] text-socle-subtle">Markdown limité · @mention · Ctrl+Entrée</p>
         </form>
       ) : (
         <p className="mt-auto text-xs text-socle-muted">Lecture seule — commentaires non modifiables.</p>
@@ -468,7 +468,7 @@ function CommentBody({ comment, compact }: { comment: CommentView; compact?: boo
           {authorInitials(name)}
         </div>
         <span className="text-[12.5px] font-semibold text-socle-ink">{name}</span>
-        <span className="text-[11px] text-socle-faint">{formatRelativeTimeFr(comment.createdAt)}</span>
+        <span className="text-[11px] text-socle-subtle">{formatRelativeTimeFr(comment.createdAt)}</span>
         {comment.status === 'resolu' && !compact && (
           <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-socle-success">
             Résolu

@@ -143,7 +143,7 @@ export function BrandingAdminPage() {
       innerWide
       rightRail={
         <aside className="admin-rail admin-rail--fields" data-mock-id="branding-rail">
-          <div data-mock-id="branding-rail-hosting">
+          <div data-mock-id="branding-rail-hosting" data-visual-mask="branding-self-hosted">
             <div className="admin-rail__label">Instance auto-hébergée</div>
             <p className="admin-rail__para">
               La personnalisation de marque s&apos;applique à cette instance. L&apos;URL publique est
@@ -163,17 +163,17 @@ export function BrandingAdminPage() {
           </div>
           <div className="admin-rail__divider" data-mock-id="branding-rail-seealso">
             <div className="admin-rail__label">Voir aussi</div>
-            <Link to="/admin/tags" className="admin-rail__link">
-              Administration →
+            <Link to="/admin/licence" className="admin-rail__link">
+              Licence →
             </Link>
-            <span className="admin-rail__link" style={{ color: '#9B9BA1', cursor: 'default' }}>
+            <Link to="/admin" className="admin-rail__link">
               Identité &amp; SSO →
-            </span>
+            </Link>
           </div>
         </aside>
       }
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }} data-mock-id="branding-title-row">
         <h1 className="admin-title" data-mock-id="branding-title" style={{ margin: 0 }}>
           Personnalisation de marque
         </h1>
@@ -373,10 +373,18 @@ export function BrandingAdminPage() {
         </div>
       </div>
 
-      <div className="admin-builder-label" data-mock-id="branding-domain-label">
+      <div
+        className="admin-builder-label"
+        data-mock-id="branding-domain-label"
+        data-visual-mask="branding-public-url"
+      >
         URL publique
       </div>
-      <div className="admin-branding-domain" data-mock-id="branding-domain">
+      <div
+        className="admin-branding-domain"
+        data-mock-id="branding-domain"
+        data-visual-mask="branding-public-url"
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div
@@ -438,41 +446,45 @@ export function BrandingAdminPage() {
               }
             }}
           />
-          {email ? (
-            <div
+          <div style={{ position: 'relative' }}>
+            {email ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginTop: 8,
+                  fontSize: 11.5,
+                  color: '#1E8E5A',
+                  fontWeight: 600,
+                }}
+                data-mock-id="branding-spf"
+              >
+                <CheckIcon size={11} />
+                SPF &amp; DKIM vérifiés
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="admin-link-action"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                marginTop: 8,
-                fontSize: 11.5,
-                color: '#1E8E5A',
-                fontWeight: 600,
+                position: 'absolute',
+                right: 0,
+                top: 8,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                font: 'inherit',
               }}
-              data-mock-id="branding-spf"
+              data-mock-id="branding-test-email"
+              data-visual-mask="branding-test-email"
+              disabled={testMut.isPending || !b}
+              onClick={() => testMut.mutate()}
             >
-              <CheckIcon size={11} />
-              SPF &amp; DKIM vérifiés
-            </div>
-          ) : null}
-          <button
-            type="button"
-            className="admin-link-action"
-            style={{
-              marginTop: 12,
-              display: 'inline-block',
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              font: 'inherit',
-            }}
-            data-mock-id="branding-test-email"
-            disabled={testMut.isPending || !b}
-            onClick={() => testMut.mutate()}
-          >
-            Envoyer un e-mail de test →
-          </button>
+              Envoyer un e-mail de test →
+            </button>
+          </div>
         </div>
         <div style={{ flex: 1, borderLeft: '1px solid #ECECEE', paddingLeft: 32 }}>
           <div

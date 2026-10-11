@@ -12,7 +12,25 @@ import { fileURLToPath } from 'node:url'
 import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
 import { describe, expect, it } from 'vitest'
-import { HOME_SEED } from './dashboard-fixtures.mjs'
+import {
+  FAVORITES_SEED,
+  HOME_MOBILE_SEED,
+  HOME_SEED,
+  NOTIFICATIONS_SEED,
+  SPACE_IDENTITE,
+  SPACE_INFRA,
+  TREE_IDENTITE,
+  TREE_IDENTITE_MENU,
+  TREE_INFRA,
+} from './dashboard-fixtures.mjs'
+import { BRANDING_ADMIN_VIEW, PUBLIC_BRANDING_VIEW } from './branding-admin-fixtures.mjs'
+import {
+  CUSTOM_FIELDS_ADMIN_LIST,
+  SPACE_CONFORMITE,
+  SPACE_INFRA as CF_SPACE_INFRA,
+} from './custom-fields-admin-fixtures.mjs'
+import { RETENTION_ADMIN_SETTINGS, RETENTION_LEGAL_HOLDS } from './retention-admin-fixtures.mjs'
+import { TAGS_ADMIN_LIST } from './tags-admin-fixtures.mjs'
 import { EDIT_CUSTOM_FIELDS, EDIT_WRITING_HINTS, editDocument } from './edit-fixtures.mjs'
 import { COMPARE_11_12, HIST_VERSIONS_DESKTOP, HIST_VERSIONS_MOBILE } from './history-fixtures.mjs'
 import {
@@ -90,6 +108,71 @@ function validate(schemaName: string, data: unknown) {
 describe('e2e-visual fixtures ↔ OpenAPI', () => {
   it('HOME_SEED matches HomeResponse', () => {
     validate('HomeResponse', HOME_SEED)
+  })
+
+  describe('fixtures distinctes par maquette (Dashboard desktop / MobileHome / MobileMenu)', () => {
+    it('HOME_MOBILE_SEED matches HomeResponse et diffère de HOME_SEED', () => {
+      validate('HomeResponse', HOME_MOBILE_SEED)
+      expect(HOME_MOBILE_SEED).not.toEqual(HOME_SEED)
+    })
+
+    it('arbres d’espace : SpaceTreeResponse', () => {
+      validate('SpaceTreeResponse', TREE_IDENTITE)
+      validate('SpaceTreeResponse', TREE_IDENTITE_MENU)
+      validate('SpaceTreeResponse', TREE_INFRA)
+      expect(TREE_IDENTITE_MENU).not.toEqual(TREE_IDENTITE)
+    })
+
+    it.each([
+      ['TREE_IDENTITE', TREE_IDENTITE],
+      ['TREE_IDENTITE_MENU', TREE_IDENTITE_MENU],
+      ['TREE_INFRA', TREE_INFRA],
+    ])('%s : identifiants de document uniques', (_label, tree) => {
+      const ids: string[] = []
+      const walk = (node: unknown) => {
+        if (Array.isArray(node)) return node.forEach(walk)
+        if (!node || typeof node !== 'object') return
+        for (const [k, v] of Object.entries(node)) {
+          if (k === 'documents' && Array.isArray(v)) for (const d of v) ids.push((d as { id: string }).id)
+          walk(v)
+        }
+      }
+      walk(tree)
+      expect(ids.length).toBeGreaterThan(0)
+      expect(new Set(ids).size).toBe(ids.length)
+    })
+
+    it('espaces : SpaceView', () => {
+      for (const s of [SPACE_IDENTITE, SPACE_INFRA, SPACE_CONFORMITE, CF_SPACE_INFRA]) {
+        validate('SpaceView', s)
+      }
+    })
+
+    it('shell : NotificationPage, FavoriteItem[]', () => {
+      validate('NotificationPage', NOTIFICATIONS_SEED)
+      expect(Array.isArray(FAVORITES_SEED)).toBe(true)
+      for (const f of FAVORITES_SEED) validate('FavoriteItem', f)
+    })
+  })
+
+  describe('écrans d’administration', () => {
+    it('BRANDING_ADMIN_VIEW / PUBLIC_BRANDING_VIEW', () => {
+      validate('BrandingAdminView', BRANDING_ADMIN_VIEW)
+      validate('PublicBrandingView', PUBLIC_BRANDING_VIEW)
+    })
+
+    it('CUSTOM_FIELDS_ADMIN_LIST matches FieldListResponse', () => {
+      validate('FieldListResponse', CUSTOM_FIELDS_ADMIN_LIST)
+    })
+
+    it('TAGS_ADMIN_LIST matches TagListResponse', () => {
+      validate('TagListResponse', TAGS_ADMIN_LIST)
+    })
+
+    it('RETENTION_* match RetentionSettingsView / LegalHoldListResponse', () => {
+      validate('RetentionSettingsView', RETENTION_ADMIN_SETTINGS)
+      validate('LegalHoldListResponse', RETENTION_LEGAL_HOLDS)
+    })
   })
 
   it('pageDocument matches DocumentResponse', () => {

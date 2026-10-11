@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: LicenseRef-Socle-Proprietary */
 /*
  * Pixel-faithful login styles from Login.dc.html / LoginError.dc.html / MobileLogin.dc.html.
- * Informative muted text: mockup #B0B0B5 fails WCAG 4.5:1 on white (~2.9:1);
- * use #75757C (closest AA-compliant) ONLY for that informative copy.
  */
 
 .login-root {
@@ -11,6 +9,8 @@
   background: #ffffff;
   color: #0e0e10;
   min-height: 100vh;
+  /* Login*.dc.html : line-height défaut navigateur hors textes explicitement à 1.4 / 1.6 */
+  line-height: normal;
 }
 
 .login-root a {
@@ -72,7 +72,6 @@
   font-size: 17px;
   font-weight: 700;
   color: #0e0e10;
-  line-height: 1.2;
 }
 
 .login-title {
@@ -80,7 +79,6 @@
   font-size: 34px;
   margin: 0 0 8px;
   color: #0e0e10;
-  line-height: 1.2;
 }
 
 .login-title--error {
@@ -91,7 +89,6 @@
   font-size: 14px;
   color: #9b9ba1;
   margin: 0 0 32px;
-  line-height: 1.2;
 }
 
 .login-subtitle--error {
@@ -106,7 +103,6 @@
   font-weight: 600;
   color: #43434a;
   margin-bottom: 6px;
-  line-height: 1.2;
 }
 
 .login-email-wrap {
@@ -151,7 +147,6 @@
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
-  line-height: 1;
   margin-bottom: 20px;
   border: none;
   cursor: pointer;
@@ -187,7 +182,6 @@
 }
 
 .login-divider-text {
-  /* mockup #B0B0B5 fails 4.5:1; #75757C is the closest AA-compliant */
   font-size: 11.5px;
   color: #75757c;
 }
@@ -231,23 +225,15 @@
 }
 
 .login-footer {
-  /* mockup #B0B0B5 → #75757C for AA contrast on informative text only */
   font-size: 12px;
   color: #75757c;
-  margin-top: 28px;
+  margin: 28px 0 12px;
   line-height: 1.6;
 }
 
-.login-powered {
-  font-size: 11.5px;
-  color: #9b9ba1;
-  margin-top: 12px;
-  font-weight: 500;
-}
-
 .login-footer a {
-  color: #3730e0;
-  font-weight: 500;
+  color: inherit;
+  font-weight: inherit;
 }
 
 .login-footer a:focus-visible {
@@ -323,6 +309,10 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
+}
+
+.login-cause:not(:last-child) {
+  margin-bottom: 8px;
 }
 
 .login-cause-dot {
@@ -418,14 +408,12 @@
   .login-mobile-name {
     font-size: 26px;
     color: #0e0e10;
-    line-height: 1.2;
   }
 
   .login-mobile-org {
     font-size: 13px;
     color: #9b9ba1;
     margin-top: 4px;
-    line-height: 1.2;
   }
 
   .login-mobile-sso {

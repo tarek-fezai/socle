@@ -166,20 +166,20 @@ export function TagsAdminPage() {
       rightRail={
         summary ? (
           <aside className="admin-rail" data-mock-id="tags-rail">
-            <div>
+            <div data-mock-id="tags-rail-block-0">
               <div className="admin-rail__label">Tags actifs</div>
               <div className="admin-rail__value" data-mock-id="tags-rail-count">
                 {summary.tagCount}
               </div>
             </div>
-            <div>
+            <div data-mock-id="tags-rail-block-1">
               <div className="admin-rail__label">Documents étiquetés</div>
               <div className="admin-rail__value" data-mock-id="tags-rail-tagged">
                 {summary.taggedDocumentCount}{' '}
                 <span className="admin-rail__value-sub">/ {summary.totalDocumentCount}</span>
               </div>
             </div>
-            <div>
+            <div data-mock-id="tags-rail-block-2">
               <div className="admin-rail__label">Qui peut créer un tag</div>
               <div
                 role="button"
@@ -208,7 +208,7 @@ export function TagsAdminPage() {
         ) : null
       }
     >
-      <div className="admin-title-row">
+      <div className="admin-title-row" data-mock-id="tags-title-row">
         <h1 className="admin-title" data-mock-id="tags-title">
           Tags
         </h1>
@@ -228,24 +228,24 @@ export function TagsAdminPage() {
       )}
 
       <div className="admin-table-wrap" data-mock-id="tags-table">
-        <div className="admin-table-head">
+        <div className="admin-table-head" data-mock-id="tags-table-head">
           <div style={{ flex: 2 }}>Tag</div>
           <div style={{ flex: 1 }}>Documents</div>
           <div style={{ flex: 1.6 }}>Créé par</div>
           <div style={{ width: 240 }}>Actions</div>
         </div>
         {tags.map((tag, index) => (
-          <div key={tag.id} className="admin-table-row">
+          <div key={tag.id} className="admin-table-row" data-mock-id={`tags-row-${index}`}>
             <div style={{ flex: 2 }}>
               <TagPill tag={tag} index={index} />
             </div>
             <div style={{ flex: 1, color: '#43434A' }}>{tag.documentCount}</div>
             <div style={{ flex: 1.6, color: '#6B6B72' }}>{tag.createdByDisplayName ?? '—'}</div>
-            <div className="admin-actions" style={{ width: 240 }}>
+            <div className="admin-actions" style={{ width: tag.governed ? 200 : 240 }}>
               {tag.documentCount > 0 && (
                 <Link
                   to={`/tags/${tag.id}/export`}
-                  className="admin-action admin-action--neutral"
+                  className="admin-action admin-action--neutral admin-action--row-reveal"
                   data-mock-id={index === 0 ? 'tags-action-export' : undefined}
                 >
                   Exporter
@@ -281,7 +281,7 @@ export function TagsAdminPage() {
         ))}
       </div>
 
-      <div className="admin-callout">
+      <div className="admin-callout" data-mock-id="tags-callout">
         <p style={{ margin: 0 }} data-mock-id="tags-merge-callout">
           « Fusionner » réattribue tous les documents d&apos;un tag vers un autre et supprime le
           doublon — utile pour unifier des variantes comme « obsolète » et « à archiver ».

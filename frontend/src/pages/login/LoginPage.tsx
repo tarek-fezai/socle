@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { FormEvent, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   fetchAuthConfig,
   getCachedAuthConfig,
@@ -14,7 +14,6 @@ import {
   useBrandingAccent,
   useBrandingInstanceName,
   useBrandingLogoUrl,
-  useHidePoweredBy,
 } from '../../lib/publicBranding'
 import { AlertIcon, LockIcon, LoginErrorVisualSvg, LoginVisualSvg, PasskeyIcon } from './LoginVisuals'
 import './login.css'
@@ -48,15 +47,6 @@ function BrandName({ mockId, className = 'login-brand-name' }: { mockId?: string
   )
 }
 
-function PoweredBy() {
-  const hide = useHidePoweredBy()
-  if (hide) return null
-  return (
-    <p className="login-powered" data-mock-id="powered-by">
-      Propulsé par Socle
-    </p>
-  )
-}
 
 function MobileBrand() {
   const logoUrl = useBrandingLogoUrl()
@@ -104,7 +94,6 @@ export function LoginLoadingLayout({ message }: { message: string }) {
             Se connecter
           </h1>
           <p className="login-loading-msg">{message}</p>
-          <PoweredBy />
         </div>
         <div className="login-visual">
           <LoginVisualSvg />
@@ -171,7 +160,7 @@ export function LoginPage() {
       {/* Desktop = Login.dc.html */}
       <div className="login-shell login-desktop">
         <div className="login-form-col">
-          <div className="login-brand">
+          <div className="login-brand" data-mock-id="login-brand">
             <BrandMark />
             <BrandName mockId="brand-name" />
           </div>
@@ -216,7 +205,7 @@ export function LoginPage() {
             </button>
           </form>
 
-          <div className="login-divider">
+          <div className="login-divider" data-mock-id="login-divider">
             <div className="login-divider-line" />
             <span className="login-divider-text" data-mock-id="divider-ou">
               ou
@@ -227,6 +216,7 @@ export function LoginPage() {
           <button
             type="button"
             className="login-sso"
+            data-mock-id="sso-org-btn"
             onClick={() => void run(() => loginWithSso(returnTo))}
           >
             <LockIcon />
@@ -239,6 +229,7 @@ export function LoginPage() {
             <button
               type="button"
               className="login-sso"
+              data-mock-id="sso-passkey-btn"
               onClick={() => void run(() => loginWithAcr(passkeyAcr, returnTo))}
             >
               <PasskeyIcon />
@@ -252,10 +243,9 @@ export function LoginPage() {
             Réservé aux comptes provisionnés par votre organisation. Un problème d&apos;accès ? Contactez{' '}
             <IdentityTeamLabel config={config} />.
           </p>
-          <PoweredBy />
         </div>
 
-        <div className="login-visual">
+        <div className="login-visual" data-mock-id="login-visual">
           <LoginVisualSvg />
           <div className="login-quote">
             <p className="login-serif" data-mock-id="quote">
@@ -268,7 +258,7 @@ export function LoginPage() {
       {/* Mobile = MobileLogin.dc.html */}
       <div className="login-mobile">
         <div className="login-mobile-body">
-          <div className="login-mobile-brand">
+          <div className="login-mobile-brand" data-mock-id="mobile-brand-block">
             <BrandMark size={44} className="login-mobile-mark" />
             <BrandName className="login-serif login-mobile-name" mockId="mobile-brand-name" />
             {orgName ? (
@@ -281,6 +271,7 @@ export function LoginPage() {
           <button
             type="button"
             className="login-mobile-sso"
+            data-mock-id="mobile-sso-btn"
             onClick={() => void run(() => loginWithSso(returnTo))}
           >
             <LockIcon stroke="#FFFFFF" />
@@ -305,17 +296,21 @@ export function LoginPage() {
   )
 }
 
-const REASON_COPY: Record<string, string> = {
-  not_in_allowed_group: 'Votre compte n\'appartient à aucun groupe autorisé à accéder à Socle.',
-  account_disabled: 'Votre compte Socle a été désactivé par un administrateur.',
-  not_provisioned: 'Votre compte n\'a pas encore été créé par votre organisation.',
-  email_domain_not_allowed: 'Le domaine de votre adresse n\'est pas autorisé sur cette instance.',
+const DOMAIN_NOT_ALLOWED_CAUSE = 'Le domaine de votre adresse n\'est pas autorisé sur cette instance.'
+
+/** Causes possibles de LoginError.dc.html ; le nom de l'IdP vient de la configuration publique. */
+function loginErrorCauses(reason: string, config: PublicAuthConfig | null): string[] {
+  const idp = config?.idpDisplayName?.trim() || 'votre fournisseur d\'identité'
+  const causes = [
+    `La synchronisation SCIM depuis ${idp} n'a pas encore provisionné ce compte.`,
+    'Le compte a été désactivé ou retiré d\'un groupe autorisé.',
+  ]
+  return reason === 'email_domain_not_allowed' ? [DOMAIN_NOT_ALLOWED_CAUSE, ...causes] : causes
 }
 
 export function LoginErrorPage() {
   const [params] = useSearchParams()
   const reason = params.get('reason') ?? 'not_provisioned'
-  const cause = REASON_COPY[reason] ?? REASON_COPY.not_provisioned
   const [config, setConfig] = useState<PublicAuthConfig | null>(() => getCachedAuthConfig())
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
@@ -360,17 +355,18 @@ export function LoginErrorPage() {
 
   const support = supportMailto(config)
   const org = config?.organizationName?.trim() || config?.displayName?.trim() || ''
+  const causes = loginErrorCauses(reason, config)
 
   return (
     <div className="login-root">
       <div className="login-shell login-desktop">
         <div className="login-form-col">
-          <div className="login-brand login-brand--error">
+          <div className="login-brand login-brand--error" data-mock-id="login-brand">
             <BrandMark />
             <BrandName mockId="brand-name" />
           </div>
 
-          <div className="login-alert-icon">
+          <div className="login-alert-icon" data-mock-id="login-alert-icon">
             <AlertIcon />
           </div>
 
@@ -378,16 +374,24 @@ export function LoginErrorPage() {
             Connexion refusée
           </h1>
           <p className="login-subtitle login-subtitle--error" data-mock-id="subtitle">
-            L&apos;authentification SSO a réussi, mais l&apos;accès à Socle est refusé pour{' '}
+            {reason === 'not_provisioned' ? (
+              <>L&apos;authentification SSO a réussi, mais aucun compte Socle n&apos;est associé à </>
+            ) : (
+              <>L&apos;authentification SSO a réussi, mais l&apos;accès à Socle est refusé pour </>
+            )}
             <strong style={{ color: '#0E0E10' }}>{email || 'votre compte'}</strong>.
           </p>
 
           <div className="login-causes" data-testid="login-error-causes" data-mock-id="causes">
-            <div className="login-causes-title">Causes possibles</div>
-            <div className="login-cause">
-              <span className="login-cause-dot" aria-hidden="true" />
-              <span className="login-cause-text">{cause}</span>
+            <div className="login-causes-title" data-mock-id="causes-title">
+              Causes possibles
             </div>
+            {causes.map((c, i) => (
+              <div className="login-cause" key={c} data-mock-id={`cause-${i}`}>
+                <span className="login-cause-dot" aria-hidden="true" />
+                <span className="login-cause-text">{c}</span>
+              </div>
+            ))}
           </div>
 
           <button
@@ -399,20 +403,17 @@ export function LoginErrorPage() {
             Réessayer
           </button>
 
-          {support ? (
-            <a className="login-ghost" href={support} data-mock-id="contact-support">
-              Contacter l&apos;équipe Identité &amp; accès
-            </a>
-          ) : null}
+          <Link className="login-ghost" to="/integrations" data-mock-id="contact-support">
+            Voir l&apos;état du provisioning (admin)
+          </Link>
 
           <p className="login-footer login-footer--error" data-mock-id="footer">
             Un problème persiste ? Contactez <IdentityTeamLabel config={config} />
             {org ? <> de {org}</> : null}.
           </p>
-          <PoweredBy />
         </div>
 
-        <div className="login-visual login-visual--error">
+        <div className="login-visual login-visual--error" data-mock-id="login-visual">
           <LoginErrorVisualSvg />
           <div className="login-quote">
             <p className="login-serif" data-mock-id="quote">
@@ -433,9 +434,11 @@ export function LoginErrorPage() {
           <p className="login-mobile-note" style={{ marginBottom: 16 }}>
             L&apos;accès à Socle est refusé pour <strong>{email || 'votre compte'}</strong>.
           </p>
-          <p className="login-mobile-note" style={{ marginBottom: 20, textAlign: 'left' }}>
-            {cause}
-          </p>
+          {causes.map((c) => (
+            <p key={c} className="login-mobile-note" style={{ marginBottom: 12, textAlign: 'left' }}>
+              {c}
+            </p>
+          ))}
           <button type="button" className="login-mobile-sso" onClick={() => void onRetry()}>
             <span className="login-mobile-sso-label">Réessayer</span>
           </button>

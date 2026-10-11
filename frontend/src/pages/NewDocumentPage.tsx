@@ -349,7 +349,7 @@ export function NewDocumentPage() {
               Arborescence indisponible — le document sera créé à la racine.
             </p>
           ) : (
-            <p className="mt-1.5 text-[11.5px] text-socle-faint">{folderHint}</p>
+            <p className="mt-1.5 text-[11.5px] text-socle-subtle">{folderHint}</p>
           )}
         </div>
 

@@ -207,7 +207,7 @@ export function TemplatesAdminPage() {
           <label className="block">
             <span className={labelCls}>
               Tags par défaut{' '}
-              <span className="font-normal normal-case text-socle-faint">
+              <span className="font-normal normal-case text-socle-subtle">
                 (identifiants de tags séparés par des virgules)
               </span>
             </span>
@@ -356,11 +356,11 @@ function TemplateSection({
 }) {
   return (
     <section aria-label={title}>
-      <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-socle-faint">
+      <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-socle-subtle">
         {title}
       </div>
       <div className="overflow-hidden rounded-[10px] border border-socle-line">
-        <div className="flex bg-socle-soft px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-socle-faint">
+        <div className="flex bg-socle-soft px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-socle-subtle">
           <div className="flex-[2.4]">Modèle</div>
           <div className="flex-1">Type</div>
           <div className="w-[210px]">Actions</div>
