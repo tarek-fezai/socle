@@ -35,6 +35,8 @@ function resolveTemplates(html) {
 const KEEP_HELMET_STYLES = new Set([
   'Diff.dc.html',
   'DiffApproval.dc.html',
+  // .block-handles / .block — sinon les poignées se rendent inline et déplacent le corps
+  'Edit.dc.html',
   // .nav-item.on { background; font-weight } — sinon l'état actif n'existe pas (inline color seule)
   'TagsAdmin.dc.html',
   'CustomFields.dc.html',
@@ -52,9 +54,16 @@ function helmetStyles(rawHtml) {
   return css ? `<style>${css}</style>` : ''
 }
 
+/** Style de base des maquettes : contrôles de formulaire en police héritée (IBM Plex). */
+const FORM_FONT_RULE = 'button, input, select, textarea { font-family: inherit; }'
+
 function rewriteHtml(rawHtml, name = '') {
   const html = resolveTemplates(rawHtml)
-  const kept = KEEP_HELMET_STYLES.has(name) ? helmetStyles(rawHtml) : ''
+  const kept = KEEP_HELMET_STYLES.has(name)
+    ? helmetStyles(rawHtml)
+    : helmetStyles(rawHtml).includes(FORM_FONT_RULE)
+      ? `<style>${FORM_FONT_RULE}</style>`
+      : ''
   return html
     .replace(/@import url\('https:\/\/fonts\.googleapis\.com[^']*'\);?/g, '')
     .replace(/<script src="\.\/support\.js"><\/script>/, '')

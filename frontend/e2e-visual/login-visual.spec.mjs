@@ -3,6 +3,7 @@
  * Règles : docs/visual-parity.md
  */
 import { test, expect } from '@playwright/test'
+import { SCREENSHOT_OPTIONS } from './visual-parity-kit.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { PNG } from 'pngjs'
@@ -177,7 +178,7 @@ test.describe('login visual parity', () => {
     await settleFonts(page)
     await maskGlyphSensitive(page, 'app-desktop')
     await page.waitForTimeout(100)
-    const appShot = await page.screenshot({ fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
+    const appShot = await page.screenshot({ ...SCREENSHOT_OPTIONS, fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
 
     await page.goto('http://127.0.0.1:4174/Login.dc.html')
     await page.evaluate(() => {
@@ -207,7 +208,7 @@ test.describe('login visual parity', () => {
     await settleFonts(page)
     await maskGlyphSensitive(page, 'mock-desktop')
     await page.waitForTimeout(100)
-    const mockShot = await page.screenshot({ fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
+    const mockShot = await page.screenshot({ ...SCREENSHOT_OPTIONS, fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
 
     await testInfo.attach('maquette-login', { body: mockShot, contentType: 'image/png' })
     await testInfo.attach('app-login', { body: appShot, contentType: 'image/png' })
@@ -274,7 +275,7 @@ test.describe('login visual parity', () => {
     })
     await settleFonts(page)
     await page.waitForTimeout(100)
-    const appShot = await page.screenshot({ fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
+    const appShot = await page.screenshot({ ...SCREENSHOT_OPTIONS, fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
 
     await page.goto('http://127.0.0.1:4174/LoginError.dc.html')
     await page.evaluate(() => {
@@ -330,7 +331,7 @@ test.describe('login visual parity', () => {
     })
     await settleFonts(page)
     await page.waitForTimeout(100)
-    const mockShot = await page.screenshot({ fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
+    const mockShot = await page.screenshot({ ...SCREENSHOT_OPTIONS, fullPage: false, clip: { x: 0, y: 0, width: 1440, height: 900 } })
 
     await testInfo.attach('maquette-login-error', { body: mockShot, contentType: 'image/png' })
     await testInfo.attach('app-login-error', { body: appShot, contentType: 'image/png' })
@@ -369,7 +370,7 @@ test.describe('login visual parity', () => {
     await settleFonts(page)
     await maskGlyphSensitive(page, 'mock-mobile')
     await page.waitForTimeout(100)
-    const mockShot = await page.locator('div[style*="390px"]').first().screenshot()
+    const mockShot = await page.locator('div[style*="390px"]').first().screenshot(SCREENSHOT_OPTIONS)
 
     await page.goto('/login')
     await page.waitForSelector('.login-mobile')
@@ -395,7 +396,7 @@ test.describe('login visual parity', () => {
     await settleFonts(page)
     await maskGlyphSensitive(page, 'app-mobile')
     await page.waitForTimeout(100)
-    const appShot = await page.locator('.login-mobile').screenshot()
+    const appShot = await page.locator('.login-mobile').screenshot(SCREENSHOT_OPTIONS)
 
     await testInfo.attach('maquette-mobile-login', { body: mockShot, contentType: 'image/png' })
     await testInfo.attach('app-mobile-login', { body: appShot, contentType: 'image/png' })

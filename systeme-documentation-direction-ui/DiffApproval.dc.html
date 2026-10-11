@@ -11,6 +11,7 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
   body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #0E0E10; }
+  button, input, select, textarea { font-family: inherit; }
   a { text-decoration: none; }
   .mono { font-family: 'IBM Plex Mono', monospace; }
   .ghost:hover { background: #F5F5F7; }
@@ -76,13 +77,13 @@
         <div class="cell" style="padding: 8px 14px; font-size: 12px;">@@ Circuit d'approbation — reformulation @@</div>
       </div>
 
-      <div class="diffline row-del">
+      <div class="diffline row-del row-add">
         <div class="side old"><div class="ln mono">1</div><div class="cell mono">Toute révision est validée par le responsable</div></div>
-        <div class="side new row-add"><div class="ln mono">1</div><div class="cell mono">Toute révision est validée successivement par le</div></div>
+        <div class="side new"><div class="ln mono">1</div><div class="cell mono">Toute révision est validée successivement par le</div></div>
       </div>
-      <div class="diffline row-del">
+      <div class="diffline row-del row-add">
         <div class="side old"><div class="ln mono">2</div><div class="cell mono">hiérarchique du demandeur avant publication.</div></div>
-        <div class="side new row-add"><div class="ln mono">2</div><div class="cell mono">responsable N1 puis par le propriétaire N2 de la</div></div>
+        <div class="side new"><div class="ln mono">2</div><div class="cell mono">responsable N1 puis par le propriétaire N2 de la</div></div>
       </div>
       <div class="diffline row-add">
         <div class="side old row-empty"><div class="ln mono"></div><div class="cell mono"></div></div>

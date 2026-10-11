@@ -81,6 +81,20 @@ export function buildVersionRows(
   }))
 }
 
+/**
+ * Actions d'une ligne d'historique. Jamais d'action sur la version courante (desktop et mobile).
+ * Mobile (MobileHistory.dc.html) : une seule action — « Voir les changements » s'il existe une
+ * version précédente, sinon « Restaurer cette version ».
+ */
+export function versionRowActions(
+  v: Pick<VersionRow, 'isCurrent' | 'previousVersionNo'>,
+  { canAct, mobile = false }: { canAct: boolean; mobile?: boolean },
+): { compare: boolean; restore: boolean } {
+  if (!canAct || v.isCurrent) return { compare: false, restore: false }
+  const compare = v.previousVersionNo != null
+  return { compare, restore: mobile ? !compare : true }
+}
+
 /** « +18 » / « −4 » (vrai signe moins U+2212, comme la maquette). */
 export function formatLinesAdded(n: number | null | undefined): string | null {
   return n == null ? null : `+${n}`

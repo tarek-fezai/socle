@@ -41,13 +41,11 @@ function Card({
   title,
   children,
   mockId,
-  action,
 }: {
   tone: string
   title: string
   children: string
   mockId?: string
-  action?: ReactNode
 }) {
   return (
     <>
@@ -56,7 +54,6 @@ function Card({
         <span className="edit-card-title" style={{ color: tone }}>
           {title}
         </span>
-        {action}
       </div>
       <p className="edit-card-text" data-mock-id={mockId}>
         {children}
@@ -80,26 +77,22 @@ export function AssistantHints({
       {shown.map((p, i) => (
         <div
           key={p.index}
-          className="edit-card"
+          role="button"
+          tabIndex={0}
+          className="edit-card edit-card--link"
+          title={`Aller au paragraphe (${p.wordCount ?? 0} mots)`}
+          aria-label={`Paragraphe long : aller au paragraphe (${p.wordCount ?? 0} mots)`}
           data-testid="assistant-long-paragraph"
           data-mock-id={i === 0 ? 'edit-card-long' : undefined}
+          onClick={() => onGoToParagraph(p.index)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return
+            e.preventDefault()
+            onGoToParagraph(p.index)
+          }}
         >
-          <Card
-            tone="#B7791F"
-            title="Paragraphe long"
-            mockId={i === 0 ? 'edit-card-long-text' : undefined}
-            action={
-              <button
-                type="button"
-                className="edit-card-link"
-                data-testid="assistant-goto-paragraph"
-                onClick={() => onGoToParagraph(p.index)}
-              >
-                Aller au paragraphe
-              </button>
-            }
-          >
-            {longParagraphMessage(p, threshold)}
+          <Card tone="#B7791F" title="Paragraphe long" mockId={i === 0 ? 'edit-card-long-text' : undefined}>
+            {longParagraphMessage(threshold)}
           </Card>
         </div>
       ))}

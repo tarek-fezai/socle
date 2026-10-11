@@ -57,11 +57,12 @@ export function readingMinutes(words: number): number {
   return Math.max(1, Math.round(words / WORDS_PER_MINUTE))
 }
 
-/** « 1 240 mots · 6 min de lecture » */
+/** « 1 240 mots · 6 min de lecture » — séparateur de milliers : espace insécable pleine chasse (maquette). */
 export function formatWordStats(words: number): string {
   const n = Math.max(0, Math.floor(words))
   const label = n > 1 ? 'mots' : 'mot'
-  return `${n.toLocaleString('fr-FR')} ${label} · ${readingMinutes(n)} min de lecture`
+  const count = n.toLocaleString('fr-FR').replace(/\u202f/g, '\u00a0')
+  return `${count} ${label} · ${readingMinutes(n)} min de lecture`
 }
 
 /* ------------------------------------------------------------------ */

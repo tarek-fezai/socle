@@ -491,8 +491,10 @@ describe('DocumentEditPage — assistant et métadonnées', () => {
     scenario.hints = { longParagraphThresholdWords: 40, brokenLinks: [], longParagraphs: [] }
     render(wrap(<DocumentEditPage />))
     const panel = await screen.findByTestId('edit-assistant')
-    await waitFor(() => expect(within(panel).getByText(/Aller au paragraphe/)).toBeTruthy())
-    expect(panel.textContent).toContain('45')
+    const card = await within(panel).findByTestId('assistant-long-paragraph')
+    expect(card.textContent).toContain('Le paragraphe édité dépasse 40 mots')
+    expect(card.getAttribute('title')).toBe('Aller au paragraphe (45 mots)')
+    expect(within(panel).getByRole('button', { name: /aller au paragraphe \(45 mots\)/i })).toBe(card)
   })
 
   it('affiche les champs personnalisés seulement s’il existe des définitions', async () => {

@@ -9,6 +9,8 @@
  *   ciblé documenté ; surface chiffrée (px et % de page) et journalisée.
  * - Tailles PNG différentes → ÉCHEC, sauf entrée `SIZE_EXCEPTIONS` (Δw/Δh déclarés = mesurés),
  *   puis comparaison sur zone commune ancrée en haut à gauche (crop TL).
+ * - Décalage sous-pixel hérité d'une zone NOT_IMPLEMENTED → `SUBPIXEL_EXCEPTIONS` encadrées
+ *   (conditions mesurées par le test, sinon seuil normal 1 %).
  * - Fonctionnalité absente → `NOT_IMPLEMENTED` (jamais comptée comme passée).
  *
  * Mode mesure : `VISUAL_BASELINE=1` n'échoue pas sur les écarts mais journalise et écrit
@@ -27,7 +29,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const OUT_DIR = path.join(__dirname, 'test-results')
 
 export const PAGE_AREA = 1440 * 900
+
+/** Options de capture communes (maquette ET app, tous les specs visuels). */
+export const SCREENSHOT_OPTIONS = Object.freeze({ animations: 'disabled', caret: 'hide' })
 export const MOCK_ORIGIN = 'http://127.0.0.1:4174'
+
+/** Surface de page pour % de masque (desktop 1440x900 par defaut ; mobile 390x844). */
+export function pageAreaFor({ width = 1440, height = 900 } = {}) {
+  return width * height
+}
 
 export const AUTH_CONFIG = {
   authority: 'http://127.0.0.1:9/realms/socle',
@@ -66,6 +76,12 @@ export async function injectOidcSession(page, now = VISUAL_NOW) {
 }
 
 export async function settleFonts(page) {
+  // fonts.ready ne couvre que les chargements déjà déclenchés : forcer la mise en page d'abord.
+  await page.evaluate(async () => {
+    void document.body.offsetHeight
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    await document.fonts.ready
+  })
   await assertFontsLoaded(page)
 }
 
@@ -135,7 +151,7 @@ export function pngSize(buf) {
   return { w: img.width, h: img.height }
 }
 
-export async function measureMaskName(page, name) {
+export async function measureMaskName(page, name, pageArea = PAGE_AREA) {
   return page.evaluate(
     ({ maskName, pageArea }) => {
       let area = 0
@@ -149,7 +165,7 @@ export async function measureMaskName(page, name) {
         pctOfPage: Number(((area / pageArea) * 100).toFixed(3)),
       }
     },
-    { maskName: name, pageArea: PAGE_AREA },
+    { maskName: name, pageArea },
   )
 }
 
@@ -182,7 +198,7 @@ export async function measureSelector(page, selector) {
 export async function shotSection(
   page,
   selector,
-  { maskNames = [], targeted = [], label, maskColor = '#FFFFFF' },
+  { maskNames = [], targeted = [], label, maskColor = '#FFFFFF', pageArea = PAGE_AREA },
 ) {
   const loc = page.locator(selector).first()
   await loc.waitFor({ state: 'visible' })
@@ -202,7 +218,7 @@ export async function shotSection(
     const tb = await tl.boundingBox()
     const areaPx = Math.round((tb?.width ?? 0) * (tb?.height ?? 0))
     console.log(
-      `MASK ${label} ${t.name}: 1 él., ${areaPx} px (${((areaPx / PAGE_AREA) * 100).toFixed(3)} % page) — ${t.reason}`,
+      `MASK ${label} ${t.name}: 1 él., ${areaPx} px (${((areaPx / pageArea) * 100).toFixed(3)} % page) — ${t.reason}`,
     )
     targetedLocators.push(tl)
   }
@@ -226,7 +242,7 @@ export async function shotSection(
           pctOfPage: Number(((area / pageArea) * 100).toFixed(3)),
         }
       }),
-    { sels: maskNames.map(maskSel), names: maskNames, pageArea: PAGE_AREA },
+    { sels: maskNames.map(maskSel), names: maskNames, pageArea },
   )
   for (const m of maskAreas) {
     if (m.count === 0) {
@@ -235,27 +251,151 @@ export async function shotSection(
     console.log(`MASK ${label} ${m.name}: ${m.count} él., ${m.areaPx} px (${m.pctOfPage} % page)`)
   }
 
+  const geo = await measureSectionGeometry(loc)
   const shot = await loc.screenshot({
-    animations: 'disabled',
-    caret: 'hide',
+    ...SCREENSHOT_OPTIONS,
     mask: [...maskNames.map((n) => page.locator(maskSel(n))), ...targetedLocators],
     maskColor,
   })
   fs.mkdirSync(OUT_DIR, { recursive: true })
   fs.writeFileSync(path.join(OUT_DIR, `${label}.png`), shot)
-  return { shot, maskAreas, box: { w: Math.round(box.width), h: Math.round(box.height) } }
+  return { shot, maskAreas, geo, box: { w: Math.round(box.width), h: Math.round(box.height) } }
+}
+
+/**
+ * Géométrie et typographie d'une section (y de mise en page, y écran, boîte, texte, police de
+ * l'élément porteur du texte) — base des conditions `SUBPIXEL_EXCEPTIONS`.
+ * @param {import('@playwright/test').Locator} loc
+ */
+export async function measureSectionGeometry(loc) {
+  return loc.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    let scroll = window.scrollY
+    for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+      scroll += p.scrollTop
+    }
+    const textHolder = (function find(n) {
+      for (const c of n.childNodes) if (c.nodeType === Node.TEXT_NODE && c.textContent.trim()) return n
+      for (const c of n.children) {
+        const hit = find(c)
+        if (hit) return hit
+      }
+      return null
+    })(el) ?? el
+    const cs = getComputedStyle(textHolder)
+    return {
+      y: r.top + scroll,
+      yViewport: r.top,
+      w: r.width,
+      h: r.height,
+      text: (el.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      fontFamily: cs.fontFamily.split(',')[0].replace(/["']/g, '').trim().toLowerCase(),
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      lineHeight: cs.lineHeight,
+    }
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Exceptions sous-pixel encadrées                                     */
+/* ------------------------------------------------------------------ */
+
+/** Plafond de `maxPixel` (ratio) d'une SUBPIXEL_EXCEPTION. */
+export const SUBPIXEL_MAX_PIXEL = 0.08
+/** Écart minimal de fraction de pixel (y maquette / y app) pour appliquer l'exception. */
+export const SUBPIXEL_MIN_FRAC_DELTA = 0.25
+
+/**
+ * @typedef {{ upstreamNotImplemented: string, maxPixel: number, reason: string }} SubpixelException
+ */
+
+const frac = (v) => v - Math.floor(v)
+
+/** Distance entre fractions de pixel, circulaire (0,95 et 0,05 sont à 0,10 px). */
+export function fracDistance(a, b) {
+  const d = Math.abs(frac(a) - frac(b))
+  return Math.min(d, 1 - d)
+}
+
+/**
+ * Côté maquette : position des zones NOT_IMPLEMENTED amont de chaque SUBPIXEL_EXCEPTION
+ * (bas de chaque élément, en y de mise en page — même repère que `measureSectionGeometry`).
+ * @param {import('@playwright/test').Page} page  page maquette annotée
+ * @param {Record<string, SubpixelException>} subpixelExceptions
+ * @param {NotImplementedZone[]} notImplemented
+ */
+export async function measureSubpixelUpstreams(page, subpixelExceptions, notImplemented) {
+  const out = {}
+  for (const [section, ex] of Object.entries(subpixelExceptions)) {
+    const zone = notImplemented.find((z) => z.id === ex.upstreamNotImplemented)
+    const sel = zone && (zone.mockMask ? `[data-visual-mask="${zone.mockMask}"]` : zone.mockMeasureSelector)
+    if (!sel) {
+      out[section] = { id: ex.upstreamNotImplemented, inList: !!zone, bottoms: [] }
+      continue
+    }
+    const zones = await page.evaluate((selector) => {
+      return [...document.querySelectorAll(selector)].map((el) => {
+        const r = el.getBoundingClientRect()
+        let scroll = window.scrollY
+        for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+          scroll += p.scrollTop
+        }
+        return { top: r.top + scroll, bottom: r.bottom + scroll, h: r.height }
+      })
+    }, sel)
+    out[section] = { id: zone.id, inList: true, zones }
+  }
+  return out
+}
+
+/**
+ * Conditions d'une SUBPIXEL_EXCEPTION, toutes mesurées :
+ *  a) structurel identique (texte, police, taille, graisse, interligne, box.w, box.h) ;
+ *  b) |frac(y maquette) − frac(y app)| ≥ 0,25 px ;
+ *  c) la zone amont est dans NOT_IMPLEMENTED et au-dessus de la section (maquette).
+ */
+export function subpixelVerdict(ex, geo, upstream, notImplemented) {
+  if (!notImplemented.some((z) => z.id === ex.upstreamNotImplemented)) {
+    return { guard: `zone amont « ${ex.upstreamNotImplemented} » absente de NOT_IMPLEMENTED — supprimer l'exception` }
+  }
+  const reasons = []
+  const { mock, app } = geo ?? {}
+  if (!mock || !app) return { applied: false, reasons: ['géométrie non mesurée'] }
+  for (const k of ['text', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight']) {
+    if (mock[k] !== app[k]) reasons.push(`${k} ≠ (${JSON.stringify(mock[k])} / ${JSON.stringify(app[k])})`)
+  }
+  for (const k of ['w', 'h']) {
+    if (Math.abs(mock[k] - app[k]) > 0.01) reasons.push(`box.${k} ≠ (${mock[k].toFixed(2)} / ${app[k].toFixed(2)})`)
+  }
+  const fracDelta = fracDistance(mock.yViewport, app.yViewport)
+  if (fracDelta < SUBPIXEL_MIN_FRAC_DELTA) reasons.push(`|Δfrac| ${fracDelta.toFixed(2)} < ${SUBPIXEL_MIN_FRAC_DELTA} px`)
+  const above = (upstream?.zones ?? []).filter((z) => z.bottom <= mock.y + 0.01)
+  if (above.length === 0) reasons.push(`zone « ${ex.upstreamNotImplemented} » absente au-dessus de la section (maquette)`)
+  const nearest = above.sort((a, b) => b.bottom - a.bottom)[0] ?? null
+  return { applied: reasons.length === 0, reasons, fracDelta, nearest }
 }
 
 /**
  * Fabrique de comparateur de section.
  * Tailles égales → ≤ 1 % ; sinon SIZE_EXCEPTION déclarée (Δ mesuré = déclaré) + crop TL.
  *
+ * SUBPIXEL_EXCEPTIONS (opts.subpixel) : seuil `maxPixel` au lieu de 1 % UNIQUEMENT si les conditions de
+ * `subpixelVerdict` sont mesurées vraies ; garde si la zone amont quitte NOT_IMPLEMENTED ; échec si la
+ * section passe déjà à 1 % (exception inutile).
+ *
  * @param {Record<string, { dw: number, dh: number, reason: string }>} sizeExceptions
- * @returns {(name: string, mockShot: Buffer, appShot: Buffer, testInfo: import('@playwright/test').TestInfo) =>
+ * @param {{ subpixel?: Record<string, SubpixelException>, notImplemented?: NotImplementedZone[], upstreams?: Record<string, unknown> }} [opts]
+ * @returns {(name: string, mockShot: Buffer, appShot: Buffer, testInfo: import('@playwright/test').TestInfo, geo?: { mock: object, app: object }) =>
  *   { name: string, pct: number, mock: {w:number,h:number}, app: {w:number,h:number}, ok: boolean, note: string }}
  */
-export function compareSectionShots(sizeExceptions = {}) {
-  return function compare(name, mockShot, appShot, testInfo) {
+export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, notImplemented = [], upstreams = {} } = {}) {
+  for (const [k, ex] of Object.entries(subpixel)) {
+    if (!(ex.maxPixel > 0 && ex.maxPixel <= SUBPIXEL_MAX_PIXEL) || !ex.reason || !ex.upstreamNotImplemented) {
+      throw new Error(`SUBPIXEL_EXCEPTIONS[${k}] invalide (maxPixel ≤ ${SUBPIXEL_MAX_PIXEL}, reason, upstreamNotImplemented requis)`)
+    }
+  }
+  return function compare(name, mockShot, appShot, testInfo, geo) {
     const mock = pngSize(mockShot)
     const app = pngSize(appShot)
     const dw = app.w - mock.w
@@ -292,6 +432,32 @@ export function compareSectionShots(sizeExceptions = {}) {
 
     const ratio = diffRatio(aBuf, bBuf, name)
     const pct = ratio * 100
+    const sp = subpixel[name]
+    if (sp) {
+      const v = subpixelVerdict(sp, geo, upstreams[name], notImplemented)
+      const fail = (msg) => {
+        console.log(msg)
+        testInfo.annotations.push({ type: 'section-pixel', description: msg })
+        return { name, pct, mock, app, ok: false, note: msg }
+      }
+      if (v.guard) return fail(`${name}: SUBPIXEL_EXCEPTION — ${v.guard}`)
+      const g = geo ?? {}
+      const fy = (s) => (s ? `${s.y.toFixed(2)} (frac ${frac(s.yViewport).toFixed(2)})` : 'n/a')
+      const up = v.nearest ? ` ; amont ${sp.upstreamNotImplemented} bas ${v.nearest.bottom.toFixed(2)} (h ${v.nearest.h.toFixed(2)})` : ''
+      const geoNote = `y maquette ${fy(g.mock)} / app ${fy(g.app)} ; |Δfrac| ${v.fracDelta?.toFixed(2) ?? 'n/a'} px${up}`
+      if (ratio <= 0.01) {
+        return fail(`${name}: ${pct.toFixed(3)} % ≤ 1 % — SUBPIXEL_EXCEPTION inutile, retirer l'entrée (${geoNote})`)
+      }
+      const limit = v.applied ? sp.maxPixel : 0.01
+      const ok = ratio <= limit
+      const verdict = v.applied
+        ? `SUBPIXEL appliquée (seuil ${(sp.maxPixel * 100).toFixed(0)} %, ${sp.reason})`
+        : `SUBPIXEL NON appliquée (${v.reasons.join(' ; ')}) → seuil 1 %`
+      const line = `${name}: ${pct.toFixed(3)} % — ${verdict} — ${geoNote} — ${note}`
+      console.log(line)
+      testInfo.annotations.push({ type: 'section-pixel', description: line })
+      return { name, pct, mock, app, ok, note: line, subpixel: { applied: v.applied, limit } }
+    }
     const ok = ratio <= 0.01
     const line = `${name}: ${pct.toFixed(3)} % — ${note}`
     console.log(line)
@@ -422,7 +588,7 @@ export function finishPixelResults(specName, results, extra = {}) {
 }
 
 /**
- * Assertion structurelle compacte (diffs seulement, sans les m�triques compl�tes).
+ * Assertion structurelle compacte (diffs seulement, sans les métriques complètes).
  * @param {{ id: string, diffs: string[] }[]} results  sortie de compareMetrics
  */
 export function expectNoStructuralDiffs(results) {

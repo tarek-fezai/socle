@@ -31,6 +31,7 @@ import {
   formatVersionDateTime,
   formatVersionDateTimeMobile,
   versionAuthor,
+  versionRowActions,
   versionsCountLabel,
   type VersionRow,
 } from './document/versionHistoryUtils'
@@ -224,8 +225,7 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
           {listState}
           {rows.map((v, i) => {
             const author = versionAuthor(v)
-            const showCompare = canAct && !v.isCurrent && v.previousVersionNo != null
-            const showRestore = canAct && !v.isCurrent
+            const { compare: showCompare, restore: showRestore } = versionRowActions(v, { canAct, mobile: true })
             const hasActions = showCompare || showRestore
             return (
               <div className="hist-m-item" key={v.versionNo} data-testid={`history-row-${v.versionNo}`}>
@@ -311,8 +311,7 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
               const author = versionAuthor(v)
               const added = formatLinesAdded(v.linesAdded)
               const removed = formatLinesRemoved(v.linesRemoved)
-              const showCompare = canAct && !v.isCurrent && v.previousVersionNo != null
-              const showRestore = canAct && !v.isCurrent
+              const { compare: showCompare, restore: showRestore } = versionRowActions(v, { canAct })
               const mid = (field: string) => `hist-r${i}-${field}`
               return (
                 <li

@@ -4,7 +4,7 @@ import type { components } from './api-types'
 import type { TipTapNode } from './documents'
 
 /** Seuil client par défaut (aligné sur socle.writing-assistant.long-paragraph-words). */
-export const DEFAULT_LONG_PARAGRAPH_WORDS = 120
+export const DEFAULT_LONG_PARAGRAPH_WORDS = 60
 
 /** Libellé fixe renvoyé par le serveur quand aucune ancre source n'est disponible. */
 export const INACCESSIBLE_LABEL = 'Document inaccessible'
@@ -98,6 +98,6 @@ export function findLongParagraphs(
 }
 
 /** Texte de la carte « Paragraphe long ». */
-export function longParagraphMessage(p: LongParagraph, threshold: number): string {
-  return `Ce paragraphe dépasse ${threshold} mots (${p.wordCount ?? 0}) — envisagez de le diviser en deux idées.`
+export function longParagraphMessage(threshold: number): string {
+  return `Le paragraphe édité dépasse ${threshold} mots — envisagez de le diviser en deux idées.`
 }

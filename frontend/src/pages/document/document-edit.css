@@ -153,6 +153,7 @@ a.edit-crumb:hover {
   font-size: 13px;
   font-weight: 500;
   line-height: normal;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -172,6 +173,7 @@ a.edit-crumb:hover {
   font-size: 13px;
   font-weight: 600;
   line-height: normal;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -570,6 +572,10 @@ a.edit-crumb:hover {
   margin-bottom: 6px;
 }
 
+.edit-insert-panel > div:last-child .edit-insert-grid {
+  margin-bottom: 0;
+}
+
 .edit-insert-item {
   display: flex;
   align-items: center;
@@ -650,6 +656,14 @@ a.edit-crumb:hover {
   line-height: 1.7;
   color: #43434a;
   margin: 0 0 18px;
+}
+
+/* Paragraphe en cours d'édition (curseur dedans, éditeur au focus) — extension EditingParagraph. */
+.edit-prose > p.is-editing {
+  outline: 1px dashed #c7c6f5;
+  outline-offset: 6px;
+  border-radius: 4px;
+  padding: 2px 0;
 }
 
 .edit-prose p.is-editor-empty:first-child::before,
@@ -1047,6 +1061,10 @@ a.edit-crumb:hover {
   color: inherit;
 }
 
+.edit-card--link {
+  cursor: pointer;
+}
+
 .edit-card--link:hover {
   background: #fafafb;
 }
@@ -1068,23 +1086,6 @@ a.edit-crumb:hover {
 .edit-card-title {
   font-size: 12px;
   font-weight: 600;
-}
-
-.edit-card-link {
-  margin-left: auto;
-  border: 0;
-  background: none;
-  padding: 0;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  color: #3730e0;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.edit-card-link:hover {
-  text-decoration: underline;
 }
 
 .edit-card-text {

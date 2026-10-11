@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { defineConfig, devices } from '@playwright/test'
 
-/** Visual + auth UX checks for /login pages. */
+/**
+ * Config dédiée aux specs de parité visuelle (`e2e-visual/`, docs/visual-parity.md).
+ * Aucun retry : un écart instable doit échouer, pas passer au second essai.
+ */
 export default defineConfig({
   testDir: './e2e-visual',
   testMatch: '**/*.spec.mjs',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
   workers: 1,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   timeout: 60_000,

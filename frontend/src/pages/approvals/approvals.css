@@ -260,7 +260,8 @@
   width: 100%;
   height: 60px;
   margin: 0;
-  padding: 0;
+  /* Maquette : <span> 14 px dans une ligne dont la grille est celle du parent 16 px → base du texte 2 px plus bas. */
+  padding: 2px 0 0;
   border: 0;
   outline: none;
   resize: vertical;
@@ -303,6 +304,10 @@
 .appr-approve {
   flex: 1;
   box-sizing: content-box;
+  /* Maquette : lien dont le texte reste en haut du bloc étiré (un <button> centre son contenu). */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   text-align: center;
   padding: 12px 0;
   border: 0;

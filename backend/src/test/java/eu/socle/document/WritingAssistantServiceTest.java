@@ -265,7 +265,7 @@ class WritingAssistantServiceTest {
     }
 
     @Test
-    void documentWithoutLinks_hasEmptyHints_andDefaultThreshold120() {
+    void documentWithoutLinks_hasEmptyHints_andDefaultThreshold60() {
         UUID lonely = UUID.fromString("99999999-9999-9999-9999-999999999998");
         insertDoc(lonely, "Seul", false);
         DocumentEntity e = new DocumentEntity();
@@ -276,7 +276,7 @@ class WritingAssistantServiceTest {
 
         assertThat(hints.brokenLinks()).isEmpty();
         assertThat(hints.longParagraphs()).isEmpty();
-        assertThat(hints.longParagraphThresholdWords()).isEqualTo(120);
+        assertThat(hints.longParagraphThresholdWords()).isEqualTo(60);
         verify(authorizationService, never()).filterByDocumentViewer(any(), anyCollection(), any());
     }
 
@@ -302,12 +302,12 @@ class WritingAssistantServiceTest {
 
     @Test
     void longParagraphs_useConfiguredThreshold_fromCurrentBody() {
-        entity.setBody(paragraphs("Court.", words(121), words(120)));
+        entity.setBody(paragraphs("Court.", words(61), words(60)));
 
         Hints hints = service.hints(jwt, DOC);
         assertThat(hints.longParagraphs()).hasSize(1);
         assertThat(hints.longParagraphs().getFirst().index()).isEqualTo(1);
-        assertThat(hints.longParagraphs().getFirst().wordCount()).isEqualTo(121);
+        assertThat(hints.longParagraphs().getFirst().wordCount()).isEqualTo(61);
 
         properties.setLongParagraphWords(5);
         Hints strict = service.hints(jwt, DOC);

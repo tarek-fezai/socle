@@ -49,6 +49,8 @@ import './document-page.css'
 
 /** Hauteur cumulée barre haute + onglets (sticky) pour le décalage de défilement. */
 const SCROLL_OFFSET = 120
+/** Part basse de la fenêtre exclue du scroll-spy (bande active = haut de l'écran). */
+const SCROLL_SPY_BOTTOM = 0.55
 
 export function DocumentReadPage() {
   const { id = '' } = useParams()
@@ -263,9 +265,15 @@ export function DocumentReadPage() {
           else visible.delete(e.target.id)
         }
         const first = tocIds.find((tid) => visible.has(tid))
-        if (first) setActiveId(first)
+        if (first) {
+          setActiveId(first)
+          return
+        }
+        // Au-dessus du premier titre (ex. mise en page qui s'allonge au chargement des polices) : aucun actif.
+        const top = document.getElementById(tocIds[0]!)?.getBoundingClientRect().top
+        if (top != null && top > window.innerHeight * (1 - SCROLL_SPY_BOTTOM)) setActiveId(null)
       },
-      { rootMargin: `-${SCROLL_OFFSET}px 0px -55% 0px`, threshold: 0 },
+      { rootMargin: `-${SCROLL_OFFSET}px 0px -${SCROLL_SPY_BOTTOM * 100}% 0px`, threshold: 0 },
     )
     for (const tid of tocIds) {
       const el = document.getElementById(tid)

@@ -134,7 +134,7 @@ export function EditTopBar({
         </button>
         {/* Exception visuelle : popover résumé facultatif (hors maquette pixel-perfect). */}
         <ChangeSummaryPopover
-          label="Enregistrer la version"
+          label="Enregistrer"
           buttonClassName="edit-ghost"
           testId="edit-save-version"
           disabled={saveVersionDisabled}

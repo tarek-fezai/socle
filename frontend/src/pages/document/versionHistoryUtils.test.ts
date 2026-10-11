@@ -18,6 +18,7 @@ import {
   segmentHunk,
   unchangedLabel,
   versionAuthor,
+  versionRowActions,
   versionsCountLabel,
 } from './versionHistoryUtils'
 
@@ -82,6 +83,31 @@ describe('versionAuthor', () => {
   it('initiales calculées si absentes ; auteur non résolu → libellé neutre', () => {
     expect(versionAuthor({ authorId: 'u1', authorDisplayName: 'Tarek Fezai' }).initials).toBe('TF')
     expect(versionAuthor({ authorId: 'u1' })).toEqual({ name: 'Utilisateur', initials: '?', system: false })
+  })
+})
+
+describe('versionRowActions', () => {
+  const row = (isCurrent: boolean, previousVersionNo: number | null) => ({ isCurrent, previousVersionNo })
+
+  it('jamais de Restaurer ni de Comparer sur la version courante (desktop et mobile)', () => {
+    for (const mobile of [false, true]) {
+      expect(versionRowActions(row(true, 10), { canAct: true, mobile })).toEqual({ compare: false, restore: false })
+      expect(versionRowActions(row(true, null), { canAct: true, mobile })).toEqual({ compare: false, restore: false })
+    }
+  })
+
+  it('desktop : Comparer si une version précédente existe, Restaurer sur toute version non courante', () => {
+    expect(versionRowActions(row(false, 10), { canAct: true })).toEqual({ compare: true, restore: true })
+    expect(versionRowActions(row(false, null), { canAct: true })).toEqual({ compare: false, restore: true })
+  })
+
+  it('mobile : une seule action — Voir les changements, sinon Restaurer (maquette)', () => {
+    expect(versionRowActions(row(false, 10), { canAct: true, mobile: true })).toEqual({ compare: true, restore: false })
+    expect(versionRowActions(row(false, null), { canAct: true, mobile: true })).toEqual({ compare: false, restore: true })
+  })
+
+  it('sans droit d’édition : aucune action', () => {
+    expect(versionRowActions(row(false, 10), { canAct: false })).toEqual({ compare: false, restore: false })
   })
 })
 

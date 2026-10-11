@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "socle.writing-assistant")
 public class WritingAssistantProperties {
 
-    public static final int DEFAULT_LONG_PARAGRAPH_WORDS = 120;
+    public static final int DEFAULT_LONG_PARAGRAPH_WORDS = 60;
 
-    /** Nombre de mots au-delà duquel un paragraphe est signalé. Défaut : 120. */
+    /** Nombre de mots au-delà duquel un paragraphe est signalé. Défaut : 60. */
     private int longParagraphWords = DEFAULT_LONG_PARAGRAPH_WORDS;
 
     @PostConstruct

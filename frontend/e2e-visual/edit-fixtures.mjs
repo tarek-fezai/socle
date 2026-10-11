@@ -79,18 +79,23 @@ function blockWords(blocks) {
   return n
 }
 
-/** Seuil serveur : strictement entre le chapeau et le paragraphe « en cours d'édition ». */
-export const EDIT_LONG_THRESHOLD = countWords(EDITING_PARAGRAPH) - 1
+/**
+ * Seuil serveur (`socle.writing-assistant.long-paragraph-words`, configurable) = 60, valeur affichée par la
+ * maquette. Un seul paragraphe le dépasse : le premier paragraphe de remplissage (61 mots), sous la ligne de
+ * flottaison ; les autres restent ≤ 30 mots.
+ */
+export const EDIT_LONG_THRESHOLD = 60
+const LONG_FILLER_WORDS = EDIT_LONG_THRESHOLD + 1
 
 export function editBody() {
   const blocks = baseBlocks()
   const base = blockWords(blocks)
   let remaining = EDIT_TARGET_WORDS - base
-  if (remaining < 0) throw new Error(`corps trop long: ${base} mots`)
-  // Paragraphes de remplissage toujours ≤ seuil (pas de carte « Paragraphe long » parasite).
-  const maxPerParagraph = Math.min(EDIT_LONG_THRESHOLD, 30)
+  if (remaining < LONG_FILLER_WORDS) throw new Error(`corps trop long: ${base} mots`)
+  let first = true
   while (remaining > 0) {
-    const take = Math.min(remaining, maxPerParagraph)
+    const take = first ? LONG_FILLER_WORDS : Math.min(remaining, 30)
+    first = false
     const words = []
     while (words.length < take) words.push(...FILLER_SENTENCE.split(' '))
     blocks.push(p(words.slice(0, take).join(' ')))
@@ -101,8 +106,8 @@ export function editBody() {
   const image = structuredClone(IMAGE_NODE)
   delete image.attrs.caption
   blocks.push(image, structuredClone(ATTACHMENT_NODE))
-  if (countWords(LEAD) > EDIT_LONG_THRESHOLD || countWords(CHANTIER) > EDIT_LONG_THRESHOLD) {
-    throw new Error('le chapeau dépasse le seuil de paragraphe long')
+  if ([LEAD, EDITING_PARAGRAPH, CHANTIER].some((t) => countWords(t) > EDIT_LONG_THRESHOLD)) {
+    throw new Error('un paragraphe visible dépasse le seuil de paragraphe long')
   }
   return { type: 'doc', content: blocks }
 }
@@ -149,7 +154,13 @@ export const EDIT_WRITING_HINTS = {
       reason: 'deleted',
     },
   ],
-  longParagraphs: [],
+  // Réponse serveur pour editBody() : seul le 1er paragraphe de remplissage (rang 3) dépasse le seuil.
+  longParagraphs: (() => {
+    const paragraphs = editBody().content.filter((b) => b.type === 'paragraph')
+    const index = paragraphs.findIndex((b) => countWords(b.content[0].text) > EDIT_LONG_THRESHOLD)
+    const flat = paragraphs[index].content[0].text
+    return [{ index, wordCount: countWords(flat), excerpt: `${flat.slice(0, 80).trim()}…` }]
+  })(),
 }
 
 export const EDIT_CUSTOM_FIELDS = [

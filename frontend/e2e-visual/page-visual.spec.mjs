@@ -2,28 +2,32 @@
 /**
  * Règles : docs/visual-parity.md
  *
- * Document READ page (/docs/:id) vs Main.dc.html (desktop) and MobilePage.dc.html (mobile).
- * Pattern: dashboard-visual.spec.mjs (pixel diff + data-mock-id structural compare).
+ * Page de lecture /docs/:id vs Main.dc.html (desktop 1440×900) et MobilePage.dc.html (mobile 390×844).
  *
- * Documented exceptions (see also page-fixtures.mjs):
- *  - Onglet « Index » : bouton désactivé (title="bientôt") au lieu d'un lien Index.dc.html.
- *  - « Champs personnalisés » : omis tant qu'aucune définition n'existe (masqué dans la maquette).
- *  - Figures draw.io : « Bloc non pris en charge dans cette version » (lot 3). Les captures d'écran
- *    sont des blocs `image` (pièce jointe, légende « Fig. 2 — … ») et il existe un bloc `attachment`
- *    (fichier joint, absent de Main.dc.html) en fin de corps : plus d'exception « figure manquante »
- *    pour les images / fichiers, seulement pour draw.io.
- *  - Propriétaire : « Équipe {nom de l'espace} » (maquette : « Équipe Identité »).
- *  - Bouton d'attestation : police IBM Plex (app) vs Arial UA (maquette).
- *  - Sélecteur de langue retiré de la maquette (hors V1).
- *  - Shell (sidebar) : comparaison limitée à la colonne principale (x ≥ 268) en desktop.
- *  - Glyphes masqués dans les diffs pixel ; le texte est couvert par le test structurel.
+ * Pixel honnête (texte inclus, ≤ 1 % par section) ; seul exclu : `mask` Playwright nommé
+ * (`data-visual-mask`). Annotation maquette ET app : attributs `data-*` uniquement
+ * (aucun style / DOM modifié avant capture).
+ *
+ * ── Périmètre desktop ─────────────────────────────────────────────────────────────────
+ *  Colonne principale + rail (fil d'Ariane, actions, menu d'export, onglets, statut, attestation,
+ *  titre, chapeau, corps, documents liés, retour d'utilité, rail d'infos). La barre latérale (shell)
+ *  n'est PAS comparée ici : Main.dc.html montre un arbre de dossiers + boutons Document/Dossier,
+ *  l'app le shell Favoris / Espaces / Membres (décision tf : shell canonique, docs/visual-parity.md).
+ *  Le menu « Imprimer / Exporter » est ouvert dans la maquette (état figé) : il est donc ouvert
+ *  dans l'app par un clic avant capture (interaction utilisateur, pas une mutation du DOM).
+ *  Les captures « sous la ligne de flottaison » défilent dans la page (maquette : conteneur
+ *  `overflow: hidden` défilé par scrollIntoView, l'app défile normalement).
+ *
+ * ── Contexte de rendu ─────────────────────────────────────────────────────────────────
+ *  User-Agent macOS : la maquette est dessinée pour macOS (« ⌘P ») ; l'app affiche « Ctrl+P »
+ *  hors Apple (comportement voulu, `isApplePlatform`). Même Chromium des deux côtés.
+ *  Fixtures de lecture : retour d'utilité sans totaux (la maquette n'affiche pas « 18 oui · 2 non »,
+ *  réservés aux éditeurs côté app).
+ *
+ * Mesure avant polish : `VISUAL_BASELINE=1 npx playwright test e2e-visual/page-visual.spec.mjs`
+ * (journalise tous les % / tailles, écrit test-results/page-before.json, n'échoue pas).
  */
 import { test, expect } from '@playwright/test'
-import fs from 'node:fs'
-import path from 'node:path'
-import { PNG } from 'pngjs'
-import pixelmatch from 'pixelmatch'
-import { fileURLToPath } from 'node:url'
 import {
   PAGE_BELOW_FOLD_IDS,
   PAGE_DESKTOP_IDS,
@@ -40,7 +44,7 @@ import {
   PAGE_ATTESTATION,
   PAGE_COMMENTS,
   PAGE_DOC_ID,
-  PAGE_FEEDBACK_EDITOR,
+  PAGE_FEEDBACK_VIEWER,
   PAGE_LINKS,
   SPACE_IDENTITE,
   TREE_IDENTITE,
@@ -52,67 +56,319 @@ import {
   pageDocumentViewer,
 } from './page-fixtures.mjs'
 import { FAVORITES_SEED, NOTIFICATIONS_SEED, SPACE_INFRA, TREE_INFRA } from './dashboard-fixtures.mjs'
+import {
+  AUTH_CONFIG,
+  MOCK_ORIGIN,
+  assertNotImplementedGuards,
+  compareSectionShots,
+  expectNoStructuralDiffs,
+  finishPixelResults,
+  injectOidcSession,
+  json,
+  measureMaskName,
+  measureSubpixelUpstreams,
+  mockBaseApis,
+  pageAreaFor,
+  reportNotImplemented,
+  settleFonts,
+  shotSection,
+} from './visual-parity-kit.mjs'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const outDir = path.join(__dirname, 'test-results')
+const MAC_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
-test.use({ timezoneId: 'Europe/Paris' })
+/**
+ * Anti-crénelage : barre haute / onglets collants (couche composée dans l'app) sont rendus en niveaux
+ * de gris, la maquette (sans couche) en LCD. Même rendu des deux côtés (--disable-lcd-text), uniquement
+ * pour ce fichier ; le texte reste comparé pixel à pixel (même réglage que new-document-visual).
+ */
+test.use({
+  timezoneId: 'Europe/Paris',
+  userAgent: MAC_UA,
+  launchOptions: { args: ['--disable-lcd-text'] },
+})
 
-const AUTH_CONFIG = {
-  authority: 'http://127.0.0.1:9/realms/socle',
-  clientId: 'socle-frontend',
-  scopes: ['openid', 'profile', 'email'],
-  organizationName: 'Organisation Démo',
-  displayName: 'Organisation Démo',
-  supportContact: 'identite@example.com',
-  passkeyAcrValues: 'phr',
-  idpDisplayName: 'Demo IdP',
+/**
+ * Zones maquette sans équivalent app — NON comparées, jamais « passées ».
+ * @type {import('./visual-parity-kit.mjs').NotImplementedZone[]}
+ */
+export const NOT_IMPLEMENTED = [
+  {
+    id: 'page-drawio',
+    page: 'page',
+    reason:
+      'Diagrammes draw.io (Fig. 1 et 3 + mention « Diagramme importé depuis draw.io ») : bloc `drawio` non rendu — l’app affiche « Bloc non pris en charge dans cette version »',
+    backlog: 'DOC-DRAWIO-RENDER (lot 3)',
+    mockMask: 'page-drawio',
+    appPlaceholderSelector: '[data-testid="unsupported-block"]',
+  },
+  {
+    id: 'page-figure-image',
+    page: 'page',
+    reason:
+      'Capture d’écran Fig. 2 : la maquette montre un gabarit pointillé « [Capture d’écran — …] » ; l’app rend la pièce jointe réelle — pas d’image comparable (légende comparée)',
+    backlog: 'DOC-IMAGE-PLACEHOLDER-MOCKUP',
+    mockMask: 'page-figure-image',
+    appPlaceholderSelector: '[data-visual-mask="page-figure-image"]',
+  },
+  {
+    id: 'page-custom-fields',
+    page: 'page',
+    reason:
+      'Rail « Champs personnalisés » (Référence réglementaire, Système concerné) : la page de lecture ne charge aucune valeur de champ (pas d’appel GET custom-fields côté lecture)',
+    backlog: 'DOC-READ-CUSTOM-FIELDS',
+    mockMask: 'page-custom-fields',
+    appImplementedProbe: '[data-mock-id="rail-custom-fields"]',
+  },
+  {
+    id: 'mpage-drawio',
+    page: 'page-mobile',
+    reason:
+      'Schéma draw.io mobile (« Flux de provisionnement — schéma draw.io ») : bloc `drawio` non rendu — l’app affiche « Bloc non pris en charge dans cette version »',
+    backlog: 'DOC-DRAWIO-RENDER (lot 3)',
+    mockMask: 'mpage-drawio',
+    appPlaceholderSelector: '[data-testid="unsupported-block"]',
+  },
+]
+
+/**
+ * Boîtes mesurées à ±1-2 px après un bloc draw.io NOT_IMPLEMENTED : la hauteur du placeholder
+ * « Bloc non pris en charge » diffère de la figure SVG de la maquette (et de sa fraction de pixel),
+ * donc le décalage sous-pixel cascade sur tout ce qui suit (arrondi de la boîte de capture).
+ * Valeurs = écarts mesurés (app − maquette).
+ */
+const SIZE_EXCEPTIONS = {
+  'page-desktop-figure-2': {
+    dw: 0,
+    dh: -1,
+    reason: 'arrondi de boîte (fraction de pixel héritée du bloc draw.io NOT_IMPLEMENTED au-dessus)',
+  },
 }
 
-const json = (route, body, status = 200) =>
-  route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
-
-async function injectOidcSession(page) {
-  await page.addInitScript(
-    ({ authority, clientId, now }) => {
-      Date.now = () => now
-      const key = `oidc.user:${authority}:${clientId}`
-      const user = {
-        id_token: 'visual.id',
-        session_state: 'visual',
-        access_token: 'visual-access-token',
-        refresh_token: 'visual-refresh',
-        token_type: 'Bearer',
-        scope: 'openid profile email',
-        profile: { sub: 'tarek-visual', name: 'Tarek Fezai', preferred_username: 'tarek', given_name: 'Tarek' },
-        expires_at: Math.floor(now / 1000) + 3600,
-      }
-      sessionStorage.setItem(key, JSON.stringify(user))
-      localStorage.setItem(
-        'socle.shell.expandedSpaces',
-        JSON.stringify(['s0000001-0000-4000-8000-000000000001', 's0000001-0000-4000-8000-000000000002']),
-      )
-    },
-    { authority: AUTH_CONFIG.authority, clientId: AUTH_CONFIG.clientId, now: VISUAL_NOW },
-  )
+/**
+ * Décalage sous-pixel hérité des figures draw.io NOT_IMPLEMENTED (Fig. 1 : SVG responsive de hauteur
+ * fractionnaire dans la maquette ; placeholder de hauteur entière dans l'app). Appliqué seulement si les
+ * conditions du kit sont mesurées vraies (docs/visual-parity.md § Sous-pixel).
+ * @type {Record<string, import('./visual-parity-kit.mjs').SubpixelException>}
+ */
+const SUBPIXEL_EXCEPTIONS = {
+  'page-desktop-h2-flux': {
+    upstreamNotImplemented: 'page-drawio',
+    maxPixel: 0.08,
+    reason: 'fraction de y héritée de la figure draw.io (Fig. 1) NOT_IMPLEMENTED au-dessus',
+  },
+  'page-desktop-p-flux': {
+    upstreamNotImplemented: 'page-drawio',
+    maxPixel: 0.08,
+    reason: 'fraction de y héritée de la figure draw.io (Fig. 1) NOT_IMPLEMENTED au-dessus',
+  },
 }
+
+/* ------------------------------------------------------------------ */
+/* Sections                                                           */
+/* ------------------------------------------------------------------ */
+
+/** id = data-mock-id posé par `annotateSections*` (maquette et app). */
+const DESKTOP_SECTIONS = [
+  { id: 'pg-crumbs', name: 'crumbs' },
+  { id: 'pg-actions', name: 'actions' },
+  { id: 'pg-export-menu', name: 'export-menu' },
+  { id: 'pg-tabs', name: 'tabs' },
+  { id: 'pg-status', name: 'status' },
+  { id: 'pg-attestation', name: 'attestation' },
+  { id: 'pg-title', name: 'title' },
+  { id: 'pg-lead', name: 'lead' },
+  // Rail (sticky dans l'app) mesuré avant tout défilement : la maquette ne défile pas.
+  { id: 'pg-rail-toc', name: 'rail-toc' },
+  { id: 'pg-rail-owner', name: 'rail-owner' },
+  { id: 'pg-rail-author', name: 'rail-author' },
+  { id: 'pg-rail-modified', name: 'rail-modified' },
+  { id: 'pg-rail-tags', name: 'rail-tags' },
+  { id: 'pg-rail-reliability', name: 'rail-reliability' },
+  { id: 'pg-h2-principe', name: 'h2-principe' },
+  { id: 'pg-p-principe', name: 'p-principe' },
+  { id: 'pg-quote', name: 'quote' },
+  { id: 'pg-h2-roles', name: 'h2-roles' },
+  { id: 'pg-table', name: 'table' },
+  { id: 'pg-figure-2', name: 'figure-2', masks: ['page-figure-image'] },
+  { id: 'pg-h2-flux', name: 'h2-flux' },
+  { id: 'pg-p-flux', name: 'p-flux' },
+  { id: 'pg-related-title', name: 'related-title' },
+  { id: 'pg-related-links', name: 'related-links' },
+  { id: 'pg-feedback', name: 'feedback' },
+]
+
+const MOBILE_SECTIONS = [
+  { id: 'pg-m-top', name: 'top' },
+  // Barre d'onglets (sticky dans l'app) mesurée avant tout défilement : la maquette ne défile pas.
+  { id: 'pg-m-tabbar', name: 'tabbar' },
+  { id: 'pg-m-status', name: 'status' },
+  { id: 'pg-m-title', name: 'title' },
+  { id: 'pg-m-tags', name: 'tags' },
+  { id: 'pg-m-lead', name: 'lead' },
+  { id: 'pg-m-h2-principe', name: 'h2-principe' },
+  { id: 'pg-m-p-principe', name: 'p-principe' },
+  { id: 'pg-m-h2-roles', name: 'h2-roles' },
+  { id: 'pg-m-roles', name: 'roles' },
+  { id: 'pg-m-feedback', name: 'feedback' },
+]
+
+/* ------------------------------------------------------------------ */
+/* Annotation (data-* uniquement)                                      */
+/* ------------------------------------------------------------------ */
+
+/** Main.dc.html — sections pixel. À appeler après `annotatePageMockup` (ids structurels). */
+async function annotateSectionsMock(page) {
+  await page.evaluate(() => {
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const mask = (el, name) => el?.setAttribute('data-visual-mask', name)
+    const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    const main = root.children[1]
+    const [topbar, tabs, content] = [...main.children]
+    set(topbar.children[0], 'pg-crumbs')
+    set(topbar.children[1], 'pg-actions')
+    set(topbar.querySelector('span[style*="position: absolute"]'), 'pg-export-menu')
+    set(tabs, 'pg-tabs')
+    const article = content.children[0]
+    const rail = content.children[1]
+    const k = [...article.children]
+    set(k[0], 'pg-status')
+    set(k[1], 'pg-attestation')
+    set(k[2], 'pg-title')
+    set(k[3], 'pg-lead')
+    set(k[4], 'pg-h2-principe')
+    set(k[5], 'pg-p-principe')
+    set(k[6], 'pg-quote')
+    set(k[7], 'pg-h2-roles')
+    set(k[8], 'pg-table')
+    mask(k[9], 'page-drawio')
+    mask(k[10], 'page-drawio')
+    set(k[11], 'pg-figure-2')
+    mask(k[11].children[0], 'page-figure-image')
+    set(k[12], 'pg-h2-flux')
+    set(k[13], 'pg-p-flux')
+    mask(k[14], 'page-drawio')
+    mask(k[15], 'page-drawio')
+    set(k[17], 'pg-related-title')
+    set(k[18], 'pg-related-links')
+    set(k[19], 'pg-feedback')
+    const stick = rail.firstElementChild
+    const blocks = [...stick.children]
+    set(blocks[0], 'pg-rail-toc')
+    set(blocks[1], 'pg-rail-owner')
+    set(blocks[2], 'pg-rail-author')
+    set(blocks[3], 'pg-rail-modified')
+    set(blocks[4], 'pg-rail-tags')
+    set(blocks[5], 'pg-rail-reliability')
+    mask(blocks[6], 'page-custom-fields')
+  })
+}
+
+/** App /docs/:id desktop — mêmes ids de section (data-* uniquement). */
+async function annotateSectionsApp(page) {
+  await page.evaluate(() => {
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const mask = (el, name) => el?.setAttribute('data-visual-mask', name)
+    set(document.querySelector('.doc-topbar .doc-crumbs'), 'pg-crumbs')
+    set(document.querySelector('.doc-topbar .doc-actions'), 'pg-actions')
+    set(document.querySelector('.doc-tabs'), 'pg-tabs')
+    set(document.querySelector('.doc-status'), 'pg-status')
+    set(document.querySelector('.doc-attestation'), 'pg-attestation')
+    set(document.querySelector('.doc-main .doc-title'), 'pg-title')
+    const k = [...document.querySelectorAll('.doc-body .doc-read > *')]
+    set(k[0], 'pg-lead')
+    set(k[1], 'pg-h2-principe')
+    set(k[2], 'pg-p-principe')
+    set(k[3], 'pg-quote')
+    set(k[4], 'pg-h2-roles')
+    set(k[5], 'pg-table')
+    // k[6] : drawio (Fig. 1), k[7] : image (Fig. 2)
+    set(k[7], 'pg-figure-2')
+    mask(k[7]?.querySelector('img'), 'page-figure-image')
+    set(k[8], 'pg-h2-flux')
+    set(k[9], 'pg-p-flux')
+    set(document.querySelector('h2#documents-lies'), 'pg-related-title')
+    set(document.querySelector('.doc-related'), 'pg-related-links')
+    set(document.querySelector('.doc-feedback'), 'pg-feedback')
+    const rail = document.querySelector('.doc-rail-inner')
+    set(rail.querySelector('nav[aria-label="Sur cette page"]'), 'pg-rail-toc')
+    set(rail.querySelector('[data-mock-id="rail-owner"]'), 'pg-rail-owner')
+    set(rail.querySelector('[data-mock-id="rail-author"]'), 'pg-rail-author')
+    set(rail.querySelector('[data-mock-id="rail-modified"]'), 'pg-rail-modified')
+    set(rail.querySelector('[data-mock-id="rail-tags"]'), 'pg-rail-tags')
+    set(rail.querySelector('[data-mock-id="rail-reliability"]'), 'pg-rail-reliability')
+    // Menu d'export (ouvert par clic avant l'annotation).
+    set(document.querySelector('[data-testid="doc-export-menu"]'), 'pg-export-menu')
+    // Zones NOT_IMPLEMENTED : masque nommé sur l'élément app (placeholders).
+    document.querySelectorAll('[data-testid="unsupported-block"]').forEach((el) => mask(el, 'page-drawio'))
+  })
+}
+
+/** MobilePage.dc.html — sections pixel. */
+async function annotateSectionsMobileMock(page) {
+  await page.evaluate(() => {
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const mask = (el, name) => el?.setAttribute('data-visual-mask', name)
+    const root = Array.from(document.querySelectorAll('div')).find((d) =>
+      (d.getAttribute('style') || '').includes('390px'),
+    )
+    const [top, content, bar] = [...root.children]
+    set(top, 'pg-m-top')
+    const k = [...content.children]
+    set(k[0], 'pg-m-status')
+    set(k[1], 'pg-m-title')
+    set(k[2], 'pg-m-tags')
+    set(k[3], 'pg-m-lead')
+    set(k[4], 'pg-m-h2-principe')
+    set(k[5], 'pg-m-p-principe')
+    set(k[6], 'pg-m-h2-roles')
+    set(k[7], 'pg-m-roles')
+    mask(k[8], 'mpage-drawio')
+    set(k[9], 'pg-m-feedback')
+    set(bar, 'pg-m-tabbar')
+  })
+}
+
+async function annotateSectionsMobileApp(page) {
+  await page.evaluate(() => {
+    const set = (el, id) => el?.setAttribute('data-mock-id', id)
+    const mask = (el, name) => el?.setAttribute('data-visual-mask', name)
+    set(document.querySelector('.doc-mobile-top'), 'pg-m-top')
+    set(document.querySelector('.doc-status'), 'pg-m-status')
+    set(document.querySelector('.doc-main .doc-title'), 'pg-m-title')
+    set(document.querySelector('.doc-tags--mobile'), 'pg-m-tags')
+    const k = [...document.querySelectorAll('.doc-body .doc-read > *')]
+    set(k[0], 'pg-m-lead')
+    set(k[1], 'pg-m-h2-principe')
+    set(k[2], 'pg-m-p-principe')
+    set(k[3], 'pg-m-h2-roles')
+    set(k[4], 'pg-m-roles')
+    document.querySelectorAll('[data-testid="unsupported-block"]').forEach((el) => mask(el, 'mpage-drawio'))
+    set(document.querySelector('.doc-feedback'), 'pg-m-feedback')
+    set(document.querySelector('.doc-mobile-tabs'), 'pg-m-tabbar')
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* API                                                                */
+/* ------------------------------------------------------------------ */
 
 /**
  * @param {import('@playwright/test').Page} page
  * @param {{ variant?: 'desktop'|'mobile', attestation?: boolean, editor?: boolean, related?: boolean }} [opts]
  */
 async function mockPageApis(page, { variant = 'desktop', attestation = true, editor = true, related = true } = {}) {
-  await page.route('**/api/v1/public/auth-config', (route) => json(route, AUTH_CONFIG))
-  await page.route('**/api/v1/me', (route) => json(route, ME_TAREK))
+  await mockBaseApis(page, { me: ME_TAREK, notifications: NOTIFICATIONS_SEED, spaces: [SPACE_IDENTITE, SPACE_INFRA] })
+  await page.route('**/api/v1/public/auth-config', (route) =>
+    json(route, { ...AUTH_CONFIG, supportContact: 'identite@example.com', passkeyAcrValues: 'phr' }),
+  )
   await mockAttachmentRoutes(page)
   await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/resolved`, (route) =>
     json(route, editor ? pageDocument(variant) : pageDocumentViewer(variant)),
   )
   await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/view`, (route) => route.fulfill({ status: 204 }))
   await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/comments**`, (route) => json(route, PAGE_COMMENTS))
-  await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/feedback`, (route) =>
-    json(route, editor ? PAGE_FEEDBACK_EDITOR : { myVote: null }),
-  )
+  await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/feedback`, (route) => json(route, PAGE_FEEDBACK_VIEWER))
   await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/attestations/active`, (route) =>
     attestation ? json(route, PAGE_ATTESTATION) : route.fulfill({ status: 204 }),
   )
@@ -124,11 +380,6 @@ async function mockPageApis(page, { variant = 'desktop', attestation = true, edi
   )
   await page.route('**/api/v1/favorites/**', (route) => json(route, { favorited: true }))
   await page.route('**/api/v1/favorites', (route) => json(route, FAVORITES_SEED))
-  await page.route('**/api/v1/notifications**', (route) => json(route, NOTIFICATIONS_SEED))
-  await page.route('**/api/v1/spaces', (route) => {
-    if (route.request().method() !== 'GET') return route.continue()
-    return json(route, [SPACE_IDENTITE, SPACE_INFRA])
-  })
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}`, (route) => json(route, SPACE_IDENTITE))
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}/owners`, (route) =>
     json(route, {
@@ -138,176 +389,172 @@ async function mockPageApis(page, { variant = 'desktop', attestation = true, edi
   )
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}/tree**`, (route) => json(route, TREE_IDENTITE))
   await page.route(`**/api/v1/spaces/${SPACE_INFRA.id}/tree**`, (route) => json(route, TREE_INFRA))
-  await page.route('**/api/v1/search**', (route) => json(route, { query: '', results: [], total: 0 }))
 }
 
 async function prep(page, opts) {
-  await injectOidcSession(page)
+  await injectOidcSession(page, VISUAL_NOW)
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'socle.shell.expandedSpaces',
+      JSON.stringify(['s0000001-0000-4000-8000-000000000001', 's0000001-0000-4000-8000-000000000002']),
+    )
+  })
   await mockPageApis(page, opts)
 }
 
-function diffRatio(a, b, label) {
-  const imgA = PNG.sync.read(a)
-  const imgB = PNG.sync.read(b)
-  if (imgA.width !== imgB.width || imgA.height !== imgB.height) {
-    throw new Error(`${label}: size mismatch ${imgA.width}x${imgA.height} vs ${imgB.width}x${imgB.height}`)
+async function waitDesktopApp(page) {
+  await page.waitForSelector('[data-mock-id="doc-title"]')
+  await page.waitForSelector('[data-mock-id="doc-attestation"]')
+  await page.waitForSelector('[data-mock-id="rail-reliability"]')
+  await page.waitForSelector('[data-mock-id="doc-related-link"]')
+}
+
+/** Menu d'export ouvert (maquette : état figé ouvert) — clic utilisateur, pas de mutation du DOM. */
+async function openAppExportMenu(page) {
+  await page.getByTestId('doc-export-btn').click()
+  await page.waitForSelector('[data-testid="doc-export-menu"]')
+  await page.mouse.move(1, 1)
+}
+
+/* ------------------------------------------------------------------ */
+/* Pixel                                                              */
+/* ------------------------------------------------------------------ */
+
+async function shootAll(page, sections, prefix, side) {
+  const out = {}
+  for (const s of sections) {
+    out[s.name] = await shotSection(page, `[data-mock-id="${s.id}"]`, {
+      maskNames: s.masks ?? [],
+      label: `${prefix}-sec-${s.name}-${side}`,
+    })
   }
-  const diff = new PNG({ width: imgA.width, height: imgA.height })
-  const mismatched = pixelmatch(imgA.data, imgB.data, diff.data, imgA.width, imgA.height, {
-    threshold: 0.2,
-    includeAA: false,
-  })
-  fs.mkdirSync(outDir, { recursive: true })
-  fs.writeFileSync(path.join(outDir, `${label}-maquette.png`), a)
-  fs.writeFileSync(path.join(outDir, `${label}-app.png`), b)
-  fs.writeFileSync(path.join(outDir, `${label}-diff.png`), PNG.sync.write(diff))
-  return mismatched / (imgA.width * imgA.height)
+  return out
 }
-
-async function settleFonts(page) {
-  await page.evaluate(() => document.fonts.ready)
-}
-
-/** Glyphes transparents : le pixel-diff compare la géométrie / les aplats, pas le rendu des polices. */
-async function maskGlyphs(page) {
-  await page.addStyleTag({
-    content: `* { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; caret-color: transparent !important; }
-      svg text { fill: transparent !important; }
-      ::selection { background: transparent; }`,
-  })
-}
-
-const MOCK = 'http://127.0.0.1:4174'
 
 test.describe('document page visual parity', () => {
-  test('desktop Page vs Main.dc.html @ 1440×900 (colonne principale)', async ({ page }, testInfo) => {
+  test('desktop Page vs Main.dc.html — sections pixel ≤ 1 % (texte inclus)', async ({ page }, testInfo) => {
     await prep(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
+    await page.goto(`${MOCK_ORIGIN}/Main.dc.html`)
+    await annotateSectionsMock(page)
+    await settleFonts(page)
+    await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'page')
+    const upstreams = await measureSubpixelUpstreams(page, SUBPIXEL_EXCEPTIONS, NOT_IMPLEMENTED)
+    const mockSec = await shootAll(page, DESKTOP_SECTIONS, 'page-desktop', 'mock')
+
     await page.goto(`/docs/${PAGE_DOC_ID}`)
-    await page.waitForSelector('[data-mock-id="doc-title"]')
-    await page.waitForSelector('[data-mock-id="doc-attestation"]')
-    await page.waitForSelector('[data-mock-id="rail-reliability"]')
-    await page.waitForSelector('[data-mock-id="doc-related-link"]')
-    await page.evaluate(() => {
-      document.body.style.margin = '0'
-      document.documentElement.style.overflow = 'hidden'
-    })
+    await waitDesktopApp(page)
+    await openAppExportMenu(page)
+    await annotateSectionsApp(page)
     await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(150)
-    const clip = { x: 268, y: 0, width: 1172, height: 900 }
-    const appShot = await page.screenshot({ fullPage: false, clip })
+    await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'page')
 
-    await page.goto(`${MOCK}/Main.dc.html`)
-    await page.evaluate(() => {
-      // Exception : « Champs personnalisés » absent de l'app sans définition de champs.
-      const label = Array.from(document.querySelectorAll('div')).find(
-        (d) => d.children.length === 0 && (d.textContent || '').trim() === 'Champs personnalisés',
+    const compare = compareSectionShots(SIZE_EXCEPTIONS, {
+      subpixel: SUBPIXEL_EXCEPTIONS,
+      notImplemented: NOT_IMPLEMENTED,
+      upstreams,
+    })
+    const results = []
+    // Haut de page d'abord (sections sticky / menu), puis le corps, puis le rail.
+    for (const s of DESKTOP_SECTIONS) {
+      await page.mouse.move(1, 1)
+      const app = await shotSection(page, `[data-mock-id="${s.id}"]`, {
+        maskNames: s.masks ?? [],
+        label: `page-desktop-sec-${s.name}-app`,
+      })
+      results.push(
+        compare(`page-desktop-${s.name}`, mockSec[s.name].shot, app.shot, testInfo, {
+          mock: mockSec[s.name].geo,
+          app: app.geo,
+        }),
       )
-      const block = label?.parentElement?.parentElement
-      if (block) block.style.visibility = 'hidden'
-    })
-    await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(150)
-    const mockShot = await page.screenshot({ fullPage: false, clip })
-
-    await testInfo.attach('maquette-page', { body: mockShot, contentType: 'image/png' })
-    await testInfo.attach('app-page', { body: appShot, contentType: 'image/png' })
-    const ratio = diffRatio(mockShot, appShot, 'page-desktop')
-    expect(ratio, `desktop page diff ${ratio}`).toBeLessThanOrEqual(0.03)
+    }
+    finishPixelResults('page', results)
   })
 
-  test('mobile Page vs MobilePage.dc.html @ 390×844', async ({ page }, testInfo) => {
+  test('mobile Page vs MobilePage.dc.html @ 390×844 — sections pixel ≤ 1 % (texte inclus)', async ({
+    page,
+  }, testInfo) => {
     await prep(page, { variant: 'mobile', attestation: false, related: false })
     await page.setViewportSize({ width: 390, height: 844 })
 
-    await page.goto(`${MOCK}/MobilePage.dc.html`)
-    await page.evaluate(() => {
-      const root = Array.from(document.querySelectorAll('div')).find((d) =>
-        (d.getAttribute('style') || '').includes('390px'),
-      )
-      if (root) {
-        root.style.position = 'fixed'
-        root.style.left = '0'
-        root.style.top = '0'
-      }
-    })
+    await page.goto(`${MOCK_ORIGIN}/MobilePage.dc.html`)
+    await annotateSectionsMobileMock(page)
     await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(100)
-    const clip = { x: 0, y: 0, width: 390, height: 844 }
-    const mockShot = await page.screenshot({ fullPage: false, clip })
+    // Surface mobile : 390×844 (pas 1440×900).
+    const area = pageAreaFor({ width: 390, height: 844 })
+    const m = await measureMaskName(page, 'mpage-drawio', area)
+    const mz = NOT_IMPLEMENTED.find((z) => z.id === 'mpage-drawio')
+    const desc = `NOT_IMPLEMENTED ${mz.id}: ${m.areaPx} px (${m.pctOfPage} % page 390×844) — ${mz.reason} [${mz.backlog}]`
+    console.log(desc)
+    testInfo.annotations.push({ type: 'not-implemented', description: desc })
+    const mockSec = {}
+    for (const s of MOBILE_SECTIONS) {
+      mockSec[s.name] = await shotSection(page, `[data-mock-id="${s.id}"]`, {
+        label: `page-mobile-sec-${s.name}-mock`,
+      })
+    }
 
     await page.goto(`/docs/${PAGE_DOC_ID}`)
     await page.waitForSelector('[data-mock-id="doc-title"]')
     await page.waitForSelector('[data-mock-id="doc-mobile-tabs"]')
-    await page.evaluate(() => {
-      document.body.style.margin = '0'
-    })
+    await annotateSectionsMobileApp(page)
     await settleFonts(page)
-    await maskGlyphs(page)
-    await page.waitForTimeout(100)
-    const appShot = await page.screenshot({ fullPage: false, clip })
+    await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'page-mobile')
 
-    const ratio = diffRatio(mockShot, appShot, 'page-mobile')
-    expect(ratio, `mobile page diff ${ratio}`).toBeLessThanOrEqual(0.04)
+    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const results = []
+    for (const s of MOBILE_SECTIONS) {
+      await page.mouse.move(1, 1)
+      const app = await shotSection(page, `[data-mock-id="${s.id}"]`, {
+        label: `page-mobile-sec-${s.name}-app`,
+      })
+      results.push(compare(`page-mobile-${s.name}`, mockSec[s.name].shot, app.shot, testInfo))
+    }
+    finishPixelResults('page-mobile', results)
   })
 })
 
+/* ------------------------------------------------------------------ */
+/* Structurel                                                         */
+/* ------------------------------------------------------------------ */
+
 test.describe('document page structural', () => {
+  const FLOW_Y =
+    'box.y : cascade verticale (figures draw.io rendues en « Bloc non pris en charge », fichier joint absent de la maquette, Fig. 4 non seedée) ; x / w / h comparés.'
   const desktopExceptions = {
-    'doc-topbar': { skip: ['text'], reason: 'Boutons d’action (aide, favori, export, Publier) : libellés dans les enfants' },
-    'doc-breadcrumb': { skip: ['text'], reason: 'Séparateurs → et liens : textContent agrégé' },
+    'doc-topbar': { skip: ['text'], reason: 'Conteneur — libellés des boutons d’action comparés par le pixel (sections actions / export-menu)' },
+    'doc-breadcrumb': { skip: ['text'], reason: 'Séparateurs → et liens : textContent agrégé ; comparé par le pixel (section crumbs)' },
     'doc-switch-index': {
       skip: ['box', 'lineHeight'],
-      reason: 'Onglet Index désactivé (title="bientôt") : bouton au lieu du lien Index.dc.html',
+      reason: 'Onglet Index désactivé (title="bientôt") : <button> au lieu du lien Index.dc.html',
     },
     'doc-tabs': { skip: ['text'], reason: 'Libellés dans les enfants ; Modifier/Accès conditionnels aux droits' },
     'doc-attestation': { skip: ['text'], reason: 'Conteneur — textes comparés sur les enfants annotés' },
-    'doc-attestation-title': {
-      skip: ['box'],
-      reason: 'Largeur du bloc texte = flex-grow : dépend de la largeur du bouton (police)',
-    },
-    'doc-attestation-text': { skip: ['box'], reason: 'Idem' },
-    'doc-attestation-cta': {
-      skip: ['box', 'fontFamily'],
-      reason: 'Bouton de la maquette sans font-family (UA Arial) ; l’app applique IBM Plex Sans',
-    },
     'rail-owner-name': {
-      skip: ['text', 'box'],
-      reason: 'Propriétaire = « Équipe {nom de l’espace} » (maquette : « Équipe Identité »)',
-    },
-    'rail-toc-link': {
-      skip: ['color', 'fontWeight'],
-      reason: 'Entrée TOC active (IntersectionObserver) : #3730e0 / 600 vs maquette inactive #6b6b72 / 400',
+      skip: ['text', 'box.width'],
+      reason: 'Propriétaire = « Équipe {nom de l’espace} » (maquette : « Équipe Identité ») — donnée réelle, largeur du texte en découle',
     },
   }
 
   const belowFoldExceptions = {
-    // Box.y : figures draw.io absentes côté app (exception lot 3) + carte « fichier joint » sans
-    // équivalent dans la maquette. L'image (Fig. 2) est rendue mais la maquette masque ses <figure>.
-    'doc-related-title': { skip: ['box'], reason: 'Figures draw.io (lot 3) et fichier joint → décalage vertical' },
-    'doc-related-link': { skip: ['box'], reason: 'Figures draw.io (lot 3) et fichier joint → décalage vertical' },
-    'doc-feedback-label': {
-      skip: ['box', 'text'],
-      reason: 'Libellé desktop/mobile partagé ; y dépend des figures draw.io (lot 3) et du fichier joint',
-    },
+    'doc-related-title': { skip: ['box.y'], reason: FLOW_Y },
+    'doc-related-link': { skip: ['box.y'], reason: FLOW_Y },
+    'doc-feedback-label': { skip: ['box.y', 'text'], reason: `${FLOW_Y} Libellé desktop/mobile partagé (deux <span> dans l’app).` },
   }
+
   test('desktop Page structural match', async ({ page }, testInfo) => {
     await prep(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    await page.goto(`${MOCK}/Main.dc.html`)
+    await page.goto(`${MOCK_ORIGIN}/Main.dc.html`)
     await settleFonts(page)
     await annotatePageMockup(page)
     const mockMap = await collectMetrics(page, PAGE_DESKTOP_IDS)
 
     await page.goto(`/docs/${PAGE_DOC_ID}`)
-    await page.waitForSelector('[data-mock-id="doc-title"]')
-    await page.waitForSelector('[data-mock-id="doc-attestation"]')
-    await page.waitForSelector('[data-mock-id="doc-related-link"]')
+    await waitDesktopApp(page)
     await settleFonts(page)
     const appMap = await collectMetrics(page, PAGE_DESKTOP_IDS)
 
@@ -316,21 +563,18 @@ test.describe('document page structural', () => {
     expect(fonts.find((f) => f.family === 'IBM Plex Sans')?.loaded).toBe(true)
 
     const results = compareMetrics(mockMap, appMap, PAGE_DESKTOP_IDS, { pageExceptions: desktopExceptions })
-    fs.mkdirSync(outDir, { recursive: true })
-    fs.writeFileSync(path.join(outDir, 'structural-page-desktop.json'), JSON.stringify(results, null, 2))
     await testInfo.attach('structural-page-desktop.json', {
       body: Buffer.from(JSON.stringify(results, null, 2)),
       contentType: 'application/json',
     })
-    const failures = results.filter((r) => r.diffs.length)
-    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+    expectNoStructuralDiffs(results)
   })
 
   test('mobile Page structural match', async ({ page }) => {
     await prep(page, { variant: 'mobile', attestation: false, related: false })
     await page.setViewportSize({ width: 390, height: 844 })
 
-    await page.goto(`${MOCK}/MobilePage.dc.html`)
+    await page.goto(`${MOCK_ORIGIN}/MobilePage.dc.html`)
     await settleFonts(page)
     await annotateMobilePageMockup(page)
     const mockMap = await collectMetrics(page, PAGE_MOBILE_IDS)
@@ -341,35 +585,19 @@ test.describe('document page structural', () => {
     await settleFonts(page)
     const appMap = await collectMetrics(page, PAGE_MOBILE_IDS)
 
-    // Aucune exception : textes, typographie et boîtes identiques à MobilePage.dc.html.
-    const pageExceptions = {}
-    const results = compareMetrics(mockMap, appMap, PAGE_MOBILE_IDS, { pageExceptions })
-    fs.mkdirSync(outDir, { recursive: true })
-    fs.writeFileSync(path.join(outDir, 'structural-page-mobile.json'), JSON.stringify(results, null, 2))
-    const failures = results.filter((r) => r.diffs.length)
-    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+    const results = compareMetrics(mockMap, appMap, PAGE_MOBILE_IDS, { pageExceptions: {} })
+    expectNoStructuralDiffs(results)
   })
 
-  test('desktop below-fold : Documents liés + feedback (après défilement)', async ({ page }, testInfo) => {
+  test('desktop below-fold : Documents liés + feedback (après défilement)', async ({ page }) => {
     await prep(page)
     await page.setViewportSize({ width: 1440, height: 900 })
 
-    await page.goto(`${MOCK}/Main.dc.html`)
+    await page.goto(`${MOCK_ORIGIN}/Main.dc.html`)
     await settleFonts(page)
     await annotatePageMockup(page)
-    // Masquer figures draw.io / captures dans la maquette pour aligner la hauteur relative.
-    await page.evaluate(() => {
-      document.querySelectorAll('figure, .doc-unsupported').forEach((el) => {
-        el.style.display = 'none'
-      })
-      // Also hide the draw.io SVG blocks and dashed screenshot placeholders in the maquette
-      document.querySelectorAll('figure').forEach((el) => {
-        el.style.display = 'none'
-      })
-    })
     for (const id of PAGE_BELOW_FOLD_IDS) {
-      const el = page.locator(`[data-mock-id="${id}"]`).first()
-      if (await el.count()) await el.scrollIntoViewIfNeeded()
+      await page.locator(`[data-mock-id="${id}"]`).first().scrollIntoViewIfNeeded()
     }
     const mockMap = await collectMetrics(page, PAGE_BELOW_FOLD_IDS)
 
@@ -385,24 +613,20 @@ test.describe('document page structural', () => {
     const results = compareMetrics(mockMap, appMap, PAGE_BELOW_FOLD_IDS, {
       pageExceptions: belowFoldExceptions,
     })
-    fs.mkdirSync(outDir, { recursive: true })
-    fs.writeFileSync(path.join(outDir, 'structural-page-below-fold.json'), JSON.stringify(results, null, 2))
-    await testInfo.attach('structural-page-below-fold.json', {
-      body: Buffer.from(JSON.stringify(results, null, 2)),
-      contentType: 'application/json',
-    })
-    const failures = results.filter((r) => r.diffs.length)
-    expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
+    expectNoStructuralDiffs(results)
   })
 })
+
+/* ------------------------------------------------------------------ */
+/* Comportement (non visuel)                                           */
+/* ------------------------------------------------------------------ */
 
 test.describe('document page behaviour', () => {
   test('print : masque shell, barre, onglets et rail ; garde titre et contenu', async ({ page }) => {
     await prep(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(`/docs/${PAGE_DOC_ID}`)
-    await page.waitForSelector('[data-mock-id="doc-title"]')
-    await page.waitForSelector('[data-mock-id="doc-attestation"]')
+    await waitDesktopApp(page)
     await page.emulateMedia({ media: 'print' })
 
     const display = (sel) =>

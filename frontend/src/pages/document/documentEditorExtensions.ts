@@ -12,6 +12,7 @@ import { PollNode } from '../../components/rich-blocks/pollExtension'
 import { tableExtensions } from '../../components/rich-blocks/tableExtensions'
 import { VideoNode } from '../../components/rich-blocks/videoExtension'
 import { Placeholder } from '../../lib/placeholderExtension'
+import { EditingParagraph } from './editingParagraphExtension'
 
 /** Extensions TipTap de l'éditeur document — source de vérité pour le contrat getJSON ↔ validateur. */
 export function documentEditorExtensions(): Extensions {
@@ -25,6 +26,7 @@ export function documentEditorExtensions(): Extensions {
       HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
     }),
     Placeholder,
+    EditingParagraph,
     AttachmentImageNode,
     AttachmentNode,
     DateNode,
