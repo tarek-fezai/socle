@@ -280,36 +280,37 @@ export function SpacesPage() {
               >
                 Annuler
               </button>
-              <button
-                type="submit"
+              <a
+                href="/spaces"
                 data-mock-id="create-submit"
-                disabled={create.isPending}
-                className="hover:bg-[#2C27C7] disabled:opacity-50"
+                aria-disabled={create.isPending || undefined}
+                onClick={(e) => {
+                  e.preventDefault()
+                  if (create.isPending || !name.trim()) return
+                  create.mutate()
+                }}
+                className="hover:bg-[#2C27C7]"
                 style={{
-                  appearance: 'none',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'center',
                   boxSizing: 'content-box',
                   padding: '9px 20px',
-                  margin: 0,
                   borderRadius: 7,
-                  border: 0,
                   background: '#3730E0',
                   color: '#FFFFFF',
                   font: 'inherit',
                   fontSize: 13,
                   fontWeight: 600,
                   lineHeight: 'normal',
-                  letterSpacing: 'inherit',
-                  textAlign: 'center',
+                  textDecoration: 'none',
                   WebkitFontSmoothing: 'auto',
                   MozOsxFontSmoothing: 'auto',
-                  cursor: 'pointer',
+                  textRendering: 'auto',
+                  opacity: create.isPending ? 0.5 : 1,
+                  pointerEvents: create.isPending ? 'none' : undefined,
+                  cursor: create.isPending ? 'default' : 'pointer',
                 }}
               >
                 {create.isPending ? 'Création…' : "Créer l'espace"}
-              </button>
+              </a>
             </div>
           </form>
           </div>
