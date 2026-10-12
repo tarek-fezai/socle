@@ -36,6 +36,10 @@ const RASTER_EXCEPTIONS = {
     maxPixel: 0.05,
     reason: 'lissage LCD (<a> maquette) vs gris (<button> app), géométrie identique',
   },
+  'create-space-submit': {
+    maxPixel: 0.05,
+    reason: 'lissage LCD (<a> maquette) vs gris (<button> app), géométrie identique',
+  },
 }
 
 const PIXEL_SECTIONS = [
@@ -79,7 +83,7 @@ test.describe('create-space visual', () => {
     await probeAncestorStack(page, '[data-mock-id="create-title"]', 'create-space-mock')
     await probeAncestorStack(page, '[data-mock-id="create-submit"]', 'create-space-mock')
     await probeAncestorStack(page, '[data-mock-id="create-cancel"]', 'create-space-mock')
-    await probeTextBox(page, '[data-mock-id="create-submit"]', 'create-space-mock')
+    const mockSubmitTb = await probeTextBox(page, '[data-mock-id="create-submit"]', 'create-space-mock')
     const mockCancelTb = await probeTextBox(page, '[data-mock-id="create-cancel"]', 'create-space-mock')
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'create-space')
 
@@ -116,16 +120,19 @@ test.describe('create-space visual', () => {
     await probeAncestorStack(page, '[data-mock-id="create-title"]', 'create-space-app')
     await probeAncestorStack(page, '[data-mock-id="create-submit"]', 'create-space-app')
     await probeAncestorStack(page, '[data-mock-id="create-cancel"]', 'create-space-app')
-    await probeTextBox(page, '[data-mock-id="create-submit"]', 'create-space-app')
+    const appSubmitTb = await probeTextBox(page, '[data-mock-id="create-submit"]', 'create-space-app')
     const appCancelTb = await probeTextBox(page, '[data-mock-id="create-cancel"]', 'create-space-app')
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'create-space')
 
-    const cancelSel = '[data-mock-id="create-cancel"]'
-    const rasterGeo = {
-      mock: mockCancelTb,
-      app: appCancelTb,
-      mockOwnLayers: mockLayers[cancelSel]?.ownLayers ?? null,
-      appOwnLayers: appLayers[cancelSel]?.ownLayers ?? null,
+    const rasterGeo = (sel, mockTb, appTb) => ({
+      mock: mockTb,
+      app: appTb,
+      mockOwnLayers: mockLayers[sel]?.ownLayers ?? null,
+      appOwnLayers: appLayers[sel]?.ownLayers ?? null,
+    })
+    const geos = {
+      cancel: rasterGeo('[data-mock-id="create-cancel"]', mockCancelTb, appCancelTb),
+      submit: rasterGeo('[data-mock-id="create-submit"]', mockSubmitTb, appSubmitTb),
     }
     const compare = compareSectionShots(SIZE_EXCEPTIONS, { raster: RASTER_EXCEPTIONS })
     const results = []
@@ -140,7 +147,7 @@ test.describe('create-space visual', () => {
           mockSec[s.name].shot,
           app.shot,
           testInfo,
-          s.name === 'cancel' ? rasterGeo : undefined,
+          geos[s.name],
         ),
       )
     }

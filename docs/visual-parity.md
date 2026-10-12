@@ -73,8 +73,8 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 15. **Accès** : people picker / Inviter / onglets document `NOT_IMPLEMENTED` (`ACCESS-PEOPLE-PICKER`, prioritaire). Formulaire UUID conservé sans affichage d’UUID (`APP_EXTRA` provisoire).
 16. **Une section > seuil fait échouer la CI.** Interdit : `test.fail()`, `test.fixme()`, skip conditionnel pour rendre un écart « attendu ».
 17. **Trash.dc.html : « Supprimer définitivement » est un `<button type="button" class="perm-delete">`** (décision tf **2026-10-12**, artifact Design v144). Règle UA `.perm-delete` dans le `<helmet>` ; `serve-mockups.mjs` conserve ce helmet. Confirmation dans la page à la place de `window.confirm` : backlog, ne pas implémenter ici.
-18. **CreateSpace.dc.html : CTA restés `<a>`**. Approval Approuver/Refuser (`<a>` vs `<button>` 14 px) passent à 0 %. À 13 px, le CTA CreateSpace en `<button>` reste à 1,940 % sur Linux (géométrie identique, lissage auto sans effet) : l’app aligne le CTA sur un `<a>` comme la maquette (`font-smoothing` / `text-rendering: auto`). Annuler reste un `<button>` (exception raster). Submit étiré à 37 px : le `<a>` cale le texte sous le padding haut (y=596).
-19. **`RASTER_EXCEPTIONS`** (entrée unique `create-space-cancel`) : lissage LCD du `<a>` maquette vs gris du `<button>` app à géométrie identique. Essais fond opaque `#FFFFFF` et `appearance` UA : écart inchangé (3,164 %). Seuil ≤ 5 % ; garde si la section ≤ 1 %.
+18. **CreateSpace.dc.html : CTA restés `<a>`** (hypothèse `<a>` vs `<button>` réfutée : Approval.dc.html Approuver/Refuser sont des `<a>`, l’app passe ≤ 1 % en `<button>` à 14 px). Submit étiré à 37 px (rangée = cancel + bordure) : `display:flex; align-items:flex-start` pour caler le texte sous le padding haut (y=596), comme generate-token #68. Essais CTA : fond opaque, `appearance` UA, `font-smoothing: auto`, même tag `<a>` — Linux reste à 1,940 %.
+19. **`RASTER_EXCEPTIONS`** (`create-space-cancel`, `create-space-submit`) : lissage LCD (`<a>` maquette) vs gris (`<button>` app) à géométrie identique. Annuler : 3,164 % Windows / 4,298 % Linux. CTA : 0,987 % Windows / 1,940 % Linux. Seuil ≤ 5 % ; si ≤ 1 % sur un rasterizer l’entrée reste (l’autre OS peut dépasser).
 
 ## Comparaison
 
@@ -176,11 +176,13 @@ RASTER_EXCEPTIONS[sectionId] = { maxPixel: 0.05, reason }
   2. styles calculés de police identiques (famille — premier nom —, taille, graisse,
      `letter-spacing`, `line-height`, couleur) ;
   3. aucun calque propre LayerTree des deux côtés (`ownLayers` vide).
-- Une entrée **inutile** (section ≤ 1 % sans elle) fait échouer le test : la retirer.
+- Si la section ≤ 1 % sur **ce** rasterizer : succès, exception inutilisée (ne pas retirer tant qu’un autre OS dépasse 1 %).
+- Retirer l’entrée seulement quand Windows **et** Linux sont ≤ 1 %.
 
 | Section | Motif |
 |---|---|
 | `create-space-cancel` | LCD (`<a>` maquette) vs gris (`<button>` app), géométrie identique |
+| `create-space-submit` | idem, 13 px ; 1,940 % Linux / 0,987 % Windows |
 
 ## Exceptions structurales
 

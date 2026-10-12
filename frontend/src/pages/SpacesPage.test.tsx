@@ -90,7 +90,7 @@ describe('SpacesPage', () => {
     fireEvent.change(screen.getByPlaceholderText(/Sécurité/i), {
       target: { value: 'Identité' },
     })
-    fireEvent.click(screen.getByRole('link', { name: "Créer l'espace" }))
+    fireEvent.click(screen.getByRole('button', { name: "Créer l'espace" }))
 
     await waitFor(() => {
       expect(createSpace).toHaveBeenCalledWith(

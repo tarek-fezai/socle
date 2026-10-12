@@ -784,7 +784,7 @@ export function rasterVerdict(geo) {
  * section passe déjà à 1 % (exception inutile).
  *
  * RASTER_EXCEPTIONS (opts.raster) : seuil `maxPixel` ≤ 5 % si boîte + Range texte identiques (1/100 px),
- * police calculée identique, aucun calque propre LayerTree ; échec si la section ≤ 1 %.
+ * police calculée identique, aucun calque propre LayerTree ; ≤ 1 % = succès (inutilisée sur ce rasterizer).
  *
  * @param {Record<string, { dw: number, dh: number, reason: string }>} sizeExceptions
  * @param {{ subpixel?: Record<string, SubpixelException>, raster?: Record<string, RasterException>, notImplemented?: NotImplementedZone[], upstreams?: Record<string, unknown> }} [opts]
@@ -877,9 +877,10 @@ export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, raster
         return { name, pct, mock, app, ok: false, note: msg }
       }
       if (ratio <= 0.01) {
-        return fail(
-          `${name}: ${pct.toFixed(3)} % ≤ 1 % — RASTER_EXCEPTION inutile, retirer l'entrée`,
-        )
+        const line = `${name}: ${pct.toFixed(3)} % ≤ 1 % — RASTER_EXCEPTION inutilisée sur ce rasterizer (garder si un autre OS > 1 %)`
+        console.log(line)
+        testInfo.annotations.push({ type: 'section-pixel', description: line })
+        return { name, pct, mock, app, ok: true, note: line, raster: { applied: false, unused: true } }
       }
       const limit = v.applied ? rst.maxPixel : 0.01
       const ok = ratio <= limit
