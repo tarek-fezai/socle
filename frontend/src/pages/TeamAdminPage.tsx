@@ -43,9 +43,22 @@ export function TeamAdminPage() {
       <div data-mock-id="team-page">
         <div className="mb-1.5 flex items-start justify-between">
           <div>
-            <h1 className="admin-title admin-title--team" data-mock-id="team-title">
+            <div
+              data-mock-id="team-title"
+              className="font-display"
+              style={{
+                fontFamily: '"Instrument Serif", Georgia, serif',
+                fontSize: 34,
+                fontWeight: 400,
+                lineHeight: 'normal',
+                color: '#0E0E10',
+                margin: '0 0 6px',
+                display: 'inline-block',
+                whiteSpace: 'nowrap',
+              }}
+            >
               Membres & équipes
-            </h1>
+            </div>
             <Lead />
           </div>
           <button
@@ -133,26 +146,30 @@ function TabBtn({
 }) {
   const on = current === id
   return (
-    <button
-      type="button"
+    <a
+      href={`#${id}`}
       role="tab"
       aria-selected={on}
       data-mock-id={mockId}
-      onClick={() => onClick(id)}
-      className="leading-[normal] text-[#6B6B72]"
+      onClick={(e) => {
+        e.preventDefault()
+        onClick(id)
+      }}
       style={{
         padding: '7px 16px',
         fontSize: 12.5,
-        fontWeight: on ? 600 : 400,
+        fontWeight: 400,
+        color: '#6B6B72',
         background: on ? '#FFFFFF' : 'transparent',
-        border: 0,
         borderRight: '1px solid #ECECEE',
         boxSizing: 'content-box',
         lineHeight: 'normal',
+        textDecoration: 'none',
+        display: 'inline-block',
       }}
     >
       {children}
-    </button>
+    </a>
   )
 }
 
