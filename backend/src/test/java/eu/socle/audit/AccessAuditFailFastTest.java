@@ -49,7 +49,7 @@ class AccessAuditFailFastTest {
 
     @Test
     void grant_failsWhenRequestedAuditInsertFails_withoutTouchingFga() {
-        AccessController controller = new AccessController(authorizationService, userSyncService, auditService, groupService, identityFacade);
+        AccessController controller = new AccessController(authorizationService, userSyncService, auditService, groupService, identityFacade, org.mockito.Mockito.mock(eu.socle.authz.AccessDirectoryEnricher.class));
         when(userSyncService.syncFromJwt(any())).thenReturn(user(USER));
         when(identityFacade.isSystemAdmin(any())).thenReturn(true);
         doThrow(new AuditService.AuditWriteException("db down", new RuntimeException("constraint")))
@@ -72,7 +72,7 @@ class AccessAuditFailFastTest {
 
     @Test
     void revoke_failsWhenRequestedAuditInsertFails_withoutTouchingFga() {
-        AccessController controller = new AccessController(authorizationService, userSyncService, auditService, groupService, identityFacade);
+        AccessController controller = new AccessController(authorizationService, userSyncService, auditService, groupService, identityFacade, org.mockito.Mockito.mock(eu.socle.authz.AccessDirectoryEnricher.class));
         when(userSyncService.syncFromJwt(any())).thenReturn(user(USER));
         when(identityFacade.isSystemAdmin(any())).thenReturn(true);
         doThrow(new AuditService.AuditWriteException("db down", new RuntimeException("constraint")))

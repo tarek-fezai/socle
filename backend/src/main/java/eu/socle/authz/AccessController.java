@@ -47,19 +47,22 @@ public class AccessController {
     private final AuditService auditService;
     private final GroupService groupService;
     private final IdentityFacade identityFacade;
+    private final AccessDirectoryEnricher enricher;
 
     public AccessController(
             AuthorizationService authorizationService,
             UserSyncService userSyncService,
             AuditService auditService,
             GroupService groupService,
-            IdentityFacade identityFacade
+            IdentityFacade identityFacade,
+            AccessDirectoryEnricher enricher
     ) {
         this.authorizationService = authorizationService;
         this.userSyncService = userSyncService;
         this.auditService = auditService;
         this.groupService = groupService;
         this.identityFacade = identityFacade;
+        this.enricher = enricher;
     }
 
     @GetMapping("/{objectType}/{objectId}")
@@ -72,7 +75,7 @@ public class AccessController {
         requireCanManage(jwt, user.getId(), objectType, objectId);
         List<AuthorizationService.AccessEntry> entries =
                 authorizationService.listAccessEntries(objectType, objectId);
-        return new AccessListResponse(objectType, objectId, true, entries);
+        return new AccessListResponse(objectType, objectId, true, enricher.enrich(entries));
     }
 
     @PostMapping("/{objectType}/{objectId}")
@@ -265,6 +268,21 @@ public class AccessController {
             String objectType,
             UUID objectId,
             boolean canManage,
-            List<AuthorizationService.AccessEntry> entries
+            List<AccessEntryView> entries
+    ) {}
+
+    @io.swagger.v3.oas.annotations.media.Schema(name = "AccessEntry")
+    public record AccessEntryView(
+            String subject,
+            String subjectType,
+            UUID subjectId,
+            String relation,
+            String source,
+            String inheritedFrom,
+            boolean revocable,
+            String displayName,
+            String initials,
+            java.time.Instant lastActivityAt,
+            Integer memberCount
     ) {}
 }

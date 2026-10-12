@@ -5,6 +5,7 @@ import eu.socle.team.GroupDtos.AddMemberRequest;
 import eu.socle.team.GroupDtos.CreateGroupRequest;
 import eu.socle.team.GroupDtos.GroupView;
 import eu.socle.team.GroupDtos.UpdateGroupRequest;
+import eu.socle.team.GroupDtos.UpdateMemberRoleRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -73,6 +74,16 @@ public class GroupController {
             @Valid @RequestBody AddMemberRequest body
     ) {
         return service.addMember(jwt, id, body);
+    }
+
+    @PutMapping("/{id}/members/{userId}")
+    public GroupView updateMemberRole(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @PathVariable UUID userId,
+            @Valid @RequestBody UpdateMemberRoleRequest body
+    ) {
+        return service.updateMemberRole(jwt, id, userId, body);
     }
 
     @DeleteMapping("/{id}/members/{userId}")

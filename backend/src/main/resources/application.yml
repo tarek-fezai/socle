@@ -113,6 +113,8 @@ socle:
     proxy-url: ${SOCLE_LINK_PREVIEW_PROXY_URL:}
     cache-ttl-hours: ${SOCLE_LINK_PREVIEW_CACHE_TTL_HOURS:168}
     rate-limit-per-minute: ${SOCLE_LINK_PREVIEW_RATE_LIMIT_PER_MINUTE:10}
+  directory:
+    rate-limit-per-minute: ${SOCLE_DIRECTORY_RATE_LIMIT_PER_MINUTE:30}
   temporal:
     target: ${TEMPORAL_TARGET:localhost:7233}
     namespace: ${TEMPORAL_NAMESPACE:default}

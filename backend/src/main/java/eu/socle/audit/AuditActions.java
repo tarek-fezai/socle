@@ -72,6 +72,7 @@ public final class AuditActions {
     public static final String GROUP_DELETED = "group.deleted";
     public static final String GROUP_MEMBER_ADDED = "group.member_added";
     public static final String GROUP_MEMBER_REMOVED = "group.member_removed";
+    public static final String GROUP_MEMBER_ROLE_CHANGED = "group.member_role_changed";
 
     /** Export documentaire (PDF) — traçabilité a posteriori (fuite potentielle). */
     public static final String DOCUMENT_EXPORTED = "document.exported";

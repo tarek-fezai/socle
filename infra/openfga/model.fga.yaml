@@ -22,9 +22,9 @@ tuples:
     relation: viewer
     object: space:engineering
 
-  # Groupe
+  # Groupe (member est calculé — on assigne un rôle d'équipe)
   - user: user:group-member
-    relation: member
+    relation: contributeur
     object: group:eng-team
 
   - user: group:eng-team#member
@@ -160,6 +160,68 @@ tuples:
   - user: user:creator
     relation: editor
     object: document:org-in-folder
+
+  # Rôles d'équipe — docs/teams-and-access.md § 1.3
+  - user: user:team-owner
+    relation: proprietaire
+    object: group:squad
+  - user: user:team-approver
+    relation: approbateur
+    object: group:squad
+  - user: user:team-contrib
+    relation: contributeur
+    object: group:squad
+  - user: user:team-reader
+    relation: lecteur
+    object: group:squad
+
+  - user: organisation:acme
+    relation: parent
+    object: space:squad-owned
+  - user: group:squad#as_owner
+    relation: owner
+    object: space:squad-owned
+  - user: group:squad#as_editor
+    relation: editor
+    object: space:squad-owned
+  - user: group:squad#as_viewer
+    relation: viewer
+    object: space:squad-owned
+  - user: space:squad-owned
+    relation: parent
+    object: document:squad-owned-doc
+  - user: space:squad-owned
+    relation: inherit_from
+    object: document:squad-owned-doc
+
+  - user: organisation:acme
+    relation: parent
+    object: space:squad-edit
+  - user: group:squad#as_editor
+    relation: editor
+    object: space:squad-edit
+  - user: group:squad#as_viewer
+    relation: viewer
+    object: space:squad-edit
+  - user: space:squad-edit
+    relation: parent
+    object: document:squad-edit-doc
+  - user: space:squad-edit
+    relation: inherit_from
+    object: document:squad-edit-doc
+
+  - user: organisation:acme
+    relation: parent
+    object: space:squad-view
+  - user: group:squad#as_viewer
+    relation: viewer
+    object: space:squad-view
+  - user: space:squad-view
+    relation: parent
+    object: document:squad-view-doc
+  - user: space:squad-view
+    relation: inherit_from
+    object: document:squad-view-doc
 
 tests:
   - name: organisation visibility — user:* is viewer not editor
@@ -347,3 +409,118 @@ tests:
           editor: true
           owner: false
           viewer: true
+
+  - name: team role grant owner — proprietaire is owner; others are not
+    check:
+      - user: user:team-owner
+        object: document:squad-owned-doc
+        assertions:
+          owner: true
+          editor: true
+          viewer: true
+      - user: user:team-approver
+        object: document:squad-owned-doc
+        assertions:
+          owner: false
+          editor: true
+          viewer: true
+      - user: user:team-contrib
+        object: document:squad-owned-doc
+        assertions:
+          owner: false
+          editor: true
+          viewer: true
+      - user: user:team-reader
+        object: document:squad-owned-doc
+        assertions:
+          owner: false
+          editor: false
+          viewer: true
+      - user: user:outsider
+        object: document:squad-owned-doc
+        assertions:
+          owner: false
+          editor: false
+          viewer: false
+
+  - name: team role grant editor — lecteur is viewer only
+    check:
+      - user: user:team-owner
+        object: document:squad-edit-doc
+        assertions:
+          owner: false
+          editor: true
+          viewer: true
+      - user: user:team-approver
+        object: document:squad-edit-doc
+        assertions:
+          owner: false
+          editor: true
+          viewer: true
+      - user: user:team-contrib
+        object: document:squad-edit-doc
+        assertions:
+          owner: false
+          editor: true
+          viewer: true
+      - user: user:team-reader
+        object: document:squad-edit-doc
+        assertions:
+          owner: false
+          editor: false
+          viewer: true
+
+  - name: team role grant viewer — nobody is editor
+    check:
+      - user: user:team-owner
+        object: document:squad-view-doc
+        assertions:
+          owner: false
+          editor: false
+          viewer: true
+      - user: user:team-approver
+        object: document:squad-view-doc
+        assertions:
+          owner: false
+          editor: false
+          viewer: true
+      - user: user:team-contrib
+        object: document:squad-view-doc
+        assertions:
+          owner: false
+          editor: false
+          viewer: true
+      - user: user:team-reader
+        object: document:squad-view-doc
+        assertions:
+          owner: false
+          editor: false
+          viewer: true
+
+  - name: team as_approver — proprietaire and approbateur only
+    check:
+      - user: user:team-owner
+        object: group:squad
+        assertions:
+          as_approver: true
+          member: true
+      - user: user:team-approver
+        object: group:squad
+        assertions:
+          as_approver: true
+          member: true
+      - user: user:team-contrib
+        object: group:squad
+        assertions:
+          as_approver: false
+          member: true
+      - user: user:team-reader
+        object: group:squad
+        assertions:
+          as_approver: false
+          member: true
+      - user: user:outsider
+        object: group:squad
+        assertions:
+          member: false
+          as_approver: false

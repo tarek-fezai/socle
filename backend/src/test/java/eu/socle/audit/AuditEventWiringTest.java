@@ -63,7 +63,7 @@ class AuditEventWiringTest {
 
     @Test
     void grantAccess_recordsAccessGranted() {
-        AccessController controller = new AccessController(authorizationService, userSyncService, auditService, groupService, identityFacade);
+        AccessController controller = new AccessController(authorizationService, userSyncService, auditService, groupService, identityFacade, org.mockito.Mockito.mock(eu.socle.authz.AccessDirectoryEnricher.class));
         when(userSyncService.syncFromJwt(any())).thenReturn(user(USER));
         when(identityFacade.isSystemAdmin(any())).thenReturn(true);
         doNothing().when(authorizationService).grantPermission(any(), any(), any(), any(), any());

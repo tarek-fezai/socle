@@ -1,23 +1,59 @@
 {
   "schema_version": "1.1",
   "type_definitions": [
-    {
-      "type": "user"
-    },
+    { "type": "user" },
     {
       "type": "group",
       "relations": {
+        "proprietaire": { "this": {} },
+        "approbateur": { "this": {} },
+        "contributeur": { "this": {} },
+        "lecteur": { "this": {} },
         "member": {
-          "this": {}
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "proprietaire" } },
+              { "computedUserset": { "relation": "approbateur" } },
+              { "computedUserset": { "relation": "contributeur" } },
+              { "computedUserset": { "relation": "lecteur" } }
+            ]
+          }
+        },
+        "as_owner": { "computedUserset": { "relation": "proprietaire" } },
+        "as_editor": {
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "proprietaire" } },
+              { "computedUserset": { "relation": "approbateur" } },
+              { "computedUserset": { "relation": "contributeur" } }
+            ]
+          }
+        },
+        "as_viewer": {
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "proprietaire" } },
+              { "computedUserset": { "relation": "approbateur" } },
+              { "computedUserset": { "relation": "contributeur" } },
+              { "computedUserset": { "relation": "lecteur" } }
+            ]
+          }
+        },
+        "as_approver": {
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "proprietaire" } },
+              { "computedUserset": { "relation": "approbateur" } }
+            ]
+          }
         }
       },
       "metadata": {
         "relations": {
-          "member": {
-            "directly_related_user_types": [
-              { "type": "user" }
-            ]
-          }
+          "proprietaire": { "directly_related_user_types": [{ "type": "user" }] },
+          "approbateur": { "directly_related_user_types": [{ "type": "user" }] },
+          "contributeur": { "directly_related_user_types": [{ "type": "user" }] },
+          "lecteur": { "directly_related_user_types": [{ "type": "user" }] }
         }
       }
     },
@@ -47,19 +83,22 @@
           "owner": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_owner" }
             ]
           },
           "editor": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_editor" }
             ]
           },
           "viewer": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_viewer" }
             ]
           }
         }
@@ -113,27 +152,26 @@
       },
       "metadata": {
         "relations": {
-          "parent": {
-            "directly_related_user_types": [
-              { "type": "organisation" }
-            ]
-          },
+          "parent": { "directly_related_user_types": [{ "type": "organisation" }] },
           "owner": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_owner" }
             ]
           },
           "editor": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_editor" }
             ]
           },
           "viewer": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_viewer" }
             ]
           }
         }
@@ -203,20 +241,23 @@
           "owner": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_owner" }
             ]
           },
           "editor": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_editor" }
             ]
           },
           "viewer": {
             "directly_related_user_types": [
               { "type": "user" },
               { "type": "user", "wildcard": {} },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_viewer" }
             ]
           }
         }
@@ -287,26 +328,30 @@
           "direct_access": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_viewer" }
             ]
           },
           "owner": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_owner" }
             ]
           },
           "editor": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_editor" }
             ]
           },
           "viewer": {
             "directly_related_user_types": [
               { "type": "user" },
               { "type": "user", "wildcard": {} },
-              { "type": "group", "relation": "member" }
+              { "type": "group", "relation": "member" },
+              { "type": "group", "relation": "as_viewer" }
             ]
           }
         }
