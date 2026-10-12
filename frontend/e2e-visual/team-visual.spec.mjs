@@ -42,7 +42,13 @@ export const NOT_IMPLEMENTED = [
   },
 ]
 
-const SIZE_EXCEPTIONS = {}
+const SIZE_EXCEPTIONS = {
+  'team-title': {
+    dw: -131,
+    dh: 0,
+    reason: 'h1 maquette 357 px (boîte) vs 226 px (glyphes) ; zone commune déjà 0 %',
+  },
+}
 
 const PIXEL_SECTIONS = [
   { id: 'team-title', name: 'title', masks: [] },
