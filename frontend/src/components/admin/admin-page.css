@@ -187,6 +187,14 @@
   flex-shrink: 0;
 }
 
+.admin-title--team {
+  display: inline-block;
+  margin: 0 0 6px;
+  line-height: normal;
+  white-space: nowrap;
+  font-family: 'Instrument Serif', serif !important;
+}
+
 .admin-lead {
   font-size: 14px;
   color: #9b9ba1;

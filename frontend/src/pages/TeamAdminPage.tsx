@@ -43,7 +43,7 @@ export function TeamAdminPage() {
       <div data-mock-id="team-page">
         <div className="mb-1.5 flex items-start justify-between">
           <div>
-            <h1 className="admin-title" data-mock-id="team-title" style={{ margin: '0 0 6px', display: 'inline-block' }}>
+            <h1 className="admin-title admin-title--team" data-mock-id="team-title">
               Membres & équipes
             </h1>
             <Lead />
@@ -139,10 +139,16 @@ function TabBtn({
       aria-selected={on}
       data-mock-id={mockId}
       onClick={() => onClick(id)}
-      className={`text-[12.5px] leading-[normal] text-[#6B6B72] ${on ? 'bg-white font-semibold' : ''}`}
+      className="leading-[normal] text-[#6B6B72]"
       style={{
         padding: '7px 16px',
+        fontSize: 12.5,
+        fontWeight: on ? 600 : 400,
+        background: on ? '#FFFFFF' : 'transparent',
+        border: 0,
         borderRight: '1px solid #ECECEE',
+        boxSizing: 'content-box',
+        lineHeight: 'normal',
       }}
     >
       {children}
