@@ -143,6 +143,40 @@ export async function probeCompositionLayers(page, selectors, side) {
 }
 
 /**
+ * Propriétés de rastérisation (élément) + largeur colonne au 1/100 px.
+ * @param {import('@playwright/test').Page} page
+ * @param {string[]} selectors
+ * @param {string} side
+ */
+export async function probeRasterProps(page, selectors, side) {
+  const found = await page.evaluate((sels) => {
+    const out = {}
+    for (const s of sels) {
+      const el = document.querySelector(s)
+      if (!el) {
+        out[s] = 'MISSING'
+        continue
+      }
+      const cs = getComputedStyle(el)
+      const r = el.getBoundingClientRect()
+      out[s] = {
+        x: Number(r.x.toFixed(2)),
+        y: Number(r.y.toFixed(2)),
+        w: Number(r.width.toFixed(2)),
+        h: Number(r.height.toFixed(2)),
+        transform: cs.transform,
+        willChange: cs.willChange,
+        fontSmoothing: cs.webkitFontSmoothing || cs.fontSmoothing || '',
+        textRendering: cs.textRendering,
+      }
+    }
+    return out
+  }, selectors)
+  console.log(`RASTER ${side}: ${JSON.stringify(found)}`)
+  return found
+}
+
+/**
  * Routes communes du shell (config OIDC, branding, /me, cloche notifications, arbres d'espaces vides).
  * À appeler AVANT les routes propres à l'écran (Playwright applique la dernière enregistrée en premier).
  */

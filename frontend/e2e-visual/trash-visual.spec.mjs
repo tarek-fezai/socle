@@ -18,6 +18,7 @@ import {
   finishPixelResults,
   injectOidcSession,
   probeCompositionLayers,
+  probeRasterProps,
   reportAppExtras,
   reportNotImplemented,
   settleFonts,
@@ -72,6 +73,7 @@ test.describe('trash visual', () => {
     await annotateTrashMockup(page)
     await settleFonts(page)
     await probeCompositionLayers(page, ['[data-mock-id="trash-row-0-delete"]'], 'trash-mock')
+    await probeRasterProps(page, ['[data-mock-id="trash-row-0-delete"]'], 'trash-mock')
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'trash')
 
     const mockSec = {}
@@ -87,6 +89,7 @@ test.describe('trash visual', () => {
     await page.mouse.move(1, 1)
     await settleFonts(page)
     await probeCompositionLayers(page, ['[data-mock-id="trash-row-0-delete"]'], 'trash-app')
+    await probeRasterProps(page, ['[data-mock-id="trash-row-0-delete"]'], 'trash-app')
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'trash')
     await reportAppExtras(page, testInfo, APP_EXTRA, 'trash')
 

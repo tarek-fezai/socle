@@ -105,12 +105,19 @@ export function SpacesPage() {
             aria-label="Fermer"
             onClick={() => setFormOpen(false)}
           />
+          <div
+            data-mock-id="create-modal"
+            className="absolute top-[120px] w-[480px] rounded-2xl bg-white px-[30px] pb-[26px] pt-[30px] leading-[normal] shadow-[0_24px_60px_rgba(14,14,16,0.28)]"
+            style={{
+              left: '50%',
+              transform: 'translateX(-50%)',
+              WebkitFontSmoothing: 'auto',
+              textRendering: 'auto',
+            }}
+          >
           <form
             onSubmit={onSubmit}
-            data-mock-id="create-modal"
             aria-label="Créer un espace"
-            className="absolute top-[120px] w-[480px] rounded-2xl bg-white px-[30px] pb-[26px] pt-[30px] leading-[normal] shadow-[0_24px_60px_rgba(14,14,16,0.28)]"
-            style={{ left: 'calc(50% - 240px)' }}
           >
             <div className="mb-[22px] flex items-start justify-between">
               <h1
@@ -250,6 +257,7 @@ export function SpacesPage() {
               </button>
             </div>
           </form>
+          </div>
         </div>
       )}
       {error && <p className="mb-4 text-sm text-socle-danger">{error}</p>}

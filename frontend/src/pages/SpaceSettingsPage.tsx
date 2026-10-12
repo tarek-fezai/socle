@@ -126,7 +126,10 @@ export function SpaceSettingsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-60px)] leading-[normal]">
-      <aside className="flex w-[420px] shrink-0 flex-col border-r border-socle-line px-6 py-7">
+      <aside
+        className="flex w-[420px] shrink-0 flex-col border-r border-socle-line px-6 py-7"
+        style={{ boxSizing: 'content-box' }}
+      >
         <div className="mb-[22px] flex items-center gap-2.5">
           <div
             className="h-[30px] w-[30px] shrink-0 rounded-lg"
@@ -179,8 +182,21 @@ export function SpaceSettingsPage() {
           </Link>
         </div>
       </aside>
-      <main className="flex min-w-0 flex-1 justify-center px-10 pt-9">
-        <div className="w-[621px]" style={{ WebkitFontSmoothing: 'auto' }}>
+      <main
+        className="flex min-w-0 flex-1"
+        style={{ justifyContent: 'center', padding: '36px 40px 0', minWidth: 0 }}
+      >
+        <div
+          data-settings-col
+          className="shrink-0"
+          style={{
+            width: 620,
+            flexBasis: 620,
+            boxSizing: 'border-box',
+            WebkitFontSmoothing: 'auto',
+            textRendering: 'auto',
+          }}
+        >
       <div className="breadcrumb mb-6">
         <Link to="/">Accueil</Link>
         <span className="text-[#DEDEE1]">→</span>
@@ -284,7 +300,8 @@ export function SpaceSettingsPage() {
       <Link
         to="/audit"
         data-mock-id="settings-audit"
-        className="mb-3 flex items-center justify-between rounded-[10px] border border-socle-line px-4 pt-[14px] pb-[15px]"
+        className="mb-3 flex items-center justify-between rounded-[10px] border border-socle-line px-4 py-[14px]"
+        style={{ marginTop: 0.5 }}
       >
         <div>
           <div className="mb-0.5 text-[13.5px] font-semibold leading-[normal] text-socle-ink">Journal d&apos;audit</div>
@@ -297,7 +314,7 @@ export function SpaceSettingsPage() {
       <Link
         to="/trash"
         data-mock-id="settings-trash"
-        className="mb-5 flex items-center justify-between rounded-[10px] border border-socle-line px-4 pt-[14px] pb-[15px]"
+        className="mb-5 flex items-center justify-between rounded-[10px] border border-socle-line px-4 py-[14px]"
       >
         <div>
           <div className="mb-0.5 text-[13.5px] font-semibold leading-[normal] text-socle-ink">Corbeille</div>

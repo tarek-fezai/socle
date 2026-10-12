@@ -117,6 +117,8 @@ export async function annotateCreateSpaceMockup(page) {
 
 export async function annotateSettingsMockup(page) {
   await page.evaluate(() => {
+    const col = [...document.querySelectorAll('div')].find((d) => d.style && d.style.width === '620px')
+    col?.setAttribute('data-settings-col', '')
     const h1 = document.querySelector('h1')
     h1?.setAttribute('data-mock-id', 'settings-title')
     const nameBlock = h1?.nextElementSibling

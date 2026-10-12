@@ -17,6 +17,7 @@ import {
   finishPixelResults,
   injectOidcSession,
   probeCompositionLayers,
+  probeRasterProps,
   reportNotImplemented,
   settleFonts,
   shotSection,
@@ -53,6 +54,11 @@ test.describe('create-space visual', () => {
       ['[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]'],
       'create-space-mock',
     )
+    await probeRasterProps(
+      page,
+      ['[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]', '[data-mock-id="create-modal"]'],
+      'create-space-mock',
+    )
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'create-space')
 
     const mockSec = {}
@@ -72,6 +78,11 @@ test.describe('create-space visual', () => {
     await probeCompositionLayers(
       page,
       ['[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]'],
+      'create-space-app',
+    )
+    await probeRasterProps(
+      page,
+      ['[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]', '[data-mock-id="create-modal"]'],
       'create-space-app',
     )
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'create-space')

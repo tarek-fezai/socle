@@ -75,6 +75,7 @@ OpenFGA `editor` (ou `owner` pour restore/list) avant toute opération.
 | Méthode | Chemin |
 |---------|--------|
 | `GET` | `/api/v1/trash?resourceType=&offset=&limit=` — liste paginée (`deleted_at DESC`), filtrée OpenFGA **viewer** |
+| — | **`GET /api/v1/trash?spaceId=` (filtré OpenFGA) — manquant**, backlog `TRASH-PER-SPACE` (ne pas implémenter ici) |
 | `GET` | `/api/v1/trash/{id}` (prévisualisation soft-delete, droit **editor**) |
 | `POST` | `/api/v1/trash/{id}/restore` — Check **editor** sur la racine **et chaque descendant** avant écriture |
 | `DELETE` | `/api/v1/trash/{id}` (purge anticipée) |

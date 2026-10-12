@@ -214,20 +214,50 @@ function TrashRow({
         >
           {restoring ? 'Restauration…' : 'Restaurer'}
         </button>
-        <a
-          href="#purge"
-          role="button"
+        <button
+          type="button"
           data-mock-id={`trash-row-${index}-delete`}
-          aria-disabled={restoring || purging}
-          onClick={(e) => {
-            e.preventDefault()
-            if (!restoring && !purging) onPurge()
+          disabled={restoring || purging}
+          onClick={() => {
+            if (restoring || purging) return
+            if (
+              window.confirm(
+                'Supprimer définitivement cet élément ? Cette action est irréversible.',
+              )
+            ) {
+              onPurge()
+            }
           }}
-          className="px-2.5 py-1.5 text-[12.5px] font-semibold leading-[normal] text-[#B54708] hover:underline"
-          style={{ WebkitFontSmoothing: 'auto' }}
+          className="text-[12.5px] font-semibold text-[#B54708] hover:underline disabled:opacity-60"
+          style={{
+            all: 'unset',
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            display: 'inline',
+            background: 'transparent',
+            border: 0,
+            borderRadius: 0,
+            boxShadow: 'none',
+            padding: '6px 10px',
+            margin: 0,
+            font: 'inherit',
+            fontFamily: 'inherit',
+            fontSize: 12.5,
+            fontWeight: 600,
+            lineHeight: 'inherit',
+            letterSpacing: 'inherit',
+            textAlign: 'inherit',
+            verticalAlign: 'baseline',
+            color: '#B54708',
+            cursor: 'pointer',
+            boxSizing: 'content-box',
+            textDecoration: 'none',
+            WebkitFontSmoothing: 'auto',
+            textRendering: 'auto',
+          }}
         >
           {purging ? 'Suppression…' : 'Supprimer définitivement'}
-        </a>
+        </button>
       </div>
     </li>
   )
