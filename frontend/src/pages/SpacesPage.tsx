@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { FormEvent, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
-import { createSpace, listSpaces } from '../lib/spaces'
+import { SPACE_SWATCHES } from '../lib/spaceColors'
+import { createSpace, listSpaces, updateSpace } from '../lib/spaces'
 
 function mixWithWhite(hex: string, whiteRatio: number): string {
   const h = hex.replace('#', '')
@@ -35,14 +37,33 @@ export function SpacesPage() {
   const qc = useQueryClient()
   const spaces = useQuery({ queryKey: ['spaces'], queryFn: () => listSpaces(api) })
   const [name, setName] = useState('')
-  const [color, setColor] = useState('#3730E0')
+  const [description, setDescription] = useState('')
+  const [color, setColor] = useState<(typeof SPACE_SWATCHES)[number]>('#3730E0')
+  const [visibility, setVisibility] = useState<'organisation' | 'space'>('organisation')
   const [error, setError] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
 
   const create = useMutation({
-    mutationFn: () => createSpace(api, { name: name.trim(), color }),
+    mutationFn: async () => {
+      const space = await createSpace(api, {
+        name: name.trim(),
+        color,
+        description: description.trim() || null,
+      })
+      if (visibility !== 'organisation') {
+        await updateSpace(api, space.id, {
+          name: space.name,
+          color: space.color,
+          defaultVisibility: visibility,
+        })
+      }
+      return space
+    },
     onSuccess: () => {
       setName('')
+      setDescription('')
+      setColor('#3730E0')
+      setVisibility('organisation')
       setError(null)
       setFormOpen(false)
       void qc.invalidateQueries({ queryKey: ['spaces'] })
@@ -77,40 +98,223 @@ export function SpacesPage() {
         {stats}
       </p>
 
-      {formOpen && (
-        <form
-          onSubmit={onSubmit}
-          className="mb-8 flex max-w-[780px] flex-wrap items-end gap-3 rounded-xl border border-socle-line bg-[#FAFAFB] p-4"
-          aria-label="Créer un espace"
-        >
-          <label className="min-w-[200px] flex-1 text-sm">
-            Nom
-            <input
-              className="mt-1 w-full rounded-lg border border-socle-line bg-white px-3 py-2"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Identité &amp; accès"
-              required
-              autoFocus
-            />
-          </label>
-          <label className="text-sm">
-            Couleur
-            <input
-              type="color"
-              className="mt-1 block h-10 w-14 cursor-pointer rounded border border-socle-line"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-            />
-          </label>
-          <button type="submit" className="btn-primary" disabled={create.isPending || !name.trim()}>
-            {create.isPending ? 'Création…' : 'Créer un espace'}
-          </button>
-          <button type="button" className="btn-ghost" onClick={() => setFormOpen(false)}>
-            Annuler
-          </button>
-        </form>
-      )}
+      {formOpen &&
+        createPortal(
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: 1440,
+              height: 900,
+              zIndex: 50,
+            }}
+          >
+            <div
+              style={{
+                position: 'relative',
+                width: 1440,
+                height: 900,
+                overflow: 'hidden',
+              }}
+            >
+          <button
+            type="button"
+            className="absolute inset-0 bg-[rgba(14,14,16,0.45)]"
+            aria-label="Fermer"
+            onClick={() => setFormOpen(false)}
+          />
+          <div
+            data-mock-id="create-modal"
+            className="absolute top-[120px] w-[480px] rounded-2xl bg-white px-[30px] pb-[26px] pt-[30px] leading-[normal] shadow-[0_24px_60px_rgba(14,14,16,0.28)]"
+            style={{
+              left: '50%',
+              transform: 'translateX(-50%)',
+            }}
+          >
+          <form
+            onSubmit={onSubmit}
+            aria-label="Créer un espace"
+          >
+            <div className="mb-[22px] flex items-start justify-between">
+              <h1
+                className="m-0 font-display text-[24px] font-normal leading-[normal] text-socle-ink"
+                data-mock-id="create-title"
+              >
+                Créer un espace
+              </h1>
+              <button
+                type="button"
+                aria-label="Fermer"
+                data-mock-id="create-close"
+                onClick={() => setFormOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-[7px] hover:bg-[#F5F5F7]"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="mb-4">
+              <label
+                className="mb-2 block text-[12px] font-semibold uppercase leading-[normal] tracking-[0.05em] text-[#9B9BA1]"
+                data-mock-id="create-name-label"
+                htmlFor="create-space-name"
+              >
+                Nom de l&apos;espace
+              </label>
+              <div className="rounded-[9px] border border-socle-line px-[13px] py-[11px]">
+                <input
+                  id="create-space-name"
+                  className="w-full border-0 bg-transparent p-0 text-[14.5px] text-socle-ink outline-none placeholder:text-[#C2C2C6]"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex. Sécurité & SOC"
+                  required
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="mb-[18px]">
+              <label
+                className="mb-2 block text-[12px] font-semibold uppercase leading-[normal] tracking-[0.05em] text-[#9B9BA1]"
+                data-mock-id="create-desc-label"
+                htmlFor="create-space-desc"
+              >
+                Description
+              </label>
+              <div className="rounded-[9px] border border-socle-line px-[13px] py-[11px]">
+                <input
+                  id="create-space-desc"
+                  className="w-full border-0 bg-transparent p-0 text-[13.5px] text-socle-ink outline-none placeholder:text-[#C2C2C6]"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="De quoi cet espace regroupe-t-il la documentation ?"
+                />
+              </div>
+            </div>
+            <div
+              className="mb-2.5 text-[12px] font-semibold uppercase leading-[normal] tracking-[0.05em] text-[#9B9BA1]"
+              data-mock-id="create-color-label"
+            >
+              Couleur
+            </div>
+            <div className="mb-5 flex gap-3" data-mock-id="create-swatches">
+              {SPACE_SWATCHES.map((swatch) => (
+                <button
+                  key={swatch}
+                  type="button"
+                  aria-label={`Couleur ${swatch}`}
+                  aria-pressed={color === swatch}
+                  onClick={() => setColor(swatch)}
+                  className="h-7 w-7 rounded-lg"
+                  style={{
+                    background: swatch,
+                    boxShadow:
+                      color === swatch ? '0 0 0 2px #FFFFFF, 0 0 0 4px #3730E0' : undefined,
+                  }}
+                />
+              ))}
+            </div>
+            <div
+              className="mb-2.5 text-[12px] font-semibold uppercase leading-[normal] tracking-[0.05em] text-[#9B9BA1]"
+              data-mock-id="create-vis-label"
+            >
+              Visibilité par défaut
+            </div>
+            <div className="mb-[26px] flex flex-col gap-2" data-mock-id="create-vis-field">
+              {(
+                [
+                  ['organisation', 'Organisation entière'],
+                  ['space', 'Membres invités uniquement'],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setVisibility(value)}
+                  className={`flex items-center gap-2.5 rounded-[9px] px-[13px] py-2.5 text-left text-[13.5px] font-medium text-socle-ink ${
+                    visibility === value
+                      ? 'border-[1.5px] border-socle-accent bg-[#FAFAFE]'
+                      : 'border border-socle-line'
+                  }`}
+                >
+                  <span
+                    className="shrink-0 rounded-full"
+                    style={{
+                      width: 14,
+                      height: 14,
+                      boxSizing: 'content-box',
+                      borderWidth: visibility === value ? 4.5 : 1.5,
+                      borderStyle: 'solid',
+                      borderColor: visibility === value ? '#3730E0' : '#C7C6C6',
+                    }}
+                  />
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2.5">
+              <button
+                type="button"
+                data-mock-id="create-cancel"
+                onClick={() => setFormOpen(false)}
+                className="hover:bg-[#F5F5F7]"
+                style={{
+                  appearance: 'none',
+                  boxSizing: 'content-box',
+                  padding: '9px 16px',
+                  margin: 0,
+                  borderRadius: 7,
+                  border: '1px solid #ECECEE',
+                  background: 'none',
+                  color: '#43434A',
+                  font: 'inherit',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  lineHeight: 'normal',
+                  letterSpacing: 'inherit',
+                  cursor: 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                data-mock-id="create-submit"
+                disabled={create.isPending}
+                className="hover:bg-[#2C27C7] disabled:opacity-50"
+                style={{
+                  appearance: 'none',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
+                  boxSizing: 'content-box',
+                  padding: '9px 20px',
+                  margin: 0,
+                  borderRadius: 7,
+                  border: 0,
+                  background: '#3730E0',
+                  color: '#FFFFFF',
+                  font: 'inherit',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  lineHeight: 'normal',
+                  letterSpacing: 'inherit',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                {create.isPending ? 'Création…' : "Créer l'espace"}
+              </button>
+            </div>
+          </form>
+          </div>
+            </div>
+          </div>,
+          document.body,
+        )}
       {error && <p className="mb-4 text-sm text-socle-danger">{error}</p>}
 
       {spaces.isLoading && <p className="text-sm text-socle-muted">Chargement…</p>}

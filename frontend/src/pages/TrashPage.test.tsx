@@ -10,6 +10,7 @@ vi.mock('../lib/api', () => ({ api: {} }))
 
 const listTrash = vi.fn()
 const restoreTrashItem = vi.fn()
+const purgeTrashItem = vi.fn()
 
 vi.mock('../lib/trash', async () => {
   const actual = await vi.importActual<typeof import('../lib/trash')>('../lib/trash')
@@ -17,6 +18,7 @@ vi.mock('../lib/trash', async () => {
     ...actual,
     listTrash: (...args: unknown[]) => listTrash(...args),
     restoreTrashItem: (...args: unknown[]) => restoreTrashItem(...args),
+    purgeTrashItem: (...args: unknown[]) => purgeTrashItem(...args),
   }
 })
 
@@ -80,7 +82,7 @@ const sampleItem = {
 describe('trash helpers', () => {
   it('formate le temps restant avant purge', () => {
     const now = new Date('2026-09-28T10:00:00Z')
-    expect(formatPurgeRemaining('2026-10-10T10:00:00Z', now).label).toBe('purgé dans 12 jours')
+    expect(formatPurgeRemaining('2026-10-10T10:00:00Z', now).label).toBe('12 jours restants')
     expect(formatPurgeRemaining('2026-09-30T10:00:00Z', now).urgent).toBe(true)
   })
 
@@ -94,6 +96,7 @@ describe('TrashPage', () => {
   beforeEach(() => {
     listTrash.mockReset()
     restoreTrashItem.mockReset()
+    purgeTrashItem.mockReset()
   })
 
   it('affiche la liste et filtre par type via l’API (pas en mémoire)', async () => {
@@ -195,6 +198,41 @@ describe('TrashPage', () => {
       expect(screen.getByText(/Restaurez d'abord le dossier parent/)).toBeTruthy()
     })
     expect(screen.getByText('Registre des accès à privilèges')).toBeTruthy()
+  })
+
+  it('Supprimer définitivement : bouton focusable, Entrée/Espace ouvrent la confirmation', async () => {
+    listTrash.mockResolvedValue({
+      items: [sampleItem],
+      offset: 0,
+      limit: 50,
+      total: 1,
+    })
+    purgeTrashItem.mockResolvedValue(undefined)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    render(wrap(<TrashPage />))
+    await waitFor(() => expect(screen.getByText('Registre des accès à privilèges')).toBeTruthy())
+
+    const btn = screen.getByRole('button', { name: 'Supprimer définitivement' }) as HTMLButtonElement
+    expect(btn.tagName).toBe('BUTTON')
+    expect(btn.type).toBe('button')
+    btn.focus()
+    expect(document.activeElement).toBe(btn)
+
+    confirmSpy.mockReturnValueOnce(false)
+    fireEvent.keyDown(btn, { key: 'Enter' })
+    btn.click()
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(purgeTrashItem).not.toHaveBeenCalled()
+
+    confirmSpy.mockClear()
+    confirmSpy.mockReturnValueOnce(true)
+    fireEvent.keyDown(btn, { key: ' ' })
+    btn.click()
+    expect(confirmSpy).toHaveBeenCalled()
+    await waitFor(() => expect(purgeTrashItem).toHaveBeenCalledWith(expect.anything(), ITEM_ID))
+
+    confirmSpy.mockRestore()
   })
 
   it('affiche exactement les items renvoyés par le backend (pas de filtre client)', async () => {

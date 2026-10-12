@@ -54,6 +54,13 @@ import {
   TEMPLATES_SEED,
   VISUAL_NOW as FIVE_SCREENS_NOW,
 } from './five-screens-fixtures.mjs'
+import {
+  ACCESS_DOC_SEED,
+  FOLDER_PROCEDURES,
+  SPACE_IDENTITE_SETTINGS,
+  SPACE_OWNERS_SEED,
+  TRASH_SEED,
+} from './parity-screens-fixtures.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const openapi = JSON.parse(readFileSync(resolve(root, 'openapi/openapi.json'), 'utf8'))
@@ -346,6 +353,30 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
 
     it('TEMPLATES_SEED : TemplateSummary[]', () => {
       for (const t of TEMPLATES_SEED) validate('TemplateSummary', t)
+    })
+  })
+
+  describe('écrans Access / Settings / Trash / Export / CreateSpace', () => {
+    it('TRASH_SEED matches TrashPage / TrashItemView', () => {
+      validate('TrashPage', TRASH_SEED)
+      for (const item of TRASH_SEED.items ?? []) validate('TrashItemView', item)
+    })
+
+    it('ACCESS_DOC_SEED matches AccessListResponse / AccessEntry', () => {
+      validate('AccessListResponse', ACCESS_DOC_SEED)
+      for (const e of ACCESS_DOC_SEED.entries ?? []) validate('AccessEntry', e)
+    })
+
+    it('SPACE_IDENTITE_SETTINGS matches SpaceView', () => {
+      validate('SpaceView', SPACE_IDENTITE_SETTINGS)
+    })
+
+    it('SPACE_OWNERS_SEED matches GovernanceView', () => {
+      validate('GovernanceView', SPACE_OWNERS_SEED)
+    })
+
+    it('FOLDER_PROCEDURES matches FolderView', () => {
+      validate('FolderView', FOLDER_PROCEDURES)
     })
   })
 })

@@ -5,7 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
-vi.mock('../lib/api', () => ({ api: {} }))
+vi.mock('../lib/api', () => ({
+  api: { get: () => Promise.resolve({ data: { instanceName: 'Organisation Démo' } }) },
+}))
+
+vi.mock('../lib/spaces', () => ({
+  getSpace: () => Promise.resolve({ id: '00000000-0000-0000-0000-000000000001', name: 'Identité & accès' }),
+}))
 
 const listAccess = vi.fn()
 const grantAccess = vi.fn()
@@ -116,7 +122,7 @@ describe('AccessPage', () => {
       expect(screen.getByText('Via groupe')).toBeTruthy()
       expect(screen.getByText('Hérité')).toBeTruthy()
     })
-    expect(screen.getByText(/Hérité de/)).toBeTruthy()
+    expect(screen.getByText(/Hérité d/)).toBeTruthy()
     expect(screen.getByText('Non révocable ici')).toBeTruthy()
   })
 
@@ -149,7 +155,7 @@ describe('AccessPage', () => {
     render(wrap(<AccessPage objectType="space" />))
     await waitFor(() => expect(screen.getByText(/Aucun accès/)).toBeTruthy())
 
-    fireEvent.change(screen.getByPlaceholderText(/id utilisateur/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Identifiant/i), {
       target: { value: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Accorder' }))
@@ -184,7 +190,7 @@ describe('AccessPage', () => {
     render(wrap(<AccessPage objectType="space" />))
     await waitFor(() => expect(screen.getByText(/Aucun accès/)).toBeTruthy())
 
-    fireEvent.change(screen.getByPlaceholderText(/id utilisateur/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Identifiant/i), {
       target: { value: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Accorder' }))

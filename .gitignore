@@ -4,6 +4,8 @@
 *.local.yml
 *.pem
 *.key
+pat_*
+*.pat
 
 # IDE / OS
 .idea/

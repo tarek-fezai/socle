@@ -57,9 +57,10 @@ export function resourceTypeLabel(type: string): string {
 }
 
 /** Relatif : « il y a 4 jours », « il y a 2 heures », « à l'instant ». */
-export function formatDeletedAgo(iso: string, now = new Date()): string {
+export function formatDeletedAgo(iso: string, now: Date | number = Date.now()): string {
   const then = new Date(iso).getTime()
-  const diffMs = Math.max(0, now.getTime() - then)
+  const nowMs = typeof now === 'number' ? now : now.getTime()
+  const diffMs = Math.max(0, nowMs - then)
   const minutes = Math.floor(diffMs / 60_000)
   if (minutes < 1) return "à l'instant"
   if (minutes < 60) return `il y a ${minutes} min`
@@ -71,17 +72,25 @@ export function formatDeletedAgo(iso: string, now = new Date()): string {
 }
 
 /**
- * Temps restant avant purge — « purgé dans 12 jours ».
+ * Temps restant avant purge — « 12 jours restants » (Trash.dc.html).
  * Urgent (&lt; 7 jours) : le consommateur peut souligner en danger.
  */
 export function formatPurgeRemaining(
   purgeAtIso: string,
-  now = new Date(),
+  now: Date | number = Date.now(),
 ): { label: string; urgent: boolean } {
   const purgeAt = new Date(purgeAtIso).getTime()
-  const diffMs = purgeAt - now.getTime()
+  const nowMs = typeof now === 'number' ? now : now.getTime()
+  const diffMs = purgeAt - nowMs
   if (diffMs <= 0) return { label: 'purge imminente', urgent: true }
   const days = Math.ceil(diffMs / 86_400_000)
-  if (days <= 1) return { label: 'purgé dans moins d’un jour', urgent: true }
-  return { label: `purgé dans ${days} jours`, urgent: days < 7 }
+  if (days <= 1) return { label: 'moins d’un jour restant', urgent: true }
+  return { label: `${days} jours restants`, urgent: days < 7 }
+}
+
+export async function purgeTrashItem(
+  api: { delete: (url: string) => Promise<unknown> },
+  trashItemId: string,
+) {
+  await api.delete(`/api/v1/trash/${trashItemId}`)
 }

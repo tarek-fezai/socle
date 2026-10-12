@@ -11,6 +11,8 @@
  *   puis comparaison sur zone commune ancrée en haut à gauche (crop TL).
  * - Décalage sous-pixel hérité d'une zone NOT_IMPLEMENTED → `SUBPIXEL_EXCEPTIONS` encadrées
  *   (conditions mesurées par le test, sinon seuil normal 1 %).
+ * - Lissage LCD vs gris à géométrie identique → `RASTER_EXCEPTIONS` encadrées (seuil ≤ 5 %,
+ *   conditions a/b/c mesurées ; échec si la section ≤ 1 %).
  * - Fonctionnalité absente → `NOT_IMPLEMENTED` (jamais comptée comme passée).
  * - Élément présent dans l'app, absent de la maquette par décision produit → `APP_EXTRA`
  *   (masque côté app uniquement, surface chiffrée, reason + décision ; échec s'il disparaît).
@@ -88,6 +90,263 @@ export async function settleFonts(page) {
     await document.fonts.ready
   })
   await assertFontsLoaded(page)
+}
+
+/**
+ * Calques de composition (élément + ancêtres) : transform, opacity&lt;1, will-change, filter,
+ * backdrop-filter, animation. Journalisé pour le rapport AA — ne mute pas le DOM.
+ * @param {import('@playwright/test').Page} page
+ * @param {string[]} selectors
+ * @param {string} side
+ */
+export async function probeCompositionLayers(page, selectors, side) {
+  const found = await page.evaluate((sels) => {
+    const hitsOf = (cs) => {
+      const hits = []
+      if (cs.transform && cs.transform !== 'none') hits.push(`transform=${cs.transform}`)
+      if (cs.opacity && cs.opacity !== '1') hits.push(`opacity=${cs.opacity}`)
+      if (cs.willChange && cs.willChange !== 'auto') hits.push(`will-change=${cs.willChange}`)
+      if (cs.filter && cs.filter !== 'none') hits.push(`filter=${cs.filter}`)
+      const bf = cs.backdropFilter || cs.webkitBackdropFilter
+      if (bf && bf !== 'none') hits.push(`backdrop-filter=${bf}`)
+      if (cs.animationName && cs.animationName !== 'none') hits.push(`animation=${cs.animationName}`)
+      return hits
+    }
+    const walk = (el) => {
+      const layers = []
+      let n = el
+      let depth = 0
+      while (n && n.nodeType === 1 && depth < 24) {
+        const hits = hitsOf(getComputedStyle(n))
+        if (hits.length) {
+          layers.push({
+            depth,
+            tag: n.tagName.toLowerCase(),
+            mockId: n.getAttribute('data-mock-id') || '',
+            cls: String(n.className || '').slice(0, 96),
+            hits,
+          })
+        }
+        n = n.parentElement
+        depth++
+      }
+      return layers
+    }
+    const out = {}
+    for (const s of sels) {
+      const el = document.querySelector(s)
+      out[s] = el ? walk(el) : 'MISSING'
+    }
+    return out
+  }, selectors)
+  const line = `COMPOSITION ${side}: ${JSON.stringify(found)}`
+  console.log(line)
+  return found
+}
+
+/**
+ * Propriétés de rastérisation (élément) + largeur colonne au 1/100 px.
+ * @param {import('@playwright/test').Page} page
+ * @param {string[]} selectors
+ * @param {string} side
+ */
+export async function probeRasterProps(page, selectors, side) {
+  const found = await page.evaluate((sels) => {
+    const out = {}
+    for (const s of sels) {
+      const el = document.querySelector(s)
+      if (!el) {
+        out[s] = 'MISSING'
+        continue
+      }
+      const cs = getComputedStyle(el)
+      const r = el.getBoundingClientRect()
+      out[s] = {
+        x: Number(r.x.toFixed(2)),
+        y: Number(r.y.toFixed(2)),
+        w: Number(r.width.toFixed(2)),
+        h: Number(r.height.toFixed(2)),
+        transform: cs.transform,
+        willChange: cs.willChange,
+        fontSmoothing: cs.webkitFontSmoothing || cs.fontSmoothing || '',
+        textRendering: cs.textRendering,
+      }
+    }
+    return out
+  }, selectors)
+  console.log(`RASTER ${side}: ${JSON.stringify(found)}`)
+  return found
+}
+
+/**
+ * CDP LayerTree : calques et raisons de composition pour chaque sélecteur.
+ * @param {import('@playwright/test').Page} page
+ * @param {string[]} selectors
+ * @param {string} side
+ */
+export async function probeCompositingReasons(page, selectors, side) {
+  const client = await page.context().newCDPSession(page)
+  await client.send('DOM.enable')
+  let layers = []
+  const onTree = (e) => {
+    if (Array.isArray(e.layers)) layers = e.layers
+  }
+  client.on('LayerTree.layerTreeDidChange', onTree)
+  await client.send('LayerTree.enable')
+  await page.evaluate(() => document.body.getBoundingClientRect())
+  await page.waitForTimeout(80)
+
+  const { root } = await client.send('DOM.getDocument', { depth: 0, pierce: true })
+  const out = {}
+  for (const sel of selectors) {
+    const { nodeId } = await client.send('DOM.querySelector', {
+      nodeId: root.nodeId,
+      selector: sel,
+    })
+    if (!nodeId) {
+      out[sel] = 'MISSING'
+      continue
+    }
+    const { node } = await client.send('DOM.describeNode', { nodeId })
+    const backendNodeId = node.backendNodeId
+    const own = layers.filter((l) => l.backendNodeId === backendNodeId)
+    const ownLayers = []
+    for (const l of own) {
+      const r = await client.send('LayerTree.compositingReasons', { layerId: l.layerId })
+      ownLayers.push({
+        layerId: l.layerId,
+        parentLayerId: l.parentLayerId || '',
+        w: l.width,
+        h: l.height,
+        reasons: r.compositingReasons,
+        ids: r.compositingReasonIds,
+      })
+    }
+    let paintsInto = null
+    if (!ownLayers.length) {
+      const elBox = await page.locator(sel).first().boundingBox()
+      const hit =
+        elBox &&
+        layers.find(
+          (l) =>
+            elBox.x >= l.offsetX - 1 &&
+            elBox.y >= l.offsetY - 1 &&
+            elBox.x + elBox.width <= l.offsetX + l.width + 1 &&
+            elBox.y + elBox.height <= l.offsetY + l.height + 1 &&
+            l.backendNodeId,
+        )
+      if (hit) {
+        const r = await client.send('LayerTree.compositingReasons', { layerId: hit.layerId })
+        paintsInto = {
+          layerId: hit.layerId,
+          backendNodeId: hit.backendNodeId,
+          w: hit.width,
+          h: hit.height,
+          reasons: r.compositingReasons,
+          ids: r.compositingReasonIds,
+        }
+      }
+    }
+    out[sel] = { backendNodeId, ownLayers, paintsInto }
+  }
+  console.log(`CDP_LAYERS ${side}: ${JSON.stringify(out)}`)
+  client.off('LayerTree.layerTreeDidChange', onTree)
+  await client.send('LayerTree.disable')
+  await client.detach()
+  return out
+}
+
+/**
+ * Chaîne d'ancêtres : position / transform / opacity / filter / will-change / contain /
+ * isolation / overflow + getBoundingClientRect au 1/100 px.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} selector
+ * @param {string} side
+ */
+export async function probeAncestorStack(page, selector, side) {
+  const stack = await page.evaluate((sel) => {
+    const el = document.querySelector(sel)
+    if (!el) return 'MISSING'
+    const rows = []
+    let n = el
+    let depth = 0
+    while (n && n.nodeType === 1 && depth < 28) {
+      const cs = getComputedStyle(n)
+      const r = n.getBoundingClientRect()
+      rows.push({
+        depth,
+        tag: n.tagName.toLowerCase(),
+        mockId: n.getAttribute('data-mock-id') || '',
+        position: cs.position,
+        transform: cs.transform,
+        opacity: cs.opacity,
+        filter: cs.filter,
+        backdropFilter: cs.backdropFilter || cs.webkitBackdropFilter || 'none',
+        willChange: cs.willChange,
+        contain: cs.contain,
+        isolation: cs.isolation,
+        overflow: `${cs.overflowX}/${cs.overflowY}`,
+        x: Number(r.x.toFixed(2)),
+        y: Number(r.y.toFixed(2)),
+      })
+      n = n.parentElement
+      depth++
+    }
+    return rows
+  }, selector)
+  console.log(`ANCESTORS ${side} ${selector}: ${JSON.stringify(stack)}`)
+  return stack
+}
+
+/**
+ * Boîte + Range du nœud texte + styles de placement (1/100 px).
+ * @param {import('@playwright/test').Page} page
+ * @param {string} selector
+ * @param {string} side
+ */
+export async function probeTextBox(page, selector, side) {
+  const found = await page.evaluate((sel) => {
+    const el = document.querySelector(sel)
+    if (!el) return 'MISSING'
+    const r = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    let text = walker.nextNode()
+    while (text && !(text.textContent || '').trim()) text = walker.nextNode()
+    let tr = null
+    if (text) {
+      const range = document.createRange()
+      range.selectNodeContents(text)
+      const br = range.getBoundingClientRect()
+      tr = {
+        x: Number(br.x.toFixed(2)),
+        y: Number(br.y.toFixed(2)),
+        w: Number(br.width.toFixed(2)),
+        h: Number(br.height.toFixed(2)),
+      }
+    }
+    return {
+      box: {
+        x: Number(r.x.toFixed(2)),
+        y: Number(r.y.toFixed(2)),
+        w: Number(r.width.toFixed(2)),
+        h: Number(r.height.toFixed(2)),
+      },
+      text: tr,
+      display: cs.display,
+      lineHeight: cs.lineHeight,
+      padding: cs.padding,
+      verticalAlign: cs.verticalAlign,
+      boxSizing: cs.boxSizing,
+      fontFamily: cs.fontFamily,
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      letterSpacing: cs.letterSpacing,
+      color: cs.color,
+    }
+  }, selector)
+  console.log(`TEXTBOX ${side} ${selector}: ${JSON.stringify(found)}`)
+  return found
 }
 
 /**
@@ -393,6 +652,8 @@ export async function measureSectionGeometry(loc) {
 export const SUBPIXEL_MAX_PIXEL = 0.08
 /** Écart minimal de fraction de pixel (y maquette / y app) pour appliquer l'exception. */
 export const SUBPIXEL_MIN_FRAC_DELTA = 0.25
+/** Plafond de `maxPixel` (ratio) d'une RASTER_EXCEPTION (LCD vs gris). */
+export const RASTER_MAX_PIXEL = 0.05
 
 /**
  * @typedef {{ upstreamNotImplemented: string, maxPixel: number, reason: string }} SubpixelException
@@ -465,6 +726,56 @@ export function subpixelVerdict(ex, geo, upstream, notImplemented) {
 }
 
 /**
+ * @typedef {{ maxPixel: number, reason: string }} RasterException
+ */
+
+function sameRect01(a, b) {
+  if (!a || !b) return false
+  return ['x', 'y', 'w', 'h'].every((k) => Math.abs(Number(a[k]) - Number(b[k])) <= 0.01)
+}
+
+function normFontFamily(s) {
+  const first = String(s || '').split(',')[0] || ''
+  return first.replace(/['"]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+/**
+ * RASTER_EXCEPTION : LCD vs gris à boîte/texte/police identiques, sans calque propre.
+ * @param {{ mock?: object, app?: object, mockOwnLayers?: unknown[], appOwnLayers?: unknown[] } | undefined} geo
+ */
+export function rasterVerdict(geo) {
+  const reasons = []
+  const { mock, app } = geo ?? {}
+  if (!mock || !app || mock === 'MISSING' || app === 'MISSING') {
+    return { applied: false, reasons: ['preuves boîte/texte non mesurées'] }
+  }
+  if (!sameRect01(mock.box, app.box)) {
+    reasons.push(
+      `boîte ≠ (${JSON.stringify(mock.box)} / ${JSON.stringify(app.box)})`,
+    )
+  }
+  if (!sameRect01(mock.text, app.text)) {
+    reasons.push(
+      `texte Range ≠ (${JSON.stringify(mock.text)} / ${JSON.stringify(app.text)})`,
+    )
+  }
+  const mockFam = normFontFamily(mock.fontFamily)
+  const appFam = normFontFamily(app.fontFamily)
+  if (mockFam !== appFam) reasons.push(`fontFamily ≠ (${mock.fontFamily} / ${app.fontFamily})`)
+  for (const k of ['fontSize', 'fontWeight', 'letterSpacing', 'lineHeight', 'color']) {
+    if (mock[k] !== app[k]) reasons.push(`${k} ≠ (${JSON.stringify(mock[k])} / ${JSON.stringify(app[k])})`)
+  }
+  const mL = Array.isArray(geo.mockOwnLayers) ? geo.mockOwnLayers : null
+  const aL = Array.isArray(geo.appOwnLayers) ? geo.appOwnLayers : null
+  if (!mL || !aL) reasons.push('LayerTree non mesuré')
+  else {
+    if (mL.length) reasons.push(`calque propre maquette (${mL.length})`)
+    if (aL.length) reasons.push(`calque propre app (${aL.length})`)
+  }
+  return { applied: reasons.length === 0, reasons }
+}
+
+/**
  * Fabrique de comparateur de section.
  * Tailles égales → ≤ 1 % ; sinon SIZE_EXCEPTION déclarée (Δ mesuré = déclaré) + crop TL.
  *
@@ -472,15 +783,23 @@ export function subpixelVerdict(ex, geo, upstream, notImplemented) {
  * `subpixelVerdict` sont mesurées vraies ; garde si la zone amont quitte NOT_IMPLEMENTED ; échec si la
  * section passe déjà à 1 % (exception inutile).
  *
+ * RASTER_EXCEPTIONS (opts.raster) : seuil `maxPixel` ≤ 5 % si boîte + Range texte identiques (1/100 px),
+ * police calculée identique, aucun calque propre LayerTree ; ≤ 1 % = succès (inutilisée sur ce rasterizer).
+ *
  * @param {Record<string, { dw: number, dh: number, reason: string }>} sizeExceptions
- * @param {{ subpixel?: Record<string, SubpixelException>, notImplemented?: NotImplementedZone[], upstreams?: Record<string, unknown> }} [opts]
+ * @param {{ subpixel?: Record<string, SubpixelException>, raster?: Record<string, RasterException>, notImplemented?: NotImplementedZone[], upstreams?: Record<string, unknown> }} [opts]
  * @returns {(name: string, mockShot: Buffer, appShot: Buffer, testInfo: import('@playwright/test').TestInfo, geo?: { mock: object, app: object }) =>
  *   { name: string, pct: number, mock: {w:number,h:number}, app: {w:number,h:number}, ok: boolean, note: string }}
  */
-export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, notImplemented = [], upstreams = {} } = {}) {
+export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, raster = {}, notImplemented = [], upstreams = {} } = {}) {
   for (const [k, ex] of Object.entries(subpixel)) {
     if (!(ex.maxPixel > 0 && ex.maxPixel <= SUBPIXEL_MAX_PIXEL) || !ex.reason || !ex.upstreamNotImplemented) {
       throw new Error(`SUBPIXEL_EXCEPTIONS[${k}] invalide (maxPixel ≤ ${SUBPIXEL_MAX_PIXEL}, reason, upstreamNotImplemented requis)`)
+    }
+  }
+  for (const [k, ex] of Object.entries(raster)) {
+    if (!(ex.maxPixel > 0 && ex.maxPixel <= RASTER_MAX_PIXEL) || !ex.reason) {
+      throw new Error(`RASTER_EXCEPTIONS[${k}] invalide (maxPixel ≤ ${RASTER_MAX_PIXEL}, reason requis)`)
     }
   }
   return function compare(name, mockShot, appShot, testInfo, geo) {
@@ -548,6 +867,30 @@ export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, notImp
       console.log(line)
       testInfo.annotations.push({ type: 'section-pixel', description: line })
       return { name, pct, mock, app, ok, note: line, subpixel: { applied: v.applied, limit } }
+    }
+    const rst = raster[name]
+    if (rst) {
+      const v = rasterVerdict(geo)
+      const fail = (msg) => {
+        console.log(msg)
+        testInfo.annotations.push({ type: 'section-pixel', description: msg })
+        return { name, pct, mock, app, ok: false, note: msg }
+      }
+      if (ratio <= 0.01) {
+        const line = `${name}: ${pct.toFixed(3)} % ≤ 1 % — RASTER_EXCEPTION inutilisée sur ce rasterizer (garder si un autre OS > 1 %)`
+        console.log(line)
+        testInfo.annotations.push({ type: 'section-pixel', description: line })
+        return { name, pct, mock, app, ok: true, note: line, raster: { applied: false, unused: true } }
+      }
+      const limit = v.applied ? rst.maxPixel : 0.01
+      const ok = ratio <= limit
+      const verdict = v.applied
+        ? `RASTER appliquée (seuil ${(rst.maxPixel * 100).toFixed(0)} %, ${rst.reason})`
+        : `RASTER NON appliquée (${v.reasons.join(' ; ')}) → seuil 1 %`
+      const line = `${name}: ${pct.toFixed(3)} % — ${verdict} — ${note}`
+      console.log(line)
+      testInfo.annotations.push({ type: 'section-pixel', description: line })
+      return { name, pct, mock, app, ok, note: line, raster: { applied: v.applied, limit, reasons: v.reasons } }
     }
     const ok = ratio <= 0.01
     const line = `${name}: ${pct.toFixed(3)} % — ${note}`

@@ -18,28 +18,31 @@ import {
   updateDocumentVisibility,
   type DocumentVisibility,
 } from '../lib/documents'
+import { getSpace } from '../lib/spaces'
 
 type ResourceKind = 'space' | 'folder' | 'document'
 
 const VISIBILITY_OPTIONS: Array<{
   value: DocumentVisibility
   label: string
-  hint: string
+  hint: (org: string, spaceName: string) => string
 }> = [
   {
     value: 'organisation',
     label: 'Tous les utilisateurs',
-    hint: "Toute personne authentifiée de l'instance peut consulter ce document.",
+    hint: (org: string) =>
+      `Toute personne authentifiée de ${org} peut consulter ce document.`,
   },
   {
     value: 'space',
     label: "Membres de l'espace",
-    hint: "Restreint aux membres ayant accès à l'espace (ou au dossier parent).",
+    hint: (_org: string, spaceName: string) =>
+      `Restreint aux membres de l'espace ${spaceName}.`,
   },
   {
     value: 'restricted',
     label: 'Personnes et équipes listées',
-    hint: "Accès limité aux personnes et équipes listées ci-dessous, plus les owners de l'espace.",
+    hint: () => 'Accès limité aux personnes et équipes listées ci-dessous.',
   },
 ]
 
@@ -73,11 +76,11 @@ function AccessEntryRow({
           </span>
           <span className="text-xs text-socle-muted">{entry.subjectType}</span>
         </div>
-        <p className="truncate font-mono text-xs text-socle-ink">{entry.subject}</p>
+        <p className="truncate text-xs text-socle-ink">
+          {entry.subjectType === 'group' ? 'Groupe' : 'Personne'}
+        </p>
         {entry.inheritedFrom && (
-          <p className="text-xs text-socle-slate">
-            Hérité de <span className="font-mono">{entry.inheritedFrom}</span>
-          </p>
+          <p className="text-xs text-socle-slate">Hérité d&apos;un parent</p>
         )}
         {source === 'group' && (
           <p className="text-xs text-socle-slate">
@@ -175,7 +178,7 @@ export function AccessPage({
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!subjectId.trim()) {
-      setError(subjectType === 'group' ? 'Sélectionnez un groupe' : 'UUID utilisateur requis')
+      setError(subjectType === 'group' ? 'Sélectionnez un groupe' : 'Identifiant utilisateur requis')
       return
     }
     setError(null)
@@ -200,7 +203,7 @@ export function AccessPage({
     objectType === 'space' ? 'espace' : objectType === 'folder' ? 'dossier' : 'document'
 
   return (
-    <main className="page-shell">
+    <main className="mx-auto w-[760px] max-w-[760px] px-0 pt-11 leading-[normal]">
       <div className="breadcrumb mb-6">
         <Link to="/">Accueil</Link>
         <span className="text-[#DEDEE1]">→</span>
@@ -213,14 +216,12 @@ export function AccessPage({
         <span className="font-medium text-socle-ink">Accès et permissions</span>
       </div>
 
-      <h1 className="serif-title">Accès et permissions</h1>
-      <p className="mt-2 text-sm text-socle-muted">
-        Personnes et équipes ayant accès à cet {resourceLabel} — distinction direct / via groupe /
-        hérité.
-      </p>
-      <p className="mt-2 font-mono text-xs text-socle-subtle">
-        {objectType}:{objectId}
-      </p>
+      <h1
+        className="mb-7 font-display text-[36px] font-normal leading-[normal] text-socle-ink"
+        data-mock-id="access-title"
+      >
+        Accès et permissions
+      </h1>
 
       {objectType === 'document' && (
         <VisibilityBlock
@@ -237,11 +238,17 @@ export function AccessPage({
       )}
 
       <div className="mt-8">
-        <div className="section-label mb-3">Personnes et équipes</div>
+        <div
+          className="mb-3 text-[13px] font-semibold leading-[normal] text-socle-ink"
+          data-mock-id="access-people-label"
+        >
+          Personnes et équipes
+        </div>
 
         {perms.isSuccess && perms.data.canManage && (
           <form
             onSubmit={onSubmit}
+            data-visual-mask="access-grant-form"
             className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-socle-line bg-white p-4"
           >
             <label className="flex flex-col gap-1 text-sm">
@@ -286,12 +293,12 @@ export function AccessPage({
               </label>
             ) : (
               <label className="flex min-w-[16rem] flex-1 flex-col gap-1 text-sm">
-                <span className="text-socle-muted">UUID utilisateur</span>
+                <span className="text-socle-muted">Identifiant utilisateur</span>
                 <input
                   value={subjectId}
                   onChange={(e) => setSubjectId(e.target.value)}
-                  placeholder="id utilisateur"
-                  className="field-input font-mono text-xs"
+                  placeholder="Identifiant"
+                  className="field-input text-xs"
                 />
               </label>
             )}
@@ -340,6 +347,10 @@ export function AccessPage({
         </ul>
       </div>
 
+      <p className="mt-2 text-sm text-socle-muted">
+        Personnes et équipes ayant accès à cet {resourceLabel} — distinction direct / via groupe /
+        hérité.
+      </p>
       <p className="mt-8 text-xs text-socle-muted">
         Seuls les accès <strong className="text-socle-slate">directs</strong> ou{' '}
         <strong className="text-socle-slate">via groupe</strong> sur cette ressource sont
@@ -368,6 +379,21 @@ function VisibilityBlock({
     enabled: Boolean(documentId),
     retry: false,
   })
+
+  const space = useQuery({
+    queryKey: ['space', doc.data?.spaceId],
+    queryFn: () => getSpace(api, doc.data!.spaceId),
+    enabled: Boolean(doc.data?.spaceId),
+  })
+  const branding = useQuery({
+    queryKey: ['public-branding'],
+    queryFn: async () => {
+      const { data } = await api.get<{ instanceName?: string }>('/api/v1/public/branding')
+      return data
+    },
+  })
+  const orgName = branding.data?.instanceName?.trim() || "l'instance"
+  const spaceName = space.data?.name?.trim() || "l'espace"
 
   const current = (doc.data?.visibility as DocumentVisibility | undefined) ?? 'space'
   const editable = canManage && !accessForbidden
@@ -399,7 +425,14 @@ function VisibilityBlock({
 
   return (
     <section className="mt-8" data-testid="visibility-block">
-      <div className="section-label mb-3">Visibilité</div>
+      <div className="mb-3 flex items-baseline justify-between">
+        <div className="text-[13px] font-semibold leading-[normal] text-socle-ink" data-mock-id="access-vis-label">
+          Visibilité
+        </div>
+        <div className="text-[11.5px] text-[#9B9BA1]">
+          Modifiable par les propriétaires de l&apos;espace
+        </div>
+      </div>
       {!editable && (
         <p className="mb-3 text-xs text-socle-muted">
           Lecture seule — seuls les owners de l’espace peuvent modifier la visibilité.
@@ -411,11 +444,12 @@ function VisibilityBlock({
           return (
             <label
               key={opt.value}
-              className={`flex cursor-pointer items-start gap-3 rounded-[10px] border px-4 py-3.5 ${
+              data-mock-id={`access-vis-${opt.value}`}
+              className={`flex cursor-pointer items-start gap-3 rounded-[10px] px-4 py-3.5 ${
                 selected
-                  ? 'border-socle-accent bg-[#FAFAFE]'
-                  : 'border-socle-line bg-white'
-              } ${!editable ? 'cursor-default opacity-90' : 'hover:bg-socle-soft'}`}
+                  ? 'border-[1.5px] border-socle-accent bg-[#FAFAFE]'
+                  : 'border border-socle-line bg-white'
+              } ${!editable ? 'cursor-default opacity-90' : 'hover:border-[#C7C6F5]'}`}
             >
               <input
                 type="radio"
@@ -428,14 +462,29 @@ function VisibilityBlock({
                     save.mutate(opt.value)
                   }
                 }}
-                className="mt-1"
+                className="sr-only"
                 data-testid={`visibility-${opt.value}`}
               />
+              <span
+                aria-hidden
+                className={`mt-0.5 shrink-0 rounded-full ${
+                  selected ? 'border-socle-accent' : 'border-[#C7C6C6]'
+                }`}
+                style={{
+                  width: 16,
+                  height: 16,
+                  boxSizing: 'content-box',
+                  borderWidth: selected ? 5 : 1.5,
+                  borderStyle: 'solid',
+                }}
+              />
               <span>
-                <span className="block text-[13.5px] font-semibold text-socle-ink">
+                <span className="block text-[13.5px] font-semibold leading-[normal] text-socle-ink">
                   {opt.label}
                 </span>
-                <span className="mt-0.5 block text-[12.5px] text-socle-muted">{opt.hint}</span>
+                <span className="mt-0.5 block text-[12.5px] leading-[normal] text-[#6B6B72]">
+                  {opt.hint(orgName, spaceName)}
+                </span>
               </span>
             </label>
           )
