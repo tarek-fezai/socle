@@ -48,7 +48,6 @@ const KEEP_HELMET_STYLES = new Set([
   'Trash.dc.html',
   // .seg.on / .mono — sinon l’onglet Invitations et l’e-mail sont en Sans 400
   'TeamInvitations.dc.html',
-  'InviteOrgMember.dc.html',
 ])
 
 function helmetStyles(rawHtml) {

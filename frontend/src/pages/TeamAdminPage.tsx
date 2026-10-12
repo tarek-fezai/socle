@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { FormEvent, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AdminShell } from '../components/admin/AdminShell'
 import { PeoplePicker, type PickerValue } from '../components/PeoplePicker'
@@ -559,42 +558,46 @@ function InvitationsTab() {
               {formatInvitationSentFr(row.lastSentAt)}
             </div>
             <div className="flex w-[190px] shrink-0 justify-end gap-1.5">
-              <a
-                href={`#resend-${row.id}`}
+              <span
                 className="resend"
+                role="button"
+                tabIndex={0}
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
                   color: '#3730E0',
                   padding: '6px 10px',
                   borderRadius: 6,
-                  textDecoration: 'none',
                 }}
-                onClick={(e) => {
-                  e.preventDefault()
+                onClick={() => {
                   if (!resend.isPending) resend.mutate(row.id)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !resend.isPending) resend.mutate(row.id)
                 }}
               >
                 Renvoyer
-              </a>
-              <a
-                href={`#revoke-${row.id}`}
+              </span>
+              <span
                 className="cancel"
+                role="button"
+                tabIndex={0}
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
                   color: '#B54708',
                   padding: '6px 10px',
                   borderRadius: 6,
-                  textDecoration: 'none',
                 }}
-                onClick={(e) => {
-                  e.preventDefault()
+                onClick={() => {
                   if (!revoke.isPending) revoke.mutate(row.id)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !revoke.isPending) revoke.mutate(row.id)
                 }}
               >
                 Annuler
-              </a>
+              </span>
             </div>
           </div>
         ))}
@@ -645,7 +648,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
     onError: (e) => setError(apiErrorMessage(e, 'Envoi impossible')),
   })
 
-  return createPortal(
+  return (
     <div
       data-mock-id="invite-modal-backdrop"
       style={{
@@ -977,7 +980,6 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   )
 }
