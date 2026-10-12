@@ -25,13 +25,7 @@ import {
 export const APP_EXTRA = []
 export const NOT_IMPLEMENTED = []
 
-const SIZE_EXCEPTIONS = {
-  'invitations-row': {
-    dw: 0,
-    dh: -1,
-    reason: 'hauteur maquette 51 px (content-box + bordure) vs 50 px app (preflight border-box)',
-  },
-}
+const SIZE_EXCEPTIONS = {}
 
 const PIXEL_SECTIONS = [
   { id: 'team-tab-invitations', name: 'tab-invitations', masks: [] },

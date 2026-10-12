@@ -525,9 +525,10 @@ function InvitationsTab() {
             className="flex items-center"
             data-mock-id={i === 0 ? 'invitations-row' : undefined}
             style={{
+              height: 51,
               padding: '11px 16px',
               borderBottom: '1px solid #F5F5F7',
-              boxSizing: 'content-box',
+              boxSizing: 'border-box',
             }}
           >
             <div className="flex flex-[2.2] items-center gap-2.5">
@@ -557,24 +558,42 @@ function InvitationsTab() {
               {formatInvitationSentFr(row.lastSentAt)}
             </div>
             <div className="flex w-[190px] shrink-0 justify-end gap-1.5">
-              <button
-                type="button"
-                className="text-[12px] font-semibold text-socle-accent"
-                style={{ padding: '6px 10px', borderRadius: 6 }}
-                onClick={() => resend.mutate(row.id)}
-                disabled={resend.isPending}
+              <a
+                href={`#resend-${row.id}`}
+                className="resend"
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#3730E0',
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  textDecoration: 'none',
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  if (!resend.isPending) resend.mutate(row.id)
+                }}
               >
                 Renvoyer
-              </button>
-              <button
-                type="button"
-                className="text-[12px] font-semibold text-[#B54708]"
-                style={{ padding: '6px 10px', borderRadius: 6 }}
-                onClick={() => revoke.mutate(row.id)}
-                disabled={revoke.isPending}
+              </a>
+              <a
+                href={`#revoke-${row.id}`}
+                className="cancel"
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#B54708',
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  textDecoration: 'none',
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  if (!revoke.isPending) revoke.mutate(row.id)
+                }}
               >
                 Annuler
-              </button>
+              </a>
             </div>
           </div>
         ))}
@@ -651,10 +670,14 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
           padding: '30px 30px 26px',
           boxSizing: 'border-box',
           height: 'fit-content',
+          WebkitFontSmoothing: 'auto',
+          MozOsxFontSmoothing: 'auto',
+          textRendering: 'auto',
+          fontSynthesis: 'weight style',
         }}
       >
         <div className="mb-1.5 flex items-start justify-between">
-          <h1
+          <div
             id="invite-modal-title"
             data-mock-id="invite-title"
             className="serif"
@@ -665,10 +688,13 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
               margin: 0,
               color: '#0E0E10',
               lineHeight: 'normal',
+              WebkitFontSmoothing: 'auto',
+              MozOsxFontSmoothing: 'auto',
+              textRendering: 'auto',
             }}
           >
             Inviter un membre
-          </h1>
+          </div>
           <button
             type="button"
             aria-label="Fermer"
