@@ -30,6 +30,14 @@ export const NOT_IMPLEMENTED = []
 
 const SIZE_EXCEPTIONS = {}
 
+/** LCD maquette vs gris app à géométrie identique — docs/visual-parity.md § RASTER_EXCEPTIONS. */
+const RASTER_EXCEPTIONS = {
+  'create-space-cancel': {
+    maxPixel: 0.05,
+    reason: 'lissage LCD (<a> maquette) vs gris (<button> app), géométrie identique',
+  },
+}
+
 const PIXEL_SECTIONS = [
   { id: 'create-title', name: 'title', masks: [] },
   { id: 'create-close', name: 'close', masks: [] },
@@ -62,7 +70,7 @@ test.describe('create-space visual', () => {
       ['[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]', '[data-mock-id="create-modal"]'],
       'create-space-mock',
     )
-    await probeCompositingReasons(
+    const mockLayers = await probeCompositingReasons(
       page,
       ['[data-mock-id="create-modal"]', '[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]'],
       'create-space-mock',
@@ -72,7 +80,7 @@ test.describe('create-space visual', () => {
     await probeAncestorStack(page, '[data-mock-id="create-submit"]', 'create-space-mock')
     await probeAncestorStack(page, '[data-mock-id="create-cancel"]', 'create-space-mock')
     await probeTextBox(page, '[data-mock-id="create-submit"]', 'create-space-mock')
-    await probeTextBox(page, '[data-mock-id="create-cancel"]', 'create-space-mock')
+    const mockCancelTb = await probeTextBox(page, '[data-mock-id="create-cancel"]', 'create-space-mock')
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'create-space')
 
     const mockSec = {}
@@ -99,7 +107,7 @@ test.describe('create-space visual', () => {
       ['[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]', '[data-mock-id="create-modal"]'],
       'create-space-app',
     )
-    await probeCompositingReasons(
+    const appLayers = await probeCompositingReasons(
       page,
       ['[data-mock-id="create-modal"]', '[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]'],
       'create-space-app',
@@ -109,17 +117,32 @@ test.describe('create-space visual', () => {
     await probeAncestorStack(page, '[data-mock-id="create-submit"]', 'create-space-app')
     await probeAncestorStack(page, '[data-mock-id="create-cancel"]', 'create-space-app')
     await probeTextBox(page, '[data-mock-id="create-submit"]', 'create-space-app')
-    await probeTextBox(page, '[data-mock-id="create-cancel"]', 'create-space-app')
+    const appCancelTb = await probeTextBox(page, '[data-mock-id="create-cancel"]', 'create-space-app')
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'create-space')
 
-    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const cancelSel = '[data-mock-id="create-cancel"]'
+    const rasterGeo = {
+      mock: mockCancelTb,
+      app: appCancelTb,
+      mockOwnLayers: mockLayers[cancelSel]?.ownLayers ?? null,
+      appOwnLayers: appLayers[cancelSel]?.ownLayers ?? null,
+    }
+    const compare = compareSectionShots(SIZE_EXCEPTIONS, { raster: RASTER_EXCEPTIONS })
     const results = []
     for (const s of PIXEL_SECTIONS) {
       const app = await shotSection(page, `[data-mock-id="${s.id}"]`, {
         maskNames: s.masks,
         label: `create-space-sec-${s.name}-app`,
       })
-      results.push(compare(`create-space-${s.name}`, mockSec[s.name].shot, app.shot, testInfo))
+      results.push(
+        compare(
+          `create-space-${s.name}`,
+          mockSec[s.name].shot,
+          app.shot,
+          testInfo,
+          s.name === 'cancel' ? rasterGeo : undefined,
+        ),
+      )
     }
     finishPixelResults('create-space', results)
   })

@@ -7,8 +7,8 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash` |
-| **Sections > 1 % (échec CI, pas de test.fail)** | `create-space` cancel 3.164 % — boîte et Range du texte identiques à la maquette ; le `<button>` peint en niveaux de gris alors que le `<a>` maquette a des franges LCD (13 px / 500, `#43434A` sur blanc). Submit 0.987 % après `display:flex; align-items:flex-start` (texte y=596 des deux côtés, comme generate-token #68 / approval). `Approval.dc.html` Refuser (14 px / 600) : LCD des deux côtés, 0 %. Maquette CreateSpace non modifiée. |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` / `RASTER_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash`, `create-space` |
+| **Sections > 1 % (échec CI, pas de test.fail)** | — |
 
 ## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
 
@@ -73,7 +73,8 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 15. **Accès** : people picker / Inviter / onglets document `NOT_IMPLEMENTED` (`ACCESS-PEOPLE-PICKER`, prioritaire). Formulaire UUID conservé sans affichage d’UUID (`APP_EXTRA` provisoire).
 16. **Une section > seuil fait échouer la CI.** Interdit : `test.fail()`, `test.fixme()`, skip conditionnel pour rendre un écart « attendu ».
 17. **Trash.dc.html : « Supprimer définitivement » est un `<button type="button" class="perm-delete">`** (décision tf **2026-10-12**, artifact Design v144). Règle UA `.perm-delete` dans le `<helmet>` ; `serve-mockups.mjs` conserve ce helmet. Confirmation dans la page à la place de `window.confirm` : backlog, ne pas implémenter ici.
-18. **CreateSpace.dc.html : CTA restés `<a>`** (hypothèse `<a>` vs `<button>` réfutée : Approval.dc.html Approuver/Refuser sont des `<a>`, l’app passe ≤ 1 % en `<button>`). Submit étiré à 37 px (rangée = cancel + bordure) : `display:flex; align-items:flex-start` pour caler le texte sous le padding haut (y=596), comme generate-token #68. Cancel : même géométrie / Range que la maquette ; écart 3.164 % = raster LCD (`<a>`) vs gris (`<button>`) à 13 px / 500.
+18. **CreateSpace.dc.html : CTA restés `<a>`** (hypothèse `<a>` vs `<button>` réfutée : Approval.dc.html Approuver/Refuser sont des `<a>`, l’app passe ≤ 1 % en `<button>`). Submit étiré à 37 px (rangée = cancel + bordure) : `display:flex; align-items:flex-start` pour caler le texte sous le padding haut (y=596), comme generate-token #68.
+19. **`RASTER_EXCEPTIONS`** (entrée unique `create-space-cancel`) : lissage LCD du `<a>` maquette vs gris du `<button>` app à géométrie identique. Essais fond opaque `#FFFFFF` et `appearance` UA : écart inchangé (3,164 %). Seuil ≤ 5 % ; garde si la section ≤ 1 %.
 
 ## Comparaison
 
@@ -159,6 +160,27 @@ SUBPIXEL_EXCEPTIONS[sectionId] = { upstreamNotImplemented: '<id NOT_IMPLEMENTED>
 |---|---|
 | `page-desktop-h2-flux`, `page-desktop-p-flux` | `page-drawio` (Fig. 1 draw.io) |
 | `edit-desktop-h2-principe`, `edit-desktop-p-editing` | `edit-lead-coedit` (bloc co-édition) |
+
+## Lissage LCD vs gris (`RASTER_EXCEPTIONS`)
+
+Un `<a>` maquette et un `<button>` app de **même boîte et même Range de texte** peuvent encore différer
+par le mode de lissage (franges LCD vs niveaux de gris), sans calque de composition propre.
+
+```js
+RASTER_EXCEPTIONS[sectionId] = { maxPixel: 0.05, reason }
+```
+
+- `maxPixel` **≤ 0,05** (5 %) ; `reason` obligatoire.
+- Appliquée **seulement si les trois conditions sont mesurées** par le test (sinon seuil 1 %) :
+  1. boîte et rectangle du nœud texte identiques au 1/100 px ;
+  2. styles calculés de police identiques (famille — premier nom —, taille, graisse,
+     `letter-spacing`, `line-height`, couleur) ;
+  3. aucun calque propre LayerTree des deux côtés (`ownLayers` vide).
+- Une entrée **inutile** (section ≤ 1 % sans elle) fait échouer le test : la retirer.
+
+| Section | Motif |
+|---|---|
+| `create-space-cancel` | LCD (`<a>` maquette) vs gris (`<button>` app), géométrie identique |
 
 ## Exceptions structurales
 

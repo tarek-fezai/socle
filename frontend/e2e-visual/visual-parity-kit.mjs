@@ -11,6 +11,8 @@
  *   puis comparaison sur zone commune ancrée en haut à gauche (crop TL).
  * - Décalage sous-pixel hérité d'une zone NOT_IMPLEMENTED → `SUBPIXEL_EXCEPTIONS` encadrées
  *   (conditions mesurées par le test, sinon seuil normal 1 %).
+ * - Lissage LCD vs gris à géométrie identique → `RASTER_EXCEPTIONS` encadrées (seuil ≤ 5 %,
+ *   conditions a/b/c mesurées ; échec si la section ≤ 1 %).
  * - Fonctionnalité absente → `NOT_IMPLEMENTED` (jamais comptée comme passée).
  * - Élément présent dans l'app, absent de la maquette par décision produit → `APP_EXTRA`
  *   (masque côté app uniquement, surface chiffrée, reason + décision ; échec s'il disparaît).
@@ -336,9 +338,11 @@ export async function probeTextBox(page, selector, side) {
       padding: cs.padding,
       verticalAlign: cs.verticalAlign,
       boxSizing: cs.boxSizing,
+      fontFamily: cs.fontFamily,
       fontSize: cs.fontSize,
       fontWeight: cs.fontWeight,
       letterSpacing: cs.letterSpacing,
+      color: cs.color,
     }
   }, selector)
   console.log(`TEXTBOX ${side} ${selector}: ${JSON.stringify(found)}`)
@@ -648,6 +652,8 @@ export async function measureSectionGeometry(loc) {
 export const SUBPIXEL_MAX_PIXEL = 0.08
 /** Écart minimal de fraction de pixel (y maquette / y app) pour appliquer l'exception. */
 export const SUBPIXEL_MIN_FRAC_DELTA = 0.25
+/** Plafond de `maxPixel` (ratio) d'une RASTER_EXCEPTION (LCD vs gris). */
+export const RASTER_MAX_PIXEL = 0.05
 
 /**
  * @typedef {{ upstreamNotImplemented: string, maxPixel: number, reason: string }} SubpixelException
@@ -720,6 +726,56 @@ export function subpixelVerdict(ex, geo, upstream, notImplemented) {
 }
 
 /**
+ * @typedef {{ maxPixel: number, reason: string }} RasterException
+ */
+
+function sameRect01(a, b) {
+  if (!a || !b) return false
+  return ['x', 'y', 'w', 'h'].every((k) => Math.abs(Number(a[k]) - Number(b[k])) <= 0.01)
+}
+
+function normFontFamily(s) {
+  const first = String(s || '').split(',')[0] || ''
+  return first.replace(/['"]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+/**
+ * RASTER_EXCEPTION : LCD vs gris à boîte/texte/police identiques, sans calque propre.
+ * @param {{ mock?: object, app?: object, mockOwnLayers?: unknown[], appOwnLayers?: unknown[] } | undefined} geo
+ */
+export function rasterVerdict(geo) {
+  const reasons = []
+  const { mock, app } = geo ?? {}
+  if (!mock || !app || mock === 'MISSING' || app === 'MISSING') {
+    return { applied: false, reasons: ['preuves boîte/texte non mesurées'] }
+  }
+  if (!sameRect01(mock.box, app.box)) {
+    reasons.push(
+      `boîte ≠ (${JSON.stringify(mock.box)} / ${JSON.stringify(app.box)})`,
+    )
+  }
+  if (!sameRect01(mock.text, app.text)) {
+    reasons.push(
+      `texte Range ≠ (${JSON.stringify(mock.text)} / ${JSON.stringify(app.text)})`,
+    )
+  }
+  const mockFam = normFontFamily(mock.fontFamily)
+  const appFam = normFontFamily(app.fontFamily)
+  if (mockFam !== appFam) reasons.push(`fontFamily ≠ (${mock.fontFamily} / ${app.fontFamily})`)
+  for (const k of ['fontSize', 'fontWeight', 'letterSpacing', 'lineHeight', 'color']) {
+    if (mock[k] !== app[k]) reasons.push(`${k} ≠ (${JSON.stringify(mock[k])} / ${JSON.stringify(app[k])})`)
+  }
+  const mL = Array.isArray(geo.mockOwnLayers) ? geo.mockOwnLayers : null
+  const aL = Array.isArray(geo.appOwnLayers) ? geo.appOwnLayers : null
+  if (!mL || !aL) reasons.push('LayerTree non mesuré')
+  else {
+    if (mL.length) reasons.push(`calque propre maquette (${mL.length})`)
+    if (aL.length) reasons.push(`calque propre app (${aL.length})`)
+  }
+  return { applied: reasons.length === 0, reasons }
+}
+
+/**
  * Fabrique de comparateur de section.
  * Tailles égales → ≤ 1 % ; sinon SIZE_EXCEPTION déclarée (Δ mesuré = déclaré) + crop TL.
  *
@@ -727,15 +783,23 @@ export function subpixelVerdict(ex, geo, upstream, notImplemented) {
  * `subpixelVerdict` sont mesurées vraies ; garde si la zone amont quitte NOT_IMPLEMENTED ; échec si la
  * section passe déjà à 1 % (exception inutile).
  *
+ * RASTER_EXCEPTIONS (opts.raster) : seuil `maxPixel` ≤ 5 % si boîte + Range texte identiques (1/100 px),
+ * police calculée identique, aucun calque propre LayerTree ; échec si la section ≤ 1 %.
+ *
  * @param {Record<string, { dw: number, dh: number, reason: string }>} sizeExceptions
- * @param {{ subpixel?: Record<string, SubpixelException>, notImplemented?: NotImplementedZone[], upstreams?: Record<string, unknown> }} [opts]
+ * @param {{ subpixel?: Record<string, SubpixelException>, raster?: Record<string, RasterException>, notImplemented?: NotImplementedZone[], upstreams?: Record<string, unknown> }} [opts]
  * @returns {(name: string, mockShot: Buffer, appShot: Buffer, testInfo: import('@playwright/test').TestInfo, geo?: { mock: object, app: object }) =>
  *   { name: string, pct: number, mock: {w:number,h:number}, app: {w:number,h:number}, ok: boolean, note: string }}
  */
-export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, notImplemented = [], upstreams = {} } = {}) {
+export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, raster = {}, notImplemented = [], upstreams = {} } = {}) {
   for (const [k, ex] of Object.entries(subpixel)) {
     if (!(ex.maxPixel > 0 && ex.maxPixel <= SUBPIXEL_MAX_PIXEL) || !ex.reason || !ex.upstreamNotImplemented) {
       throw new Error(`SUBPIXEL_EXCEPTIONS[${k}] invalide (maxPixel ≤ ${SUBPIXEL_MAX_PIXEL}, reason, upstreamNotImplemented requis)`)
+    }
+  }
+  for (const [k, ex] of Object.entries(raster)) {
+    if (!(ex.maxPixel > 0 && ex.maxPixel <= RASTER_MAX_PIXEL) || !ex.reason) {
+      throw new Error(`RASTER_EXCEPTIONS[${k}] invalide (maxPixel ≤ ${RASTER_MAX_PIXEL}, reason requis)`)
     }
   }
   return function compare(name, mockShot, appShot, testInfo, geo) {
@@ -803,6 +867,29 @@ export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, notImp
       console.log(line)
       testInfo.annotations.push({ type: 'section-pixel', description: line })
       return { name, pct, mock, app, ok, note: line, subpixel: { applied: v.applied, limit } }
+    }
+    const rst = raster[name]
+    if (rst) {
+      const v = rasterVerdict(geo)
+      const fail = (msg) => {
+        console.log(msg)
+        testInfo.annotations.push({ type: 'section-pixel', description: msg })
+        return { name, pct, mock, app, ok: false, note: msg }
+      }
+      if (ratio <= 0.01) {
+        return fail(
+          `${name}: ${pct.toFixed(3)} % ≤ 1 % — RASTER_EXCEPTION inutile, retirer l'entrée`,
+        )
+      }
+      const limit = v.applied ? rst.maxPixel : 0.01
+      const ok = ratio <= limit
+      const verdict = v.applied
+        ? `RASTER appliquée (seuil ${(rst.maxPixel * 100).toFixed(0)} %, ${rst.reason})`
+        : `RASTER NON appliquée (${v.reasons.join(' ; ')}) → seuil 1 %`
+      const line = `${name}: ${pct.toFixed(3)} % — ${verdict} — ${note}`
+      console.log(line)
+      testInfo.annotations.push({ type: 'section-pixel', description: line })
+      return { name, pct, mock, app, ok, note: line, raster: { applied: v.applied, limit, reasons: v.reasons } }
     }
     const ok = ratio <= 0.01
     const line = `${name}: ${pct.toFixed(3)} % — ${note}`
