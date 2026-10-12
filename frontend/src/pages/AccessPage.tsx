@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { FormEvent, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { FormEvent, useState, type ReactNode } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PeoplePicker, type PickerValue } from '../components/PeoplePicker'
 import { api } from '../lib/api'
@@ -11,6 +11,7 @@ import {
   revokeAccess,
   type AccessEntry,
 } from '../lib/access'
+import { listComments } from '../lib/comments'
 import { formatRelativeFr } from '../lib/relativeTime'
 import { softDeleteDocument } from '../lib/trash'
 import {
@@ -19,6 +20,8 @@ import {
   type DocumentVisibility,
 } from '../lib/documents'
 import { getSpace } from '../lib/spaces'
+import { DocumentCrumbs, DocumentTabs } from './document/DocumentChrome'
+import './document/document-page.css'
 
 type ResourceKind = 'space' | 'folder' | 'document'
 
@@ -53,6 +56,12 @@ function relationLabel(relation: string, group: boolean) {
   return relation
 }
 
+function personAvatar(initials: string): { bg: string; fg: string } {
+  if (initials === 'CD') return { bg: '#EEEDFD', fg: '#3730E0' }
+  if (initials === 'YM') return { bg: '#F2E4DC', fg: '#8A4A2E' }
+  return { bg: '#0E0E10', fg: '#FFFFFF' }
+}
+
 function AccessEntryRow({
   entry,
   onRevoke,
@@ -72,15 +81,20 @@ function AccessEntryRow({
     : entry.lastActivityAt
       ? `Actif ${formatRelativeFr(entry.lastActivityAt).toLowerCase()}`
       : '—'
+  const avatar = isGroup ? { bg: '#F1EFEA', fg: '#6B6862' } : personAvatar(initials)
   return (
-    <li className="row group flex items-center px-4 py-3" style={{ borderBottom: '1px solid #F5F5F7' }}>
-      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+    <li
+      className="row group flex items-center border-b border-[#F5F5F7] last:border-b-0"
+      style={{ padding: '12px 16px' }}
+    >
+      <div className="flex min-w-0 flex-1 items-center" style={{ gap: 10 }}>
         <div
-          className="flex h-[26px] w-[26px] shrink-0 items-center justify-center text-[10px] font-semibold"
+          className="flex h-[26px] w-[26px] shrink-0 items-center justify-center font-semibold"
           style={{
             borderRadius: isGroup ? 8 : '50%',
-            background: isGroup ? '#F1EFEA' : '#0E0E10',
-            color: isGroup ? '#6B6862' : '#FFFFFF',
+            background: avatar.bg,
+            color: avatar.fg,
+            fontSize: isGroup ? 11 : 10,
           }}
         >
           {initials}
@@ -90,7 +104,10 @@ function AccessEntryRow({
           <div className="text-[11.5px] text-[#9B9BA1]">{meta}</div>
         </div>
       </div>
-      <span className="shrink-0 rounded-[7px] border border-socle-line px-3 py-1 text-[12.5px] font-medium text-[#43434A]">
+      <span
+        className="shrink-0 font-medium text-[#43434A]"
+        style={{ fontSize: 12.5, padding: '5px 12px', border: '1px solid #ECECEE', borderRadius: 7 }}
+      >
         {relationLabel(entry.relation, isGroup)}
       </span>
       {entry.revocable ? (
@@ -212,55 +229,20 @@ export function AccessPage({
   const resourceLabel =
     objectType === 'space' ? 'espace' : objectType === 'folder' ? 'dossier' : 'document'
 
-  return (
-    <main className="mx-auto w-[760px] max-w-[760px] px-0 pt-11 leading-[normal]">
-      {objectType === 'document' && (
-        <div
-          className="mb-6 flex items-center gap-[22px] border-b border-socle-line"
-          data-mock-id="access-doc-tabs"
-          role="tablist"
-        >
-          <Link to={`/docs/${objectId}`} className="doc-tab" role="tab">
-            Lire
-          </Link>
-          <Link to={`/docs/${objectId}/edit`} className="doc-tab" role="tab">
-            Modifier
-          </Link>
-          <Link to={`/docs/${objectId}/history`} className="doc-tab" role="tab">
-            Historique
-          </Link>
-          <Link to={`/docs/${objectId}`} className="doc-tab" role="tab">
-            Commentaires
-          </Link>
-          <span className="doc-tab is-active" role="tab" aria-selected>
-            Accès
-          </span>
-        </div>
-      )}
-      <div className="mb-6 flex items-start justify-between">
-        <div className="breadcrumb">
-          <Link to="/">Accueil</Link>
-          <span className="text-[#DEDEE1]">→</span>
-          {objectType === 'space' && (
-            <>
-              <Link to="/spaces">Espaces</Link>
-              <span className="text-[#DEDEE1]">→</span>
-            </>
-          )}
-          <span className="font-medium text-socle-ink">Accès et permissions</span>
-        </div>
-        {perms.data?.canManage && (
-          <button
-            type="button"
-            data-mock-id="access-invite"
-            onClick={() => setInviteOpen(true)}
-            className="rounded-[7px] bg-socle-accent px-4 py-1.5 text-[13px] font-semibold text-white hover:bg-[#2C27C7]"
-          >
-            + Inviter
-          </button>
-        )}
-      </div>
+  const inviteButton = perms.data?.canManage ? (
+    <button
+      type="button"
+      data-mock-id="access-invite"
+      onClick={() => setInviteOpen(true)}
+      className="inline-flex shrink-0 items-center rounded-[7px] bg-socle-accent text-[13px] font-semibold leading-[normal] text-white hover:bg-[#2C27C7]"
+      style={{ height: 31, padding: '0 16px' }}
+    >
+      + Inviter
+    </button>
+  ) : null
 
+  const body = (
+    <>
       <h1
         className="mb-7 font-display text-[36px] font-normal leading-[normal] text-socle-ink"
         data-mock-id="access-title"
@@ -345,10 +327,12 @@ export function AccessPage({
         </ul>
       </div>
 
-      <p className="mt-2 text-sm text-socle-muted">
-        Personnes et équipes ayant accès à cet {resourceLabel} — distinction direct / via groupe /
-        hérité.
-      </p>
+      {objectType !== 'document' && (
+        <p className="mt-2 text-sm text-socle-muted">
+          Personnes et équipes ayant accès à cet {resourceLabel} — distinction direct / via groupe /
+          hérité.
+        </p>
+      )}
       {objectType === 'document' && perms.data?.canManage && (
         <div
           data-mock-id="access-delete-box"
@@ -390,7 +374,90 @@ export function AccessPage({
           )}
         </div>
       )}
+    </>
+  )
+
+  if (objectType === 'document') {
+    return (
+      <DocumentAccessChrome objectId={objectId} invite={inviteButton}>
+        {body}
+      </DocumentAccessChrome>
+    )
+  }
+
+  return (
+    <main className="mx-auto w-[760px] max-w-[760px] px-0 pt-11 leading-[normal]">
+      <div className="mb-6 flex items-start justify-between">
+        <div className="breadcrumb">
+          <Link to="/">Accueil</Link>
+          <span className="text-[#DEDEE1]">→</span>
+          {objectType === 'space' && (
+            <>
+              <Link to="/spaces">Espaces</Link>
+              <span className="text-[#DEDEE1]">→</span>
+            </>
+          )}
+          <span className="font-medium text-socle-ink">Accès et permissions</span>
+        </div>
+        {inviteButton}
+      </div>
+      {body}
     </main>
+  )
+}
+
+function DocumentAccessChrome({
+  objectId,
+  invite,
+  children,
+}: {
+  objectId: string
+  invite: ReactNode
+  children: ReactNode
+}) {
+  const navigate = useNavigate()
+  const doc = useQuery({
+    queryKey: ['document', objectId],
+    queryFn: () => getDocument(api, objectId),
+    enabled: Boolean(objectId),
+    retry: false,
+  })
+  const space = useQuery({
+    queryKey: ['space', doc.data?.spaceId],
+    queryFn: () => getSpace(api, doc.data!.spaceId),
+    enabled: Boolean(doc.data?.spaceId),
+  })
+  const comments = useQuery({
+    queryKey: ['document-comments', objectId, 'ouvert', ''],
+    queryFn: () => listComments(api, objectId, { status: 'ouvert' }),
+    enabled: Boolean(objectId),
+    retry: false,
+  })
+  const crumbs = [
+    { label: space.data?.name?.trim() || 'Espace', to: doc.data?.spaceId ? `/spaces/${doc.data.spaceId}/tree` : undefined },
+    { label: doc.data?.title?.trim() || 'Document' },
+  ]
+
+  return (
+    <div className="doc-page" data-mock-id="access-page">
+      <div className="doc-topbar">
+        <DocumentCrumbs crumbs={crumbs} mockPrefix="access" />
+        {invite}
+      </div>
+      <DocumentTabs
+        documentId={objectId}
+        current="access"
+        mockPrefix="access-doc"
+        showEdit={Boolean(doc.data?.permissions?.canEdit)}
+        showAccess
+        openComments={comments.data?.openThreadCount ?? 0}
+        commentsOpen={false}
+        onToggleComments={() => navigate(`/docs/${objectId}?comments=1`)}
+      />
+      <div className="flex justify-center px-10 pt-11">
+        <div className="w-[760px] shrink-0 leading-[normal]">{children}</div>
+      </div>
+    </div>
   )
 }
 

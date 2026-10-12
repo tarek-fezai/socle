@@ -138,6 +138,10 @@
   min-width: 0;
 }
 
+.admin-main--team {
+  padding: 36px 48px 0;
+}
+
 .admin-main--fields {
   padding: 36px 40px 0;
 }

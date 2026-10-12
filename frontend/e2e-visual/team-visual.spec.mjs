@@ -68,6 +68,7 @@ test.describe('team visual', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
 
     await page.goto(`${MOCK_ORIGIN}/Team.dc.html`)
+    await page.waitForSelector('a.seg')
     await annotateTeamMockup(page)
     await settleFonts(page)
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'team')

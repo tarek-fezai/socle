@@ -5,6 +5,7 @@
 import { ME_TAREK, NOTIFICATIONS_SEED, SPACE_IDENTITE, TREE_IDENTITE } from './dashboard-fixtures.mjs'
 import { SPACES_SEED } from './five-screens-fixtures.mjs'
 import { json, mockBaseApis } from './visual-parity-kit.mjs'
+import { PAGE_COMMENTS } from './page-fixtures.mjs'
 import {
   ACCESS_DOC,
   ACCESS_DOC_SEED,
@@ -35,6 +36,7 @@ export async function mockParityApis(page) {
     return json(route, ACCESS_DOC)
   })
   await page.route(`**/api/v1/access/document/${PAGE_DOC_ID}`, (route) => json(route, ACCESS_DOC_SEED))
+  await page.route(`**/api/v1/documents/${PAGE_DOC_ID}/comments**`, (route) => json(route, PAGE_COMMENTS))
   await page.route(`**/api/v1/folders/${EXPORT_FOLDER_ID}`, (route) => json(route, FOLDER_PROCEDURES))
   await page.route(`**/api/v1/tags/${EXPORT_TAG_ID}`, (route) => json(route, TAG_IAM))
   await page.route('**/api/v1/groups**', (route) => {
@@ -55,12 +57,23 @@ export async function annotateTeamMockup(page) {
     invite?.setAttribute('data-mock-id', 'team-invite-cta')
     invite?.setAttribute('data-visual-mask', 'team-invite-cta')
     const segs = [...document.querySelectorAll('a.seg')]
-    segs[0]?.setAttribute('data-mock-id', 'team-tab-membres')
-    segs[1]?.setAttribute('data-mock-id', 'team-tab-equipes')
-    segs[2]?.setAttribute('data-mock-id', 'team-tab-invitations')
-    segs[2]?.setAttribute('data-visual-mask', 'team-tab-invitations')
-    const table = [...document.querySelectorAll('div')].find((d) =>
-      (d.textContent ?? '').startsWith('Membre') && d.style && d.style.textTransform === 'uppercase',
+    const exact = (label) =>
+      [...document.querySelectorAll('a')].find((a) => {
+        const t = (a.textContent ?? '').replace(/\s+/g, ' ').trim()
+        return t === label || t.startsWith(`${label} `)
+      })
+    const membres = segs[0] || exact('Membres')
+    const equipes = segs[1] || exact('Équipes')
+    const invitations = segs[2] || exact('Invitations')
+    membres?.setAttribute('data-mock-id', 'team-tab-membres')
+    equipes?.setAttribute('data-mock-id', 'team-tab-equipes')
+    invitations?.setAttribute('data-mock-id', 'team-tab-invitations')
+    invitations?.setAttribute('data-visual-mask', 'team-tab-invitations')
+    const table = [...document.querySelectorAll('div')].find(
+      (d) =>
+        Boolean(d.style?.textTransform === 'uppercase') &&
+        (d.textContent ?? '').includes('Rôle global') &&
+        (d.textContent ?? '').includes('Dernière activité'),
     )
     table?.setAttribute('data-mock-id', 'team-members-head')
   })

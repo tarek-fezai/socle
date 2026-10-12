@@ -36,6 +36,14 @@ export function isDocumentHistoryPath(pathname: string): boolean {
   return /^\/(?:docs|documents)\/(?!new\/?$)[^/]+\/history(?:\/compare)?\/?$/.test(pathname)
 }
 
+/**
+ * `/documents/:id/access` (Access.dc.html) — barre haute + onglets fournis par la page ;
+ * le shell masque `ShellHeader` / barres mobiles, la sidebar reste.
+ */
+export function isDocumentAccessPath(pathname: string): boolean {
+  return /^\/documents\/[^/]+\/access\/?$/.test(pathname)
+}
+
 /** Export document / dossier / tag — barre haute « Fermer » fournie par la page. */
 export function isExportPath(pathname: string): boolean {
   return (
@@ -73,6 +81,7 @@ export function hasOwnDocumentChrome(pathname: string): boolean {
     isDocumentReadPath(pathname) ||
     isDocumentEditPath(pathname) ||
     isDocumentHistoryPath(pathname) ||
+    isDocumentAccessPath(pathname) ||
     isExportPath(pathname) ||
     isApprovalsPath(pathname) ||
     isAdminWorkspacePath(pathname) ||

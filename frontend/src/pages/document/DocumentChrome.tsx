@@ -257,9 +257,9 @@ export function DocumentTopBar({
 export type DocTabsProps = {
   documentId: string
   /** Onglet courant (défaut : Lire). */
-  current?: 'read' | 'edit' | 'history'
+  current?: 'read' | 'edit' | 'history' | 'access'
   /** Préfixe des `data-mock-id` (défaut : `doc`). */
-  mockPrefix?: 'doc' | 'edit' | 'hist'
+  mockPrefix?: 'doc' | 'edit' | 'hist' | 'access-doc'
   showEdit: boolean
   showAccess: boolean
   openComments: number
@@ -325,7 +325,14 @@ export function DocumentTabs({
         )}
       </button>
       {showAccess && (
-        <Link to={`/documents/${documentId}/access`} role="tab" aria-selected={false} className="doc-tab" data-testid="tab-access">
+        <Link
+          to={`/documents/${documentId}/access`}
+          role="tab"
+          aria-selected={current === 'access'}
+          className={`doc-tab${current === 'access' ? ' is-active' : ''}`}
+          data-testid="tab-access"
+          data-mock-id={current === 'access' ? `${mockPrefix}-tab-access` : undefined}
+        >
           Accès
         </Link>
       )}

@@ -33,6 +33,8 @@ export function TeamAdminPage() {
   return (
     <AdminShell
       active="team"
+      innerWide
+      mainClassName="admin-main--team"
       breadcrumb={[
         { label: 'Administration', to: '/admin' },
         { label: 'Membres & équipes' },
@@ -78,7 +80,8 @@ export function TeamAdminPage() {
               disabled
               title="Bientôt"
               data-mock-id="team-tab-invitations"
-              className="border-l border-socle-line px-4 py-1.5 text-[12.5px] text-[#6B6B72] opacity-60"
+              className="border-l border-socle-line text-[12.5px] text-[#6B6B72] opacity-60"
+              style={{ padding: '7px 16px' }}
             >
               Invitations{' '}
               <span className="ml-1 text-[10px] font-semibold text-[#B7791F]">Bientôt</span>
@@ -139,9 +142,10 @@ function TabBtn({
       aria-selected={on}
       data-mock-id={mockId}
       onClick={() => onClick(id)}
-      className={`px-4 py-1.5 text-[12.5px] ${on ? 'bg-white font-semibold text-socle-ink' : 'text-[#6B6B72]'} ${
+      className={`text-[12.5px] ${on ? 'bg-white font-semibold text-socle-ink' : 'text-[#6B6B72]'} ${
         id !== 'membres' ? 'border-l border-socle-line' : ''
       }`}
+      style={{ padding: '7px 16px' }}
     >
       {children}
     </button>
@@ -189,7 +193,7 @@ function MembersTab({ q }: { q: string }) {
           <div className="flex-[1.2]">Rôle dans l&apos;équipe</div>
           <div className="flex-1">Statut</div>
           <div className="flex-[1.1]">Dernière activité</div>
-          <div className="w-16" />
+          <div className="w-7 shrink-0" />
         </div>
         {(page.data?.users ?? []).map((row, i) => {
           const team = row.teams[0]
@@ -246,7 +250,7 @@ function MembersTab({ q }: { q: string }) {
               <div className="flex-[1.1] text-[12px] text-[#9B9BA1]">
                 {row.lastActivityAt ? formatRelativeFr(row.lastActivityAt) : '—'}
               </div>
-              <div className="w-16">
+              <div className="w-7 shrink-0">
                 {pending?.id === row.id ? (
                   <div className="flex flex-col gap-1 text-[11px]">
                     <button type="button" onClick={() => toggle.mutate(row)}>
