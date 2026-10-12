@@ -30,7 +30,6 @@ const SIZE_EXCEPTIONS = {}
 const PIXEL_SECTIONS = [
   { id: 'team-tab-invitations', name: 'tab-invitations', masks: [] },
   { id: 'invitations-head', name: 'head', masks: [] },
-  { id: 'invitations-row', name: 'row', masks: [] },
 ]
 
 test.describe('invitations visual', () => {
