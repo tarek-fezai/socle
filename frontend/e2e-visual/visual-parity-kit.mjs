@@ -297,6 +297,55 @@ export async function probeAncestorStack(page, selector, side) {
 }
 
 /**
+ * Boîte + Range du nœud texte + styles de placement (1/100 px).
+ * @param {import('@playwright/test').Page} page
+ * @param {string} selector
+ * @param {string} side
+ */
+export async function probeTextBox(page, selector, side) {
+  const found = await page.evaluate((sel) => {
+    const el = document.querySelector(sel)
+    if (!el) return 'MISSING'
+    const r = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    let text = walker.nextNode()
+    while (text && !(text.textContent || '').trim()) text = walker.nextNode()
+    let tr = null
+    if (text) {
+      const range = document.createRange()
+      range.selectNodeContents(text)
+      const br = range.getBoundingClientRect()
+      tr = {
+        x: Number(br.x.toFixed(2)),
+        y: Number(br.y.toFixed(2)),
+        w: Number(br.width.toFixed(2)),
+        h: Number(br.height.toFixed(2)),
+      }
+    }
+    return {
+      box: {
+        x: Number(r.x.toFixed(2)),
+        y: Number(r.y.toFixed(2)),
+        w: Number(r.width.toFixed(2)),
+        h: Number(r.height.toFixed(2)),
+      },
+      text: tr,
+      display: cs.display,
+      lineHeight: cs.lineHeight,
+      padding: cs.padding,
+      verticalAlign: cs.verticalAlign,
+      boxSizing: cs.boxSizing,
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      letterSpacing: cs.letterSpacing,
+    }
+  }, selector)
+  console.log(`TEXTBOX ${side} ${selector}: ${JSON.stringify(found)}`)
+  return found
+}
+
+/**
  * Routes communes du shell (config OIDC, branding, /me, cloche notifications, arbres d'espaces vides).
  * À appeler AVANT les routes propres à l'écran (Playwright applique la dernière enregistrée en premier).
  */

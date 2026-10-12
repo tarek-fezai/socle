@@ -262,22 +262,19 @@ export function SpacesPage() {
                 onClick={() => setFormOpen(false)}
                 className="hover:bg-[#F5F5F7]"
                 style={{
-                  all: 'unset',
                   appearance: 'none',
-                  display: 'inline',
                   boxSizing: 'content-box',
                   padding: '9px 16px',
                   margin: 0,
                   borderRadius: 7,
                   border: '1px solid #ECECEE',
-                  background: '#FFFFFF',
+                  background: 'none',
                   color: '#43434A',
                   font: 'inherit',
                   fontSize: 13,
                   fontWeight: 500,
-                  lineHeight: 'inherit',
+                  lineHeight: 'normal',
                   letterSpacing: 'inherit',
-                  textAlign: 'inherit',
                   cursor: 'pointer',
                 }}
               >
@@ -289,9 +286,10 @@ export function SpacesPage() {
                 disabled={create.isPending}
                 className="hover:bg-[#2C27C7] disabled:opacity-50"
                 style={{
-                  all: 'unset',
                   appearance: 'none',
-                  display: 'inline',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
                   boxSizing: 'content-box',
                   padding: '9px 20px',
                   margin: 0,
@@ -302,9 +300,9 @@ export function SpacesPage() {
                   font: 'inherit',
                   fontSize: 13,
                   fontWeight: 600,
-                  lineHeight: 'inherit',
+                  lineHeight: 'normal',
                   letterSpacing: 'inherit',
-                  textAlign: 'inherit',
+                  textAlign: 'center',
                   cursor: 'pointer',
                 }}
               >

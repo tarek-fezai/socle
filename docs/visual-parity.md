@@ -8,7 +8,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 | État | Specs |
 | --- | --- |
 | **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash` |
-| **Sections > 1 % (échec CI, pas de test.fail)** | `create-space` submit 5.577 % / cancel 3.164 % — `<button>` app vs `<a>` maquette (CDP : aucun calque propre ; titre 0 % après retrait de l’ancêtre `position:fixed`) |
+| **Sections > 1 % (échec CI, pas de test.fail)** | `create-space` cancel 3.164 % — boîte et Range du texte identiques à la maquette ; le `<button>` peint en niveaux de gris alors que le `<a>` maquette a des franges LCD (13 px / 500, `#43434A` sur blanc). Submit 0.987 % après `display:flex; align-items:flex-start` (texte y=596 des deux côtés, comme generate-token #68 / approval). `Approval.dc.html` Refuser (14 px / 600) : LCD des deux côtés, 0 %. Maquette CreateSpace non modifiée. |
 
 ## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
 
@@ -73,6 +73,7 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 15. **Accès** : people picker / Inviter / onglets document `NOT_IMPLEMENTED` (`ACCESS-PEOPLE-PICKER`, prioritaire). Formulaire UUID conservé sans affichage d’UUID (`APP_EXTRA` provisoire).
 16. **Une section > seuil fait échouer la CI.** Interdit : `test.fail()`, `test.fixme()`, skip conditionnel pour rendre un écart « attendu ».
 17. **Trash.dc.html : « Supprimer définitivement » est un `<button type="button" class="perm-delete">`** (décision tf **2026-10-12**, artifact Design v144). Règle UA `.perm-delete` dans le `<helmet>` ; `serve-mockups.mjs` conserve ce helmet. Confirmation dans la page à la place de `window.confirm` : backlog, ne pas implémenter ici.
+18. **CreateSpace.dc.html : CTA restés `<a>`** (hypothèse `<a>` vs `<button>` réfutée : Approval.dc.html Approuver/Refuser sont des `<a>`, l’app passe ≤ 1 % en `<button>`). Submit étiré à 37 px (rangée = cancel + bordure) : `display:flex; align-items:flex-start` pour caler le texte sous le padding haut (y=596), comme generate-token #68. Cancel : même géométrie / Range que la maquette ; écart 3.164 % = raster LCD (`<a>`) vs gris (`<button>`) à 13 px / 500.
 
 ## Comparaison
 
