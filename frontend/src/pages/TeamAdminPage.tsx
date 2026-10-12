@@ -633,9 +633,6 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
         inset: 0,
         background: 'rgba(14,14,16,0.45)',
         zIndex: 40,
-        display: 'flex',
-        justifyContent: 'center',
-        paddingTop: 120,
       }}
     >
       <div
@@ -643,6 +640,10 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-labelledby="invite-modal-title"
         style={{
+          position: 'absolute',
+          top: 120,
+          left: '50%',
+          transform: 'translateX(-50%)',
           width: 520,
           background: '#FFFFFF',
           borderRadius: 16,
@@ -656,7 +657,15 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
           <h1
             id="invite-modal-title"
             data-mock-id="invite-title"
-            className="m-0 font-display text-[24px] font-normal leading-[normal] text-socle-ink"
+            className="serif"
+            style={{
+              fontFamily: "'Instrument Serif', serif",
+              fontWeight: 400,
+              fontSize: 24,
+              margin: 0,
+              color: '#0E0E10',
+              lineHeight: 'normal',
+            }}
           >
             Inviter un membre
           </h1>
@@ -886,39 +895,37 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
             1 invitation prête à envoyer
           </span>
           <div className="flex gap-2">
-            <button
-              type="button"
+            <a
+              href="#invite-cancel"
               data-mock-id="invite-cancel"
-              onClick={onClose}
-              className="hover:bg-[#F5F5F7]"
+              className="ghost"
+              onClick={(e) => {
+                e.preventDefault()
+                onClose()
+              }}
               style={{
-                appearance: 'none',
-                boxSizing: 'content-box',
                 padding: '9px 15px',
-                margin: 0,
                 borderRadius: 7,
                 border: '1px solid #ECECEE',
-                background: 'none',
                 color: '#43434A',
-                font: 'inherit',
                 fontSize: 13,
                 fontWeight: 500,
-                lineHeight: 'normal',
-                letterSpacing: 'inherit',
-                cursor: 'pointer',
+                textDecoration: 'none',
               }}
             >
               Annuler
-            </button>
-            <button
-              type="button"
+            </a>
+            <a
+              href="#invite-submit"
               data-mock-id="invite-submit"
+              className="cta"
               aria-disabled={
                 !email.trim() ||
                 send.isPending ||
                 (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
               }
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault()
                 if (
                   !email.trim() ||
                   send.isPending ||
@@ -928,29 +935,18 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
                 }
                 send.mutate()
               }}
-              className="hover:bg-[#2C27C7]"
               style={{
-                appearance: 'none',
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'center',
-                boxSizing: 'content-box',
                 padding: '9px 18px',
-                margin: 0,
                 borderRadius: 7,
-                border: 0,
                 background: '#3730E0',
                 color: '#FFFFFF',
-                font: 'inherit',
                 fontSize: 13,
                 fontWeight: 600,
-                lineHeight: 'normal',
-                letterSpacing: 'inherit',
-                cursor: 'pointer',
+                textDecoration: 'none',
               }}
             >
               Envoyer l&apos;invitation
-            </button>
+            </a>
           </div>
         </div>
       </div>
