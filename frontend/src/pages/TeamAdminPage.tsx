@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { FormEvent, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AdminShell } from '../components/admin/AdminShell'
 import { PeoplePicker, type PickerValue } from '../components/PeoplePicker'
@@ -112,7 +113,7 @@ export function TeamAdminPage() {
               style={{
                 padding: '7px 16px',
                 fontSize: 12.5,
-                fontWeight: 400,
+                fontWeight: tab === 'invitations' ? 600 : 400,
                 color: '#6B6B72',
                 background: tab === 'invitations' ? '#FFFFFF' : 'transparent',
                 boxSizing: 'content-box',
@@ -644,7 +645,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
     onError: (e) => setError(apiErrorMessage(e, 'Envoi impossible')),
   })
 
-  return (
+  return createPortal(
     <div
       data-mock-id="invite-modal-backdrop"
       style={{
@@ -976,6 +977,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

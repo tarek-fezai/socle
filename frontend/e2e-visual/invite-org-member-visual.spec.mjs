@@ -16,6 +16,11 @@ import {
   injectOidcSession,
   json,
   mockBaseApis,
+  probeAncestorStack,
+  probeCompositionLayers,
+  probeCompositingReasons,
+  probeRasterProps,
+  probeTextBox,
   reportAppExtras,
   reportNotImplemented,
   settleFonts,
@@ -26,6 +31,18 @@ export const APP_EXTRA = []
 export const NOT_IMPLEMENTED = []
 
 const SIZE_EXCEPTIONS = {}
+
+/** LCD maquette vs gris app à géométrie identique — docs/visual-parity.md § RASTER_EXCEPTIONS. */
+const RASTER_EXCEPTIONS = {
+  'invite-cancel': {
+    maxPixel: 0.05,
+    reason: 'lissage LCD (<a> maquette) vs gris (app :root antialiased), géométrie identique',
+  },
+  'invite-submit': {
+    maxPixel: 0.05,
+    reason: 'lissage LCD (<a> maquette) vs gris (app :root antialiased), géométrie identique',
+  },
+}
 
 const PIXEL_SECTIONS = [
   { id: 'invite-title', name: 'title', masks: [] },
@@ -68,6 +85,27 @@ test.describe('invite-org-member visual', () => {
     await page.goto(`${MOCK_ORIGIN}/InviteOrgMember.dc.html`)
     await annotateInviteOrgMemberMockup(page)
     await settleFonts(page)
+    await probeCompositionLayers(
+      page,
+      ['[data-mock-id="invite-title"]', '[data-mock-id="invite-submit"]', '[data-mock-id="invite-cancel"]'],
+      'invite-org-member-mock',
+    )
+    await probeRasterProps(
+      page,
+      ['[data-mock-id="invite-title"]', '[data-mock-id="invite-submit"]', '[data-mock-id="invite-cancel"]', '[data-mock-id="invite-modal"]'],
+      'invite-org-member-mock',
+    )
+    const mockLayers = await probeCompositingReasons(
+      page,
+      ['[data-mock-id="invite-modal"]', '[data-mock-id="invite-title"]', '[data-mock-id="invite-submit"]', '[data-mock-id="invite-cancel"]'],
+      'invite-org-member-mock',
+    )
+    await probeAncestorStack(page, '[data-mock-id="invite-modal"]', 'invite-org-member-mock')
+    await probeAncestorStack(page, '[data-mock-id="invite-title"]', 'invite-org-member-mock')
+    await probeAncestorStack(page, '[data-mock-id="invite-submit"]', 'invite-org-member-mock')
+    await probeAncestorStack(page, '[data-mock-id="invite-cancel"]', 'invite-org-member-mock')
+    const mockSubmitTb = await probeTextBox(page, '[data-mock-id="invite-submit"]', 'invite-org-member-mock')
+    const mockCancelTb = await probeTextBox(page, '[data-mock-id="invite-cancel"]', 'invite-org-member-mock')
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'invite-org-member')
 
     const mockSec = {}
@@ -84,17 +122,50 @@ test.describe('invite-org-member visual', () => {
     await page.waitForSelector('[data-mock-id="invite-title"]')
     await page.mouse.move(1, 1)
     await settleFonts(page)
+    await probeCompositionLayers(
+      page,
+      ['[data-mock-id="invite-title"]', '[data-mock-id="invite-submit"]', '[data-mock-id="invite-cancel"]'],
+      'invite-org-member-app',
+    )
+    await probeRasterProps(
+      page,
+      ['[data-mock-id="invite-title"]', '[data-mock-id="invite-submit"]', '[data-mock-id="invite-cancel"]', '[data-mock-id="invite-modal"]'],
+      'invite-org-member-app',
+    )
+    const appLayers = await probeCompositingReasons(
+      page,
+      ['[data-mock-id="invite-modal"]', '[data-mock-id="invite-title"]', '[data-mock-id="invite-submit"]', '[data-mock-id="invite-cancel"]'],
+      'invite-org-member-app',
+    )
+    await probeAncestorStack(page, '[data-mock-id="invite-modal"]', 'invite-org-member-app')
+    await probeAncestorStack(page, '[data-mock-id="invite-title"]', 'invite-org-member-app')
+    await probeAncestorStack(page, '[data-mock-id="invite-submit"]', 'invite-org-member-app')
+    await probeAncestorStack(page, '[data-mock-id="invite-cancel"]', 'invite-org-member-app')
+    const appSubmitTb = await probeTextBox(page, '[data-mock-id="invite-submit"]', 'invite-org-member-app')
+    const appCancelTb = await probeTextBox(page, '[data-mock-id="invite-cancel"]', 'invite-org-member-app')
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'invite-org-member')
     await reportAppExtras(page, testInfo, APP_EXTRA, 'invite-org-member')
 
-    const compare = compareSectionShots(SIZE_EXCEPTIONS)
+    const rasterGeo = (sel, mockTb, appTb) => ({
+      mock: mockTb,
+      app: appTb,
+      mockOwnLayers: mockLayers[sel]?.ownLayers ?? null,
+      appOwnLayers: appLayers[sel]?.ownLayers ?? null,
+    })
+    const geos = {
+      cancel: rasterGeo('[data-mock-id="invite-cancel"]', mockCancelTb, appCancelTb),
+      submit: rasterGeo('[data-mock-id="invite-submit"]', mockSubmitTb, appSubmitTb),
+    }
+    const compare = compareSectionShots(SIZE_EXCEPTIONS, { raster: RASTER_EXCEPTIONS })
     const results = []
     for (const s of PIXEL_SECTIONS) {
       const app = await shotSection(page, `[data-mock-id="${s.id}"]`, {
         maskNames: s.masks,
         label: `invite-sec-${s.name}-app`,
       })
-      results.push(compare(`invite-${s.name}`, mockSec[s.name].shot, app.shot, testInfo))
+      results.push(
+        compare(`invite-${s.name}`, mockSec[s.name].shot, app.shot, testInfo, geos[s.name]),
+      )
     }
     finishPixelResults('invite-org-member', results)
   })

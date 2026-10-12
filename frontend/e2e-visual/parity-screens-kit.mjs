@@ -230,6 +230,7 @@ export async function annotateTeamInvitationsMockup(page) {
     table?.setAttribute('data-mock-id', 'invitations-head')
     const row = table?.nextElementSibling
     row?.setAttribute('data-mock-id', 'invitations-row')
+    row?.querySelector('.mono')?.style.setProperty('font-family', "'IBM Plex Mono', monospace")
   })
 }
 
