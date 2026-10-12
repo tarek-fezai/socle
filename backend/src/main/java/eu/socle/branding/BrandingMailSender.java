@@ -15,5 +15,9 @@ public interface BrandingMailSender {
         return "custom";
     }
 
-    record Message(String fromName, String fromEmail, String to, String subject, String body) {}
+    record Message(String fromName, String fromEmail, String to, String subject, String body, String htmlBody) {
+        public Message(String fromName, String fromEmail, String to, String subject, String body) {
+            this(fromName, fromEmail, to, subject, body, null);
+        }
+    }
 }

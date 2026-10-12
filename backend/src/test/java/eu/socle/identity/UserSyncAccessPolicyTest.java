@@ -54,7 +54,7 @@ class UserSyncAccessPolicyTest {
         syncService = new UserSyncService(
                 userRepository, identityService, identityRepository, mapper, properties,
                 platformRoleService, new AccessPolicyService(properties, mapper, identityService),
-                accessAuditService, null);
+                accessAuditService, null, null);
         when(identityService.findUserByIdentity(ISSUER, SUBJECT)).thenReturn(Optional.empty());
         when(identityRepository.findByIssuerAndSubject(ISSUER, SUBJECT)).thenReturn(Optional.empty());
         when(userRepository.existsById(any())).thenReturn(false);

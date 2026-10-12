@@ -82,3 +82,4 @@ secrets:
   oidcClientSecret: KindOidcSecret1!
   # Valeur de test non secrète (cluster kind éphémère), ≥ 32 octets.
   patPepper: kind-ci-pat-pepper-not-a-secret-0123456789
+  invitePepper: kind-ci-invite-pepper-not-a-secret-0123456789

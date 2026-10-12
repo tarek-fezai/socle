@@ -23,24 +23,7 @@ import {
 
 export const APP_EXTRA = []
 
-export const NOT_IMPLEMENTED = [
-  {
-    id: 'team-invite-cta',
-    page: 'team',
-    reason: 'Invitations e-mail — chantier B',
-    backlog: 'TEAM-INVITATIONS',
-    mockMask: 'team-invite-cta',
-    appPlaceholderSelector: '[data-mock-id="team-invite-cta"]',
-  },
-  {
-    id: 'team-tab-invitations',
-    page: 'team',
-    reason: 'Onglet Invitations — chantier B',
-    backlog: 'TEAM-INVITATIONS',
-    mockMask: 'team-tab-invitations',
-    appPlaceholderSelector: '[data-mock-id="team-tab-invitations"]',
-  },
-]
+export const NOT_IMPLEMENTED = []
 
 const SIZE_EXCEPTIONS = {
   'team-title': {
@@ -68,6 +51,10 @@ test.describe('team visual', () => {
       return json(route, TEAM_ADMIN_USERS)
     })
     await page.route('**/api/v1/groups**', (route) => {
+      if (route.request().method() !== 'GET') return route.continue()
+      return json(route, [])
+    })
+    await page.route('**/api/v1/admin/invitations**', (route) => {
       if (route.request().method() !== 'GET') return route.continue()
       return json(route, [])
     })

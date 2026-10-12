@@ -184,6 +184,16 @@ public class GroupService {
         }
     }
 
+    /** Attribution atomique à l'acceptation d'une invitation — pas de contrôle JWT. */
+    public void addMemberForInvitation(UUID actorId, UUID groupId, UUID userId, TeamRole role) {
+        requireExists(groupId);
+        requireUserExists(userId);
+        insertMember(groupId, userId, role);
+        auditService.record(
+                actorId, false, AuditActions.GROUP_MEMBER_ADDED, "group", groupId,
+                Map.of("memberUserId", userId.toString(), "role", role.name(), "source", "invitation"), null);
+    }
+
     private void insertMember(UUID groupId, UUID userId, TeamRole role) {
         jdbc.update(
                 """

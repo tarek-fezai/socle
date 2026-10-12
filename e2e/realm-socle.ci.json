@@ -132,6 +132,23 @@
         }
       ],
       "realmRoles": ["integrateur"]
+    },
+    {
+      "id": "66666666-6666-6666-6666-666666666666",
+      "username": "invitee",
+      "enabled": true,
+      "email": "invitee@example.com",
+      "emailVerified": true,
+      "firstName": "Ivy",
+      "lastName": "Invitee",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "invitee",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["contributeur"]
     }
   ]
 }

@@ -14,11 +14,21 @@ import {
   updateGroupMemberRole,
   type Group,
 } from '../lib/groups'
-import { formatRelativeFr } from '../lib/relativeTime'
+import { formatInvitationSentFr, formatRelativeFr } from '../lib/relativeTime'
 import { grantPlatformRole, revokePlatformRole } from '../lib/platformRoles'
 import { SocleRole } from '../lib/auth'
+import { getLicence } from '../lib/licenceAdmin'
+import {
+  createInvitation,
+  invitationsKey,
+  listInvitations,
+  resendInvitation,
+  revokeInvitation,
+  type InvitationView,
+} from '../lib/invitations'
+import { useBrandingInstanceName } from '../lib/publicBranding'
 
-type Tab = 'membres' | 'equipes'
+type Tab = 'membres' | 'equipes' | 'invitations'
 
 function teamRoleLabel(role?: string) {
   if (role === 'proprietaire') return 'Propriétaire'
@@ -30,6 +40,12 @@ function teamRoleLabel(role?: string) {
 export function TeamAdminPage() {
   const [tab, setTab] = useState<Tab>('membres')
   const [q, setQ] = useState('')
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const invites = useQuery({
+    queryKey: invitationsKey(),
+    queryFn: () => listInvitations(api),
+  })
+  const pendingCount = invites.data?.length ?? 0
   return (
     <AdminShell
       active="team"
@@ -63,10 +79,10 @@ export function TeamAdminPage() {
           </div>
           <button
             type="button"
-            disabled
-            title="Bientôt"
             data-mock-id="team-invite-cta"
-            className="shrink-0 rounded-[7px] bg-socle-accent px-4 py-2 text-[13px] font-semibold text-white opacity-50"
+            onClick={() => setInviteOpen(true)}
+            className="shrink-0 rounded-[7px] bg-socle-accent px-4 py-2 text-[13px] font-semibold text-white"
+            style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, fontWeight: 600 }}
           >
             + Inviter un membre
           </button>
@@ -84,18 +100,44 @@ export function TeamAdminPage() {
             <TabBtn id="equipes" current={tab} onClick={setTab} mockId="team-tab-equipes">
               Équipes
             </TabBtn>
-            <button
-              type="button"
+            <a
+              href="#invitations"
               role="tab"
-              disabled
-              title="Bientôt"
+              aria-selected={tab === 'invitations'}
               data-mock-id="team-tab-invitations"
-              className="text-[12.5px] leading-[normal] text-[#6B6B72] opacity-60"
-              style={{ padding: '7px 16px' }}
+              onClick={(e) => {
+                e.preventDefault()
+                setTab('invitations')
+              }}
+              style={{
+                padding: '7px 16px',
+                fontSize: 12.5,
+                fontWeight: tab === 'invitations' ? 600 : 400,
+                color: tab === 'invitations' ? '#0E0E10' : '#6B6B72',
+                background: tab === 'invitations' ? '#FFFFFF' : 'transparent',
+                boxSizing: 'content-box',
+                lineHeight: 'normal',
+                textDecoration: 'none',
+                display: 'inline-block',
+              }}
             >
-              Invitations{' '}
-              <span className="ml-1 text-[10px] font-semibold text-[#B7791F]">Bientôt</span>
-            </button>
+              Invitations
+              {pendingCount > 0 && (
+                <span
+                  style={{
+                    background: '#FBF3E4',
+                    color: '#B7791F',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    borderRadius: 8,
+                    padding: '1px 6px',
+                    marginLeft: 4,
+                  }}
+                >
+                  {pendingCount}
+                </span>
+              )}
+            </a>
           </div>
           {tab === 'membres' && (
             <label className="flex items-center gap-2 rounded-lg border border-socle-line px-3 py-1.5">
@@ -112,7 +154,9 @@ export function TeamAdminPage() {
 
         {tab === 'membres' && <MembersTab q={q} />}
         {tab === 'equipes' && <TeamsTab />}
+        {tab === 'invitations' && <InvitationsTab />}
       </div>
+      {inviteOpen && <InviteMemberModal onClose={() => setInviteOpen(false)} />}
     </AdminShell>
   )
 }
@@ -418,6 +462,472 @@ function TeamsTab() {
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+function emailInitials(email: string) {
+  const local = email.split('@')[0] ?? email
+  const parts = local.split(/[.\-_]+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return local.slice(0, 2).toUpperCase()
+}
+
+function InvitationsTab() {
+  const qc = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+  const page = useQuery({ queryKey: invitationsKey(), queryFn: () => listInvitations(api) })
+  const n = page.data?.length ?? 0
+
+  const resend = useMutation({
+    mutationFn: (id: string) => resendInvitation(api, id),
+    onSuccess: () => {
+      setError(null)
+      void qc.invalidateQueries({ queryKey: invitationsKey() })
+    },
+    onError: (e) => setError(apiErrorMessage(e, 'Renvoi impossible')),
+  })
+  const revoke = useMutation({
+    mutationFn: (id: string) => revokeInvitation(api, id),
+    onSuccess: () => {
+      setError(null)
+      void qc.invalidateQueries({ queryKey: invitationsKey() })
+      void qc.invalidateQueries({ queryKey: ['admin-users-lead'] })
+    },
+    onError: (e) => setError(apiErrorMessage(e, 'Annulation impossible')),
+  })
+
+  return (
+    <div>
+      {error && (
+        <p role="alert" className="mb-3 text-sm text-socle-danger">
+          {error}
+        </p>
+      )}
+      <div
+        data-mock-id="invitations-table"
+        className="overflow-hidden rounded-[10px] border border-socle-line"
+      >
+        <div
+          className="flex bg-[#FAFAFB] text-[11px] font-semibold uppercase tracking-[0.05em] text-[#75757C]"
+          data-mock-id="invitations-head"
+          style={{ padding: '10px 16px', borderBottom: '1px solid #ECECEE', boxSizing: 'content-box' }}
+        >
+          <div className="flex-[2.2]">Invité</div>
+          <div className="flex-[1.4]">Équipe</div>
+          <div className="flex-[1.2]">Rôle</div>
+          <div className="flex-[1.2]">Envoyée par</div>
+          <div className="flex-[1.1]">Envoyée</div>
+          <div className="w-[190px] shrink-0" />
+        </div>
+        {(page.data ?? []).map((row: InvitationView, i) => (
+          <div
+            key={row.id}
+            className="flex items-center border-t border-[#F5F5F7]"
+            data-mock-id={i === 0 ? 'invitations-row' : undefined}
+            style={{ padding: '11px 16px' }}
+          >
+            <div className="flex flex-[2.2] items-center gap-2.5">
+              <div
+                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[10px] text-[#75757C]"
+                style={{ border: '1.5px dashed #DEDEE1' }}
+              >
+                {emailInitials(row.email)}
+              </div>
+              <div className="font-mono text-[13px] text-[#0E0E10]">{row.email}</div>
+            </div>
+            <div className="flex-[1.4] text-[12.5px] text-[#43434A]">{row.teamName ?? '—'}</div>
+            <div className="flex-[1.2]">
+              {row.teamRole ? (
+                <span
+                  className="text-[12px] font-medium text-[#43434A]"
+                  style={{ border: '1px solid #ECECEE', borderRadius: 6, padding: '3px 9px' }}
+                >
+                  {teamRoleLabel(row.teamRole)}
+                </span>
+              ) : (
+                '—'
+              )}
+            </div>
+            <div className="flex-[1.2] text-[12.5px] text-[#43434A]">{row.invitedByName ?? '—'}</div>
+            <div className="flex-[1.1] text-[12px] text-[#9B9BA1]">
+              {formatInvitationSentFr(row.lastSentAt)}
+            </div>
+            <div className="flex w-[190px] shrink-0 justify-end gap-1.5">
+              <button
+                type="button"
+                className="text-[12px] font-semibold text-socle-accent"
+                style={{ padding: '6px 10px', borderRadius: 6 }}
+                onClick={() => resend.mutate(row.id)}
+                disabled={resend.isPending}
+              >
+                Renvoyer
+              </button>
+              <button
+                type="button"
+                className="text-[12px] font-semibold text-[#B54708]"
+                style={{ padding: '6px 10px', borderRadius: 6 }}
+                onClick={() => revoke.mutate(row.id)}
+                disabled={revoke.isPending}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3.5 text-[12.5px] text-[#9B9BA1]">
+        {n} invitation{n > 1 ? 's' : ''} sur {n} · les invitations expirent après 7 jours sans
+        réponse
+      </p>
+    </div>
+  )
+}
+
+function InviteMemberModal({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient()
+  const org = useBrandingInstanceName() || 'Socle'
+  const [email, setEmail] = useState('')
+  const [teamId, setTeamId] = useState<string | null>(null)
+  const [teamRole, setTeamRole] = useState('contributeur')
+  const [globalRole, setGlobalRole] = useState<'CONTRIBUTEUR' | 'ADMINISTRATEUR_SYSTEME'>(
+    'CONTRIBUTEUR',
+  )
+  const [confirmAdmin, setConfirmAdmin] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const groups = useQuery({ queryKey: ['groups'], queryFn: () => listGroups(api) })
+  const licence = useQuery({ queryKey: ['admin', 'licence'], queryFn: () => getLicence(api) })
+
+  const licenceWarn =
+    licence.data &&
+    (licence.data.evaluationMode ||
+      (licence.data.effectiveMaxUsers > 0 &&
+        licence.data.activeUsers >= licence.data.effectiveMaxUsers) ||
+      licence.data.effectiveMaxUsers === 0)
+
+  const send = useMutation({
+    mutationFn: () =>
+      createInvitation(api, {
+        email: email.trim(),
+        teamId: teamId || undefined,
+        teamRole: teamId ? teamRole : undefined,
+        globalRole,
+        confirmAdmin: globalRole === 'ADMINISTRATEUR_SYSTEME' ? confirmAdmin : undefined,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: invitationsKey() })
+      void qc.invalidateQueries({ queryKey: ['admin-users-lead'] })
+      onClose()
+    },
+    onError: (e) => setError(apiErrorMessage(e, 'Envoi impossible')),
+  })
+
+  return (
+    <div
+      data-mock-id="invite-modal-backdrop"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(14,14,16,0.45)',
+        zIndex: 40,
+        display: 'flex',
+        justifyContent: 'center',
+        paddingTop: 120,
+      }}
+    >
+      <div
+        data-mock-id="invite-modal"
+        role="dialog"
+        aria-labelledby="invite-modal-title"
+        style={{
+          width: 520,
+          background: '#FFFFFF',
+          borderRadius: 16,
+          boxShadow: '0 24px 60px rgba(14,14,16,0.28)',
+          padding: '30px 30px 26px',
+          boxSizing: 'border-box',
+          height: 'fit-content',
+        }}
+      >
+        <div className="mb-1.5 flex items-start justify-between">
+          <h1
+            id="invite-modal-title"
+            data-mock-id="invite-title"
+            className="font-display"
+            style={{
+              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontWeight: 400,
+              fontSize: 24,
+              margin: 0,
+              color: '#0E0E10',
+            }}
+          >
+            Inviter un membre
+          </h1>
+          <button
+            type="button"
+            aria-label="Fermer"
+            data-mock-id="invite-close"
+            onClick={onClose}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 7,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B6B72" strokeWidth="2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <p data-mock-id="invite-lead" style={{ fontSize: 13, color: '#9B9BA1', margin: '0 0 20px' }}>
+          Rejoint l&apos;organisation {org} avec accès aux espaces de son équipe.
+        </p>
+
+        {licenceWarn && (
+          <p role="status" className="mb-4 text-[12.5px] text-[#B7791F]">
+            {licence.data?.evaluationMode
+              ? 'Licence en évaluation : la création de compte pourra être refusée à l’acceptation.'
+              : 'Sièges épuisés : l’invitation partira, mais l’acceptation sera refusée tant qu’un siège n’est pas libre.'}
+          </p>
+        )}
+
+        <div
+          data-mock-id="invite-email-label"
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#9B9BA1',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 8,
+          }}
+        >
+          Adresse e-mail
+        </div>
+        <div
+          data-mock-id="invite-email-field"
+          style={{ border: '1px solid #ECECEE', borderRadius: 9, padding: '10px 12px', marginBottom: 18 }}
+        >
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            placeholder="prenom.nom@example.com"
+            className="w-full border-0 bg-transparent text-[13.5px] outline-none placeholder:text-[#C2C2C6]"
+          />
+        </div>
+
+        <div
+          data-mock-id="invite-team-label"
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#9B9BA1',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 8,
+          }}
+        >
+          Équipe
+        </div>
+        <div data-mock-id="invite-teams" className="mb-[18px] flex flex-wrap gap-2">
+          {(groups.data ?? []).map((g) => {
+            const on = teamId === g.id
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setTeamId(on ? null : g.id)}
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: on ? 600 : 400,
+                  color: on ? '#3730E0' : '#43434A',
+                  background: on ? '#F0EFFC' : 'transparent',
+                  border: on ? '1.5px solid #3730E0' : '1px solid #ECECEE',
+                  borderRadius: 7,
+                  padding: '6px 12px',
+                }}
+              >
+                {g.name}
+              </button>
+            )
+          })}
+        </div>
+
+        <div
+          data-mock-id="invite-team-role-label"
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#9B9BA1',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 8,
+          }}
+        >
+          Rôle dans l&apos;équipe
+        </div>
+        <div data-mock-id="invite-team-roles" className="mb-[18px] flex flex-wrap gap-2">
+          {(['proprietaire', 'approbateur', 'contributeur', 'lecteur'] as const).map((r) => {
+            const on = teamRole === r
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setTeamRole(r)}
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: on ? 600 : 400,
+                  color: on ? '#3730E0' : '#43434A',
+                  background: on ? '#F0EFFC' : 'transparent',
+                  border: on ? '1.5px solid #3730E0' : '1px solid #ECECEE',
+                  borderRadius: 7,
+                  padding: '6px 12px',
+                }}
+              >
+                {teamRoleLabel(r)}
+              </button>
+            )
+          })}
+        </div>
+
+        <div
+          data-mock-id="invite-global-label"
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#9B9BA1',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 8,
+          }}
+        >
+          Rôle global
+        </div>
+        <div data-mock-id="invite-global-roles" className="mb-[22px] flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setGlobalRole('CONTRIBUTEUR')
+              setConfirmAdmin(false)
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              border: globalRole === 'CONTRIBUTEUR' ? '1.5px solid #3730E0' : '1px solid #ECECEE',
+              background: globalRole === 'CONTRIBUTEUR' ? '#FAFAFE' : 'transparent',
+              borderRadius: 9,
+              padding: '10px 13px',
+              textAlign: 'left',
+            }}
+          >
+            <div>
+              <div className="text-[13.5px] font-semibold text-[#0E0E10]">Membre</div>
+              <div className="text-[11.5px] text-[#9B9BA1]">
+                Accès selon les rôles attribués dans ses espaces
+              </div>
+            </div>
+            {globalRole === 'CONTRIBUTEUR' && (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3730E0" strokeWidth="2.5" strokeLinecap="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setGlobalRole('ADMINISTRATEUR_SYSTEME')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              border:
+                globalRole === 'ADMINISTRATEUR_SYSTEME' ? '1.5px solid #3730E0' : '1px solid #ECECEE',
+              background: globalRole === 'ADMINISTRATEUR_SYSTEME' ? '#FAFAFE' : 'transparent',
+              borderRadius: 9,
+              padding: '10px 13px',
+              textAlign: 'left',
+            }}
+          >
+            <div>
+              <div className="text-[13.5px] font-semibold text-[#0E0E10]">Administrateur</div>
+              <div className="text-[11.5px] text-[#9B9BA1]">
+                Accès complet à l&apos;administration de l&apos;organisation
+              </div>
+            </div>
+            {globalRole === 'ADMINISTRATEUR_SYSTEME' && (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3730E0" strokeWidth="2.5" strokeLinecap="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {globalRole === 'ADMINISTRATEUR_SYSTEME' && (
+          <label className="mb-4 flex items-start gap-2 text-[12.5px] text-[#43434A]">
+            <input
+              type="checkbox"
+              checked={confirmAdmin}
+              onChange={(e) => setConfirmAdmin(e.target.checked)}
+            />
+            Je confirme l&apos;invitation en administrateur système.
+          </label>
+        )}
+
+        {error && (
+          <p role="alert" className="mb-3 text-sm text-socle-danger">
+            {error}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between">
+          <span data-mock-id="invite-ready" style={{ fontSize: 12, color: '#9B9BA1' }}>
+            1 invitation prête à envoyer
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              data-mock-id="invite-cancel"
+              onClick={onClose}
+              style={{
+                padding: '9px 15px',
+                borderRadius: 7,
+                border: '1px solid #ECECEE',
+                color: '#43434A',
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              data-mock-id="invite-submit"
+              disabled={
+                !email.trim() ||
+                send.isPending ||
+                (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
+              }
+              onClick={() => send.mutate()}
+              style={{
+                padding: '9px 18px',
+                borderRadius: 7,
+                background: '#3730E0',
+                color: '#FFFFFF',
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              Envoyer l&apos;invitation
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

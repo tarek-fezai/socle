@@ -11,6 +11,7 @@ OIDC_SECRET="$(openssl rand -hex 24)"
 KC_PASS="$(openssl rand -hex 12)"
 # Valeur de test non secrète, régénérée à chaque exécution (≥ 32 octets).
 PAT_PEPPER="ci-pat-pepper-$(openssl rand -hex 24)"
+INVITE_PEPPER="ci-invite-pepper-$(openssl rand -hex 24)"
 
 KEYS_DIR="${ROOT}/e2e/.ci-licence-keys"
 mkdir -p "${KEYS_DIR}"
@@ -75,6 +76,12 @@ OIDC_CLIENT_SECRET=${OIDC_SECRET}
 OIDC_FRONTEND_CLIENT_ID=socle-frontend
 
 SOCLE_PAT_PEPPER=${PAT_PEPPER}
+SOCLE_INVITE_PEPPER=${INVITE_PEPPER}
+SOCLE_SMTP_HOST=mailpit
+SOCLE_SMTP_PORT=1025
+SOCLE_SMTP_TLS=none
+SOCLE_SMTP_FROM=socle@e2e.local
+SOCLE_PUBLIC_BASE_URL=http://127.0.0.1
 
 SOCLE_INSTANCE_DISPLAY_NAME=Socle E2E
 CORS_ALLOWED_ORIGINS=http://127.0.0.1,http://localhost

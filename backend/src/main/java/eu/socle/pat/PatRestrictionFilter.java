@@ -32,6 +32,7 @@ public class PatRestrictionFilter extends OncePerRequestFilter {
 
     static final List<String> FORBIDDEN_PREFIXES = List.of(
             "/api/v1/admin",
+            "/api/v1/invitations",
             "/api/v1/me/tokens",
             "/api/v1/me/export");
     private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");

@@ -159,7 +159,9 @@ public class SecurityConfig {
                                 "/api/v1/home",
                                 "/api/v1/home/**",
                                 "/api/v1/attachments",
-                                "/api/v1/attachments/**"
+                                "/api/v1/attachments/**",
+                                "/api/v1/invitations",
+                                "/api/v1/invitations/**"
                         ).authenticated()
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2

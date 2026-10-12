@@ -55,7 +55,6 @@ export async function annotateTeamMockup(page) {
       (a.textContent ?? '').includes('Inviter un membre'),
     )
     invite?.setAttribute('data-mock-id', 'team-invite-cta')
-    invite?.setAttribute('data-visual-mask', 'team-invite-cta')
     const segs = [...document.querySelectorAll('a.seg')]
     const exact = (label) =>
       [...document.querySelectorAll('a')].find((a) => {
@@ -68,7 +67,6 @@ export async function annotateTeamMockup(page) {
     membres?.setAttribute('data-mock-id', 'team-tab-membres')
     equipes?.setAttribute('data-mock-id', 'team-tab-equipes')
     invitations?.setAttribute('data-mock-id', 'team-tab-invitations')
-    invitations?.setAttribute('data-visual-mask', 'team-tab-invitations')
     const table = [...document.querySelectorAll('div')].find(
       (d) =>
         Boolean(d.style?.textTransform === 'uppercase') &&
@@ -211,4 +209,65 @@ export async function annotateExportMockup(page, { crumbCurrent, maskZipFormats 
       pdf?.setAttribute('data-visual-mask', 'export-format-pdf')
     }
   }, { crumbCurrent, maskZipFormats })
+}
+
+export async function annotateTeamInvitationsMockup(page) {
+  await page.evaluate(() => {
+    const invite = [...document.querySelectorAll('a')].find((a) =>
+      (a.textContent ?? '').includes('Inviter un membre'),
+    )
+    invite?.setAttribute('data-mock-id', 'team-invite-cta')
+    const segs = [...document.querySelectorAll('a.seg')]
+    segs[0]?.setAttribute('data-mock-id', 'team-tab-membres')
+    segs[1]?.setAttribute('data-mock-id', 'team-tab-equipes')
+    segs[2]?.setAttribute('data-mock-id', 'team-tab-invitations')
+    const table = [...document.querySelectorAll('div')].find(
+      (d) =>
+        Boolean(d.style?.textTransform === 'uppercase') &&
+        (d.textContent ?? '').includes('Invité') &&
+        (d.textContent ?? '').includes('Envoyée par'),
+    )
+    table?.setAttribute('data-mock-id', 'invitations-head')
+    const row = table?.nextElementSibling
+    row?.setAttribute('data-mock-id', 'invitations-row')
+  })
+}
+
+export async function annotateInviteOrgMemberMockup(page) {
+  await page.evaluate(() => {
+    const modal = [...document.querySelectorAll('div')].find(
+      (d) => (d.querySelector('h1')?.textContent ?? '').trim() === 'Inviter un membre',
+    )
+    modal?.setAttribute('data-mock-id', 'invite-modal')
+    const h1 = modal?.querySelector('h1')
+    h1?.setAttribute('data-mock-id', 'invite-title')
+    const close = modal?.querySelector('a[aria-label="Fermer"]')
+    close?.setAttribute('data-mock-id', 'invite-close')
+    const lead = h1?.parentElement?.nextElementSibling
+    lead?.setAttribute('data-mock-id', 'invite-lead')
+    const labels = [...(modal?.querySelectorAll('div') ?? [])].filter(
+      (d) => d.style?.textTransform === 'uppercase',
+    )
+    labels[0]?.setAttribute('data-mock-id', 'invite-email-label')
+    const emailField = labels[0]?.nextElementSibling
+    emailField?.setAttribute('data-mock-id', 'invite-email-field')
+    labels[1]?.setAttribute('data-mock-id', 'invite-team-label')
+    labels[1]?.nextElementSibling?.setAttribute('data-mock-id', 'invite-teams')
+    labels[2]?.setAttribute('data-mock-id', 'invite-team-role-label')
+    labels[2]?.nextElementSibling?.setAttribute('data-mock-id', 'invite-team-roles')
+    labels[3]?.setAttribute('data-mock-id', 'invite-global-label')
+    labels[3]?.nextElementSibling?.setAttribute('data-mock-id', 'invite-global-roles')
+    const cancel = [...(modal?.querySelectorAll('a') ?? [])].find((a) =>
+      (a.textContent ?? '').trim() === 'Annuler',
+    )
+    cancel?.setAttribute('data-mock-id', 'invite-cancel')
+    const submit = [...(modal?.querySelectorAll('a') ?? [])].find((a) =>
+      (a.textContent ?? '').includes("Envoyer l'invitation"),
+    )
+    submit?.setAttribute('data-mock-id', 'invite-submit')
+    const ready = [...(modal?.querySelectorAll('span') ?? [])].find((s) =>
+      (s.textContent ?? '').includes('invitation prête'),
+    )
+    ready?.setAttribute('data-mock-id', 'invite-ready')
+  })
 }

@@ -108,6 +108,14 @@ public final class AuditActions {
     public static final String USER_IDENTITIES_IMPORTED = "user.identities_imported";
 
     /** Politique d'accès OIDC (première connexion accordée / refus rate-limité). */
+    public static final String INVITATION_SENT = "invitation.sent";
+    public static final String INVITATION_ADMIN_ROLE_INVITED = "invitation.admin_role_invited";
+    public static final String INVITATION_RESENT = "invitation.resent";
+    public static final String INVITATION_REVOKED = "invitation.revoked";
+    public static final String INVITATION_EXPIRED = "invitation.expired";
+    public static final String INVITATION_ACCEPTED = "invitation.accepted";
+    public static final String INVITATION_ACCEPT_DENIED = "invitation.accept_denied";
+
     public static final String AUTH_ACCESS_GRANTED = "auth.access_granted";
     public static final String AUTH_ACCESS_DENIED = "auth.access_denied";
     public static final String USER_DISABLED = "user.disabled";

@@ -39,3 +39,8 @@ data:
   SPRING_DATASOURCE_USERNAME: {{ .Values.postgres.username | quote }}
   SOCLE_IDENTITY_ROLE_SOURCE: {{ .Values.idp.roleSource | default "CLAIMS" | quote }}
   CORS_ALLOWED_ORIGINS: {{ .Values.idp.corsAllowedOrigins | default "*" | quote }}
+  SOCLE_INVITE_TRUSTED_ISSUERS: {{ .Values.invite.trustedIssuers | default "" | quote }}
+  SOCLE_SMTP_HOST: {{ .Values.smtp.host | default "" | quote }}
+  SOCLE_SMTP_PORT: {{ .Values.smtp.port | default 587 | quote }}
+  SOCLE_SMTP_FROM: {{ .Values.smtp.from | default "" | quote }}
+  SOCLE_SMTP_TLS: {{ .Values.smtp.tls | default "starttls" | quote }}

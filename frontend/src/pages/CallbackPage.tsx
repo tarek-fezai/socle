@@ -29,6 +29,10 @@ export function CallbackPage() {
           navigate(returnTo, { replace: true })
         } catch (e) {
           if (axios.isAxiosError(e) && e.response?.status === 403) {
+            if (returnTo.startsWith('/invitations/accept')) {
+              navigate(returnTo, { replace: true })
+              return
+            }
             const reason =
               (e.response.data as { reason?: string } | undefined)?.reason ?? 'not_provisioned'
             navigate(`/login/erreur?reason=${encodeURIComponent(reason)}`, { replace: true })

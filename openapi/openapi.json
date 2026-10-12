@@ -1814,6 +1814,34 @@
         }
       }
     },
+    "/api/v1/invitations/accept" : {
+      "post" : {
+        "tags" : [ "invitation-accept-controller" ],
+        "operationId" : "accept",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AcceptRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AcceptResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/groups" : {
       "get" : {
         "tags" : [ "group-controller" ],
@@ -3621,10 +3649,104 @@
         }
       }
     },
+    "/api/v1/admin/invitations" : {
+      "get" : {
+        "tags" : [ "invitation-admin-controller" ],
+        "operationId" : "list_14",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/InvitationView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "invitation-admin-controller" ],
+        "operationId" : "create_13",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/invitations/{id}/revoke" : {
+      "post" : {
+        "tags" : [ "invitation-admin-controller" ],
+        "operationId" : "revoke",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/invitations/{id}/resend" : {
+      "post" : {
+        "tags" : [ "invitation-admin-controller" ],
+        "operationId" : "resend",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/custom-fields" : {
       "get" : {
         "tags" : [ "custom-field-admin-controller" ],
-        "operationId" : "list_14",
+        "operationId" : "list_15",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -3640,7 +3762,7 @@
       },
       "post" : {
         "tags" : [ "custom-field-admin-controller" ],
-        "operationId" : "create_13",
+        "operationId" : "create_14",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3898,7 +4020,7 @@
     "/api/v1/access/{objectType}/{objectId}" : {
       "get" : {
         "tags" : [ "access-controller" ],
-        "operationId" : "list_15",
+        "operationId" : "list_16",
         "parameters" : [ {
           "name" : "objectType",
           "in" : "path",
@@ -3965,7 +4087,7 @@
       },
       "delete" : {
         "tags" : [ "access-controller" ],
-        "operationId" : "revoke",
+        "operationId" : "revoke_1",
         "parameters" : [ {
           "name" : "objectType",
           "in" : "path",
@@ -4320,7 +4442,7 @@
     "/api/v1/webhooks/deliveries" : {
       "get" : {
         "tags" : [ "webhook-delivery-controller" ],
-        "operationId" : "list_16",
+        "operationId" : "list_17",
         "parameters" : [ {
           "name" : "endpointId",
           "in" : "query",
@@ -4372,7 +4494,7 @@
     "/api/v1/trash" : {
       "get" : {
         "tags" : [ "trash-controller" ],
-        "operationId" : "list_17",
+        "operationId" : "list_18",
         "parameters" : [ {
           "name" : "resourceType",
           "in" : "query",
@@ -4874,7 +4996,7 @@
     "/api/v1/notifications" : {
       "get" : {
         "tags" : [ "notification-controller" ],
-        "operationId" : "list_18",
+        "operationId" : "list_19",
         "parameters" : [ {
           "name" : "unreadOnly",
           "in" : "query",
@@ -4975,7 +5097,7 @@
     "/api/v1/global-roles" : {
       "get" : {
         "tags" : [ "global-role-controller" ],
-        "operationId" : "list_19",
+        "operationId" : "list_20",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -5052,7 +5174,7 @@
     "/api/v1/favorites" : {
       "get" : {
         "tags" : [ "favorite-controller" ],
-        "operationId" : "list_20",
+        "operationId" : "list_21",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -5585,7 +5707,7 @@
     "/api/v1/documents/{id}/custom-fields" : {
       "get" : {
         "tags" : [ "document-custom-field-controller" ],
-        "operationId" : "list_21",
+        "operationId" : "list_22",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5860,7 +5982,7 @@
     "/api/v1/audit" : {
       "get" : {
         "tags" : [ "audit-controller" ],
-        "operationId" : "list_22",
+        "operationId" : "list_23",
         "parameters" : [ {
           "name" : "resourceType",
           "in" : "query",
@@ -6026,7 +6148,7 @@
     "/api/v1/admin/users" : {
       "get" : {
         "tags" : [ "admin-user-directory-controller" ],
-        "operationId" : "list_23",
+        "operationId" : "list_24",
         "parameters" : [ {
           "name" : "q",
           "in" : "query",
@@ -6454,7 +6576,7 @@
     "/api/v1/admin/platform-roles/{userId}/{role}" : {
       "delete" : {
         "tags" : [ "platform-role-controller" ],
-        "operationId" : "revoke_1",
+        "operationId" : "revoke_2",
         "parameters" : [ {
           "name" : "userId",
           "in" : "path",
@@ -7865,6 +7987,28 @@
           }
         }
       },
+      "AcceptRequest" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "token" ]
+      },
+      "AcceptResponse" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "email" : {
+            "type" : "string"
+          }
+        }
+      },
       "CreateGroupRequest" : {
         "type" : "object",
         "properties" : {
@@ -8717,6 +8861,57 @@
         "properties" : {
           "reason" : {
             "type" : "string"
+          }
+        }
+      },
+      "InvitationView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "teamId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "teamName" : {
+            "type" : "string"
+          },
+          "teamRole" : {
+            "type" : "string"
+          },
+          "globalRole" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lastSentAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "invitedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "invitedByName" : {
+            "type" : "string"
+          },
+          "sendCount" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },

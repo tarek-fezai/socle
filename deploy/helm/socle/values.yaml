@@ -188,6 +188,15 @@ podDisruptionBudget:
   enabled: true
   minAvailable: 1
 
+invite:
+  trustedIssuers: ""
+
+smtp:
+  host: ""
+  port: 587
+  from: ""
+  tls: starttls
+
 secrets:
   # Plain values merged into Secret when existingSecret is empty (prefer External Secrets in prod).
   postgresPassword: ""
@@ -195,6 +204,11 @@ secrets:
   # SOCLE_PAT_PEPPER — HMAC des jetons d'accès personnels, ≥ 32 octets, obligatoire (openssl rand -base64 48).
   # Avec existingSecret, ce Secret doit porter la clé SOCLE_PAT_PEPPER. Le changer invalide tous les jetons.
   patPepper: ""
+  # SOCLE_INVITE_PEPPER — HMAC des jetons d'invitation, ≥ 32 octets, obligatoire (openssl rand -base64 48).
+  # Avec existingSecret, ce Secret doit porter la clé SOCLE_INVITE_PEPPER. Distinct de patPepper.
+  invitePepper: ""
+  smtpUsername: ""
+  smtpPassword: ""
 
 serviceAccount:
   create: true

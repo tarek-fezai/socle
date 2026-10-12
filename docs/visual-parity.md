@@ -7,7 +7,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` / `RASTER_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash`, `create-space`, `team` |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` / `RASTER_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash`, `create-space`, `team`, `invitations`, `invite-org-member` |
 | **Sections > 1 % (échec CI, pas de test.fail)** | — |
 
 ## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
@@ -21,7 +21,8 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 - `GET /api/v1/trash?spaceId=` (filtré OpenFGA) — backlog `TRASH-PER-SPACE`.
 - **SpaceSettings.dc.html** = arbre 420 px + paramètres 620 px ; `/spaces/:id` reprend cette mise en page. `NOT_IMPLEMENTED` : membres, archivage. `APP_EXTRA` (relecteur) : description, politique de commentaires, propriétaires, Enregistrer. Pas d’affichage d’UUID.
 - **CreateSpace.dc.html** = modale 480 px ouverte depuis `/spaces` (interaction Playwright). Le bouton × figure dans la maquette : comparé (`create-close`).
-- **Accès** : liste des personnes, « Inviter », onglets document et encart corbeille sont livrés (annuaire nominatif). Plus de `ACCESS-PEOPLE-PICKER` / `access-grant-form`. Invitations e-mail = chantier B.
+- **Accès** : liste des personnes, « Inviter », onglets document et encart corbeille sont livrés (annuaire nominatif). Plus de `ACCESS-PEOPLE-PICKER` / `access-grant-form`.
+- **Invitations** : `TeamInvitations.dc.html` → `/admin/team` onglet Invitations ; `InviteOrgMember.dc.html` → modal « + Inviter un membre ». Voir `docs/invitations.md`.
 
 ## Décisions produit
 
@@ -70,7 +71,7 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 
 13. **Export dossier / étiquette en ZIP** comme la maquette — PR suivante (`EXPORT-ZIP`). En attendant, download / format `NOT_IMPLEMENTED` ; libellés PDF inchangés.
 14. **Corbeille par espace** (maquette) **et** `/trash` globale conservée. Sans filtre `spaceId` API : vue d’espace `NOT_IMPLEMENTED` (`TRASH-PER-SPACE`).
-15. **Accès** : people picker / Inviter / onglets document livrés (annuaire). Plus de champ UUID. Invitations e-mail = chantier B (`TEAM-INVITATIONS`).
+15. **Accès** : people picker / Inviter / onglets document livrés (annuaire). Plus de champ UUID. Invitations e-mail : `docs/invitations.md`.
 20. **Référence de mesure = CI Linux** (`ubuntu-latest`). Les mesures locales Windows sont **indicatives**. Les gardes « exception inutile / inutilisée sur ce rasterizer » (`RASTER_EXCEPTIONS`, `SUBPIXEL_EXCEPTIONS`) ne s’évaluent **que lorsque `CI` est défini** : un ≤ 1 % Windows ne force pas le retrait d’une entrée encore nécessaire sur Linux.
 16. **Une section > seuil fait échouer la CI.** Interdit : `test.fail()`, `test.fixme()`, skip conditionnel pour rendre un écart « attendu ».
 17. **Trash.dc.html : « Supprimer définitivement » est un `<button type="button" class="perm-delete">`** (décision tf **2026-10-12**, artifact Design v144). Règle UA `.perm-delete` dans le `<helmet>` ; `serve-mockups.mjs` conserve ce helmet. Confirmation dans la page à la place de `window.confirm` : backlog, ne pas implémenter ici.

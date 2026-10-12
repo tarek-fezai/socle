@@ -48,6 +48,26 @@ Sans cela le démarrage s’arrête sur V48.
 |------|---------|----------|--------|-------------|
 | `SOCLE_PAT_PEPPER` | empty | **yes** (all non-`dev`/`local` profiles) | **yes** | HMAC-SHA256 pepper for personal access tokens, ≥ 32 bytes (`openssl rand -base64 48`). Startup is refused when absent or shorter; `dev`/`local` fall back to an ephemeral random pepper (tokens lost on restart). Changing it invalidates every issued token. Helm: `secrets.patPepper` (required) or key `SOCLE_PAT_PEPPER` in `backend.existingSecret`. |
 
+## Invitations (`socle.invite`) — `docs/invitations.md`
+
+| Name | Default | Required | Secret | Description |
+|------|---------|----------|--------|-------------|
+| `SOCLE_INVITE_PEPPER` | empty | **yes** (all non-`dev`/`local` profiles) | **yes** | Dedicated HMAC-SHA256 pepper for invitation tokens, ≥ 32 bytes (`openssl rand -base64 48`). Distinct from `SOCLE_PAT_PEPPER`. Startup is refused when absent or shorter; `dev`/`local` fall back to an ephemeral pepper (pending invites die on restart). Helm: `secrets.invitePepper` (required) or key `SOCLE_INVITE_PEPPER` in `backend.existingSecret`. |
+| `SOCLE_INVITE_TRUSTED_ISSUERS` | empty | no | no | Extra JWT issuers allowed at accept, comma-separated, in addition to `OIDC_ISSUER_URI`. |
+
+## SMTP (`socle.smtp`)
+
+| Name | Default | Required | Secret | Description |
+|------|---------|----------|--------|-------------|
+| `SOCLE_SMTP_HOST` | empty | no | no | SMTP host. Empty = not configured (log channel in `dev`). Demo-idp: Mailpit. |
+| `SOCLE_SMTP_PORT` | `587` (yml) / `1025` (compose default) | no | no | SMTP port |
+| `SOCLE_SMTP_USERNAME` | empty | no | **yes** | SMTP auth user. Never logged. |
+| `SOCLE_SMTP_PASSWORD` | empty | no | **yes** | SMTP password. Never logged. Helm: `secrets.smtpPassword`. |
+| `SOCLE_SMTP_FROM` | empty | when SMTP host set | no | Envelope From (overridden by branding sender if set) |
+| `SOCLE_SMTP_TLS` | `starttls` (yml) | **yes** outside `dev`/`local` when host is set | no | `starttls` \| `implicit`. `none` only with `dev`/`local` (Mailpit). Startup refused otherwise. |
+
+Actuator health indicator `smtp`: `up` / `down` / `not_configured` — no secrets.
+
 **Security (PAT vs IdP JWT):**
 
 - A personal access token **never** carries the platform role `ADMINISTRATEUR_SYSTEME`, even when the token owner holds it in the database. Admin URL checks (`/api/v1/admin/**`, `/api-docs`) and service-level `isSystemAdmin` / authority checks therefore fail closed for PAT principals.
