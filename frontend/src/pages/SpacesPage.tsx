@@ -303,6 +303,8 @@ export function SpacesPage() {
                   lineHeight: 'normal',
                   letterSpacing: 'inherit',
                   textAlign: 'center',
+                  WebkitFontSmoothing: 'auto',
+                  MozOsxFontSmoothing: 'auto',
                   cursor: 'pointer',
                 }}
               >
