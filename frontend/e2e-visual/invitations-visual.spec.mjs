@@ -70,6 +70,7 @@ test.describe('invitations visual', () => {
     await page.waitForSelector('[data-mock-id="team-title"]')
     await page.getByRole('tab', { name: /Invitations/ }).click()
     await page.waitForSelector('[data-mock-id="invitations-head"]')
+    await page.locator('[data-mock-id="team-tab-invitations"]').evaluate((el) => el.blur())
     await page.mouse.move(1, 1)
     await settleFonts(page)
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'invitations')

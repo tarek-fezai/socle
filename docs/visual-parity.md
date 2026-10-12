@@ -76,7 +76,7 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 16. **Une section > seuil fait échouer la CI.** Interdit : `test.fail()`, `test.fixme()`, skip conditionnel pour rendre un écart « attendu ».
 17. **Trash.dc.html : « Supprimer définitivement » est un `<button type="button" class="perm-delete">`** (décision tf **2026-10-12**, artifact Design v144). Règle UA `.perm-delete` dans le `<helmet>` ; `serve-mockups.mjs` conserve ce helmet. Confirmation dans la page à la place de `window.confirm` : backlog, ne pas implémenter ici.
 18. **CreateSpace.dc.html : CTA restés `<a>`** (hypothèse `<a>` vs `<button>` réfutée : Approval.dc.html Approuver/Refuser sont des `<a>`, l’app passe ≤ 1 % en `<button>` à 14 px). Submit étiré à 37 px (rangée = cancel + bordure) : `display:flex; align-items:flex-start` pour caler le texte sous le padding haut (y=596), comme generate-token #68. Essais CTA : fond opaque, `appearance` UA, `font-smoothing: auto`, même tag `<a>` — Linux reste à 1,940 %.
-19. **`RASTER_EXCEPTIONS`** (`create-space-cancel`, `create-space-submit`) : lissage LCD (`<a>` maquette) vs gris (`<button>` app) à géométrie identique. Annuler : 3,164 % Windows / 4,298 % Linux. CTA : 0,987 % Windows / 1,940 % Linux. Seuil ≤ 5 % ; si ≤ 1 % sur un rasterizer l’entrée reste (l’autre OS peut dépasser).
+19. **`RASTER_EXCEPTIONS`** (`create-space-cancel`, `create-space-submit`, `invite-cancel`, `invite-submit`) : lissage LCD (`<a>` maquette) vs gris (`<button>` app) à géométrie identique. Annuler : 3,164 % Windows / 4,298 % Linux. CTA : 0,987 % Windows / 1,940 % Linux. Seuil ≤ 5 % ; si ≤ 1 % sur un rasterizer l’entrée reste (l’autre OS peut dépasser).
 
 ## Comparaison
 
@@ -185,6 +185,8 @@ RASTER_EXCEPTIONS[sectionId] = { maxPixel: 0.05, reason }
 |---|---|
 | `create-space-cancel` | LCD (`<a>` maquette) vs gris (`<button>` app), géométrie identique |
 | `create-space-submit` | idem, 13 px ; 1,940 % Linux / 0,987 % Windows |
+| `invite-cancel` | LCD (`<a>` maquette) vs gris (`<button>` app), géométrie identique |
+| `invite-submit` | idem |
 
 ## Exceptions structurales
 

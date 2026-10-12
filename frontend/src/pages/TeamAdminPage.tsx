@@ -112,8 +112,8 @@ export function TeamAdminPage() {
               style={{
                 padding: '7px 16px',
                 fontSize: 12.5,
-                fontWeight: tab === 'invitations' ? 600 : 400,
-                color: tab === 'invitations' ? '#0E0E10' : '#6B6B72',
+                fontWeight: 400,
+                color: '#6B6B72',
                 background: tab === 'invitations' ? '#FFFFFF' : 'transparent',
                 boxSizing: 'content-box',
                 lineHeight: 'normal',
@@ -121,8 +121,7 @@ export function TeamAdminPage() {
                 display: 'inline-block',
               }}
             >
-              Invitations
-              {pendingCount > 0 && (
+              Invitations{' '}{pendingCount > 0 ? (
                 <span
                   style={{
                     background: '#FBF3E4',
@@ -136,7 +135,7 @@ export function TeamAdminPage() {
                 >
                   {pendingCount}
                 </span>
-              )}
+              ) : null}
             </a>
           </div>
           {tab === 'membres' && (
@@ -523,9 +522,13 @@ function InvitationsTab() {
         {(page.data ?? []).map((row: InvitationView, i) => (
           <div
             key={row.id}
-            className="flex items-center border-t border-[#F5F5F7]"
+            className="flex items-center"
             data-mock-id={i === 0 ? 'invitations-row' : undefined}
-            style={{ padding: '11px 16px' }}
+            style={{
+              padding: '11px 16px',
+              borderBottom: '1px solid #F5F5F7',
+              boxSizing: 'content-box',
+            }}
           >
             <div className="flex flex-[2.2] items-center gap-2.5">
               <div
@@ -653,14 +656,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
           <h1
             id="invite-modal-title"
             data-mock-id="invite-title"
-            className="font-display"
-            style={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
-              fontWeight: 400,
-              fontSize: 24,
-              margin: 0,
-              color: '#0E0E10',
-            }}
+            className="m-0 font-display text-[24px] font-normal leading-[normal] text-socle-ink"
           >
             Inviter un membre
           </h1>
@@ -894,13 +890,22 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
               type="button"
               data-mock-id="invite-cancel"
               onClick={onClose}
+              className="hover:bg-[#F5F5F7]"
               style={{
+                appearance: 'none',
+                boxSizing: 'content-box',
                 padding: '9px 15px',
+                margin: 0,
                 borderRadius: 7,
                 border: '1px solid #ECECEE',
+                background: 'none',
                 color: '#43434A',
+                font: 'inherit',
                 fontSize: 13,
                 fontWeight: 500,
+                lineHeight: 'normal',
+                letterSpacing: 'inherit',
+                cursor: 'pointer',
               }}
             >
               Annuler
@@ -908,19 +913,40 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               data-mock-id="invite-submit"
-              disabled={
+              aria-disabled={
                 !email.trim() ||
                 send.isPending ||
                 (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
               }
-              onClick={() => send.mutate()}
+              onClick={() => {
+                if (
+                  !email.trim() ||
+                  send.isPending ||
+                  (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
+                ) {
+                  return
+                }
+                send.mutate()
+              }}
+              className="hover:bg-[#2C27C7]"
               style={{
+                appearance: 'none',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                boxSizing: 'content-box',
                 padding: '9px 18px',
+                margin: 0,
                 borderRadius: 7,
+                border: 0,
                 background: '#3730E0',
                 color: '#FFFFFF',
+                font: 'inherit',
                 fontSize: 13,
                 fontWeight: 600,
+                lineHeight: 'normal',
+                letterSpacing: 'inherit',
+                cursor: 'pointer',
               }}
             >
               Envoyer l&apos;invitation
