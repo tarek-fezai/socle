@@ -262,7 +262,7 @@ describe('TrashPage', () => {
 })
 
 describe('AppNav trash / integrations links', () => {
-  it('expose Espaces, Équipes, Corbeille et Intégrations', async () => {
+  it('expose Espaces, Corbeille et Intégrations', async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     })
@@ -278,9 +278,7 @@ describe('AppNav trash / integrations links', () => {
       expect((screen.getByRole('link', { name: 'Espaces' }) as HTMLAnchorElement).href).toMatch(
         /\/spaces$/,
       )
-      expect((screen.getByRole('link', { name: 'Équipes' }) as HTMLAnchorElement).href).toMatch(
-        /\/team$/,
-      )
+      expect(screen.queryByRole('link', { name: 'Équipes' })).toBeNull()
       const trash = screen.getByRole('link', { name: 'Corbeille' }) as HTMLAnchorElement
       const integ = screen.getByRole('link', { name: 'Intégrations' }) as HTMLAnchorElement
       expect(trash.getAttribute('href')).toBe('/trash')

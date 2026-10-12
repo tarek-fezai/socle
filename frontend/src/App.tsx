@@ -29,6 +29,7 @@ import { SpaceSettingsPage } from './pages/SpaceSettingsPage'
 import { SpaceBrowsePage } from './pages/SpaceBrowsePage'
 import { FolderPage } from './pages/FolderPage'
 import { TeamPage } from './pages/TeamPage'
+import { TeamAdminPage } from './pages/TeamAdminPage'
 import { SearchPage } from './pages/SearchPage'
 import { DocumentReadPage } from './pages/document/DocumentReadPage'
 import { DocumentViewRedirect } from './pages/document/DocumentViewRedirect'
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="licence" element={<LicenceAdminPage />} />
             <Route path="workflows" element={<WorkflowsPage />} />
             <Route path="approval-roles" element={<ApprovalRolesPage />} />
+            <Route path="team" element={<TeamAdminPage />} />
           </Route>
           <Route path="/docs/:id" element={<DocumentReadPage />} />
           <Route path="/docs/:id/edit" element={<DocumentEditPage />} />

@@ -33,11 +33,18 @@ vi.mock('../lib/groups', () => ({
       {
         id: '22222222-2222-2222-2222-222222222222',
         name: 'Équipe sécu',
-        description: null,
+        createdBy: null,
         createdAt: '2026-01-01T00:00:00Z',
         memberCount: 2,
+        canManage: false,
+        members: [],
       },
     ]),
+}))
+
+const searchDirectoryUsers = vi.fn()
+vi.mock('../lib/directory', () => ({
+  searchDirectoryUsers: (...args: unknown[]) => searchDirectoryUsers(...args),
 }))
 
 const { getDocument, updateDocumentVisibility } = vi.hoisted(() => ({
@@ -50,10 +57,15 @@ vi.mock('../lib/documents', () => ({
   updateDocumentVisibility: (...args: unknown[]) => updateDocumentVisibility(...args),
 }))
 
+vi.mock('../lib/trash', () => ({
+  softDeleteDocument: vi.fn(),
+}))
+
 import { AccessPage } from './AccessPage'
 
 const SPACE = '00000000-0000-0000-0000-000000000001'
 const DOC = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+const USER = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 function wrap(ui: ReactNode) {
   const client = new QueryClient({
@@ -70,6 +82,15 @@ function wrap(ui: ReactNode) {
   )
 }
 
+async function pickPerson(name = 'Alice Martin') {
+  fireEvent.click(screen.getByRole('button', { name: '+ Inviter' }))
+  const input = screen.getByPlaceholderText('Rechercher un nom…')
+  fireEvent.change(input, { target: { value: 'al' } })
+  await waitFor(() => expect(screen.getByText('Alice Martin')).toBeTruthy())
+  fireEvent.click(screen.getByText('Alice Martin'))
+  expect((input as HTMLInputElement).value).toBe(name)
+}
+
 describe('AccessPage', () => {
   beforeEach(() => {
     listAccess.mockReset()
@@ -77,9 +98,13 @@ describe('AccessPage', () => {
     revokeAccess.mockReset()
     getDocument.mockReset()
     updateDocumentVisibility.mockReset()
+    searchDirectoryUsers.mockReset()
+    searchDirectoryUsers.mockResolvedValue([
+      { id: USER, displayName: 'Alice Martin', email: 'alice@example.com', initials: 'AM' },
+    ])
   })
 
-  it('affiche direct vs hérité depuis les données API', async () => {
+  it('affiche les personnes par nom et rôle, sans UUID', async () => {
     listAccess.mockResolvedValue({
       objectType: 'space',
       objectId: SPACE,
@@ -93,37 +118,32 @@ describe('AccessPage', () => {
           source: 'direct',
           inheritedFrom: null,
           revocable: true,
+          displayName: 'Tarek Fezai',
+          initials: 'TF',
         },
         {
-          subject: 'group:22222222-2222-2222-2222-222222222222#member',
+          subject: 'group:22222222-2222-2222-2222-222222222222#as_editor',
           subjectType: 'group',
           subjectId: '22222222-2222-2222-2222-222222222222',
           relation: 'editor',
           source: 'group',
           inheritedFrom: null,
           revocable: true,
-        },
-        {
-          subject: 'user:33333333-3333-3333-3333-333333333333',
-          subjectType: 'user',
-          subjectId: '33333333-3333-3333-3333-333333333333',
-          relation: 'viewer',
-          source: 'inherited',
-          inheritedFrom: 'organisation:00000000-0000-0000-0000-000000000010',
-          revocable: false,
+          displayName: 'Équipe sécu',
+          initials: '⬡',
+          memberCount: 2,
         },
       ],
     })
 
     render(wrap(<AccessPage objectType="space" />))
 
-    await waitFor(() => {
-      expect(screen.getByText('Direct')).toBeTruthy()
-      expect(screen.getByText('Via groupe')).toBeTruthy()
-      expect(screen.getByText('Hérité')).toBeTruthy()
-    })
-    expect(screen.getByText(/Hérité d/)).toBeTruthy()
-    expect(screen.getByText('Non révocable ici')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('Tarek Fezai')).toBeTruthy())
+    expect(screen.getByText('Équipe sécu')).toBeTruthy()
+    expect(screen.getByText('Propriétaire')).toBeTruthy()
+    expect(screen.getByText('Éditeur')).toBeTruthy()
+    expect(screen.queryByPlaceholderText(/Identifiant/i)).toBeNull()
+    expect(document.body.textContent).not.toContain('11111111-1111-1111-1111-111111111111')
   })
 
   it('après grant réussi, invalide et recharge la liste (pas d’optimistic)', async () => {
@@ -140,13 +160,15 @@ describe('AccessPage', () => {
         canManage: true,
         entries: [
           {
-            subject: 'user:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            subject: `user:${USER}`,
             subjectType: 'user',
-            subjectId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            subjectId: USER,
             relation: 'editor',
             source: 'direct',
             inheritedFrom: null,
             revocable: true,
+            displayName: 'Alice Martin',
+            initials: 'AM',
           },
         ],
       })
@@ -154,10 +176,7 @@ describe('AccessPage', () => {
 
     render(wrap(<AccessPage objectType="space" />))
     await waitFor(() => expect(screen.getByText(/Aucun accès/)).toBeTruthy())
-
-    fireEvent.change(screen.getByPlaceholderText(/Identifiant/i), {
-      target: { value: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
-    })
+    await pickPerson()
     fireEvent.click(screen.getByRole('button', { name: 'Accorder' }))
 
     await waitFor(() => {
@@ -168,12 +187,12 @@ describe('AccessPage', () => {
         expect.objectContaining({
           relation: 'editor',
           subjectType: 'user',
-          subjectId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          subjectId: USER,
         }),
       )
     })
     await waitFor(() => expect(listAccess).toHaveBeenCalledTimes(2))
-    await waitFor(() => expect(screen.getByText('Direct')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Alice Martin')).toBeTruthy())
   })
 
   it('affiche une erreur claire sur 503 sans mettre à jour la liste', async () => {
@@ -189,15 +208,12 @@ describe('AccessPage', () => {
 
     render(wrap(<AccessPage objectType="space" />))
     await waitFor(() => expect(screen.getByText(/Aucun accès/)).toBeTruthy())
-
-    fireEvent.change(screen.getByPlaceholderText(/Identifiant/i), {
-      target: { value: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-    })
+    await pickPerson()
     fireEvent.click(screen.getByRole('button', { name: 'Accorder' }))
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/audit down/i))
     expect(listAccess).toHaveBeenCalledTimes(1)
-    expect(screen.queryByText('Direct')).toBeNull()
+    expect(screen.queryByText('Alice Martin')).toBeNull()
   })
 
   it('affiche le bloc Visibilité sur un document — owner peut changer', async () => {
@@ -244,14 +260,12 @@ describe('AccessPage', () => {
     await waitFor(() => expect(screen.getByText('Tous les utilisateurs')).toBeTruthy())
     expect(screen.getByText("Membres de l'espace")).toBeTruthy()
     expect(screen.getByText('Personnes et équipes listées')).toBeTruthy()
+    expect(screen.getByText('Lire')).toBeTruthy()
+    expect(screen.getByText('Déplacer ce document vers la corbeille')).toBeTruthy()
 
     fireEvent.click(screen.getByTestId('visibility-restricted'))
     await waitFor(() =>
-      expect(updateDocumentVisibility).toHaveBeenCalledWith(
-        expect.anything(),
-        DOC,
-        'restricted',
-      ),
+      expect(updateDocumentVisibility).toHaveBeenCalledWith(expect.anything(), DOC, 'restricted'),
     )
   })
 })

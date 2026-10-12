@@ -2,17 +2,17 @@
 import { FormEvent, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { PeoplePicker, type PickerValue } from '../components/PeoplePicker'
 import { api } from '../lib/api'
 import {
   accessErrorMessage,
   grantAccess,
   listAccess,
   revokeAccess,
-  sourceLabel,
   type AccessEntry,
-  type AccessSource,
 } from '../lib/access'
-import { listGroups } from '../lib/groups'
+import { formatRelativeFr } from '../lib/relativeTime'
+import { softDeleteDocument } from '../lib/trash'
 import {
   getDocument,
   updateDocumentVisibility,
@@ -46,10 +46,11 @@ const VISIBILITY_OPTIONS: Array<{
   },
 ]
 
-const SOURCE_STYLES: Record<AccessSource, string> = {
-  direct: 'bg-[#F1F8F3] text-socle-success ring-[#D3EBD9]',
-  group: 'bg-socle-mist text-socle-accent ring-[#DCDAFB]',
-  inherited: 'bg-[#FBF3E4] text-socle-warn ring-[#F2E4C4]',
+function relationLabel(relation: string, group: boolean) {
+  if (relation === 'owner') return 'Propriétaire'
+  if (relation === 'editor') return 'Éditeur'
+  if (relation === 'viewer') return group ? 'Lecteurs' : 'Lecteur'
+  return relation
 }
 
 function AccessEntryRow({
@@ -61,45 +62,47 @@ function AccessEntryRow({
   onRevoke: (entry: AccessEntry) => void
   revoking: boolean
 }) {
-  const source = (entry.source as AccessSource) ?? 'direct'
+  const isGroup = entry.subjectType === 'group'
+  const name = entry.displayName || (isGroup ? 'Équipe' : 'Personne')
+  const initials = entry.initials || (isGroup ? '⬡' : '?')
+  const meta = isGroup
+    ? `${entry.memberCount ?? 0} membre${(entry.memberCount ?? 0) > 1 ? 's' : ''}${
+        entry.inheritedFrom ? ' · hérité de l\'espace' : ''
+      }`
+    : entry.lastActivityAt
+      ? `Actif ${formatRelativeFr(entry.lastActivityAt).toLowerCase()}`
+      : '—'
   return (
-    <li className="row flex items-start justify-between gap-3 rounded-xl border border-socle-line bg-white px-4 py-3 hover:bg-socle-soft">
-      <div className="min-w-0 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${SOURCE_STYLES[source]}`}
-          >
-            {sourceLabel(source)}
-          </span>
-          <span className="rounded-md border border-socle-line px-2 py-0.5 text-xs font-medium text-[#43434A]">
-            {entry.relation}
-          </span>
-          <span className="text-xs text-socle-muted">{entry.subjectType}</span>
+    <li className="row group flex items-center px-4 py-3" style={{ borderBottom: '1px solid #F5F5F7' }}>
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        <div
+          className="flex h-[26px] w-[26px] shrink-0 items-center justify-center text-[10px] font-semibold"
+          style={{
+            borderRadius: isGroup ? 8 : '50%',
+            background: isGroup ? '#F1EFEA' : '#0E0E10',
+            color: isGroup ? '#6B6862' : '#FFFFFF',
+          }}
+        >
+          {initials}
         </div>
-        <p className="truncate text-xs text-socle-ink">
-          {entry.subjectType === 'group' ? 'Groupe' : 'Personne'}
-        </p>
-        {entry.inheritedFrom && (
-          <p className="text-xs text-socle-slate">Hérité d&apos;un parent</p>
-        )}
-        {source === 'group' && (
-          <p className="text-xs text-socle-slate">
-            Accès accordé au groupe (tous les membres héritent de ce droit).
-          </p>
-        )}
+        <div className="min-w-0">
+          <div className="truncate text-[13.5px] font-medium text-socle-ink">{name}</div>
+          <div className="text-[11.5px] text-[#9B9BA1]">{meta}</div>
+        </div>
       </div>
+      <span className="shrink-0 rounded-[7px] border border-socle-line px-3 py-1 text-[12.5px] font-medium text-[#43434A]">
+        {relationLabel(entry.relation, isGroup)}
+      </span>
       {entry.revocable ? (
         <button
           type="button"
           onClick={() => onRevoke(entry)}
           disabled={revoking}
-          className="shrink-0 text-sm font-semibold text-socle-danger underline-offset-4 hover:underline disabled:opacity-50"
+          className="ml-3 shrink-0 text-sm font-semibold text-socle-danger underline-offset-4 opacity-0 hover:underline group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-50"
         >
           Révoquer
         </button>
-      ) : (
-        <span className="shrink-0 text-xs text-socle-muted">Non révocable ici</span>
-      )}
+      ) : null}
     </li>
   )
 }
@@ -120,10 +123,11 @@ export function AccessPage({
   const queryClient = useQueryClient()
   const queryKey = ['access', objectType, objectId] as const
 
-  const [subjectId, setSubjectId] = useState('')
+  const [invite, setInvite] = useState<PickerValue | null>(null)
   const [relation, setRelation] = useState('editor')
-  const [subjectType, setSubjectType] = useState<'user' | 'group'>('user')
+  const [inviteOpen, setInviteOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmTrash, setConfirmTrash] = useState(false)
 
   const perms = useQuery({
     queryKey,
@@ -132,22 +136,19 @@ export function AccessPage({
     retry: false,
   })
 
-  const groups = useQuery({
-    queryKey: ['groups'],
-    queryFn: () => listGroups(api),
-    enabled: subjectType === 'group',
-  })
-
   const grant = useMutation({
-    mutationFn: () =>
-      grantAccess(api, objectType, objectId, {
+    mutationFn: () => {
+      if (!invite) throw new Error('invite')
+      return grantAccess(api, objectType, objectId, {
         relation,
-        subjectType,
-        subjectId: subjectId.trim(),
-      }),
+        subjectType: invite.kind,
+        subjectId: invite.id,
+      })
+    },
     onSuccess: async () => {
       setError(null)
-      setSubjectId('')
+      setInvite(null)
+      setInviteOpen(false)
       await queryClient.invalidateQueries({ queryKey })
     },
     onError: (e: unknown) => {
@@ -177,13 +178,22 @@ export function AccessPage({
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!subjectId.trim()) {
-      setError(subjectType === 'group' ? 'Sélectionnez un groupe' : 'Identifiant utilisateur requis')
+    if (!invite) {
+      setError('Choisissez une personne ou une équipe')
       return
     }
     setError(null)
     grant.mutate()
   }
+
+  const trash = useMutation({
+    mutationFn: () => softDeleteDocument(api, objectId),
+    onSuccess: () => {
+      setConfirmTrash(false)
+      window.location.href = '/trash'
+    },
+    onError: (e: unknown) => setError(accessErrorMessage(e)),
+  })
 
   if (!objectId) {
     return (
@@ -204,16 +214,51 @@ export function AccessPage({
 
   return (
     <main className="mx-auto w-[760px] max-w-[760px] px-0 pt-11 leading-[normal]">
-      <div className="breadcrumb mb-6">
-        <Link to="/">Accueil</Link>
-        <span className="text-[#DEDEE1]">→</span>
-        {objectType === 'space' && (
-          <>
-            <Link to="/spaces">Espaces</Link>
-            <span className="text-[#DEDEE1]">→</span>
-          </>
+      {objectType === 'document' && (
+        <div
+          className="mb-6 flex items-center gap-[22px] border-b border-socle-line"
+          data-mock-id="access-doc-tabs"
+          role="tablist"
+        >
+          <Link to={`/docs/${objectId}`} className="doc-tab" role="tab">
+            Lire
+          </Link>
+          <Link to={`/docs/${objectId}/edit`} className="doc-tab" role="tab">
+            Modifier
+          </Link>
+          <Link to={`/docs/${objectId}/history`} className="doc-tab" role="tab">
+            Historique
+          </Link>
+          <Link to={`/docs/${objectId}`} className="doc-tab" role="tab">
+            Commentaires
+          </Link>
+          <span className="doc-tab is-active" role="tab" aria-selected>
+            Accès
+          </span>
+        </div>
+      )}
+      <div className="mb-6 flex items-start justify-between">
+        <div className="breadcrumb">
+          <Link to="/">Accueil</Link>
+          <span className="text-[#DEDEE1]">→</span>
+          {objectType === 'space' && (
+            <>
+              <Link to="/spaces">Espaces</Link>
+              <span className="text-[#DEDEE1]">→</span>
+            </>
+          )}
+          <span className="font-medium text-socle-ink">Accès et permissions</span>
+        </div>
+        {perms.data?.canManage && (
+          <button
+            type="button"
+            data-mock-id="access-invite"
+            onClick={() => setInviteOpen(true)}
+            className="rounded-[7px] bg-socle-accent px-4 py-1.5 text-[13px] font-semibold text-white hover:bg-[#2C27C7]"
+          >
+            + Inviter
+          </button>
         )}
-        <span className="font-medium text-socle-ink">Accès et permissions</span>
       </div>
 
       <h1
@@ -245,76 +290,25 @@ export function AccessPage({
           Personnes et équipes
         </div>
 
-        {perms.isSuccess && perms.data.canManage && (
+        {perms.isSuccess && perms.data.canManage && inviteOpen && (
           <form
             onSubmit={onSubmit}
-            data-visual-mask="access-grant-form"
             className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-socle-line bg-white p-4"
           >
+            <PeoplePicker value={invite} onChange={setInvite} disabled={grant.isPending} />
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-socle-muted">Sujet</span>
-              <select
-                value={subjectType}
-                onChange={(e) => {
-                  setSubjectType(e.target.value as 'user' | 'group')
-                  setSubjectId('')
-                }}
-                className="field-input"
-              >
-                <option value="user">Utilisateur</option>
-                <option value="group">Groupe</option>
-              </select>
-            </label>
-            {subjectType === 'group' ? (
-              <label className="flex min-w-[16rem] flex-1 flex-col gap-1 text-sm">
-                <span className="text-socle-muted">Groupe</span>
-                <select
-                  value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
-                  className="field-input"
-                  required
-                >
-                  <option value="">— choisir —</option>
-                  {groups.data?.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-                {groups.data?.length === 0 && (
-                  <span className="text-xs text-socle-muted">
-                    Aucun groupe — créez-en un dans{' '}
-                    <Link to="/team" className="underline">
-                      Équipes
-                    </Link>
-                    .
-                  </span>
-                )}
-              </label>
-            ) : (
-              <label className="flex min-w-[16rem] flex-1 flex-col gap-1 text-sm">
-                <span className="text-socle-muted">Identifiant utilisateur</span>
-                <input
-                  value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
-                  placeholder="Identifiant"
-                  className="field-input text-xs"
-                />
-              </label>
-            )}
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-socle-muted">Niveau</span>
+              <span className="text-socle-muted">Rôle</span>
               <select
                 value={relation}
                 onChange={(e) => setRelation(e.target.value)}
                 className="field-input"
               >
-                <option value="viewer">viewer</option>
-                <option value="editor">editor</option>
-                <option value="owner">owner</option>
+                <option value="viewer">Lecteur</option>
+                <option value="editor">Éditeur</option>
+                <option value="owner">Propriétaire</option>
               </select>
             </label>
-            <button type="submit" disabled={grant.isPending} className="btn-primary">
+            <button type="submit" disabled={grant.isPending || !invite} className="btn-primary">
               {grant.isPending ? 'Envoi…' : 'Accorder'}
             </button>
           </form>
@@ -329,7 +323,11 @@ export function AccessPage({
           </p>
         )}
 
-        <ul className="space-y-2" data-testid="access-list">
+        <ul
+          className="overflow-hidden rounded-[10px] border border-socle-line"
+          data-testid="access-list"
+          data-mock-id="access-people-rows"
+        >
           {perms.isLoading && <li className="text-socle-muted">Chargement…</li>}
           {perms.data?.entries.length === 0 && (
             <li className="rounded-xl border border-dashed border-[#DEDEE1] px-4 py-8 text-center text-sm text-socle-muted">
@@ -351,12 +349,47 @@ export function AccessPage({
         Personnes et équipes ayant accès à cet {resourceLabel} — distinction direct / via groupe /
         hérité.
       </p>
-      <p className="mt-8 text-xs text-socle-muted">
-        Seuls les accès <strong className="text-socle-slate">directs</strong> ou{' '}
-        <strong className="text-socle-slate">via groupe</strong> sur cette ressource sont
-        révocables ici. Les accès hérités se gèrent sur le parent indiqué. La visibilité et l’ACL
-        d’une page sont réservées aux owners de l’espace.
-      </p>
+      {objectType === 'document' && perms.data?.canManage && (
+        <div
+          data-mock-id="access-delete-box"
+          className="mt-8 flex items-center justify-between rounded-[10px] border px-4 py-4"
+          style={{ borderColor: '#F2CFC2', background: '#FCEEEA' }}
+        >
+          <div>
+            <div className="mb-0.5 text-[13.5px] font-semibold text-[#7C2D12]">
+              Déplacer ce document vers la corbeille
+            </div>
+            <div className="text-[12px] text-[#9A4A2E]">
+              Réservé au propriétaire — restaurable pendant 30 jours avant suppression définitive.
+            </div>
+          </div>
+          {confirmTrash ? (
+            <div className="flex gap-2">
+              <button type="button" className="text-sm" onClick={() => setConfirmTrash(false)}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="rounded-[7px] border px-3.5 py-1.5 text-[13px] font-semibold text-[#B54708]"
+                style={{ borderColor: '#E2A388' }}
+                disabled={trash.isPending}
+                onClick={() => trash.mutate()}
+              >
+                Confirmer
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="rounded-[7px] border px-3.5 py-1.5 text-[13px] font-semibold text-[#B54708]"
+              style={{ borderColor: '#E2A388' }}
+              onClick={() => setConfirmTrash(true)}
+            >
+              Supprimer
+            </button>
+          )}
+        </div>
+      )}
     </main>
   )
 }

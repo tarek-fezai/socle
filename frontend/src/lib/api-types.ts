@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/groups/{id}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateMemberRole"];
+        post?: never;
+        delete: operations["removeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/favorites/{type}/{id}": {
         parameters: {
             query?: never;
@@ -2180,6 +2196,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/directory/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["users"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit": {
         parameters: {
             query?: never;
@@ -2236,6 +2268,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["mine"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_23"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2436,22 +2484,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/groups/{id}/members/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["removeMember"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/documents/{id}/tags/{tagId}": {
         parameters: {
             query?: never;
@@ -2647,6 +2679,11 @@ export interface components {
             userId?: string;
             email?: string;
             displayName?: string;
+            role?: string;
+            initials?: string;
+        };
+        UpdateMemberRoleRequest: {
+            role: string;
         };
         FavoriteItem: {
             targetType?: string;
@@ -3077,6 +3114,7 @@ export interface components {
         AddMemberRequest: {
             /** Format: uuid */
             userId: string;
+            role?: string;
         };
         MoveFolderRequest: {
             /** Format: uuid */
@@ -3938,6 +3976,16 @@ export interface components {
             /** Format: date-time */
             contentModifiedAt?: string;
         };
+        DirectoryUser: {
+            /** Format: uuid */
+            id?: string;
+            displayName?: string;
+            email?: string;
+            initials?: string;
+        };
+        DirectoryUsersResponse: {
+            users?: components["schemas"]["DirectoryUser"][];
+        };
         AuditEventView: {
             /** Format: int64 */
             id?: number;
@@ -3988,6 +4036,37 @@ export interface components {
             hiddenImpactedCount?: number;
             canDecide?: boolean;
             cannotDecideReason?: string;
+        };
+        AdminTeamRef: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            role?: string;
+        };
+        AdminUserRow: {
+            /** Format: uuid */
+            id?: string;
+            displayName?: string;
+            email?: string;
+            initials?: string;
+            platformRoles?: string[];
+            teams?: components["schemas"]["AdminTeamRef"][];
+            status?: string;
+            /** Format: date-time */
+            lastActivityAt?: string;
+        };
+        AdminUsersResponse: {
+            users?: components["schemas"]["AdminUserRow"][];
+            /** Format: int32 */
+            total?: number;
+            /** Format: int32 */
+            activeCount?: number;
+            /** Format: int32 */
+            teamCount?: number;
+            /** Format: int32 */
+            offset?: number;
+            /** Format: int32 */
+            limit?: number;
         };
         TagListResponse: {
             tags?: components["schemas"]["TagAdminView"][];
@@ -4041,6 +4120,12 @@ export interface components {
             source?: string;
             inheritedFrom?: string;
             revocable?: boolean;
+            displayName?: string;
+            initials?: string;
+            /** Format: date-time */
+            lastActivityAt?: string;
+            /** Format: int32 */
+            memberCount?: number;
         };
         AccessListResponse: {
             objectType?: string;
@@ -4362,6 +4447,56 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    updateMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GroupView"];
+                };
+            };
+        };
+    };
+    removeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GroupView"];
+                };
             };
         };
     };
@@ -8537,6 +8672,29 @@ export interface operations {
             };
         };
     };
+    users: {
+        parameters: {
+            query?: {
+                q?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DirectoryUsersResponse"];
+                };
+            };
+        };
+    };
     list_22: {
         parameters: {
             query?: {
@@ -8628,6 +8786,33 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApprovalView"][];
+                };
+            };
+        };
+    };
+    list_23: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: string;
+                platformRole?: string;
+                groupId?: string;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminUsersResponse"];
                 };
             };
         };
@@ -8890,29 +9075,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    removeMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["GroupView"];
-                };
             };
         };
     };

@@ -88,6 +88,13 @@ export function formatPurgeRemaining(
   return { label: `${days} jours restants`, urgent: days < 7 }
 }
 
+export async function softDeleteDocument(
+  api: { delete: (url: string) => Promise<unknown> },
+  documentId: string,
+) {
+  await api.delete(`/api/v1/trash/documents/${documentId}`)
+}
+
 export async function purgeTrashItem(
   api: { delete: (url: string) => Promise<unknown> },
   trashItemId: string,

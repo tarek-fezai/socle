@@ -396,6 +396,84 @@
         }
       }
     },
+    "/api/v1/groups/{id}/members/{userId}" : {
+      "put" : {
+        "tags" : [ "group-controller" ],
+        "operationId" : "updateMemberRole",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateMemberRoleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GroupView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "group-controller" ],
+        "operationId" : "removeMember",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "userId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GroupView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/favorites/{type}/{id}" : {
       "put" : {
         "tags" : [ "favorite-controller" ],
@@ -5745,6 +5823,40 @@
         }
       }
     },
+    "/api/v1/directory/users" : {
+      "get" : {
+        "tags" : [ "directory-controller" ],
+        "operationId" : "users",
+        "parameters" : [ {
+          "name" : "q",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DirectoryUsersResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/audit" : {
       "get" : {
         "tags" : [ "audit-controller" ],
@@ -5904,6 +6016,70 @@
                   "items" : {
                     "$ref" : "#/components/schemas/ApprovalView"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users" : {
+      "get" : {
+        "tags" : [ "admin-user-directory-controller" ],
+        "operationId" : "list_23",
+        "parameters" : [ {
+          "name" : "q",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "platformRole",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "groupId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdminUsersResponse"
                 }
               }
             }
@@ -6175,41 +6351,6 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
-          }
-        }
-      }
-    },
-    "/api/v1/groups/{id}/members/{userId}" : {
-      "delete" : {
-        "tags" : [ "group-controller" ],
-        "operationId" : "removeMember",
-        "parameters" : [ {
-          "name" : "id",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        }, {
-          "name" : "userId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/GroupView"
-                }
-              }
-            }
           }
         }
       }
@@ -6645,8 +6786,24 @@
           },
           "displayName" : {
             "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "initials" : {
+            "type" : "string"
           }
         }
+      },
+      "UpdateMemberRoleRequest" : {
+        "type" : "object",
+        "properties" : {
+          "role" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "role" ]
       },
       "FavoriteItem" : {
         "type" : "object",
@@ -7724,6 +7881,9 @@
           "userId" : {
             "type" : "string",
             "format" : "uuid"
+          },
+          "role" : {
+            "type" : "string"
           }
         },
         "required" : [ "userId" ]
@@ -9907,6 +10067,35 @@
           }
         }
       },
+      "DirectoryUser" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "initials" : {
+            "type" : "string"
+          }
+        }
+      },
+      "DirectoryUsersResponse" : {
+        "type" : "object",
+        "properties" : {
+          "users" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DirectoryUser"
+            }
+          }
+        }
+      },
       "AuditEventView" : {
         "type" : "object",
         "properties" : {
@@ -10034,6 +10223,89 @@
           },
           "cannotDecideReason" : {
             "type" : "string"
+          }
+        }
+      },
+      "AdminTeamRef" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AdminUserRow" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "initials" : {
+            "type" : "string"
+          },
+          "platformRoles" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "teams" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AdminTeamRef"
+            }
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "lastActivityAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "AdminUsersResponse" : {
+        "type" : "object",
+        "properties" : {
+          "users" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AdminUserRow"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "activeCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "teamCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "offset" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -10188,6 +10460,20 @@
           },
           "revocable" : {
             "type" : "boolean"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "initials" : {
+            "type" : "string"
+          },
+          "lastActivityAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "memberCount" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },

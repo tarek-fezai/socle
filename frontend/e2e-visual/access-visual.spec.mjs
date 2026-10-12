@@ -4,7 +4,6 @@
  *
  * Access.dc.html est un écran document (onglets Lire/Modifier/… + visibilité + personnes).
  * Route comparable : /documents/:id/access (pas /spaces/:id/access — ACL espace, autre UI).
- * Pas de variante dossier/tag dans la maquette.
  *
  * Mesure : `VISUAL_BASELINE=1 npx playwright test e2e-visual/access-visual.spec.mjs`
  */
@@ -24,60 +23,23 @@ import {
   shotSection,
 } from './visual-parity-kit.mjs'
 
-const DECISION = 'DP-2026-10-11-tf — formulaire grant conservé sans affichage d’UUID (provisoire)'
+export const APP_EXTRA = []
 
-export const APP_EXTRA = [
-  {
-    id: 'access-grant-form',
-    page: 'access',
-    appMask: 'access-grant-form',
-    reason: 'formulaire d’octroi (identifiant, pas d’UUID affiché)',
-    decision: DECISION,
-  },
-]
-
-export const NOT_IMPLEMENTED = [
-  {
-    id: 'access-doc-tabs',
-    page: 'access',
-    reason:
-      'Chrome document (onglets Lire / Modifier / Historique / Commentaires / Accès) : AccessPage est une route isolée, pas DocumentChrome',
-    backlog: 'ACCESS-PEOPLE-PICKER',
-    mockMask: 'access-doc-tabs',
-  },
-  {
-    id: 'access-invite',
-    page: 'access',
-    reason: 'Bouton « + Inviter » : pas d’API d’invitation nominative',
-    backlog: 'ACCESS-PEOPLE-PICKER',
-    mockMask: 'access-invite',
-  },
-  {
-    id: 'access-people-rows',
-    page: 'access',
-    reason:
-      'Lignes personnes : AccessEntry n’a ni displayName, ni initiales, ni last-active, ni rôle « Approbatrice »',
-    backlog: 'ACCESS-PEOPLE-PICKER',
-    mockMask: 'access-people-rows',
-  },
-  {
-    id: 'access-delete-box',
-    page: 'access',
-    reason: 'Encart « Déplacer ce document vers la corbeille » absent de AccessPage',
-    backlog: 'ACCESS-DELETE-BOX',
-    mockMask: 'access-delete-box',
-  },
-]
+export const NOT_IMPLEMENTED = []
 
 const SIZE_EXCEPTIONS = {}
 
 const PIXEL_SECTIONS = [
   { id: 'access-title', name: 'title', masks: [] },
+  { id: 'access-doc-tabs', name: 'doc-tabs', masks: [] },
+  { id: 'access-invite', name: 'invite', masks: [] },
   { id: 'access-vis-label', name: 'vis-label', masks: [] },
   { id: 'access-vis-organisation', name: 'vis-organisation', masks: [] },
   { id: 'access-vis-space', name: 'vis-space', masks: [] },
   { id: 'access-vis-restricted', name: 'vis-restricted', masks: [] },
   { id: 'access-people-label', name: 'people-label', masks: [] },
+  { id: 'access-people-rows', name: 'people-rows', masks: [] },
+  { id: 'access-delete-box', name: 'delete-box', masks: [] },
 ]
 
 test.describe('access visual', () => {

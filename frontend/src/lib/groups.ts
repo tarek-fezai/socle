@@ -5,6 +5,8 @@ export type GroupMember = {
   userId: string
   email: string
   displayName: string
+  role?: string
+  initials?: string
 }
 
 export type Group = {
@@ -27,8 +29,18 @@ export async function createGroup(api: AxiosInstance, name: string) {
   return data
 }
 
-export async function addGroupMember(api: AxiosInstance, groupId: string, userId: string) {
-  const { data } = await api.post<Group>(`/api/v1/groups/${groupId}/members`, { userId })
+export async function addGroupMember(api: AxiosInstance, groupId: string, userId: string, role?: string) {
+  const { data } = await api.post<Group>(`/api/v1/groups/${groupId}/members`, { userId, role })
+  return data
+}
+
+export async function updateGroupMemberRole(
+  api: AxiosInstance,
+  groupId: string,
+  userId: string,
+  role: string,
+) {
+  const { data } = await api.put<Group>(`/api/v1/groups/${groupId}/members/${userId}`, { role })
   return data
 }
 

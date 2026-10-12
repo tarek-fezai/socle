@@ -43,6 +43,29 @@ export async function mockParityApis(page) {
   })
 }
 
+export async function annotateTeamMockup(page) {
+  await page.evaluate(() => {
+    const h1 = document.querySelector('h1')
+    h1?.setAttribute('data-mock-id', 'team-title')
+    const lead = h1?.nextElementSibling
+    lead?.setAttribute('data-mock-id', 'team-lead')
+    const invite = [...document.querySelectorAll('a')].find((a) =>
+      (a.textContent ?? '').includes('Inviter un membre'),
+    )
+    invite?.setAttribute('data-mock-id', 'team-invite-cta')
+    invite?.setAttribute('data-visual-mask', 'team-invite-cta')
+    const segs = [...document.querySelectorAll('a.seg')]
+    segs[0]?.setAttribute('data-mock-id', 'team-tab-membres')
+    segs[1]?.setAttribute('data-mock-id', 'team-tab-equipes')
+    segs[2]?.setAttribute('data-mock-id', 'team-tab-invitations')
+    segs[2]?.setAttribute('data-visual-mask', 'team-tab-invitations')
+    const table = [...document.querySelectorAll('div')].find((d) =>
+      (d.textContent ?? '').startsWith('Membre') && d.style && d.style.textTransform === 'uppercase',
+    )
+    table?.setAttribute('data-mock-id', 'team-members-head')
+  })
+}
+
 export async function annotateTrashMockup(page) {
   await page.evaluate(() => {
     const h1 = document.querySelector('h1')
@@ -81,13 +104,15 @@ export async function annotateAccessMockup(page) {
     const peopleLabel = visList?.nextElementSibling
     peopleLabel?.setAttribute('data-mock-id', 'access-people-label')
     const people = peopleLabel?.nextElementSibling
-    people?.setAttribute('data-visual-mask', 'access-people-rows')
+    people?.setAttribute('data-mock-id', 'access-people-rows')
     const trashBox = people?.nextElementSibling
-    trashBox?.setAttribute('data-visual-mask', 'access-delete-box')
+    trashBox?.setAttribute('data-mock-id', 'access-delete-box')
+    const tabBar = document.querySelector('div')?.querySelector?.('a.tab')?.parentElement
+    if (tabBar) tabBar.setAttribute('data-mock-id', 'access-doc-tabs')
     const tabs = [...document.querySelectorAll('a.tab')]
-    tabs.forEach((t) => t.setAttribute('data-visual-mask', 'access-doc-tabs'))
+    tabs.forEach((t) => t.setAttribute('data-mock-id', t.getAttribute('data-mock-id') || 'access-doc-tab'))
     const invite = [...document.querySelectorAll('a')].find((a) => (a.textContent ?? '').includes('Inviter'))
-    invite?.setAttribute('data-visual-mask', 'access-invite')
+    invite?.setAttribute('data-mock-id', 'access-invite')
   })
 }
 
