@@ -30,6 +30,13 @@ Authorization model updates ship in the repo (`deploy/compose/openfga/model.fga`
 - `openfga-init` or your runbook publishes a new model version when `OPENFGA_MODEL_ID` is empty.
 - If you pin `OPENFGA_MODEL_ID`, update it after publishing the new model to the store.
 - Run authz tests in CI (`authz-model` job) mirror what you should run after model changes.
+- **team-roles-v1** (rôles d’équipe) : au premier démarrage de cette version le
+  backend lit et réécrit les tuples sous le modèle précédent
+  (`openfga/model-pre-team-roles.json`, sujets `group#member` encore valides),
+  puis publie le modèle courant (`openfga/model.json`, ACL sans `group#member`).
+  Échec (erreurs FGA ou tuples legacy restants) → démarrage refusé, non marquée
+  dans `authz_migrations`, rejouable. Ne pas épingler `OPENFGA_MODEL_ID` sur
+  l’ancien modèle après succès.
 
 Visibility one-shot migration: `POST /api/v1/admin/authz/migrate-visibility` (or `SOCLE_FGA_VISIBILITY_MIGRATION_ON_STARTUP=true` once).
 

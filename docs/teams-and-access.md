@@ -100,10 +100,24 @@ négatif** par rôle × grant (`owner` / `editor` / `viewer`), y compris
 - Membres existants → `contributeur`. Si `groups.created_by` n’est pas
   membre, l’insérer en `proprietaire` ; s’il l’est, le passer en
   `proprietaire`.
-- Tuples `group#member@user` remplacés par `group#{role}@user`.
-- Tuples `object#{owner\|editor\|viewer}@group#member` réécrits selon le
-  tableau § 1.3. Job idempotent (table `authz_migrations`, clé
-  `team-roles-v1`).
+- Tuples `group#member@user` remplacés par `group#{role}@user`, puis
+  suppression des tuples directs `member`.
+- Tuples `object#{owner\|editor\|viewer}@group#member` (organisation,
+  space, folder, document) réécrits selon le tableau § 1.3.
+- Job au démarrage (`ApplicationRunner` + `SmartLifecycle` phase −10,
+  après le bootstrap OpenFGA phase −20), **avant** d’accepter des
+  requêtes. Verrou `pg_advisory_lock` (multi-instances). Idempotent
+  (`authz_migrations`, clé `team-roles-v1`). Lecture FGA **paginée**
+  (store entier : OpenFGA 1.8 refuse `object="type:"` sans id).
+- Si `errors > 0` ou s’il reste un tuple
+  `O#R@group:*#member` / `group:*#member@user:*` : **pas** marquée
+  appliquée, démarrage refusé (message : nombre d’erreurs, objets),
+  rejouable au boot suivant.
+- Ordre du modèle : lecture / réécriture sous
+  `classpath:openfga/model-pre-team-roles.json` (`member: [user] or …`
+  encore assignable, sujets `group#member` encore autorisés sur les ACL),
+  puis publication de `openfga/model.json` (ACL sans `group#member` —
+  `member` reste une relation **calculée** sur `group`).
 
 ## 2. Annuaire
 

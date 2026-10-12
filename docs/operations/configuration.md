@@ -15,6 +15,22 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SPRING_DATASOURCE_USERNAME` | `socle` | yes (prod) | no | DB user |
 | `SPRING_DATASOURCE_PASSWORD` | `socle` | yes (prod) | **yes** | DB password |
 
+### Flyway V48 (`unaccent`)
+
+V48 exécute `CREATE EXTENSION IF NOT EXISTS unaccent` (recherche d’annuaire
+insensible aux accents). Le rôle JDBC doit avoir le droit **`CREATE EXTENSION`**.
+
+Sur une base **gérée** (RDS, Cloud SQL, Azure Database, etc.) l’utilisateur
+applicatif n’a souvent pas ce droit : un administrateur crée l’extension
+**avant** la mise à jour, avec un rôle privilégié :
+
+```sql
+CREATE EXTENSION IF NOT EXISTS unaccent;
+```
+
+Ensuite Flyway voit l’extension déjà présente (`IF NOT EXISTS`) et continue.
+Sans cela le démarrage s’arrête sur V48.
+
 ## OIDC (resource server & OAuth client)
 
 | Name | Default | Required | Secret | Description |

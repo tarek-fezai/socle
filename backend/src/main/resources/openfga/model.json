@@ -83,21 +83,18 @@
           "owner": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_owner" }
             ]
           },
           "editor": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_editor" }
             ]
           },
           "viewer": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_viewer" }
             ]
           }
@@ -156,21 +153,18 @@
           "owner": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_owner" }
             ]
           },
           "editor": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_editor" }
             ]
           },
           "viewer": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_viewer" }
             ]
           }
@@ -241,14 +235,12 @@
           "owner": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_owner" }
             ]
           },
           "editor": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_editor" }
             ]
           },
@@ -256,7 +248,6 @@
             "directly_related_user_types": [
               { "type": "user" },
               { "type": "user", "wildcard": {} },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_viewer" }
             ]
           }
@@ -328,21 +319,18 @@
           "direct_access": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_viewer" }
             ]
           },
           "owner": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_owner" }
             ]
           },
           "editor": {
             "directly_related_user_types": [
               { "type": "user" },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_editor" }
             ]
           },
@@ -350,7 +338,6 @@
             "directly_related_user_types": [
               { "type": "user" },
               { "type": "user", "wildcard": {} },
-              { "type": "group", "relation": "member" },
               { "type": "group", "relation": "as_viewer" }
             ]
           }

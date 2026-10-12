@@ -27,7 +27,7 @@ tuples:
     relation: contributeur
     object: group:eng-team
 
-  - user: group:eng-team#member
+  - user: group:eng-team#as_editor
     relation: editor
     object: space:engineering
 
@@ -301,7 +301,7 @@ tests:
             - document:org-doc
             - document:org-in-folder
 
-  - name: group#member grants editor via space; user without membership has no access
+  - name: group#as_editor grants editor via space; user without membership has no access
     check:
       - user: user:group-member
         object: document:space-doc

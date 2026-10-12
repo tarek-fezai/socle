@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -37,7 +38,7 @@ import java.util.stream.Collectors;
 @Component
 @Order(1)
 @ConditionalOnProperty(name = "socle.openfga.auto-init", havingValue = "true", matchIfMissing = false)
-public class OpenFgaBootstrap implements ApplicationRunner {
+public class OpenFgaBootstrap implements ApplicationRunner, SmartLifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(OpenFgaBootstrap.class);
     private static final String STORE_NAME = "socle";
@@ -47,6 +48,7 @@ public class OpenFgaBootstrap implements ApplicationRunner {
     private final SocleProperties properties;
     private final Resource modelResource;
     private final Path stateDir;
+    private volatile boolean running;
 
     public OpenFgaBootstrap(
             OpenFgaClient client,
@@ -58,6 +60,38 @@ public class OpenFgaBootstrap implements ApplicationRunner {
         this.properties = properties;
         this.modelResource = modelResource;
         this.stateDir = Path.of(stateDir);
+    }
+
+    @Override
+    public void start() {
+        try {
+            run(null);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("OpenFGA bootstrap échoué", e);
+        }
+        running = true;
+    }
+
+    @Override
+    public void stop() {
+        running = false;
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running;
+    }
+
+    @Override
+    public int getPhase() {
+        return -20;
+    }
+
+    @Override
+    public boolean isAutoStartup() {
+        return true;
     }
 
     @Override
