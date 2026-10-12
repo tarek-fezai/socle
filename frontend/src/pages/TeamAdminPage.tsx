@@ -43,11 +43,8 @@ export function TeamAdminPage() {
       <div data-mock-id="team-page">
         <div className="mb-1.5 flex items-start justify-between">
           <div>
-            <h1
-              className="mb-1.5 font-display text-[34px] font-normal text-socle-ink"
-              data-mock-id="team-title"
-            >
-              Membres &amp; équipes
+            <h1 className="admin-title" data-mock-id="team-title" style={{ margin: '0 0 6px', display: 'inline-block' }}>
+              Membres & équipes
             </h1>
             <Lead />
           </div>
@@ -80,7 +77,7 @@ export function TeamAdminPage() {
               disabled
               title="Bientôt"
               data-mock-id="team-tab-invitations"
-              className="border-l border-socle-line text-[12.5px] text-[#6B6B72] opacity-60"
+              className="text-[12.5px] leading-[normal] text-[#6B6B72] opacity-60"
               style={{ padding: '7px 16px' }}
             >
               Invitations{' '}
@@ -142,10 +139,11 @@ function TabBtn({
       aria-selected={on}
       data-mock-id={mockId}
       onClick={() => onClick(id)}
-      className={`text-[12.5px] ${on ? 'bg-white font-semibold text-socle-ink' : 'text-[#6B6B72]'} ${
-        id !== 'membres' ? 'border-l border-socle-line' : ''
-      }`}
-      style={{ padding: '7px 16px' }}
+      className={`text-[12.5px] leading-[normal] text-[#6B6B72] ${on ? 'bg-white font-semibold' : ''}`}
+      style={{
+        padding: '7px 16px',
+        borderRight: '1px solid #ECECEE',
+      }}
     >
       {children}
     </button>
@@ -184,8 +182,9 @@ function MembersTab({ q }: { q: string }) {
         className="overflow-hidden rounded-[10px] border border-socle-line"
       >
         <div
-          className="flex bg-[#FAFAFB] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#75757C]"
+          className="flex bg-[#FAFAFB] text-[11px] font-semibold uppercase tracking-[0.05em] text-[#75757C]"
           data-mock-id="team-members-head"
+          style={{ padding: '10px 16px', borderBottom: '1px solid #ECECEE', boxSizing: 'content-box' }}
         >
           <div className="flex-[2.1]">Membre</div>
           <div className="flex-[1.1]">Rôle global</div>

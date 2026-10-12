@@ -336,14 +336,14 @@ export function AccessPage({
       {objectType === 'document' && perms.data?.canManage && (
         <div
           data-mock-id="access-delete-box"
-          className="mt-8 flex items-center justify-between rounded-[10px] border px-4 py-4"
-          style={{ borderColor: '#F2CFC2', background: '#FCEEEA' }}
+          className="mt-8 flex items-center justify-between rounded-[10px] border"
+          style={{ borderColor: '#F2CFC2', background: '#FCEEEA', padding: '16px 18px' }}
         >
           <div>
-            <div className="mb-0.5 text-[13.5px] font-semibold text-[#7C2D12]">
+            <div className="mb-0.5 text-[13.5px] font-semibold leading-[normal] text-[#7C2D12]">
               Déplacer ce document vers la corbeille
             </div>
-            <div className="text-[12px] text-[#9A4A2E]">
+            <div className="text-[12px] leading-[normal] text-[#9A4A2E]">
               Réservé au propriétaire — restaurable pendant 30 jours avant suppression définitive.
             </div>
           </div>
@@ -354,8 +354,15 @@ export function AccessPage({
               </button>
               <button
                 type="button"
-                className="rounded-[7px] border px-3.5 py-1.5 text-[13px] font-semibold text-[#B54708]"
-                style={{ borderColor: '#E2A388' }}
+                className="font-semibold text-[#B54708]"
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 7,
+                  border: '1px solid #E2A388',
+                  fontSize: 13,
+                  lineHeight: 'normal',
+                  boxSizing: 'content-box',
+                }}
                 disabled={trash.isPending}
                 onClick={() => trash.mutate()}
               >
@@ -365,8 +372,15 @@ export function AccessPage({
           ) : (
             <button
               type="button"
-              className="rounded-[7px] border px-3.5 py-1.5 text-[13px] font-semibold text-[#B54708]"
-              style={{ borderColor: '#E2A388' }}
+              className="font-semibold text-[#B54708]"
+              style={{
+                padding: '7px 14px',
+                borderRadius: 7,
+                border: '1px solid #E2A388',
+                fontSize: 13,
+                lineHeight: 'normal',
+                boxSizing: 'content-box',
+              }}
               onClick={() => setConfirmTrash(true)}
             >
               Supprimer
