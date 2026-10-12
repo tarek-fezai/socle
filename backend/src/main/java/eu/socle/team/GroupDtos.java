@@ -15,7 +15,7 @@ public final class GroupDtos {
 
     public record UpdateGroupRequest(@NotBlank String name) {}
 
-    public record MemberView(UUID userId, String email, String displayName) {}
+    public record MemberView(UUID userId, String email, String displayName, String role, String initials) {}
 
     public record GroupView(
             UUID id,
@@ -27,5 +27,11 @@ public final class GroupDtos {
             List<MemberView> members
     ) {}
 
-    public record AddMemberRequest(@NotNull UUID userId) {}
+    public record AddMemberRequest(@NotNull UUID userId, String role) {
+        public AddMemberRequest(UUID userId) {
+            this(userId, null);
+        }
+    }
+
+    public record UpdateMemberRoleRequest(@NotBlank String role) {}
 }

@@ -84,7 +84,7 @@ const YANIS_ID = '33333333-3333-3333-3333-333333333333'
 const TEAM_ID = 'g0000001-0000-4000-8000-000000000001'
 
 /**
- * GET /api/v1/access/document/:id — champs AccessEntry uniquement (pas de nom / initiales / last-active).
+ * GET /api/v1/access/document/:id — AccessEntry enrichi (nom / initiales / lastActivityAt).
  * @type {import('../src/lib/api-types.ts').components['schemas']['AccessListResponse']}
  */
 export const ACCESS_DOC_SEED = {
@@ -99,6 +99,10 @@ export const ACCESS_DOC_SEED = {
       relation: 'owner',
       source: 'direct',
       revocable: true,
+      displayName: 'Tarek Fezai',
+      initials: 'TF',
+      lastActivityAt: iso(VISUAL_NOW - 20 * 60_000),
+      memberCount: null,
     },
     {
       subject: `user:${CLAIRE_ID}`,
@@ -107,6 +111,10 @@ export const ACCESS_DOC_SEED = {
       relation: 'editor',
       source: 'direct',
       revocable: true,
+      displayName: 'Claire Dubois',
+      initials: 'CD',
+      lastActivityAt: iso(VISUAL_NOW - 60 * 60_000),
+      memberCount: null,
     },
     {
       subject: `user:${YANIS_ID}`,
@@ -115,6 +123,10 @@ export const ACCESS_DOC_SEED = {
       relation: 'editor',
       source: 'direct',
       revocable: true,
+      displayName: 'Yanis M.',
+      initials: 'YM',
+      lastActivityAt: iso(VISUAL_NOW - 3 * 60 * 60_000),
+      memberCount: null,
     },
     {
       subject: `group:${TEAM_ID}`,
@@ -124,6 +136,10 @@ export const ACCESS_DOC_SEED = {
       source: 'inherited',
       inheritedFrom: `space:${SPACE_IDENTITE.id}`,
       revocable: false,
+      displayName: 'Équipe Identité & accès',
+      initials: '⬡',
+      lastActivityAt: null,
+      memberCount: 12,
     },
   ],
 }

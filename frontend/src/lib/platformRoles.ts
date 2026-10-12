@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
+import type { AxiosInstance } from 'axios'
 import { SocleRole, type SocleRoleName } from './auth'
 
 const LABELS: Record<SocleRoleName, string> = {
@@ -24,4 +25,12 @@ export function formatPlatformRoleLabels(roles: string[] | undefined): string {
 
 export function isPlatformAdmin(roles: string[] | undefined): boolean {
   return Boolean(roles?.includes(SocleRole.ADMINISTRATEUR_SYSTEME))
+}
+
+export async function grantPlatformRole(api: AxiosInstance, userId: string, role: string) {
+  await api.post('/api/v1/admin/platform-roles', { userId, role })
+}
+
+export async function revokePlatformRole(api: AxiosInstance, userId: string, role: string) {
+  await api.delete(`/api/v1/admin/platform-roles/${userId}/${role}`)
 }

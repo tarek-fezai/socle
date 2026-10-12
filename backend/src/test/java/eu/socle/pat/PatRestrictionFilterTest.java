@@ -48,6 +48,7 @@ class PatRestrictionFilterTest {
             "read,GET,/api/v1/%61dmin/overview,403,pat_not_allowed",
             "read,GET,/api/v1/me/tokens;jsessionid=x,403,pat_not_allowed",
             "read,GET,/api/v1/me,200,",
+            "read,GET,/api/v1/directory/users,200,",
             "read,GET,/api/v1/administration-like,200,"
     })
     void patRules(String scope, String method, String uri, int status, String code) throws Exception {

@@ -7,7 +7,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` / `RASTER_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash`, `create-space` |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` / `RASTER_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash`, `create-space`, `team` |
 | **Sections > 1 % (échec CI, pas de test.fail)** | — |
 
 ## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
@@ -21,7 +21,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 - `GET /api/v1/trash?spaceId=` (filtré OpenFGA) — backlog `TRASH-PER-SPACE`.
 - **SpaceSettings.dc.html** = arbre 420 px + paramètres 620 px ; `/spaces/:id` reprend cette mise en page. `NOT_IMPLEMENTED` : membres, archivage. `APP_EXTRA` (relecteur) : description, politique de commentaires, propriétaires, Enregistrer. Pas d’affichage d’UUID.
 - **CreateSpace.dc.html** = modale 480 px ouverte depuis `/spaces` (interaction Playwright). Le bouton × figure dans la maquette : comparé (`create-close`).
-- **Accès** : liste des personnes, « Inviter », onglets document → `NOT_IMPLEMENTED` (backlog `ACCESS-PEOPLE-PICKER`, prioritaire). Formulaire d’octroi conservé sans affichage d’UUID → `APP_EXTRA` provisoire.
+- **Accès** : liste des personnes, « Inviter », onglets document et encart corbeille sont livrés (annuaire nominatif). Plus de `ACCESS-PEOPLE-PICKER` / `access-grant-form`. Invitations e-mail = chantier B.
 
 ## Décisions produit
 
@@ -70,7 +70,8 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 
 13. **Export dossier / étiquette en ZIP** comme la maquette — PR suivante (`EXPORT-ZIP`). En attendant, download / format `NOT_IMPLEMENTED` ; libellés PDF inchangés.
 14. **Corbeille par espace** (maquette) **et** `/trash` globale conservée. Sans filtre `spaceId` API : vue d’espace `NOT_IMPLEMENTED` (`TRASH-PER-SPACE`).
-15. **Accès** : people picker / Inviter / onglets document `NOT_IMPLEMENTED` (`ACCESS-PEOPLE-PICKER`, prioritaire). Formulaire UUID conservé sans affichage d’UUID (`APP_EXTRA` provisoire).
+15. **Accès** : people picker / Inviter / onglets document livrés (annuaire). Plus de champ UUID. Invitations e-mail = chantier B (`TEAM-INVITATIONS`).
+20. **Référence de mesure = CI Linux** (`ubuntu-latest`). Les mesures locales Windows sont **indicatives**. Les gardes « exception inutile / inutilisée sur ce rasterizer » (`RASTER_EXCEPTIONS`, `SUBPIXEL_EXCEPTIONS`) ne s’évaluent **que lorsque `CI` est défini** : un ≤ 1 % Windows ne force pas le retrait d’une entrée encore nécessaire sur Linux.
 16. **Une section > seuil fait échouer la CI.** Interdit : `test.fail()`, `test.fixme()`, skip conditionnel pour rendre un écart « attendu ».
 17. **Trash.dc.html : « Supprimer définitivement » est un `<button type="button" class="perm-delete">`** (décision tf **2026-10-12**, artifact Design v144). Règle UA `.perm-delete` dans le `<helmet>` ; `serve-mockups.mjs` conserve ce helmet. Confirmation dans la page à la place de `window.confirm` : backlog, ne pas implémenter ici.
 18. **CreateSpace.dc.html : CTA restés `<a>`** (hypothèse `<a>` vs `<button>` réfutée : Approval.dc.html Approuver/Refuser sont des `<a>`, l’app passe ≤ 1 % en `<button>` à 14 px). Submit étiré à 37 px (rangée = cancel + bordure) : `display:flex; align-items:flex-start` pour caler le texte sous le padding haut (y=596), comme generate-token #68. Essais CTA : fond opaque, `appearance` UA, `font-smoothing: auto`, même tag `<a>` — Linux reste à 1,940 %.
@@ -176,8 +177,8 @@ RASTER_EXCEPTIONS[sectionId] = { maxPixel: 0.05, reason }
   2. styles calculés de police identiques (famille — premier nom —, taille, graisse,
      `letter-spacing`, `line-height`, couleur) ;
   3. aucun calque propre LayerTree des deux côtés (`ownLayers` vide).
-- Si la section ≤ 1 % sur **ce** rasterizer : succès, exception inutilisée (ne pas retirer tant qu’un autre OS dépasse 1 %).
-- Retirer l’entrée seulement quand Windows **et** Linux sont ≤ 1 %.
+- Si la section ≤ 1 % **sur CI Linux** : l’entrée est inutile → **échec**, la retirer.
+- En local (Windows) : ≤ 1 % avec une exception déclarée = succès indicatif ; la garde « inutile » n’est pas évaluée.
 
 | Section | Motif |
 |---|---|

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { api } from '../lib/api'
 import { SocleRole } from '../lib/auth'
+import { isPlatformAdmin } from '../lib/platformRoles'
 import { listNotifications } from '../lib/notifications'
 
 /** Navigation globale — barre haute alignée maquettes (logo indigo + onglets). */
@@ -40,9 +41,11 @@ export function AppNav() {
             <Link to="/spaces" className="text-socle-muted hover:text-socle-ink">
               Espaces
             </Link>
-            <Link to="/team" className="text-socle-muted hover:text-socle-ink">
-              Équipes
-            </Link>
+            {isPlatformAdmin(me?.roles) && (
+              <Link to="/admin/team" className="text-socle-muted hover:text-socle-ink">
+                Équipes
+              </Link>
+            )}
             <Link to="/approvals" className="text-socle-muted hover:text-socle-ink">
               Approbations
             </Link>

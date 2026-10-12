@@ -48,7 +48,7 @@ class AccessGroupValidationTest {
 
     @BeforeEach
     void setUp() {
-        controller = new AccessController(authorizationService, userSyncService, auditService, groupService, identityFacade);
+        controller = new AccessController(authorizationService, userSyncService, auditService, groupService, identityFacade, org.mockito.Mockito.mock(AccessDirectoryEnricher.class));
         when(userSyncService.syncFromJwt(any())).thenReturn(user(ACTOR));
         when(identityFacade.isSystemAdmin(any())).thenReturn(true);
     }

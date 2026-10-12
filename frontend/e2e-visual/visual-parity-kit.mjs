@@ -856,7 +856,13 @@ export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, raster
       const up = v.nearest ? ` ; amont ${sp.upstreamNotImplemented} bas ${v.nearest.bottom.toFixed(2)} (h ${v.nearest.h.toFixed(2)})` : ''
       const geoNote = `y maquette ${fy(g.mock)} / app ${fy(g.app)} ; |Δfrac| ${v.fracDelta?.toFixed(2) ?? 'n/a'} px${up}`
       if (ratio <= 0.01) {
-        return fail(`${name}: ${pct.toFixed(3)} % ≤ 1 % — SUBPIXEL_EXCEPTION inutile, retirer l'entrée (${geoNote})`)
+        if (process.env.CI) {
+          return fail(`${name}: ${pct.toFixed(3)} % ≤ 1 % — SUBPIXEL_EXCEPTION inutile, retirer l'entrée (${geoNote})`)
+        }
+        const line = `${name}: ${pct.toFixed(3)} % ≤ 1 % — SUBPIXEL inutilisée en local (garde CI Linux uniquement) — ${geoNote}`
+        console.log(line)
+        testInfo.annotations.push({ type: 'section-pixel', description: line })
+        return { name, pct, mock, app, ok: true, note: line, subpixel: { applied: false, unused: true } }
       }
       const limit = v.applied ? sp.maxPixel : 0.01
       const ok = ratio <= limit
@@ -877,7 +883,10 @@ export function compareSectionShots(sizeExceptions = {}, { subpixel = {}, raster
         return { name, pct, mock, app, ok: false, note: msg }
       }
       if (ratio <= 0.01) {
-        const line = `${name}: ${pct.toFixed(3)} % ≤ 1 % — RASTER_EXCEPTION inutilisée sur ce rasterizer (garder si un autre OS > 1 %)`
+        if (process.env.CI) {
+          return fail(`${name}: ${pct.toFixed(3)} % ≤ 1 % — RASTER_EXCEPTION inutile sur CI Linux, retirer l'entrée`)
+        }
+        const line = `${name}: ${pct.toFixed(3)} % ≤ 1 % — RASTER inutilisée en local (garde CI Linux uniquement)`
         console.log(line)
         testInfo.annotations.push({ type: 'section-pixel', description: line })
         return { name, pct, mock, app, ok: true, note: line, raster: { applied: false, unused: true } }

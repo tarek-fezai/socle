@@ -86,7 +86,8 @@ class DocumentVisibilityServiceTest {
                 jdbc,
                 null);
         accessController = new AccessController(
-                authorizationService, userSyncService, auditService, groupService, identityFacade);
+                authorizationService, userSyncService, auditService, groupService, identityFacade,
+                org.mockito.Mockito.mock(eu.socle.authz.AccessDirectoryEnricher.class));
         when(documentRepository.save(any())).thenAnswer(inv -> {
             DocumentEntity e = inv.getArgument(0);
             if (e.getId() == null) {

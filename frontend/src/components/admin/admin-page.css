@@ -138,6 +138,10 @@
   min-width: 0;
 }
 
+.admin-main--team {
+  padding: 36px 48px 0;
+}
+
 .admin-main--fields {
   padding: 36px 40px 0;
 }
@@ -181,6 +185,14 @@
   margin: 0;
   color: #0e0e10;
   flex-shrink: 0;
+}
+
+.admin-title--team {
+  display: inline-block;
+  margin: 0 0 6px;
+  line-height: normal;
+  white-space: nowrap;
+  font-family: 'Instrument Serif', serif !important;
 }
 
 .admin-lead {

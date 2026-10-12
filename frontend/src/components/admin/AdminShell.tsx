@@ -15,6 +15,7 @@ export type AdminNavKey =
   | 'licence'
   | 'audit'
   | 'integrations'
+  | 'team'
 
 type NavItem =
   | { kind: 'link'; key: AdminNavKey; label: string; to: string; mockId?: string }
@@ -30,7 +31,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/admin/branding',
     mockId: 'admin-nav-branding',
   },
-  { kind: 'placeholder', label: 'Membres & équipes', soon: true },
+  { kind: 'link', key: 'team', label: 'Membres & équipes', to: '/admin/team', mockId: 'admin-nav-team' },
   { kind: 'placeholder', label: 'Identités utilisateurs', soon: true },
   { kind: 'placeholder', label: 'Rôles globaux', soon: true },
   { kind: 'link', key: 'integrations', label: 'Intégrations & API', to: '/integrations' },

@@ -61,6 +61,7 @@ import {
   SPACE_OWNERS_SEED,
   TRASH_SEED,
 } from './parity-screens-fixtures.mjs'
+import { TEAM_ADMIN_USERS } from './team-fixtures.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const openapi = JSON.parse(readFileSync(resolve(root, 'openapi/openapi.json'), 'utf8'))
@@ -365,6 +366,10 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
     it('ACCESS_DOC_SEED matches AccessListResponse / AccessEntry', () => {
       validate('AccessListResponse', ACCESS_DOC_SEED)
       for (const e of ACCESS_DOC_SEED.entries ?? []) validate('AccessEntry', e)
+    })
+
+    it('TEAM_ADMIN_USERS matches AdminUsersResponse', () => {
+      validate('AdminUsersResponse', TEAM_ADMIN_USERS)
     })
 
     it('SPACE_IDENTITE_SETTINGS matches SpaceView', () => {

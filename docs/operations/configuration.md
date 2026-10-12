@@ -15,6 +15,22 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SPRING_DATASOURCE_USERNAME` | `socle` | yes (prod) | no | DB user |
 | `SPRING_DATASOURCE_PASSWORD` | `socle` | yes (prod) | **yes** | DB password |
 
+### Flyway V48 (`unaccent`)
+
+V48 exécute `CREATE EXTENSION IF NOT EXISTS unaccent` (recherche d’annuaire
+insensible aux accents). Le rôle JDBC doit avoir le droit **`CREATE EXTENSION`**.
+
+Sur une base **gérée** (RDS, Cloud SQL, Azure Database, etc.) l’utilisateur
+applicatif n’a souvent pas ce droit : un administrateur crée l’extension
+**avant** la mise à jour, avec un rôle privilégié :
+
+```sql
+CREATE EXTENSION IF NOT EXISTS unaccent;
+```
+
+Ensuite Flyway voit l’extension déjà présente (`IF NOT EXISTS`) et continue.
+Sans cela le démarrage s’arrête sur V48.
+
 ## OIDC (resource server & OAuth client)
 
 | Name | Default | Required | Secret | Description |
@@ -71,6 +87,7 @@ Legend: **Required** = must be set for production Compose (no safe default). **S
 | `SOCLE_LINK_PREVIEW_PROXY_URL` | empty | no | no | Optional outbound HTTP(S) proxy for **all** preview fetches (HTML page + thumbnail). When set, DNS for the target is performed by the proxy — **the proxy MUST deny RFC1918 / link-local / metadata / ULA / benchmarking (198.18/15) / class E / NAT64 / 6to4** (app-side SSRF still validates URL whitelist and ports) |
 | `SOCLE_LINK_PREVIEW_CACHE_TTL_HOURS` | `168` | no | no | Preview cache TTL (hours) |
 | `SOCLE_LINK_PREVIEW_RATE_LIMIT_PER_MINUTE` | `10` | no | no | Per-user preview fetch rate limit |
+| `SOCLE_DIRECTORY_RATE_LIMIT_PER_MINUTE` | `30` | no | no | Per-user `GET /api/v1/directory/users` rate limit (429 beyond) |
 
 ## Temporal
 

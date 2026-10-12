@@ -171,14 +171,14 @@ class AuthorizationServiceOpenFgaTest {
         UUID space = UUID.randomUUID();
         UUID group = UUID.randomUUID();
         authz.grantPermission("space", space, "editor", "group", group);
-        authz.grantPermission("group", group, "member", "user", GROUP_MEMBER);
+        authz.grantPermission("group", group, "contributeur", "user", GROUP_MEMBER);
 
         UUID doc = UUID.randomUUID();
         authz.provisionDocumentAccess(doc, space, CREATOR, "space");
 
         assertThat(authz.hasRelation(GROUP_MEMBER, "document", doc, "editor")).isTrue();
 
-        authz.revokePermission("group", group, "member", "user", GROUP_MEMBER);
+        authz.revokePermission("group", group, "contributeur", "user", GROUP_MEMBER);
         assertThat(authz.hasRelation(GROUP_MEMBER, "document", doc, "editor")).isFalse();
         assertThat(authz.hasRelation(GROUP_MEMBER, "document", doc, "viewer")).isFalse();
     }

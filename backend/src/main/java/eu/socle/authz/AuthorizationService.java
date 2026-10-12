@@ -16,6 +16,7 @@ import dev.openfga.sdk.api.client.model.ClientReadRequest;
 import dev.openfga.sdk.api.client.model.ClientTupleKey;
 import dev.openfga.sdk.api.client.model.ClientTupleKeyWithoutCondition;
 import dev.openfga.sdk.api.client.model.ClientWriteRequest;
+import dev.openfga.sdk.api.configuration.ClientReadOptions;
 import dev.openfga.sdk.api.configuration.ClientWriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -63,10 +65,15 @@ public class AuthorizationService {
             "organisation", "space", "folder", "document", "group"
     );
     private static final Set<String> RELATIONS = Set.of(
-            "owner", "editor", "viewer", "member", "parent", "inherit_from", RELATION_DIRECT_ACCESS
+            "owner", "editor", "viewer", "member",
+            "proprietaire", "approbateur", "contributeur", "lecteur",
+            "parent", "inherit_from", RELATION_DIRECT_ACCESS
     );
     private static final Set<String> STRUCTURAL_RELATIONS = Set.of("parent", "inherit_from");
     private static final Set<String> DIRECT_GRANT_RELATIONS = Set.of("owner", "editor", "viewer");
+    private static final Set<String> TEAM_ROLES = Set.of(
+            "proprietaire", "approbateur", "contributeur", "lecteur", "member"
+    );
 
     private final OpenFgaClient openFgaClient;
     private final JdbcTemplate jdbc;
@@ -345,6 +352,10 @@ public class AuthorizationService {
             UUID subjectId
     ) {
         validatePermissionArgs(objectType, relation, subjectType);
+        if ("group".equals(subjectType) && DIRECT_GRANT_RELATIONS.contains(relation)) {
+            writeAtomic(groupGrantWrites(objectType, objectId, relation, subjectId), List.of());
+            return;
+        }
         String subject = subjectKey(subjectType, subjectId, relation);
         String obj = objectType + ":" + objectId;
         List<ClientTupleKey> writes = new ArrayList<>();
@@ -363,6 +374,10 @@ public class AuthorizationService {
             UUID subjectId
     ) {
         validatePermissionArgs(objectType, relation, subjectType);
+        if ("group".equals(subjectType) && DIRECT_GRANT_RELATIONS.contains(relation)) {
+            writeAtomic(List.of(), groupGrantDeletes(objectType, objectId, relation, subjectId));
+            return;
+        }
         String subject = subjectKey(subjectType, subjectId, relation);
         String obj = objectType + ":" + objectId;
         List<ClientTupleKeyWithoutCondition> deletes = new ArrayList<>();
@@ -418,7 +433,104 @@ public class AuthorizationService {
             collectInherited(parentLink.user(), entries, new HashSet<>());
         }
 
-        return List.copyOf(entries);
+        return List.copyOf(collapseGroupGrants(entries));
+    }
+
+    /**
+     * Tuples d'un grant équipe ({@code docs/teams-and-access.md} § 1.3).
+     * Plus aucun {@code object#R@group#member}.
+     */
+    List<ClientTupleKey> groupGrantWrites(String objectType, UUID objectId, String relation, UUID groupId) {
+        return groupGrantWritesOn(objectType + ":" + objectId, objectType, relation, groupId);
+    }
+
+    List<ClientTupleKey> groupGrantWritesOn(String obj, String objectType, String relation, UUID groupId) {
+        String asViewer = "group:" + groupId + "#as_viewer";
+        String asEditor = "group:" + groupId + "#as_editor";
+        String asOwner = "group:" + groupId + "#as_owner";
+        List<ClientTupleKey> writes = new ArrayList<>();
+        writes.add(tuple(asViewer, "viewer", obj));
+        if ("editor".equals(relation) || "owner".equals(relation)) {
+            writes.add(tuple(asEditor, "editor", obj));
+        }
+        if ("owner".equals(relation)) {
+            writes.add(tuple(asOwner, "owner", obj));
+        }
+        if ("document".equals(objectType)) {
+            writes.add(tuple(asViewer, RELATION_DIRECT_ACCESS, obj));
+        }
+        return writes;
+    }
+
+    /**
+     * Réécrit un grant {@code group#member} vers {@code as_*} ({@code docs/teams-and-access.md} § 1.4).
+     */
+    void rewriteLegacyGroupMemberGrant(String objectType, UUID objectId, String relation, UUID groupId) {
+        rewriteLegacyGroupMemberGrantOn(objectType + ":" + objectId, objectType, relation, groupId);
+    }
+
+    void rewriteLegacyGroupMemberGrantOn(String obj, String objectType, String relation, UUID groupId) {
+        String legacy = "group:" + groupId + "#member";
+        List<ClientTupleKeyWithoutCondition> deletes = new ArrayList<>();
+        deletes.add(deleteKey(legacy, relation, obj));
+        if ("document".equals(objectType)) {
+            deletes.add(deleteKey(legacy, RELATION_DIRECT_ACCESS, obj));
+        }
+        if (RELATION_DIRECT_ACCESS.equals(relation)) {
+            writeAtomic(
+                    List.of(tuple("group:" + groupId + "#as_viewer", RELATION_DIRECT_ACCESS, obj)),
+                    deletes);
+            return;
+        }
+        writeAtomic(groupGrantWritesOn(obj, objectType, relation, groupId), deletes);
+    }
+
+    /**
+     * {@code group:X#member@user:Y} → {@code group:X#{rôle}@user:Y}, puis suppression du tuple {@code member}.
+     */
+    void rewriteLegacyGroupMemberUser(UUID groupId, UUID userId, String sqlRole) {
+        String role = normalizeTeamRole(sqlRole);
+        writeAtomic(
+                List.of(tuple(user(userId), role, "group:" + groupId)),
+                List.of(deleteKey(user(userId), "member", "group:" + groupId)));
+    }
+
+    void deleteLegacyGroupMemberUser(UUID groupId, UUID userId) {
+        writeAtomic(List.of(), List.of(deleteKey(user(userId), "member", "group:" + groupId)));
+    }
+
+    private static String normalizeTeamRole(String sqlRole) {
+        if ("proprietaire".equals(sqlRole)
+                || "approbateur".equals(sqlRole)
+                || "contributeur".equals(sqlRole)
+                || "lecteur".equals(sqlRole)) {
+            return sqlRole;
+        }
+        return "contributeur";
+    }
+
+    List<ClientTupleKeyWithoutCondition> groupGrantDeletes(
+            String objectType, UUID objectId, String relation, UUID groupId
+    ) {
+        String obj = objectType + ":" + objectId;
+        String asViewer = "group:" + groupId + "#as_viewer";
+        String asEditor = "group:" + groupId + "#as_editor";
+        String asOwner = "group:" + groupId + "#as_owner";
+        String legacy = "group:" + groupId + "#member";
+        List<ClientTupleKeyWithoutCondition> deletes = new ArrayList<>();
+        deletes.add(deleteKey(asViewer, "viewer", obj));
+        if ("editor".equals(relation) || "owner".equals(relation)) {
+            deletes.add(deleteKey(asEditor, "editor", obj));
+        }
+        if ("owner".equals(relation)) {
+            deletes.add(deleteKey(asOwner, "owner", obj));
+        }
+        deletes.add(deleteKey(legacy, relation, obj));
+        if ("document".equals(objectType)) {
+            deletes.add(deleteKey(asViewer, RELATION_DIRECT_ACCESS, obj));
+            deletes.add(deleteKey(legacy, RELATION_DIRECT_ACCESS, obj));
+        }
+        return deletes;
     }
 
     /**
@@ -1052,16 +1164,60 @@ public class AuthorizationService {
     List<AccessTuple> readTuples(String object) {
         try {
             var response = openFgaClient.read(new ClientReadRequest()._object(object)).join();
-            return response.getTuples().stream()
-                    .map(t -> {
-                        var key = t.getKey();
-                        return new AccessTuple(key.getUser(), key.getRelation(), key.getObject());
-                    })
-                    .toList();
+            return mapReadTuples(response.getTuples());
         } catch (Exception e) {
             log.error("OpenFGA read failed for {}", object, e);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible");
         }
+    }
+
+    /**
+     * Read FGA paginé de tout le store. OpenFGA 1.8 refuse {@code object="type:"}
+     * (id vide et user vide) — on filtre ensuite par type côté client.
+     */
+    List<AccessTuple> readAllTuplesPaged() {
+        List<AccessTuple> all = new ArrayList<>();
+        String token = null;
+        int pages = 0;
+        try {
+            do {
+                ClientReadOptions opts = new ClientReadOptions().pageSize(100);
+                if (token != null && !token.isBlank()) {
+                    opts = opts.continuationToken(token);
+                }
+                var response = openFgaClient.read(new ClientReadRequest(), opts).join();
+                all.addAll(mapReadTuples(response.getTuples()));
+                token = response.getContinuationToken();
+                pages++;
+            } while (token != null && !token.isBlank() && pages < 10_000);
+        } catch (Exception e) {
+            log.error("OpenFGA read-all failed", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "OpenFGA indisponible");
+        }
+        return all;
+    }
+
+    List<AccessTuple> readTuplesByObjectType(String objectType) {
+        String prefix = objectType + ":";
+        List<AccessTuple> out = new ArrayList<>();
+        for (AccessTuple t : readAllTuplesPaged()) {
+            if (t.object() != null && t.object().startsWith(prefix)) {
+                out.add(t);
+            }
+        }
+        return out;
+    }
+
+    private static List<AccessTuple> mapReadTuples(List<dev.openfga.sdk.api.model.Tuple> tuples) {
+        if (tuples == null) {
+            return List.of();
+        }
+        List<AccessTuple> out = new ArrayList<>(tuples.size());
+        for (var t : tuples) {
+            var key = t.getKey();
+            out.add(new AccessTuple(key.getUser(), key.getRelation(), key.getObject()));
+        }
+        return out;
     }
 
     private void validatePermissionArgs(String objectType, String relation, String subjectType) {
@@ -1076,11 +1232,19 @@ public class AuthorizationService {
         if (!"user".equals(subjectType) && !"group".equals(subjectType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "subjectType invalide (user|group)");
         }
-        if ("group".equals(objectType) && !"member".equals(relation)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "groupe: seule relation member");
+        if ("group".equals(objectType)) {
+            if (!TEAM_ROLES.contains(relation)) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "groupe: rôle d'équipe (proprietaire|approbateur|contributeur|lecteur) ou member");
+            }
+            if (!"user".equals(subjectType)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "rôle d'équipe : subjectType=user");
+            }
+            return;
         }
-        if (!"group".equals(objectType) && "member".equals(relation)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "member réservé aux groupes");
+        if (TEAM_ROLES.contains(relation)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "rôle d'équipe réservé aux groupes");
         }
         if ("group".equals(subjectType) && "member".equals(relation)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "member ne prend que subjectType=user");
@@ -1244,10 +1408,43 @@ public class AuthorizationService {
     }
 
     private static String classifyDirect(String fgaUser) {
-        if (fgaUser != null && fgaUser.startsWith("group:") && fgaUser.contains("#member")) {
+        if (fgaUser != null && fgaUser.startsWith("group:") && fgaUser.contains("#")) {
             return "group";
         }
         return "direct";
+    }
+
+    /** Un grant équipe produit plusieurs tuples (as_owner / as_editor / as_viewer) — une entrée affichée. */
+    static List<AccessEntry> collapseGroupGrants(List<AccessEntry> entries) {
+        Map<String, AccessEntry> best = new LinkedHashMap<>();
+        List<AccessEntry> others = new ArrayList<>();
+        for (AccessEntry e : entries) {
+            if (!"group".equals(e.subjectType()) || e.subjectId() == null) {
+                others.add(e);
+                continue;
+            }
+            String key = e.subjectId() + "|" + e.source() + "|" + String.valueOf(e.inheritedFrom());
+            AccessEntry prev = best.get(key);
+            if (prev == null || relationRank(e.relation()) > relationRank(prev.relation())) {
+                best.put(key, e);
+            }
+        }
+        List<AccessEntry> out = new ArrayList<>(others);
+        out.addAll(best.values());
+        return out;
+    }
+
+    private static int relationRank(String relation) {
+        if ("owner".equals(relation)) {
+            return 3;
+        }
+        if ("editor".equals(relation)) {
+            return 2;
+        }
+        if ("viewer".equals(relation)) {
+            return 1;
+        }
+        return 0;
     }
 
     private static AccessEntry toEntry(AccessTuple t, String source, String inheritedFrom, boolean revocable) {

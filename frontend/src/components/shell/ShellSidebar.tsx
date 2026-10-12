@@ -10,6 +10,8 @@ import {
   saveExpandedSpaces,
   searchShortcutLabel,
 } from './shellUtils'
+import { useAuth } from '../../auth/AuthProvider'
+import { isPlatformAdmin } from '../../lib/platformRoles'
 import { ShellUserMenu } from './ShellUserMenu'
 import {
   useBrandingAccent,
@@ -54,6 +56,8 @@ const iconTeam = (
 
 export function ShellSidebar({ onOpenSearch }: Props) {
   const location = useLocation()
+  const { me } = useAuth()
+  const admin = isPlatformAdmin(me?.roles)
   const [expanded, setExpanded] = useState<Set<string>>(() => loadExpandedSpaces())
   const [kbd, setKbd] = useState('⌘K')
 
@@ -149,14 +153,16 @@ export function ShellSidebar({ onOpenSearch }: Props) {
         Tous les espaces
       </Link>
 
-      <Link
-        to="/team"
-        className={`shell-nav-item${path.startsWith('/team') ? ' active' : ''}`}
-        data-mock-id="shell-nav-team"
-      >
-        {iconTeam}
-        Membres &amp; équipes
-      </Link>
+      {admin && (
+        <Link
+          to="/admin/team"
+          className={`shell-nav-item${path.startsWith('/admin/team') || path === '/team' ? ' active' : ''}`}
+          data-mock-id="shell-nav-team"
+        >
+          {iconTeam}
+          Membres &amp; équipes
+        </Link>
+      )}
 
       <div className="shell-tree" data-mock-id="shell-tree">
         {spaceList.map((space, idx) => {

@@ -3,33 +3,41 @@ model
 
 type user
 
-# Accès via groupe hérité (Access.dc.html / Team.dc.html)
+# Équipes — rôles (docs/teams-and-access.md)
 type group
   relations
-    define member: [user]
+    define proprietaire: [user]
+    define approbateur: [user]
+    define contributeur: [user]
+    define lecteur: [user]
+    define member: proprietaire or approbateur or contributeur or lecteur
+    define as_owner: proprietaire
+    define as_editor: proprietaire or approbateur or contributeur
+    define as_viewer: proprietaire or approbateur or contributeur or lecteur
+    define as_approver: proprietaire or approbateur
 
 type organisation
   relations
-    define owner: [user, group#member]
-    define editor: [user, group#member] or owner
-    define viewer: [user, group#member] or editor
+    define owner: [user, group#as_owner]
+    define editor: [user, group#as_editor] or owner
+    define viewer: [user, group#as_viewer] or editor
 
 # Cascade organisation → space ; accès direct + groupe + héritage parent
 type space
   relations
     define parent: [organisation]
-    define owner: [user, group#member] or owner from parent
-    define editor: [user, group#member] or owner or editor from parent
-    define viewer: [user, group#member] or editor or viewer from parent
+    define owner: [user, group#as_owner] or owner from parent
+    define editor: [user, group#as_editor] or owner or editor from parent
+    define viewer: [user, group#as_viewer] or editor or viewer from parent
 
 # parent = gouvernance (owner) ; inherit_from = lecture/écriture héritée
 type folder
   relations
     define parent: [space, folder]
     define inherit_from: [space, folder]
-    define owner: [user, group#member] or owner from parent
-    define editor: [user, group#member] or owner or editor from inherit_from
-    define viewer: [user, user:*, group#member] or editor or viewer from inherit_from
+    define owner: [user, group#as_owner] or owner from parent
+    define editor: [user, group#as_editor] or owner or editor from inherit_from
+    define viewer: [user, user:*, group#as_viewer] or editor or viewer from inherit_from
 
 # parent = gouvernance (owner from parent)
 # inherit_from = editor/viewer hérités (organisation|space ; absent si restricted)
@@ -39,7 +47,7 @@ type document
   relations
     define parent: [space, folder]
     define inherit_from: [space, folder]
-    define direct_access: [user, group#member]
-    define owner: [user, group#member] or owner from parent
-    define editor: [user, group#member] or owner or editor from inherit_from
-    define viewer: [user, user:*, group#member] or editor or viewer from inherit_from
+    define direct_access: [user, group#as_viewer]
+    define owner: [user, group#as_owner] or owner from parent
+    define editor: [user, group#as_editor] or owner or editor from inherit_from
+    define viewer: [user, user:*, group#as_viewer] or editor or viewer from inherit_from

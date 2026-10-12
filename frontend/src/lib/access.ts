@@ -11,6 +11,10 @@ export type AccessEntry = {
   source: AccessSource
   inheritedFrom: string | null
   revocable: boolean
+  displayName?: string | null
+  initials?: string | null
+  lastActivityAt?: string | null
+  memberCount?: number | null
 }
 
 export type AccessListResponse = {

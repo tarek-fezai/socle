@@ -80,7 +80,8 @@ class GroupServiceAuthorizationTest {
         jdbc = new JdbcTemplate(ds);
         jdbc.execute("""
                 CREATE TABLE users (
-                  id UUID PRIMARY KEY, email TEXT NOT NULL, display_name TEXT NOT NULL, status TEXT NOT NULL
+                  id UUID PRIMARY KEY, email TEXT NOT NULL, display_name TEXT NOT NULL,
+                  status TEXT NOT NULL, avatar_initials TEXT
                 )
                 """);
         jdbc.execute("""
@@ -92,6 +93,7 @@ class GroupServiceAuthorizationTest {
                 CREATE TABLE group_members (
                   group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
                   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                  role TEXT NOT NULL DEFAULT 'contributeur',
                   PRIMARY KEY (group_id, user_id)
                 )
                 """);
@@ -116,13 +118,33 @@ class GroupServiceAuthorizationTest {
     }
 
     @Test
-    void nonCreator_cannotAddMember_403() {
+    void nonOwner_cannotAddMember_403() {
         when(userSyncService.syncFromJwt(jwt(OTHER))).thenReturn(user(OTHER));
         assertThatThrownBy(() -> service.addMember(
                 jwt(OTHER), groupId, new AddMemberRequest(MEMBER)))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void lastOwner_cannotBeRemoved_409() {
+        assertThatThrownBy(() -> service.removeMember(jwt(CREATOR), groupId, CREATOR))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException rse = (ResponseStatusException) ex;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(rse.getReason()).contains(GroupService.LAST_TEAM_OWNER);
+                });
+    }
+
+    @Test
+    void lastOwner_cannotBeDemoted_409() {
+        assertThatThrownBy(() -> service.updateMemberRole(
+                jwt(CREATOR), groupId, CREATOR, new eu.socle.team.GroupDtos.UpdateMemberRoleRequest("lecteur")))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.CONFLICT));
     }
 
     private static UserEntity user(UUID id) {
