@@ -16,7 +16,9 @@ import {
   compareSectionShots,
   finishPixelResults,
   injectOidcSession,
+  probeAncestorStack,
   probeCompositionLayers,
+  probeCompositingReasons,
   probeRasterProps,
   reportNotImplemented,
   settleFonts,
@@ -59,6 +61,15 @@ test.describe('create-space visual', () => {
       ['[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]', '[data-mock-id="create-modal"]'],
       'create-space-mock',
     )
+    await probeCompositingReasons(
+      page,
+      ['[data-mock-id="create-modal"]', '[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]'],
+      'create-space-mock',
+    )
+    await probeAncestorStack(page, '[data-mock-id="create-modal"]', 'create-space-mock')
+    await probeAncestorStack(page, '[data-mock-id="create-title"]', 'create-space-mock')
+    await probeAncestorStack(page, '[data-mock-id="create-submit"]', 'create-space-mock')
+    await probeAncestorStack(page, '[data-mock-id="create-cancel"]', 'create-space-mock')
     await reportNotImplemented(page, testInfo, NOT_IMPLEMENTED, 'create-space')
 
     const mockSec = {}
@@ -85,6 +96,15 @@ test.describe('create-space visual', () => {
       ['[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]', '[data-mock-id="create-modal"]'],
       'create-space-app',
     )
+    await probeCompositingReasons(
+      page,
+      ['[data-mock-id="create-modal"]', '[data-mock-id="create-title"]', '[data-mock-id="create-submit"]', '[data-mock-id="create-cancel"]'],
+      'create-space-app',
+    )
+    await probeAncestorStack(page, '[data-mock-id="create-modal"]', 'create-space-app')
+    await probeAncestorStack(page, '[data-mock-id="create-title"]', 'create-space-app')
+    await probeAncestorStack(page, '[data-mock-id="create-submit"]', 'create-space-app')
+    await probeAncestorStack(page, '[data-mock-id="create-cancel"]', 'create-space-app')
     await assertNotImplementedGuards(page, NOT_IMPLEMENTED, 'create-space')
 
     const compare = compareSectionShots(SIZE_EXCEPTIONS)

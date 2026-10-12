@@ -44,6 +44,8 @@ const KEEP_HELMET_STYLES = new Set([
   'Branding.dc.html',
   'Admin.dc.html',
   'Account.dc.html',
+  // .perm-delete { appearance: none; … } — sinon le bouton UA déplace trash-delete
+  'Trash.dc.html',
 ])
 
 function helmetStyles(rawHtml) {

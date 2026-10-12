@@ -177,6 +177,126 @@ export async function probeRasterProps(page, selectors, side) {
 }
 
 /**
+ * CDP LayerTree : calques et raisons de composition pour chaque sélecteur.
+ * @param {import('@playwright/test').Page} page
+ * @param {string[]} selectors
+ * @param {string} side
+ */
+export async function probeCompositingReasons(page, selectors, side) {
+  const client = await page.context().newCDPSession(page)
+  await client.send('DOM.enable')
+  let layers = []
+  const onTree = (e) => {
+    if (Array.isArray(e.layers)) layers = e.layers
+  }
+  client.on('LayerTree.layerTreeDidChange', onTree)
+  await client.send('LayerTree.enable')
+  await page.evaluate(() => document.body.getBoundingClientRect())
+  await page.waitForTimeout(80)
+
+  const { root } = await client.send('DOM.getDocument', { depth: 0, pierce: true })
+  const out = {}
+  for (const sel of selectors) {
+    const { nodeId } = await client.send('DOM.querySelector', {
+      nodeId: root.nodeId,
+      selector: sel,
+    })
+    if (!nodeId) {
+      out[sel] = 'MISSING'
+      continue
+    }
+    const { node } = await client.send('DOM.describeNode', { nodeId })
+    const backendNodeId = node.backendNodeId
+    const own = layers.filter((l) => l.backendNodeId === backendNodeId)
+    const ownLayers = []
+    for (const l of own) {
+      const r = await client.send('LayerTree.compositingReasons', { layerId: l.layerId })
+      ownLayers.push({
+        layerId: l.layerId,
+        parentLayerId: l.parentLayerId || '',
+        w: l.width,
+        h: l.height,
+        reasons: r.compositingReasons,
+        ids: r.compositingReasonIds,
+      })
+    }
+    let paintsInto = null
+    if (!ownLayers.length) {
+      const elBox = await page.locator(sel).first().boundingBox()
+      const hit =
+        elBox &&
+        layers.find(
+          (l) =>
+            elBox.x >= l.offsetX - 1 &&
+            elBox.y >= l.offsetY - 1 &&
+            elBox.x + elBox.width <= l.offsetX + l.width + 1 &&
+            elBox.y + elBox.height <= l.offsetY + l.height + 1 &&
+            l.backendNodeId,
+        )
+      if (hit) {
+        const r = await client.send('LayerTree.compositingReasons', { layerId: hit.layerId })
+        paintsInto = {
+          layerId: hit.layerId,
+          backendNodeId: hit.backendNodeId,
+          w: hit.width,
+          h: hit.height,
+          reasons: r.compositingReasons,
+          ids: r.compositingReasonIds,
+        }
+      }
+    }
+    out[sel] = { backendNodeId, ownLayers, paintsInto }
+  }
+  console.log(`CDP_LAYERS ${side}: ${JSON.stringify(out)}`)
+  client.off('LayerTree.layerTreeDidChange', onTree)
+  await client.send('LayerTree.disable')
+  await client.detach()
+  return out
+}
+
+/**
+ * Chaîne d'ancêtres : position / transform / opacity / filter / will-change / contain /
+ * isolation / overflow + getBoundingClientRect au 1/100 px.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} selector
+ * @param {string} side
+ */
+export async function probeAncestorStack(page, selector, side) {
+  const stack = await page.evaluate((sel) => {
+    const el = document.querySelector(sel)
+    if (!el) return 'MISSING'
+    const rows = []
+    let n = el
+    let depth = 0
+    while (n && n.nodeType === 1 && depth < 28) {
+      const cs = getComputedStyle(n)
+      const r = n.getBoundingClientRect()
+      rows.push({
+        depth,
+        tag: n.tagName.toLowerCase(),
+        mockId: n.getAttribute('data-mock-id') || '',
+        position: cs.position,
+        transform: cs.transform,
+        opacity: cs.opacity,
+        filter: cs.filter,
+        backdropFilter: cs.backdropFilter || cs.webkitBackdropFilter || 'none',
+        willChange: cs.willChange,
+        contain: cs.contain,
+        isolation: cs.isolation,
+        overflow: `${cs.overflowX}/${cs.overflowY}`,
+        x: Number(r.x.toFixed(2)),
+        y: Number(r.y.toFixed(2)),
+      })
+      n = n.parentElement
+      depth++
+    }
+    return rows
+  }, selector)
+  console.log(`ANCESTORS ${side} ${selector}: ${JSON.stringify(stack)}`)
+  return stack
+}
+
+/**
  * Routes communes du shell (config OIDC, branding, /me, cloche notifications, arbres d'espaces vides).
  * À appeler AVANT les routes propres à l'écran (Playwright applique la dernière enregistrée en premier).
  */

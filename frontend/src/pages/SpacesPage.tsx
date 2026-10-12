@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { FormEvent, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
@@ -97,8 +98,26 @@ export function SpacesPage() {
         {stats}
       </p>
 
-      {formOpen && (
-        <div className="fixed inset-0 z-50">
+      {formOpen &&
+        createPortal(
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: 1440,
+              height: 900,
+              zIndex: 50,
+            }}
+          >
+            <div
+              style={{
+                position: 'relative',
+                width: 1440,
+                height: 900,
+                overflow: 'hidden',
+              }}
+            >
           <button
             type="button"
             className="absolute inset-0 bg-[rgba(14,14,16,0.45)]"
@@ -111,8 +130,6 @@ export function SpacesPage() {
             style={{
               left: '50%',
               transform: 'translateX(-50%)',
-              WebkitFontSmoothing: 'auto',
-              textRendering: 'auto',
             }}
           >
           <form
@@ -243,7 +260,26 @@ export function SpacesPage() {
                 type="button"
                 data-mock-id="create-cancel"
                 onClick={() => setFormOpen(false)}
-                className="appearance-none rounded-[7px] border border-socle-line bg-white px-4 py-[9px] text-[13px] font-medium leading-[normal] text-[#43434A] hover:bg-[#F5F5F7]"
+                className="hover:bg-[#F5F5F7]"
+                style={{
+                  all: 'unset',
+                  appearance: 'none',
+                  display: 'inline',
+                  boxSizing: 'content-box',
+                  padding: '9px 16px',
+                  margin: 0,
+                  borderRadius: 7,
+                  border: '1px solid #ECECEE',
+                  background: '#FFFFFF',
+                  color: '#43434A',
+                  font: 'inherit',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  lineHeight: 'inherit',
+                  letterSpacing: 'inherit',
+                  textAlign: 'inherit',
+                  cursor: 'pointer',
+                }}
               >
                 Annuler
               </button>
@@ -251,15 +287,36 @@ export function SpacesPage() {
                 type="submit"
                 data-mock-id="create-submit"
                 disabled={create.isPending}
-                className="appearance-none rounded-[7px] border-0 bg-socle-accent px-5 py-[9px] text-[13px] font-semibold leading-[normal] text-white hover:bg-[#2C27C7] disabled:opacity-50"
+                className="hover:bg-[#2C27C7] disabled:opacity-50"
+                style={{
+                  all: 'unset',
+                  appearance: 'none',
+                  display: 'inline',
+                  boxSizing: 'content-box',
+                  padding: '9px 20px',
+                  margin: 0,
+                  borderRadius: 7,
+                  border: 0,
+                  background: '#3730E0',
+                  color: '#FFFFFF',
+                  font: 'inherit',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  lineHeight: 'inherit',
+                  letterSpacing: 'inherit',
+                  textAlign: 'inherit',
+                  cursor: 'pointer',
+                }}
               >
                 {create.isPending ? 'Création…' : "Créer l'espace"}
               </button>
             </div>
           </form>
           </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body,
+        )}
       {error && <p className="mb-4 text-sm text-socle-danger">{error}</p>}
 
       {spaces.isLoading && <p className="text-sm text-socle-muted">Chargement…</p>}

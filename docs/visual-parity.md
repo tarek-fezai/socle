@@ -7,8 +7,8 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 
 | État | Specs |
 | --- | --- |
-| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings` |
-| **Sections > 1 % (échec CI, pas de test.fail)** | `create-space` title 4.674 % / submit 5.577 % / cancel 3.164 % — AA LCD vs niveaux de gris sur la couche `translateX(-50%)` (transform / will-change / font-smoothing / text-rendering identiques des deux côtés) ; `trash` delete 8.067 % — `<button type="button">` vs `<a>` maquette (géométrie identique, même AA LCD) |
+| **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash` |
+| **Sections > 1 % (échec CI, pas de test.fail)** | `create-space` submit 5.577 % / cancel 3.164 % — `<button>` app vs `<a>` maquette (CDP : aucun calque propre ; titre 0 % après retrait de l’ancêtre `position:fixed`) |
 
 ## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
 
@@ -72,6 +72,7 @@ Les specs y renvoient par leur numéro (`DP-2026-10-11 #n`).
 14. **Corbeille par espace** (maquette) **et** `/trash` globale conservée. Sans filtre `spaceId` API : vue d’espace `NOT_IMPLEMENTED` (`TRASH-PER-SPACE`).
 15. **Accès** : people picker / Inviter / onglets document `NOT_IMPLEMENTED` (`ACCESS-PEOPLE-PICKER`, prioritaire). Formulaire UUID conservé sans affichage d’UUID (`APP_EXTRA` provisoire).
 16. **Une section > seuil fait échouer la CI.** Interdit : `test.fail()`, `test.fixme()`, skip conditionnel pour rendre un écart « attendu ».
+17. **Trash.dc.html : « Supprimer définitivement » est un `<button type="button" class="perm-delete">`** (décision tf **2026-10-12**, artifact Design v144). Règle UA `.perm-delete` dans le `<helmet>` ; `serve-mockups.mjs` conserve ce helmet. Confirmation dans la page à la place de `window.confirm` : backlog, ne pas implémenter ici.
 
 ## Comparaison
 
