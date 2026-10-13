@@ -54,6 +54,7 @@ Sans cela le démarrage s’arrête sur V48.
 |------|---------|----------|--------|-------------|
 | `SOCLE_INVITE_PEPPER` | empty | **yes** (all non-`dev`/`local` profiles) | **yes** | Dedicated HMAC-SHA256 pepper for invitation tokens, ≥ 32 bytes (`openssl rand -base64 48`). Distinct from `SOCLE_PAT_PEPPER`. Startup is refused when absent or shorter; `dev`/`local` fall back to an ephemeral pepper (pending invites die on restart). Helm: `secrets.invitePepper` (required) or key `SOCLE_INVITE_PEPPER` in `backend.existingSecret`. |
 | `SOCLE_INVITE_TRUSTED_ISSUERS` | empty | no | no | Extra JWT issuers allowed at accept, comma-separated, in addition to `OIDC_ISSUER_URI`. |
+| `socle.invite.default-ttl-days` | `14` | no | no | Lifetime of a new invitation. Ceiling stays 30 days (`max-ttl-days` and the V49 SQL check). The members table footer shows this duration from `expiresAt − createdAt`. |
 
 ## SMTP (`socle.smtp`)
 

@@ -55,7 +55,7 @@ public record InviteProperties(
     }
 
     public int ttlDays() {
-        int d = defaultTtlDays <= 0 ? 7 : defaultTtlDays;
+        int d = defaultTtlDays <= 0 ? 14 : defaultTtlDays;
         int max = maxTtlDays <= 0 ? 30 : maxTtlDays;
         return Math.min(d, max);
     }

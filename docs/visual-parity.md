@@ -22,7 +22,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 - **SpaceSettings.dc.html** = arbre 420 px + paramètres 620 px ; `/spaces/:id` reprend cette mise en page. `NOT_IMPLEMENTED` : membres, archivage. `APP_EXTRA` (relecteur) : description, politique de commentaires, propriétaires, Enregistrer. Pas d’affichage d’UUID.
 - **CreateSpace.dc.html** = modale 480 px ouverte depuis `/spaces` (interaction Playwright). Le bouton × figure dans la maquette : comparé (`create-close`).
 - **Accès** : liste des personnes, « Inviter », onglets document et encart corbeille sont livrés (annuaire nominatif). Plus de `ACCESS-PEOPLE-PICKER` / `access-grant-form`.
-- **Invitations** : `TeamInvitations.dc.html` → `/admin/team` onglet Invitations ; `InviteOrgMember.dc.html` → modal « + Inviter un membre ». Voir `docs/invitations.md`. Titre / Annuler / Envoyer du modal : lissage LCD maquette vs `:root antialiased` (8 % / 3–4 %, au-dessus du plafond raster 5 % pour le titre) — libellés comparés.
+- **Invitations** : `TeamInvitations.dc.html` → `/admin/team` onglet Invitations ; `InviteOrgMember.dc.html` → modal « + Inviter un membre ». Voir `docs/invitations.md`. La modale partage `CanvasModal` avec CreateSpace (portail dans le canvas 1440×900, aucun ancêtre `position: fixed`, centrage `left: 50%` + `translateX(-50%)`, texte des CTA calé comme CreateSpace). Titre, Annuler, Envoyer et les six lignes du tableau sont comparés. Actions de ligne : `<button type="button">` (maquette v146, comme la corbeille). Le spec journalise l’effet de retirer `-webkit-font-smoothing: antialiased` de `:root` (`font-smoothing`).
 
 ## Décisions produit
 

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { FormEvent, useState } from 'react'
+import { FormEvent, useState, type CSSProperties } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AdminShell } from '../components/admin/AdminShell'
+import { CanvasModal } from '../components/CanvasModal'
 import { PeoplePicker, type PickerValue } from '../components/PeoplePicker'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/apiError'
@@ -29,6 +30,38 @@ import {
 import { useBrandingInstanceName } from '../lib/publicBranding'
 
 type Tab = 'membres' | 'equipes' | 'invitations'
+
+const INVITE_TTL_DAYS_DEFAULT = 14
+
+function invitationTtlDays(rows: InvitationView[]): number {
+  for (const row of rows) {
+    const created = Date.parse(row.createdAt)
+    const expires = Date.parse(row.expiresAt)
+    if (!Number.isFinite(created) || !Number.isFinite(expires)) continue
+    const days = Math.round((expires - created) / 86_400_000)
+    if (days >= 1 && days <= 30) return days
+  }
+  return INVITE_TTL_DAYS_DEFAULT
+}
+
+function inviteRowActionStyle(color: string): CSSProperties {
+  return {
+    appearance: 'none',
+    background: 'none',
+    border: 0,
+    margin: 0,
+    padding: '6px 10px',
+    borderRadius: 6,
+    font: 'inherit',
+    fontSize: 12,
+    fontWeight: 600,
+    lineHeight: 'inherit',
+    letterSpacing: 'inherit',
+    textAlign: 'inherit',
+    color,
+    cursor: 'pointer',
+  }
+}
 
 function teamRoleLabel(role?: string) {
   if (role === 'proprietaire') return 'Propriétaire'
@@ -477,6 +510,7 @@ function InvitationsTab() {
   const [error, setError] = useState<string | null>(null)
   const page = useQuery({ queryKey: invitationsKey(), queryFn: () => listInvitations(api) })
   const n = page.data?.length ?? 0
+  const ttlDays = invitationTtlDays(page.data ?? [])
 
   const resend = useMutation({
     mutationFn: (id: string) => resendInvitation(api, id),
@@ -523,7 +557,7 @@ function InvitationsTab() {
           <div
             key={row.id}
             className="flex items-center"
-            data-mock-id={i === 0 ? 'invitations-row' : undefined}
+            data-mock-id={`invitations-row-${i}`}
             style={{
               height: 51,
               padding: '11px 16px',
@@ -558,53 +592,31 @@ function InvitationsTab() {
               {formatInvitationSentFr(row.lastSentAt)}
             </div>
             <div className="flex w-[190px] shrink-0 justify-end gap-1.5">
-              <span
+              <button
+                type="button"
                 className="resend"
-                role="button"
-                tabIndex={0}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#3730E0',
-                  padding: '6px 10px',
-                  borderRadius: 6,
-                }}
-                onClick={() => {
-                  if (!resend.isPending) resend.mutate(row.id)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !resend.isPending) resend.mutate(row.id)
-                }}
+                disabled={resend.isPending && resend.variables === row.id}
+                style={inviteRowActionStyle('#3730E0')}
+                onClick={() => resend.mutate(row.id)}
               >
                 Renvoyer
-              </span>
-              <span
+              </button>
+              <button
+                type="button"
                 className="cancel"
-                role="button"
-                tabIndex={0}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#B54708',
-                  padding: '6px 10px',
-                  borderRadius: 6,
-                }}
-                onClick={() => {
-                  if (!revoke.isPending) revoke.mutate(row.id)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !revoke.isPending) revoke.mutate(row.id)
-                }}
+                disabled={revoke.isPending && revoke.variables === row.id}
+                style={inviteRowActionStyle('#B54708')}
+                onClick={() => revoke.mutate(row.id)}
               >
                 Annuler
-              </span>
+              </button>
             </div>
           </div>
         ))}
       </div>
       <p className="mt-3.5 text-[12.5px] text-[#9B9BA1]">
-        {n} invitation{n > 1 ? 's' : ''} sur {n} · les invitations expirent après 7 jours sans
-        réponse
+        {n} invitation{n > 1 ? 's' : ''} sur {n} · les invitations expirent après {ttlDays}{' '}
+        jour{ttlDays > 1 ? 's' : ''} sans réponse
       </p>
     </div>
   )
@@ -648,57 +660,29 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
     onError: (e) => setError(apiErrorMessage(e, 'Envoi impossible')),
   })
 
+  const sendBlocked =
+    !email.trim() || send.isPending || (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
+
   return (
-    <div
-      data-mock-id="invite-modal-backdrop"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(14,14,16,0.45)',
-        zIndex: 40,
-      }}
-    >
+    <CanvasModal onClose={onClose}>
       <div
         data-mock-id="invite-modal"
         role="dialog"
         aria-labelledby="invite-modal-title"
+        className="absolute top-[120px] w-[520px] rounded-2xl bg-white px-[30px] pb-[26px] pt-[30px] leading-[normal] shadow-[0_24px_60px_rgba(14,14,16,0.28)]"
         style={{
-          position: 'absolute',
-          top: 120,
           left: '50%',
           transform: 'translateX(-50%)',
-          width: 520,
-          background: '#FFFFFF',
-          borderRadius: 16,
-          boxShadow: '0 24px 60px rgba(14,14,16,0.28)',
-          padding: '30px 30px 26px',
-          boxSizing: 'border-box',
-          height: 'fit-content',
-          WebkitFontSmoothing: 'auto',
-          MozOsxFontSmoothing: 'auto',
-          textRendering: 'auto',
-          fontSynthesis: 'weight style',
         }}
       >
         <div className="mb-1.5 flex items-start justify-between">
-          <div
+          <h1
             id="invite-modal-title"
             data-mock-id="invite-title"
-            className="serif"
-            style={{
-              fontFamily: "'Instrument Serif', serif",
-              fontWeight: 400,
-              fontSize: 24,
-              margin: 0,
-              color: '#0E0E10',
-              lineHeight: 'normal',
-              WebkitFontSmoothing: 'auto',
-              MozOsxFontSmoothing: 'auto',
-              textRendering: 'auto',
-            }}
+            className="m-0 font-display text-[24px] font-normal leading-[normal] text-socle-ink"
           >
             Inviter un membre
-          </div>
+          </h1>
           <button
             type="button"
             aria-label="Fermer"
@@ -925,61 +909,65 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
             1 invitation prête à envoyer
           </span>
           <div className="flex gap-2">
-            <a
-              href="#invite-cancel"
+            <button
+              type="button"
               data-mock-id="invite-cancel"
-              className="ghost"
-              onClick={(e) => {
-                e.preventDefault()
-                onClose()
-              }}
+              onClick={onClose}
+              className="hover:bg-[#F5F5F7]"
               style={{
+                appearance: 'none',
+                boxSizing: 'content-box',
                 padding: '9px 15px',
+                margin: 0,
                 borderRadius: 7,
                 border: '1px solid #ECECEE',
+                background: 'none',
                 color: '#43434A',
+                font: 'inherit',
                 fontSize: 13,
                 fontWeight: 500,
-                textDecoration: 'none',
+                lineHeight: 'normal',
+                letterSpacing: 'inherit',
+                cursor: 'pointer',
               }}
             >
               Annuler
-            </a>
-            <a
-              href="#invite-submit"
+            </button>
+            <button
+              type="button"
               data-mock-id="invite-submit"
-              className="cta"
-              aria-disabled={
-                !email.trim() ||
-                send.isPending ||
-                (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
-              }
-              onClick={(e) => {
-                e.preventDefault()
-                if (
-                  !email.trim() ||
-                  send.isPending ||
-                  (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
-                ) {
-                  return
-                }
+              disabled={send.isPending}
+              onClick={() => {
+                if (sendBlocked) return
                 send.mutate()
               }}
+              className="hover:bg-[#2C27C7] disabled:opacity-50"
               style={{
+                appearance: 'none',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                boxSizing: 'content-box',
                 padding: '9px 18px',
+                margin: 0,
                 borderRadius: 7,
+                border: 0,
                 background: '#3730E0',
                 color: '#FFFFFF',
+                font: 'inherit',
                 fontSize: 13,
                 fontWeight: 600,
-                textDecoration: 'none',
+                lineHeight: 'normal',
+                letterSpacing: 'inherit',
+                textAlign: 'center',
+                cursor: 'pointer',
               }}
             >
               Envoyer l&apos;invitation
-            </a>
+            </button>
           </div>
         </div>
       </div>
-    </div>
+    </CanvasModal>
   )
 }

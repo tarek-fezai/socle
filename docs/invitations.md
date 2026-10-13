@@ -72,7 +72,7 @@ locale). CI / ITs backend : **GreenMail**. e2e : Mailpit dans la stack
 | `global_role` | rôle plateforme (`CONTRIBUTEUR` = « Membre » UI, `ADMINISTRATEUR_SYSTEME` = « Administrateur ») |
 | `token_hash` | HMAC-SHA256(jeton, `SOCLE_INVITE_PEPPER`) — **jamais** le jeton en clair |
 | `status` | `pending` \| `accepted` \| `revoked` \| `expired` |
-| `expires_at` | NOT NULL ; défaut **7 jours** ; **max 30 jours** (CHECK SQL) |
+| `expires_at` | NOT NULL ; défaut **14 jours** (`socle.invite.default-ttl-days`) ; **max 30 jours** (CHECK SQL) |
 | `invited_by` | `users.id` de l’admin |
 | `accepted_user_id` | renseigné à l’acceptation |
 | `accepted_at` | idem |
@@ -116,7 +116,8 @@ Lien d’acceptation : `{SOCLE_PUBLIC_BASE_URL}/invitations/accept?token=…`
 `POST /api/v1/admin/invitations/{id}/revoke` — `revoked`.
 
 `GET /api/v1/admin/invitations` — liste `pending` (colonnes UI : invité,
-équipe, rôle, envoyée par, date).
+équipe, rôle, envoyée par, date). Le pied de tableau affiche le nombre
+d’invitations et la durée réelle (`expiresAt − createdAt`, sinon 14 jours).
 
 ## 5. Acceptation — garde-fous
 

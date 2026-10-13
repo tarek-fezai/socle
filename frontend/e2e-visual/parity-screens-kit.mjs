@@ -228,9 +228,14 @@ export async function annotateTeamInvitationsMockup(page) {
         (d.textContent ?? '').includes('Envoyée par'),
     )
     table?.setAttribute('data-mock-id', 'invitations-head')
-    const row = table?.nextElementSibling
-    row?.setAttribute('data-mock-id', 'invitations-row')
-    row?.querySelector('.mono')?.style.setProperty('font-family', "'IBM Plex Mono', monospace")
+    let row = table?.nextElementSibling
+    let i = 0
+    while (row && row.classList.contains('row')) {
+      row.setAttribute('data-mock-id', `invitations-row-${i}`)
+      row.querySelector('.mono')?.style.setProperty('font-family', "'IBM Plex Mono', monospace")
+      row = row.nextElementSibling
+      i += 1
+    }
   })
 }
 

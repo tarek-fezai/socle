@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { FormEvent, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { CanvasModal } from '../components/CanvasModal'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/approvals'
@@ -98,32 +98,8 @@ export function SpacesPage() {
         {stats}
       </p>
 
-      {formOpen &&
-        createPortal(
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              width: 1440,
-              height: 900,
-              zIndex: 50,
-            }}
-          >
-            <div
-              style={{
-                position: 'relative',
-                width: 1440,
-                height: 900,
-                overflow: 'hidden',
-              }}
-            >
-          <button
-            type="button"
-            className="absolute inset-0 bg-[rgba(14,14,16,0.45)]"
-            aria-label="Fermer"
-            onClick={() => setFormOpen(false)}
-          />
+      {formOpen && (
+        <CanvasModal onClose={() => setFormOpen(false)}>
           <div
             data-mock-id="create-modal"
             className="absolute top-[120px] w-[480px] rounded-2xl bg-white px-[30px] pb-[26px] pt-[30px] leading-[normal] shadow-[0_24px_60px_rgba(14,14,16,0.28)]"
@@ -311,10 +287,8 @@ export function SpacesPage() {
             </div>
           </form>
           </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+        </CanvasModal>
+      )}
       {error && <p className="mb-4 text-sm text-socle-danger">{error}</p>}
 
       {spaces.isLoading && <p className="text-sm text-socle-muted">Chargement…</p>}
