@@ -553,16 +553,18 @@ function InvitationsTab() {
           <div className="flex-[1.1]">Envoyée</div>
           <div className="w-[190px] shrink-0" />
         </div>
-        {(page.data ?? []).map((row: InvitationView, i) => (
+        {(page.data ?? []).map((row: InvitationView, i) => {
+          const last = i === n - 1
+          return (
           <div
             key={row.id}
             className="flex items-center"
             data-mock-id={`invitations-row-${i}`}
             style={{
-              height: 51,
+              height: last ? undefined : 51,
               padding: '11px 16px',
-              borderBottom: '1px solid #F5F5F7',
-              boxSizing: 'border-box',
+              borderBottom: last ? 'none' : '1px solid #F5F5F7',
+              boxSizing: last ? 'content-box' : 'border-box',
             }}
           >
             <div className="flex flex-[2.2] items-center gap-2.5">
@@ -572,7 +574,12 @@ function InvitationsTab() {
               >
                 {emailInitials(row.email)}
               </div>
-              <div className="font-mono text-[13px] text-[#0E0E10]">{row.email}</div>
+              <div
+                className="text-[13px] text-[#0E0E10]"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 400, textRendering: 'auto' }}
+              >
+                {row.email}
+              </div>
             </div>
             <div className="flex-[1.4] text-[12.5px] text-[#43434A]">{row.teamName ?? '—'}</div>
             <div className="flex-[1.2]">
@@ -612,7 +619,8 @@ function InvitationsTab() {
               </button>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
       <p className="mt-3.5 text-[12.5px] text-[#9B9BA1]">
         {n} invitation{n > 1 ? 's' : ''} sur {n} · les invitations expirent après {ttlDays}{' '}
