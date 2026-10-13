@@ -561,10 +561,10 @@ function InvitationsTab() {
             className="flex items-center"
             data-mock-id={`invitations-row-${i}`}
             style={{
-              height: last ? undefined : 51,
+              height: last ? 50 : 51,
               padding: '11px 16px',
               borderBottom: last ? 'none' : '1px solid #F5F5F7',
-              boxSizing: last ? 'content-box' : 'border-box',
+              boxSizing: 'border-box',
             }}
           >
             <div className="flex flex-[2.2] items-center gap-2.5">

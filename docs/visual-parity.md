@@ -8,7 +8,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 | État | Specs |
 | --- | --- |
 | **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` / `RASTER_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash`, `create-space`, `team`, `invitations`, `invite-org-member` |
-| **Sections > 1 % (échec CI, pas de test.fail)** | — |
+| **Sections > 1 % (échec CI, pas de test.fail)** | `invitations-row-0` … `row-4` (1,447 % – 1,770 %, glyphes de l’e-mail IBM Plex Mono). `RASTER_EXCEPTIONS` non applicables : boîte y 277 vs 271, Range du premier texte x 345 vs 344. `-webkit-font-smoothing` sans effet (1,447 % identique). |
 
 ## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
 
@@ -22,7 +22,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 - **SpaceSettings.dc.html** = arbre 420 px + paramètres 620 px ; `/spaces/:id` reprend cette mise en page. `NOT_IMPLEMENTED` : membres, archivage. `APP_EXTRA` (relecteur) : description, politique de commentaires, propriétaires, Enregistrer. Pas d’affichage d’UUID.
 - **CreateSpace.dc.html** = modale 480 px ouverte depuis `/spaces` (interaction Playwright). Le bouton × figure dans la maquette : comparé (`create-close`).
 - **Accès** : liste des personnes, « Inviter », onglets document et encart corbeille sont livrés (annuaire nominatif). Plus de `ACCESS-PEOPLE-PICKER` / `access-grant-form`.
-- **Invitations** : `TeamInvitations.dc.html` → `/admin/team` onglet Invitations ; `InviteOrgMember.dc.html` → modal « + Inviter un membre ». Voir `docs/invitations.md`. La modale partage `CanvasModal` avec CreateSpace (portail dans le canvas 1440×900, aucun ancêtre `position: fixed`, centrage `left: 50%` + `translateX(-50%)`, texte des CTA calé comme CreateSpace). Titre, Annuler, Envoyer et les six lignes du tableau sont comparés. Actions de ligne : `<button type="button">` (maquette v146, comme la corbeille). **`-webkit-font-smoothing: antialiased` sur `:root`** : essai sans, CI Linux (run 38355919523) — titre / Annuler / Envoyer restent à 0,000 % ; la ligne 0 reste à 1,447 %. Sans effet. La règle est conservée (la maquette ne la définit pas, mais la retirer ne rapproche pas ces sections).
+- **Invitations** : `TeamInvitations.dc.html` → `/admin/team` onglet Invitations ; `InviteOrgMember.dc.html` → modal « + Inviter un membre ». Voir `docs/invitations.md`. La modale partage `CanvasModal` avec CreateSpace (portail dans le canvas 1440×900, aucun ancêtre `position: fixed`, centrage `left: 50%` + `translateX(-50%)`, texte des CTA calé comme CreateSpace). Titre, Annuler, Envoyer et les six lignes du tableau sont comparés. Actions de ligne : `<button type="button">` (maquette v146, comme la corbeille). **`-webkit-font-smoothing: antialiased` sur `:root`** : essai sans, CI Linux — titre / Annuler / Envoyer restent à 0,000 % ; la ligne 0 reste à 1,447 %. Sans effet. La règle est conservée.
 
 ## Décisions produit
 
