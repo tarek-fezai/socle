@@ -2,7 +2,7 @@
 /**
  * Règles : docs/visual-parity.md
  * TeamInvitations.dc.html vs /admin/team onglet Invitations.
- * Onglet, en-tête et les six lignes (dont Renvoyer / Annuler) sont comparés.
+ * Onglet, cadre, en-tête et les six lignes (dont Renvoyer / Annuler) sont comparés.
  */
 import { test } from '@playwright/test'
 import { ME_TAREK, NOTIFICATIONS_SEED, VISUAL_NOW } from './dashboard-fixtures.mjs'
@@ -34,6 +34,7 @@ const SIZE_EXCEPTIONS = {}
 
 const PIXEL_SECTIONS = [
   { id: 'team-tab-invitations', name: 'tab-invitations', masks: [] },
+  { id: 'invitations-table', name: 'table-frame', masks: [] },
   { id: 'invitations-head', name: 'head', masks: [] },
   ...[0, 1, 2, 3, 4, 5].map((i) => ({ id: `invitations-row-${i}`, name: `row-${i}`, masks: [] })),
 ]

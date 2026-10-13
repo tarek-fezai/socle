@@ -139,7 +139,20 @@
 }
 
 .admin-main--team {
+  /* Team.dc.html : colonne flex qui remplit la zone sous le fil d'Ariane, padding dans la boîte. */
   padding: 36px 48px 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.admin-main--team .admin-main__inner--wide {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .admin-main--fields {

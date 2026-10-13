@@ -228,6 +228,7 @@ export async function annotateTeamInvitationsMockup(page) {
         (d.textContent ?? '').includes('Envoyée par'),
     )
     table?.setAttribute('data-mock-id', 'invitations-head')
+    table?.parentElement?.setAttribute('data-mock-id', 'invitations-table')
     let row = table?.nextElementSibling
     let i = 0
     while (row && row.classList.contains('row')) {

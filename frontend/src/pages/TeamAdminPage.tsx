@@ -89,8 +89,8 @@ export function TeamAdminPage() {
         { label: 'Membres & équipes' },
       ]}
     >
-      <div data-mock-id="team-page" className="flex flex-col">
-        <div className="mb-1.5 flex items-start justify-between">
+      <div data-mock-id="team-page" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="mb-1.5 flex shrink-0 items-start justify-between">
           <div>
             <div
               data-mock-id="team-title"
@@ -121,7 +121,7 @@ export function TeamAdminPage() {
           </button>
         </div>
 
-        <div className="mb-4 mt-[22px] flex items-center justify-between">
+        <div className="mb-4 mt-[22px] flex shrink-0 items-center justify-between">
           <div
             className="flex overflow-hidden rounded-lg border border-socle-line"
             data-mock-id="team-tabs"
@@ -531,7 +531,7 @@ function InvitationsTab() {
   })
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {error && (
         <p role="alert" className="mb-3 text-sm text-socle-danger">
           {error}
@@ -539,7 +539,8 @@ function InvitationsTab() {
       )}
       <div
         data-mock-id="invitations-table"
-        className="overflow-hidden rounded-[10px] border border-socle-line"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-socle-line"
+        style={{ boxSizing: 'content-box' }}
       >
         <div
           className="flex bg-[#FAFAFB] text-[11px] font-semibold uppercase tracking-[0.05em] text-[#75757C]"
@@ -627,7 +628,7 @@ function InvitationsTab() {
           )
         })}
       </div>
-      <p className="mt-3.5 text-[12.5px] text-[#9B9BA1]">
+      <p className="shrink-0 text-[12.5px] text-[#9B9BA1]" style={{ margin: 0, padding: '14px 2px 20px' }}>
         {n} invitation{n > 1 ? 's' : ''} sur {n} · les invitations expirent après {ttlDays}{' '}
         jour{ttlDays > 1 ? 's' : ''} sans réponse
       </p>
