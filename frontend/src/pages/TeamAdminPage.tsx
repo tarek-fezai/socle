@@ -89,7 +89,7 @@ export function TeamAdminPage() {
         { label: 'Membres & équipes' },
       ]}
     >
-      <div data-mock-id="team-page">
+      <div data-mock-id="team-page" className="flex flex-col">
         <div className="mb-1.5 flex items-start justify-between">
           <div>
             <div
@@ -561,16 +561,21 @@ function InvitationsTab() {
             className="flex items-center"
             data-mock-id={`invitations-row-${i}`}
             style={{
-              height: last ? 50 : 51,
               padding: '11px 16px',
               borderBottom: last ? 'none' : '1px solid #F5F5F7',
-              boxSizing: 'border-box',
             }}
           >
             <div className="flex flex-[2.2] items-center gap-2.5">
               <div
-                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[10px] text-[#75757C]"
-                style={{ border: '1.5px dashed #DEDEE1' }}
+                className="flex shrink-0 items-center justify-center text-[10px] text-[#75757C]"
+                style={{
+                  width: 26,
+                  height: 26,
+                  boxSizing: 'content-box',
+                  borderRadius: '50%',
+                  border: '1.5px dashed #DEDEE1',
+                  lineHeight: 'normal',
+                }}
               >
                 {emailInitials(row.email)}
               </div>
