@@ -8,7 +8,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 | État | Specs |
 | --- | --- |
 | **Propres** (méthode `docs/visual-parity.md` : sections, texte inclus, masques Playwright nommés, `NOT_IMPLEMENTED` / `APP_EXTRA` / `SIZE_EXCEPTIONS` / `RASTER_EXCEPTIONS` déclarés) | `account-admin`, `generate-token`, `spaces`, `search`, `notifications`, `favorites`, `new-document`, `page`, `edit`, `history`, `history-mobile`, `diff`, `diff-approval`, `restore`, `approval`, `approval-mobile`, `login`, `dashboard`, `tags-admin`, `custom-fields-admin`, `retention-admin`, `branding-admin`, `access`, `export`, `export-folder`, `export-tag`, `space-settings`, `trash`, `create-space`, `team`, `invitations`, `invite-org-member` |
-| **Sections > 1 % (échec CI, pas de test.fail)** | `invitations-row-0` … `row-4` (1,447 % – 1,770 %, glyphes de l’e-mail IBM Plex Mono). `RASTER_EXCEPTIONS` non applicables : boîte y 277 vs 271, Range du premier texte x 345 vs 344. `-webkit-font-smoothing` sans effet (1,447 % identique). |
+| **Sections > 1 % (échec CI, pas de test.fail)** | `invitations-row-0` … `row-5` (1,447 % – 1,770 % ; dernière ligne 1,635 % à 1069×50). Glyphes de l’e-mail IBM Plex Mono. `RASTER_EXCEPTIONS` non applicables : boîte y 277 vs 271, Range du premier texte x 345 vs 344. `-webkit-font-smoothing` sans effet (1,447 % identique). |
 
 ## Correspondances 2026-10-11 (Access / Export / Corbeille / Création)
 
