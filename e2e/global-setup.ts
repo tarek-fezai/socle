@@ -13,9 +13,6 @@ function rowsFrom(raw: string): ComposeRow[] {
     const parsed: unknown = JSON.parse(trimmed)
     return Array.isArray(parsed) ? (parsed as ComposeRow[]) : []
   }
-  if (trimmed.startsWith('{')) {
-    return [JSON.parse(trimmed) as ComposeRow]
-  }
   return trimmed
     .split('\n')
     .map((line) => line.trim())
