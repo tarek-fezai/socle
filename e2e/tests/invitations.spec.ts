@@ -1,19 +1,13 @@
-import { execFileSync } from 'node:child_process'
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { fetchPasswordToken } from '../helpers/auth'
 import { apiJson, type MeResponse } from '../helpers/api'
+import { createGuest, deleteGuest, type Guest } from '../helpers/keycloak-admin'
 
-/**
- * Pas de retry Playwright : un second passage sur un compte déjà créé
- * doit échouer clairement dans beforeEach, pas en 409 avalé.
- */
+/** Pas de retry : un compte Socle déjà créé pour cet e-mail doit échouer dans le test. */
 test.describe.configure({ retries: 0, mode: 'serial' })
 
 const ADMIN = process.env.E2E_USER_A ?? 'contributeur'
 const ADMIN_PASS = process.env.E2E_PASS_A ?? 'contributeur'
-const INVITEE = 'invitee'
-const INVITEE_PASS = 'invitee'
-const INVITEE_EMAIL = 'invitee@example.com'
 const apiBase = process.env.API_BASE_URL ?? process.env.BASE_URL ?? 'http://127.0.0.1'
 const mailpit = process.env.MAILPIT_URL ?? 'http://127.0.0.1:8025'
 
@@ -21,55 +15,6 @@ type Group = { id: string; name: string }
 type Invitation = { id: string; email: string }
 type MailAddress = { Address?: string }
 type MailSummary = { ID: string; Created?: string; To?: MailAddress[] }
-
-let removeInviteeAfterPass = false
-
-function soclePostgresContainer(): string {
-  const out = execFileSync('docker', ['ps', '--format', '{{.Names}}'], { encoding: 'utf8' })
-  const names = out
-    .split(/\r?\n/)
-    .map((name) => name.trim())
-    .filter(Boolean)
-  const found = names.find((name) => name.includes('postgres') && name.includes('socle'))
-  if (!found) {
-    throw new Error(`conteneur postgres Socle introuvable parmi : ${names.join(', ') || '(aucun)'}`)
-  }
-  return found
-}
-
-function postgresUser(container: string): string {
-  const fromEnv = process.env.POSTGRES_USER?.trim()
-  if (fromEnv) return fromEnv
-  return execFileSync('docker', ['exec', container, 'printenv', 'POSTGRES_USER'], {
-    encoding: 'utf8',
-  }).trim()
-}
-
-/** Retire le compte créé par un passage réussi, pour que le suivant reparte sans compte. */
-function removeInviteeAccount(): void {
-  const container = soclePostgresContainer()
-  const user = postgresUser(container)
-  const sql = `
-DO $$
-DECLARE uid uuid;
-BEGIN
-  SELECT id INTO uid FROM users WHERE lower(email) = 'invitee@example.com';
-  IF uid IS NULL THEN
-    RETURN;
-  END IF;
-  UPDATE audit_log_events SET actor_id = NULL WHERE actor_id = uid;
-  UPDATE invitations SET accepted_user_id = NULL WHERE accepted_user_id = uid;
-  UPDATE user_platform_roles SET granted_by = NULL WHERE granted_by = uid;
-  DELETE FROM activity_events WHERE actor_user_id = uid;
-  DELETE FROM users WHERE id = uid;
-END $$;
-`
-  execFileSync(
-    'docker',
-    ['exec', container, 'psql', '-U', user, '-d', 'socle_core', '-v', 'ON_ERROR_STOP=1', '-c', sql],
-    { encoding: 'utf8' },
-  )
-}
 
 async function clearMailpit(): Promise<void> {
   const res = await fetch(`${mailpit}/api/v1/messages`, { method: 'DELETE' })
@@ -87,32 +32,31 @@ async function clearMailpit(): Promise<void> {
   throw new Error('Mailpit n’est pas vide après DELETE /api/v1/messages')
 }
 
-async function assertInviteeAbsent(adminJwt: string): Promise<void> {
+async function assertInviteeAbsent(adminJwt: string, email: string): Promise<void> {
   const listed = await apiJson<{ users: { email: string }[] }>(
-    `/api/v1/admin/users?q=${encodeURIComponent(INVITEE_EMAIL)}`,
+    `/api/v1/admin/users?q=${encodeURIComponent(email)}`,
     adminJwt,
   )
-  const exists = listed.users.some((user) => user.email.toLowerCase() === INVITEE_EMAIL)
+  const exists = listed.users.some((user) => user.email.toLowerCase() === email.toLowerCase())
   if (exists) {
     throw new Error(
-      'Le compte Socle invitee@example.com existe déjà depuis un passage précédent. Le test ne contourne pas cet état.',
+      `Le compte Socle ${email} existe déjà depuis un passage précédent. Le test ne contourne pas cet état.`,
     )
   }
 }
 
-async function revokePendingForInvitee(adminJwt: string): Promise<void> {
+async function revokePendingForInvitee(adminJwt: string, email: string): Promise<void> {
   const pending = await apiJson<Invitation[]>('/api/v1/admin/invitations', adminJwt)
   for (const invitation of pending) {
-    if (invitation.email.toLowerCase() !== INVITEE_EMAIL) continue
+    if (invitation.email.toLowerCase() !== email.toLowerCase()) continue
     await apiJson<void>(`/api/v1/admin/invitations/${invitation.id}/revoke`, adminJwt, {
       method: 'POST',
     })
   }
 }
 
-async function inviteLinkAfter(sentAfter: Date): Promise<string> {
-  const target = INVITEE_EMAIL.toLowerCase()
-  // Marge d’horloge entre le runner et Mailpit ; la boîte a été vidée avant l’envoi.
+async function inviteLinkAfter(email: string, sentAfter: Date): Promise<string> {
+  const target = email.toLowerCase()
   const earliest = sentAfter.getTime() - 2_000
   for (let i = 0; i < 80; i++) {
     const res = await fetch(`${mailpit}/api/v1/messages`)
@@ -134,98 +78,172 @@ async function inviteLinkAfter(sentAfter: Date): Promise<string> {
     }
     await new Promise((resolve) => setTimeout(resolve, 250))
   }
-  throw new Error(`aucun e-mail d’invitation pour ${INVITEE_EMAIL} après ${sentAfter.toISOString()}`)
+  throw new Error(`aucun e-mail d’invitation pour ${email} après ${sentAfter.toISOString()}`)
 }
 
-test.beforeEach(async () => {
-  removeInviteeAfterPass = false
-  await clearMailpit()
-  const adminJwt = await fetchPasswordToken(ADMIN, ADMIN_PASS)
-  await assertInviteeAbsent(adminJwt)
-  await revokePendingForInvitee(adminJwt)
-})
-
-test.afterEach(() => {
-  if (!removeInviteeAfterPass) return
-  removeInviteeAfterPass = false
-  removeInviteeAccount()
-})
-
-test('invitation en attente : GET /me reste 403 not_provisioned', async () => {
-  const jwt = await fetchPasswordToken(ADMIN, ADMIN_PASS)
-  const team = await apiJson<Group>('/api/v1/groups', jwt, {
-    method: 'POST',
-    body: JSON.stringify({ name: `E2E Invite pending ${Date.now()}` }),
-  })
-  await apiJson<Invitation>('/api/v1/admin/invitations', jwt, {
-    method: 'POST',
-    body: JSON.stringify({
-      email: INVITEE_EMAIL,
-      teamId: team.id,
-      teamRole: 'lecteur',
-      globalRole: 'CONTRIBUTEUR',
-    }),
-  })
-
-  const inviteeJwt = await fetchPasswordToken(INVITEE, INVITEE_PASS)
-  const res = await fetch(`${apiBase}/api/v1/me`, {
-    headers: { Authorization: `Bearer ${inviteeJwt}` },
-  })
-  expect(res.status).toBe(403)
-  const body = (await res.json()) as { reason?: string }
-  expect(body.reason).toBe('not_provisioned')
-})
-
-test('invitation envoyée → Mailpit → login Keycloak → compte + équipe', async ({ page }) => {
-  const jwt = await fetchPasswordToken(ADMIN, ADMIN_PASS)
-  const team = await apiJson<Group>('/api/v1/groups', jwt, {
-    method: 'POST',
-    body: JSON.stringify({ name: `E2E Invite ${Date.now()}` }),
-  })
-  const sentAfter = new Date()
-  await apiJson<Invitation>('/api/v1/admin/invitations', jwt, {
-    method: 'POST',
-    body: JSON.stringify({
-      email: INVITEE_EMAIL,
-      teamId: team.id,
-      teamRole: 'lecteur',
-      globalRole: 'CONTRIBUTEUR',
-    }),
-  })
-
-  const link = await inviteLinkAfter(sentAfter)
-  await page.goto(link)
-  await expect(page.getByRole('heading', { name: /Rejoindre|Invitation/i })).toBeVisible()
-  await page.getByRole('button', { name: /Se connecter/i }).click()
-
+async function loginAtIdp(page: Page, guest: Guest): Promise<void> {
   const onIdp = /realms\/socle|\/protocol\/openid-connect/
   await page.waitForURL((url) => onIdp.test(url.href) || url.pathname === '/login', { timeout: 60_000 })
   if (!onIdp.test(page.url())) {
     await page.getByRole('button', { name: /continuer avec le sso/i }).click()
     await page.waitForURL(onIdp, { timeout: 60_000 })
   }
-  await page.locator('#username, input[name="username"]').fill(INVITEE)
-  await page.locator('#password, input[name="password"]').fill(INVITEE_PASS)
+  await page.locator('#username, input[name="username"]').fill(guest.username)
+  await page.locator('#password, input[name="password"]').fill(guest.password)
   await page.locator('#kc-login, button[type="submit"], input[type="submit"]').first().click()
+}
 
-  await expect(page.getByTestId('invitation-accepted')).toBeVisible({ timeout: 90_000 })
-  await page.waitForURL(
-    (url) =>
-      (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
-      url.port !== '8081' &&
-      url.pathname === '/',
-    { timeout: 30_000 },
-  )
+test.beforeEach(async () => {
+  await clearMailpit()
+})
 
-  const inviteeJwt = await fetchPasswordToken(INVITEE, INVITEE_PASS)
-  const me = await apiJson<MeResponse>('/api/v1/me', inviteeJwt)
-  expect(me.email.toLowerCase()).toBe(INVITEE_EMAIL)
+test('invitation en attente : GET /me reste 403 not_provisioned', async () => {
+  const guest = await createGuest()
+  try {
+    const jwt = await fetchPasswordToken(ADMIN, ADMIN_PASS)
+    await assertInviteeAbsent(jwt, guest.email)
+    await revokePendingForInvitee(jwt, guest.email)
+    const team = await apiJson<Group>('/api/v1/groups', jwt, {
+      method: 'POST',
+      body: JSON.stringify({ name: `E2E Invite pending ${Date.now()}` }),
+    })
+    await apiJson<Invitation>('/api/v1/admin/invitations', jwt, {
+      method: 'POST',
+      body: JSON.stringify({
+        email: guest.email,
+        teamId: team.id,
+        teamRole: 'lecteur',
+        globalRole: 'CONTRIBUTEUR',
+      }),
+    })
 
-  const groups = await apiJson<Group[]>('/api/v1/groups', inviteeJwt)
-  const joined = groups.find((group) => group.id === team.id)
-  expect(joined).toBeTruthy()
+    const inviteeJwt = await fetchPasswordToken(guest.username, guest.password)
+    const res = await fetch(`${apiBase}/api/v1/me`, {
+      headers: { Authorization: `Bearer ${inviteeJwt}` },
+    })
+    expect(res.status).toBe(403)
+    const body = (await res.json()) as { reason?: string }
+    expect(body.reason).toBe('not_provisioned')
+  } finally {
+    await deleteGuest(guest)
+  }
+})
 
-  const health = await fetch(`${apiBase}/actuator/health`)
-  expect(health.ok).toBeTruthy()
-  removeInviteeAfterPass = true
+test('invitation envoyée → Mailpit → login Keycloak → compte + équipe', async ({ page }) => {
+  const guest = await createGuest()
+  try {
+    const jwt = await fetchPasswordToken(ADMIN, ADMIN_PASS)
+    await assertInviteeAbsent(jwt, guest.email)
+    await revokePendingForInvitee(jwt, guest.email)
+    const team = await apiJson<Group>('/api/v1/groups', jwt, {
+      method: 'POST',
+      body: JSON.stringify({ name: `E2E Invite ${Date.now()}` }),
+    })
+    const sentAfter = new Date()
+    await apiJson<Invitation>('/api/v1/admin/invitations', jwt, {
+      method: 'POST',
+      body: JSON.stringify({
+        email: guest.email,
+        teamId: team.id,
+        teamRole: 'lecteur',
+        globalRole: 'CONTRIBUTEUR',
+      }),
+    })
+
+    let acceptStarted = 0
+    page.on('request', (req) => {
+      try {
+        if (req.method() === 'POST' && new URL(req.url()).pathname === '/api/v1/invitations/accept') {
+          acceptStarted = Date.now()
+        }
+      } catch {
+        // URL non parseable : ignorée
+      }
+    })
+    const acceptResponse = page.waitForResponse(
+      (res) => {
+        if (res.request().method() !== 'POST') return false
+        try {
+          return new URL(res.url()).pathname === '/api/v1/invitations/accept'
+        } catch {
+          return false
+        }
+      },
+      { timeout: 90_000 },
+    )
+
+    const link = await inviteLinkAfter(guest.email, sentAfter)
+    await page.goto(link)
+    await expect(page.getByRole('heading', { name: /Rejoindre|Invitation/i })).toBeVisible()
+    await page.getByRole('button', { name: /Se connecter/i }).click()
+    await loginAtIdp(page, guest)
+
+    const response = await acceptResponse
+    const wall = acceptStarted > 0 ? Date.now() - acceptStarted : -1
+    const timing = response.request().timing()
+    const ms = timing.responseEnd >= 0 ? Math.round(timing.responseEnd) : wall
+    console.log(`POST /api/v1/invitations/accept ${ms} ms status ${response.status()}`)
+    test.info().annotations.push({ type: 'accept-duration-ms', description: String(ms) })
+    expect(response.ok()).toBeTruthy()
+
+    await expect(page.getByTestId('invitation-accepted')).toBeVisible({ timeout: 90_000 })
+    await page.waitForURL(
+      (url) =>
+        (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
+        url.port !== '8081' &&
+        url.pathname === '/',
+      { timeout: 30_000 },
+    )
+
+    const inviteeJwt = await fetchPasswordToken(guest.username, guest.password)
+    const me = await apiJson<MeResponse>('/api/v1/me', inviteeJwt)
+    expect(me.email.toLowerCase()).toBe(guest.email.toLowerCase())
+
+    const groups = await apiJson<Group[]>('/api/v1/groups', inviteeJwt)
+    const joined = groups.find((group) => group.id === team.id)
+    expect(joined).toBeTruthy()
+
+    const health = await fetch(`${apiBase}/actuator/health`)
+    expect(health.ok).toBeTruthy()
+  } finally {
+    await deleteGuest(guest)
+  }
+})
+
+test('utilisateur non invité : Connexion refusée not_provisioned', async ({ page }) => {
+  const guest = await createGuest()
+  try {
+    const jwt = await fetchPasswordToken(ADMIN, ADMIN_PASS)
+    await assertInviteeAbsent(jwt, guest.email)
+    // Sans invitation en attente, le JIT ouvre l’accueil. Le 403 not_provisioned
+    // du callback (hors lien d’acceptation) vient de cette invitation.
+    const team = await apiJson<Group>('/api/v1/groups', jwt, {
+      method: 'POST',
+      body: JSON.stringify({ name: `E2E Invite denied ${Date.now()}` }),
+    })
+    await apiJson<Invitation>('/api/v1/admin/invitations', jwt, {
+      method: 'POST',
+      body: JSON.stringify({
+        email: guest.email,
+        teamId: team.id,
+        teamRole: 'lecteur',
+        globalRole: 'CONTRIBUTEUR',
+      }),
+    })
+    await page.goto('/login')
+    await loginAtIdp(page, guest)
+    await page.waitForURL(
+      (url) =>
+        (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
+        url.port !== '8081' &&
+        url.pathname === '/login/erreur' &&
+        url.searchParams.get('reason') === 'not_provisioned',
+      { timeout: 90_000 },
+    )
+    expect(new URL(page.url()).pathname).not.toBe('/callback')
+    await expect(page.getByRole('heading', { name: 'Connexion refusée' })).toBeVisible()
+    await expect(page.getByText(/aucun compte Socle n'est associé/i)).toBeVisible()
+  } finally {
+    await deleteGuest(guest)
+  }
 })

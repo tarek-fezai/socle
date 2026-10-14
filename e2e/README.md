@@ -11,6 +11,7 @@ Runs against the **production Compose** stack with `--profile demo-idp` (Keycloa
 | `KEYCLOAK_BASE_URL` | `http://127.0.0.1:8081` | Password grant + browser IdP |
 | `E2E_USER_A` / `E2E_PASS_A` | `contributeur` / `contributeur` | Submitter |
 | `E2E_USER_B` / `E2E_PASS_B` | `auditeur` / `auditeur` | Approver (after role assignment) |
+| `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` | — | Bootstrap admin du Keycloak e2e (généré dans `deploy/compose/.env.ci`). Requis pour créer les invités du spec invitations. La CI les exporte avant Playwright. |
 | `E2E_RUN_BACKUP` | — | Set locally to enable backup/restore step |
 
 ## Local run
