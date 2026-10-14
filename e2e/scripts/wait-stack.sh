@@ -5,6 +5,11 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 COMPOSE_DIR="${ROOT}/deploy/compose"
 ENV_FILE="${1:-.env.ci}"
 
+if [[ "${COMPOSE_PROJECT_NAME:-}" == "socle-production" || "${ENV_FILE}" == *".env.production"* ]]; then
+  echo "e2e: refus — ne jamais lancer l'e2e sur une instance d'exploitation." >&2
+  exit 1
+fi
+
 KEYCLOAK_PORT="${KEYCLOAK_HTTP_PORT:-8081}"
 if [[ -f "${COMPOSE_DIR}/${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -21,9 +26,13 @@ DISCOVERY="${ISSUER}/.well-known/openid-configuration"
 
 cd "$COMPOSE_DIR"
 
+if ! bash "${ROOT}/e2e/scripts/compose-e2e.sh" ps | grep -q 'socle-e2e-'; then
+  echo "e2e: la pile socle-e2e n'est pas démarrée. Arrêt sans toucher à une autre instance." >&2
+  exit 1
+fi
+
 compose_ps() {
-  docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
-    --env-file "$ENV_FILE" --profile demo-idp ps >&2 || true
+  bash "${ROOT}/e2e/scripts/compose-e2e.sh" ps >&2 || true
 }
 
 echo "Waiting for Keycloak OIDC (issuer ${ISSUER})..."

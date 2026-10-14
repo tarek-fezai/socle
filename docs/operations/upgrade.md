@@ -1,5 +1,7 @@
 # Upgrade
 
+Ne jamais lancer l’e2e sur une instance d’exploitation.
+
 ## Before you upgrade
 
 1. Read the [GitHub Release notes](https://github.com/tarek-fezai/socle/releases) for the target version (breaking changes, migrations, IdP notes).

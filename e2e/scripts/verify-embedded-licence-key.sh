@@ -8,6 +8,18 @@ set -euo pipefail
 REF="${1:?image ou conteneur requis}"
 EXPECTED_SRC="${2:?fichier ou littéral Base64 attendu}"
 
+if [[ "${COMPOSE_PROJECT_NAME:-}" == "socle-production" || "${REF}" == *socle-production* || "${REF}" == *".env.production"* ]]; then
+  echo "e2e: refus — ne jamais lancer l'e2e sur une instance d'exploitation." >&2
+  exit 1
+fi
+if docker inspect "${REF}" >/dev/null 2>&1; then
+  project="$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "${REF}" 2>/dev/null || true)"
+  if [[ "${project}" == "socle-production" ]]; then
+    echo "e2e: refus — conteneur du projet socle-production. Ne jamais lancer l'e2e sur une instance d'exploitation." >&2
+    exit 1
+  fi
+fi
+
 if [[ -f "${EXPECTED_SRC}" ]]; then
   EXPECTED="$(tr -d '\n\r ' < "${EXPECTED_SRC}")"
 else
