@@ -4,7 +4,7 @@ Runs against the dedicated Compose project `socle-e2e` (`--profile demo-idp`, Ke
 
 ## Isolation
 
-L'e2e, en local comme en CI, passe uniquement par `e2e/scripts/compose-e2e.sh`. Ce script force `docker compose -p socle-e2e --env-file .env.ci`. Le `-p` de la ligne de commande l'emporte sur `name: socle-production`. Il refuse de s'exécuter si `COMPOSE_PROJECT_NAME` vaut `socle-production`, si `.env.production` est passé, ou si des conteneurs du projet `socle-production` seraient visés. Les volumes du fichier Compose ne sont pas `external` et n'ont pas de `name:` fixe : Compose les préfixe par le projet (`socle-e2e_…`), distincts de l'instance d'exploitation. Si le port 80 ou 8081 est déjà pris, le script s'arrête sans modifier l'autre instance. Ne jamais lancer l’e2e sur une instance d’exploitation.
+L'e2e, en local comme en CI, passe uniquement par `e2e/scripts/compose-e2e.sh`. Ce script force `docker compose -p socle-e2e --env-file .env.ci`. Le `-p` de la ligne de commande l'emporte sur `name: socle-production`. Il refuse de s'exécuter si `COMPOSE_PROJECT_NAME` vaut `socle-production`, si `.env.production` est passé, ou si des conteneurs du projet `socle-production` seraient visés. Les volumes du fichier Compose ne sont pas `external` et n'ont pas de `name:` fixe : Compose les préfixe par le projet (`socle-e2e_…`), distincts de l'instance d'exploitation. Si le port 80 ou 8081 est déjà pris, le script s'arrête sans modifier l'autre instance. L'e2e construit des images :e2e, jamais celles de l'instance d'exploitation. Ne jamais lancer l’e2e sur une instance d’exploitation.
 
 ## Environment
 

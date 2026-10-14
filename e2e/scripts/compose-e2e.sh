@@ -2,7 +2,7 @@
 # Point d'entrée unique de la pile e2e.
 # Force `docker compose -p socle-e2e` et `--env-file .env.ci`.
 # Le -p de la ligne de commande l'emporte sur `name:` du fichier Compose.
-# Refuse toute cible d'exploitation (socle-production, .env.production).
+# Refuse toute cible d'exploitation (socle-production, .env.production, tag d'image autre que e2e).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -78,6 +78,20 @@ if [[ -n "${pending}" ]]; then
   refuse "option ${pending} sans valeur"
 fi
 
+# Tag d'image : exactement e2e. `local` est celui de l'instance d'exploitation.
+# Contrôle avant tout `docker compose` (et avant toute inspection Docker).
+if [[ -n "${VERSION+x}" && "${VERSION}" != "e2e" ]]; then
+  refuse "VERSION=${VERSION} dans l'environnement. L'e2e construit des images :e2e, jamais celles de l'instance d'exploitation."
+fi
+if [[ -f "${ENV_FILE}" ]]; then
+  file_version="$(grep -E '^VERSION=' "${ENV_FILE}" | tail -1 | cut -d= -f2- | tr -d '\r' || true)"
+  if [[ "${file_version}" != "e2e" ]]; then
+    refuse "VERSION=${file_version:-<absente>} dans .env.ci. L'e2e construit des images :e2e, jamais celles de l'instance d'exploitation."
+  fi
+elif [[ "${VERSION:-}" != "e2e" ]]; then
+  refuse "VERSION absente de .env.ci. Attendu : VERSION=e2e."
+fi
+
 # Un identifiant de conteneur d'exploitation passé en argument est refusé
 # avant tout `docker compose` (lecture seule de la liste, aucune action).
 if docker info >/dev/null 2>&1; then
@@ -147,6 +161,7 @@ esac
 
 cd "${COMPOSE_DIR}"
 export COMPOSE_PROJECT_NAME="${PROJECT}"
+export VERSION="e2e"
 echo "e2e: docker compose -p ${PROJECT} --env-file .env.ci ${forward[*]-}" >&2
 exec docker compose \
   -p "${PROJECT}" \

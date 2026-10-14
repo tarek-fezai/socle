@@ -226,6 +226,8 @@ jobs:
             bash e2e/scripts/compose-e2e.sh --env-file deploy/compose/.env.production ps
           refuse_ok "-p socle-production" \
             bash e2e/scripts/compose-e2e.sh -p socle-production ps
+          refuse_ok "VERSION=local" \
+            env VERSION=local bash e2e/scripts/compose-e2e.sh ps
 
       - name: E2E stack and Playwright
         if: |
@@ -243,6 +245,12 @@ jobs:
           bash e2e/scripts/generate-ci-env.sh deploy/compose/.env.ci
           # Demo IdP: keycloak DB is already in init-databases.sql
           bash e2e/scripts/compose-e2e.sh up -d --build
+          echo "Images socle après le build :"
+          docker images --format '{{.Repository}}:{{.Tag}}' | grep socle- | tee "${RUNNER_TEMP}/socle-images.txt"
+          if grep -q ':local$' "${RUNNER_TEMP}/socle-images.txt"; then
+            echo "e2e: une image socle :local a été produite" >&2
+            exit 1
+          fi
           bash e2e/scripts/compose-e2e.sh ps
           bash e2e/scripts/wait-stack.sh .env.ci
           # Preuve : image e2e embarque la clé de TEST (build-arg), pas celle du dépôt
