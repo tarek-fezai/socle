@@ -72,6 +72,23 @@ export function AcceptInvitationPage() {
   }, [tokenFromUrl, navigate])
 
   useEffect(() => {
+    if (status !== 'ok') return
+    // Peindre « Invitation acceptée », la laisser lisible, puis ouvrir l’accueil.
+    let inner = 0
+    let timer = 0
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        timer = window.setTimeout(() => navigate('/', { replace: true }), 800)
+      })
+    })
+    return () => {
+      cancelAnimationFrame(outer)
+      cancelAnimationFrame(inner)
+      window.clearTimeout(timer)
+    }
+  }, [status, navigate])
+
+  useEffect(() => {
     if (started.current) return
     const stored = tokenFromUrl || readStoredToken()
     if (!stored) return
@@ -84,7 +101,6 @@ export function AcceptInvitationPage() {
         await acceptInvitation(api, stored)
         clearToken()
         setStatus('ok')
-        navigate('/', { replace: true })
       } catch (e) {
         const code = apiErrorCode(e)
         if (
@@ -118,6 +134,27 @@ export function AcceptInvitationPage() {
 
   if (status === 'working') {
     return <LoginLoadingLayout message="Acceptation de l’invitation…" />
+  }
+
+  if (status === 'ok') {
+    return (
+      <div className="login-root">
+        <div className="login-shell" style={{ justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ width: 440, padding: 32 }}>
+            <h1
+              className="login-serif"
+              data-testid="invitation-accepted"
+              style={{ fontSize: 28, fontWeight: 400, margin: '0 0 12px' }}
+            >
+              Invitation acceptée
+            </h1>
+            <p style={{ fontSize: 14, color: '#6B6B72', margin: 0, lineHeight: 1.5 }}>
+              Votre compte est créé. Ouverture de l’accueil.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

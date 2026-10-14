@@ -49,8 +49,11 @@ export async function revokeInvitation(api: Pick<AxiosInstance, 'post'>, id: str
 }
 
 export async function acceptInvitation(api: Pick<AxiosInstance, 'post'>, token: string) {
-  const { data } = await api.post<{ userId: string; email: string }>('/api/v1/invitations/accept', {
-    token,
-  })
+  // Création du compte : attendre la réponse du serveur au-delà du délai général de 15 s.
+  const { data } = await api.post<{ userId: string; email: string }>(
+    '/api/v1/invitations/accept',
+    { token },
+    { timeout: 90_000 },
+  )
   return data
 }

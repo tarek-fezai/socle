@@ -153,7 +153,10 @@ invitation `pending` valide :
 - le sync JWT **ne crée pas** le compte (pas de JIT) ;
 - seul `POST /api/v1/invitations/accept` est laissé passer ;
 - les autres `/api/**` restent refusés (`not_provisioned`) jusqu’à
-  l’acceptation réussie.
+  l’acceptation réussie. Le client ne remplace pas `/callback` ni
+  `/invitations/accept` par la page « Connexion refusée » sur ce 403 :
+  le callback revient sur l’acceptation. Après succès, la page affiche
+  « Invitation acceptée » puis ouvre l’accueil.
 
 Sans invitation pending, le comportement JIT / domaines / groupes est
 inchangé.
