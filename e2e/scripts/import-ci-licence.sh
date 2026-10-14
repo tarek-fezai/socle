@@ -5,6 +5,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 COMPOSE_DIR="${ROOT}/deploy/compose"
 ENV_FILE="${1:-.env.ci}"
+if [[ "${COMPOSE_PROJECT_NAME:-}" == "socle-production" || "${ENV_FILE}" == *".env.production"* ]]; then
+  echo "e2e: refus — ne jamais lancer l'e2e sur une instance d'exploitation." >&2
+  exit 1
+fi
+if ! bash "${ROOT}/e2e/scripts/compose-e2e.sh" ps | grep -q 'socle-e2e-'; then
+  echo "e2e: la pile socle-e2e n'est pas démarrée. Aucune licence n'est importée." >&2
+  exit 1
+fi
 LIC_OUT="${ROOT}/e2e/.ci-licence-keys/licence.signed.json"
 BASE_URL="${BASE_URL:-http://127.0.0.1}"
 KEYCLOAK_PORT="${KEYCLOAK_HTTP_PORT:-8081}"

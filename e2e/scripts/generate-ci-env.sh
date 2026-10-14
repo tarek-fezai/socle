@@ -45,7 +45,7 @@ rm -f "${PRIV}" "${KEYS_DIR}/public.der"
 cat > "$OUT" <<EOF
 DOMAIN=http://127.0.0.1
 VERSION=local
-COMPOSE_PROJECT_NAME=socle-production
+COMPOSE_PROJECT_NAME=socle-e2e
 
 POSTGRES_USER=socle
 POSTGRES_PASSWORD=${PG_PASS}

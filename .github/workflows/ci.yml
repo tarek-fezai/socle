@@ -200,6 +200,33 @@ jobs:
           steps.changes.outputs.e2e_relevant != 'true'
         run: echo "E2E skipped — no deploy/Dockerfile/release/e2e changes."
 
+      - name: E2E guard refuses production
+        if: |
+          github.event_name == 'schedule' ||
+          steps.changes.outputs.e2e_relevant == 'true'
+        run: |
+          set -euo pipefail
+          chmod +x e2e/scripts/*.sh
+          refuse_ok() {
+            local label="$1"
+            shift
+            set +e
+            "$@"
+            local code=$?
+            set -e
+            if [[ "$code" -eq 0 ]]; then
+              echo "garde-fou: ${label} aurait dû échouer" >&2
+              exit 1
+            fi
+            echo "garde-fou: ${label} refusé (exit ${code})"
+          }
+          refuse_ok "COMPOSE_PROJECT_NAME=socle-production" \
+            env COMPOSE_PROJECT_NAME=socle-production bash e2e/scripts/compose-e2e.sh ps
+          refuse_ok "--env-file .env.production" \
+            bash e2e/scripts/compose-e2e.sh --env-file deploy/compose/.env.production ps
+          refuse_ok "-p socle-production" \
+            bash e2e/scripts/compose-e2e.sh -p socle-production ps
+
       - name: E2E stack and Playwright
         if: |
           github.event_name == 'schedule' ||
@@ -209,23 +236,21 @@ jobs:
           KEYCLOAK_BASE_URL: http://127.0.0.1:8081
           E2E_RUN_BACKUP: "1"
           POSTGRES_USER: socle
-          COMPOSE_PROJECT_NAME: socle-production
+          COMPOSE_PROJECT_NAME: socle-e2e
         run: |
           set -euo pipefail
           chmod +x e2e/scripts/*.sh
           bash e2e/scripts/generate-ci-env.sh deploy/compose/.env.ci
           # Demo IdP: keycloak DB is already in init-databases.sql
-          cd deploy/compose
-          docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
-            --env-file .env.ci --profile demo-idp up -d --build
-          cd ../..
+          bash e2e/scripts/compose-e2e.sh up -d --build
+          bash e2e/scripts/compose-e2e.sh ps
           bash e2e/scripts/wait-stack.sh .env.ci
           # Preuve : image e2e embarque la clé de TEST (build-arg), pas celle du dépôt
           REPO_KEY="$(tr -d '\n\r ' < backend/src/main/resources/licence/ed25519-public.b64)"
           CI_KEY="$(tr -d '\n\r ' < e2e/.ci-licence-keys/public.b64)"
           test -n "$CI_KEY"
           test "$REPO_KEY" != "$CI_KEY"
-          BACKEND_CID="$(cd deploy/compose && docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml --env-file .env.ci --profile demo-idp ps -q backend)"
+          BACKEND_CID="$(bash e2e/scripts/compose-e2e.sh ps -q backend)"
           bash e2e/scripts/verify-embedded-licence-key.sh "$BACKEND_CID" e2e/.ci-licence-keys/public.b64
           bash e2e/scripts/import-ci-licence.sh .env.ci
           cd e2e
@@ -236,12 +261,9 @@ jobs:
 
       - name: Dump Compose logs on failure
         if: failure()
-        working-directory: deploy/compose
         run: |
-          docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
-            --env-file .env.ci --profile demo-idp ps -a || true
-          docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
-            --env-file .env.ci --profile demo-idp logs --no-color --tail=200 \
+          bash e2e/scripts/compose-e2e.sh ps -a || true
+          bash e2e/scripts/compose-e2e.sh logs --no-color --tail=200 \
             backend openfga openfga-init temporal keycloak caddy || true
 
       - name: Upload Playwright artifacts on failure
@@ -258,9 +280,7 @@ jobs:
       - name: Tear down Compose
         if: always() && (github.event_name == 'schedule' || steps.changes.outputs.e2e_relevant == 'true')
         run: |
-          cd deploy/compose
-          docker compose -f docker-compose.yml -f ../../e2e/docker-compose.e2e.yml \
-            --env-file .env.ci --profile demo-idp down -v --remove-orphans || true
+          bash e2e/scripts/compose-e2e.sh down -v --remove-orphans || true
 
   helm:
     name: helm
