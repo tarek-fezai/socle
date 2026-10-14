@@ -46,6 +46,8 @@ const KEEP_HELMET_STYLES = new Set([
   'Account.dc.html',
   // .perm-delete { appearance: none; … } — sinon le bouton UA déplace trash-delete
   'Trash.dc.html',
+  // .seg.on / .mono — sinon l’onglet Invitations et l’e-mail sont en Sans 400
+  'TeamInvitations.dc.html',
 ])
 
 function helmetStyles(rawHtml) {

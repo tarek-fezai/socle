@@ -20,6 +20,23 @@ export function formatRelativeFr(iso: string, now = Date.now()): string {
   return formatShortDateFr(iso)
 }
 
+/** TeamInvitations.dc.html — « Il y a 2 jours ». */
+export function formatInvitationSentFr(iso: string, now = Date.now()): string {
+  const t = Date.parse(iso)
+  if (!Number.isFinite(t)) return ''
+  const diffMs = Math.max(0, now - t)
+  const min = Math.floor(diffMs / 60_000)
+  const hour = Math.floor(diffMs / 3_600_000)
+  const day = Math.floor(diffMs / 86_400_000)
+
+  if (min < 1) return 'À l’instant'
+  if (min < 60) return `Il y a ${min} min`
+  if (hour < 24) return `Il y a ${hour} h`
+  if (day === 1) return 'Il y a 1 jour'
+  if (day < 7) return `Il y a ${day} jours`
+  return formatShortDateFr(iso)
+}
+
 export function formatShortDateFr(iso: string): string {
   const d = new Date(iso)
   if (!Number.isFinite(d.getTime())) return ''

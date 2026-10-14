@@ -125,6 +125,22 @@ socle:
     # Pepper HMAC-SHA256 des jetons d'accès personnels (≥ 32 octets). Obligatoire hors profil
     # dev/local : démarrage refusé si absent ou trop court. Générer : openssl rand -base64 48
     pepper: ${SOCLE_PAT_PEPPER:}
+  invite:
+    # Pepper HMAC dédié des jetons d'invitation (≥ 32 octets). Distinct de SOCLE_PAT_PEPPER.
+    pepper: ${SOCLE_INVITE_PEPPER:}
+    default-ttl-days: 14
+    max-ttl-days: 30
+    resend-min-interval-seconds: 60
+    trusted-issuers: ${SOCLE_INVITE_TRUSTED_ISSUERS:}
+  smtp:
+    host: ${SOCLE_SMTP_HOST:}
+    port: ${SOCLE_SMTP_PORT:587}
+    username: ${SOCLE_SMTP_USERNAME:}
+    password: ${SOCLE_SMTP_PASSWORD:}
+    from: ${SOCLE_SMTP_FROM:}
+    # starttls | implicit — obligatoire hors dev/local dès que host est posé.
+    # none : uniquement profils dev/local (Mailpit).
+    tls: ${SOCLE_SMTP_TLS:starttls}
   openfga:
     api-url: ${OPENFGA_API_URL:http://localhost:8082}
     store-id: ${OPENFGA_STORE_ID:}

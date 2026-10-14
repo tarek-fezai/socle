@@ -16,6 +16,9 @@ socle:
   pat:
     # Valeur de test, non secrète.
     pepper: test-only-pat-pepper-not-a-secret-0123456789
+  invite:
+    # Valeur de test, non secrète. Distincte de socle.pat.pepper.
+    pepper: test-only-invite-pepper-not-a-secret-012345
   folders:
     max-depth: 5
   cors:

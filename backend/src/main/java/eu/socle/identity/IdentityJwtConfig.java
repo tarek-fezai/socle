@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.identity;
 
+import eu.socle.invite.InvitePendingAdmissionException;
 import eu.socle.user.UserEntity;
 import eu.socle.user.UserSyncService;
 import eu.socle.web.ApiErrors;
@@ -59,6 +60,8 @@ public class IdentityJwtConfig {
         UserEntity user;
         try {
             user = userSyncService.syncFromJwt(jwt);
+        } catch (InvitePendingAdmissionException pending) {
+            return List.of();
         } catch (AccessPolicyDeniedException denied) {
             stashDenied(denied);
             return List.of();

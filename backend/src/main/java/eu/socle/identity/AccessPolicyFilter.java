@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.identity;
 
+import eu.socle.invite.InvitationRequestPaths;
+import eu.socle.invite.InvitationService;
 import eu.socle.pat.PatAuthenticationToken;
+import eu.socle.user.UserIdentityService;
 import eu.socle.web.ApiErrors;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -38,17 +41,23 @@ public class AccessPolicyFilter extends OncePerRequestFilter {
     private final AccessDecisionCache decisionCache;
     private final AccessAuditService accessAuditService;
     private final IdentityClaimsMapper claimsMapper;
+    private final InvitationService invitationService;
+    private final UserIdentityService identityService;
 
     public AccessPolicyFilter(
             AccessPolicyService accessPolicyService,
             AccessDecisionCache decisionCache,
             AccessAuditService accessAuditService,
-            IdentityClaimsMapper claimsMapper
+            IdentityClaimsMapper claimsMapper,
+            InvitationService invitationService,
+            UserIdentityService identityService
     ) {
         this.accessPolicyService = accessPolicyService;
         this.decisionCache = decisionCache;
         this.accessAuditService = accessAuditService;
         this.claimsMapper = claimsMapper;
+        this.invitationService = invitationService;
+        this.identityService = identityService;
     }
 
     @Override
@@ -85,6 +94,20 @@ public class AccessPolicyFilter extends OncePerRequestFilter {
         if (subject == null || issuer == null) {
             // Laissé à UserSyncService (401 subject/issuer manquant).
             chain.doFilter(request, response);
+            return;
+        }
+
+        if (invitationService != null
+                && invitationService.hasPendingForVerifiedEmail(
+                        claimsMapper.email(jwt), claimsMapper.emailVerified(jwt))
+                && (identityService == null
+                        || identityService.findUserByIdentity(issuer, subject).isEmpty())) {
+            if (InvitationRequestPaths.isAcceptRequest(request)) {
+                chain.doFilter(request, response);
+                return;
+            }
+            accessAuditService.recordDenied(issuer, subject, null, AccessDeniedReason.NOT_PROVISIONED);
+            writeDenied(response, new AccessPolicyDeniedException(AccessDeniedReason.NOT_PROVISIONED));
             return;
         }
 

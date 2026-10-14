@@ -56,7 +56,7 @@ class AccessPolicyFilterTest {
         cache = new AccessDecisionCache(clock);
         filter = new AccessPolicyFilter(
                 new AccessPolicyService(properties, mapper, identityService),
-                cache, accessAuditService, mapper);
+                cache, accessAuditService, mapper, null, identityService);
         when(identityService.findUserByIdentity(ISSUER, SUBJECT)).thenReturn(Optional.empty());
     }
 

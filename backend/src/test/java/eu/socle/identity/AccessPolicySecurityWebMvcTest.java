@@ -3,8 +3,10 @@ package eu.socle.identity;
 
 import eu.socle.config.SecurityWebMvcTest;
 import eu.socle.config.SocleProperties;
+import eu.socle.invite.InvitationService;
 import eu.socle.user.MeController;
 import eu.socle.user.UserEntity;
+import eu.socle.user.UserIdentityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +43,8 @@ class AccessPolicySecurityWebMvcTest {
     @MockBean IdentityClaimsMapper claimsMapper;
     @MockBean IdentityFacade identityFacade;
     @MockBean SocleProperties socleProperties;
+    @MockBean InvitationService invitationService;
+    @MockBean UserIdentityService identityService;
 
     @BeforeEach
     void setUp() {

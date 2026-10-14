@@ -56,7 +56,7 @@ class UserSyncServiceTest {
                 userRepository, identityService, identityRepository,
                 claimsMapper, properties, platformRoleService,
                 new AccessPolicyService(properties, claimsMapper, identityService),
-                accessAuditService, null);
+                accessAuditService, null, null);
     }
 
     @Test

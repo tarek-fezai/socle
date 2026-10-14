@@ -1,5 +1,17 @@
 # Overlay for Playwright / CI — demo IdP realm with Caddy-friendly redirect URIs.
 services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SOCLE_SMTP_HOST: mailpit
+      SOCLE_SMTP_PORT: 1025
+      SOCLE_SMTP_TLS: none
+      SOCLE_SMTP_FROM: socle@e2e.local
+      SOCLE_PUBLIC_BASE_URL: http://127.0.0.1
+    depends_on:
+      mailpit:
+        condition: service_started
+
   keycloak:
     environment:
       # Browser / JWT iss claim must match OIDC_ISSUER_URI (http://127.0.0.1:8081/realms/socle).

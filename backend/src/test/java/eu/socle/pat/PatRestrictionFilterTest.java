@@ -45,6 +45,8 @@ class PatRestrictionFilterTest {
             "read_write,GET,/api/v1/me/tokens,403,pat_not_allowed",
             "read_write,DELETE,/api/v1/me/tokens/abc,403,pat_not_allowed",
             "read_write,GET,/api/v1/me/export,403,pat_not_allowed",
+            "read_write,POST,/api/v1/invitations/accept,403,pat_not_allowed",
+            "read,GET,/api/v1/invitations,403,pat_not_allowed",
             "read,GET,/api/v1/%61dmin/overview,403,pat_not_allowed",
             "read,GET,/api/v1/me/tokens;jsessionid=x,403,pat_not_allowed",
             "read,GET,/api/v1/me,200,",

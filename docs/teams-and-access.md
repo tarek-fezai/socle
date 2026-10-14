@@ -170,7 +170,7 @@ de PR).
 | Admin `/admin/users` | admin système | disable/enable et rôles plateforme : admin système, **dernier admin** protégé (existant) |
 | Accès objet | **owner** FGA de l’objet (ou admin système) | idem ; sinon **403** sur GET / POST / DELETE |
 | Membres d’équipe | membres + admin | `proprietaire` de l’équipe ou admin système |
-| Invitations org | visible « Bientôt » | **pas d’API** (chantier B) |
+| Invitations org | onglet + CTA | `docs/invitations.md` |
 
 ## 3. Écran Accès
 
@@ -205,9 +205,7 @@ ne voit pas la liste et ne peut ni accorder ni retirer.
   la page** (pas de `window.confirm`) ; changement de rôle global via
   l’API plateforme existante (protection du dernier admin conservée).
 - **Équipes** : liste, création, membres et rôles (annuaire + § 1.2).
-- **Invitations** et CTA « + Inviter un membre » : visibles, **désactivés**,
-  libellé « Bientôt ». Backlog `TEAM-INVITATIONS` (chantier B) —
-  `NOT_IMPLEMENTED` visuel.
+- **Invitations** et CTA « + Inviter un membre » : voir `docs/invitations.md`.
 - `/team` : redirection vers `/admin/team` pour un admin système ; **retirée
   des menus** (sidebar, menu mobile) pour les autres. Un non-admin qui
   ouvre `/team` ou `/admin/team` → garde admin existante (403 / redirection
@@ -254,7 +252,7 @@ Pas de secret, pas d’e-mail en clair obligatoire au-delà de ce que les
   `access-people-rows`) et l’`APP_EXTRA` `access-grant-form`.
 - `ACCESS-DELETE-BOX` implémenté sur le document → retirer de
   `NOT_IMPLEMENTED`.
-- `TEAM-INVITATIONS` (onglet + CTA) reste `NOT_IMPLEMENTED`.
+- Invitations : specs `invitations` + `invite-org-member` (`docs/visual-parity.md`).
 - **Référence de mesure = CI Linux.** Les mesures locales Windows sont
   indicatives. Les gardes `RASTER_EXCEPTIONS` / `SUBPIXEL_EXCEPTIONS`
   « inutilisée sur ce rasterizer » ne s’évaluent **que sur Linux (CI)** :
@@ -263,7 +261,7 @@ Pas de secret, pas d’e-mail en clair obligatoire au-delà de ce que les
 
 ## 8. Hors périmètre
 
-- Invitations par e-mail / lien (chantier B).
+- SCIM / synchro annuaire.
 - Présence temps réel (« En ligne ») : `lastActivityAt` = `last_login_at`.
 - Modification des maquettes `*.dc.html`.
 - Signature ou import de licence.

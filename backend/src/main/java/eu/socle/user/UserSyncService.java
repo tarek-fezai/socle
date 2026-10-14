@@ -9,6 +9,8 @@ import eu.socle.identity.IdentityClaimsMapper;
 import eu.socle.identity.IdentityProperties;
 import eu.socle.identity.PatClaims;
 import eu.socle.identity.PlatformRoleService;
+import eu.socle.invite.InvitationService;
+import eu.socle.invite.InvitePendingAdmissionException;
 import eu.socle.licence.LicenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +44,7 @@ public class UserSyncService {
     private final AccessPolicyService accessPolicyService;
     private final AccessAuditService accessAuditService;
     private final LicenceService licenceService;
+    private final InvitationService invitationService;
 
     public UserSyncService(
             UserRepository userRepository,
@@ -52,7 +55,8 @@ public class UserSyncService {
             PlatformRoleService platformRoleService,
             AccessPolicyService accessPolicyService,
             AccessAuditService accessAuditService,
-            @Lazy @Autowired(required = false) LicenceService licenceService
+            @Lazy @Autowired(required = false) LicenceService licenceService,
+            @Lazy @Autowired(required = false) InvitationService invitationService
     ) {
         this.accessPolicyService = accessPolicyService;
         this.accessAuditService = accessAuditService;
@@ -63,6 +67,7 @@ public class UserSyncService {
         this.identityProperties = identityProperties;
         this.platformRoleService = platformRoleService;
         this.licenceService = licenceService;
+        this.invitationService = invitationService;
     }
 
     @Transactional
@@ -101,6 +106,10 @@ public class UserSyncService {
                 // Compte existant rattaché à cette identité : désactivé / domaine / groupe.
                 requireGranted(accessPolicyService.evaluate(jwt, user));
             } else {
+                if (invitationService != null
+                        && invitationService.hasPendingForVerifiedEmail(emailRaw, emailVerified)) {
+                    throw new InvitePendingAdmissionException();
+                }
                 // Jamais de liaison implicite users.id = sub (prise de compte inter-IdP).
                 refuseIfSubjectCollidesWithExistingUserId(subject);
                 // Création effective uniquement — limite de sièges / licence ici seulement.

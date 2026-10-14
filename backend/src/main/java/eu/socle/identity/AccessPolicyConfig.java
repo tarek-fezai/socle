@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.identity;
 
+import eu.socle.invite.InvitationService;
+import eu.socle.user.UserIdentityService;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,9 +20,13 @@ public class AccessPolicyConfig {
             AccessPolicyService accessPolicyService,
             AccessDecisionCache decisionCache,
             AccessAuditService accessAuditService,
-            IdentityClaimsMapper claimsMapper
+            IdentityClaimsMapper claimsMapper,
+            InvitationService invitationService,
+            UserIdentityService identityService
     ) {
-        return new AccessPolicyFilter(accessPolicyService, decisionCache, accessAuditService, claimsMapper);
+        return new AccessPolicyFilter(
+                accessPolicyService, decisionCache, accessAuditService, claimsMapper,
+                invitationService, identityService);
     }
 
     @Bean

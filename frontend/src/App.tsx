@@ -44,6 +44,7 @@ import { FavoritesPage } from './pages/FavoritesPage'
 import { AccountPage } from './pages/account/AccountPage'
 import { AdminHomePage } from './pages/admin/AdminHomePage'
 import { RequirePlatformAdmin } from './auth/RequirePlatformAdmin'
+import { AcceptInvitationPage } from './pages/AcceptInvitationPage'
 
 function ProtectedShell() {
   return (
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/login/erreur" element={<LoginErrorPage />} />
         <Route path="/callback" element={<CallbackPage />} />
         <Route path="/silent-renew" element={<SilentRenewPage />} />
+        <Route path="/invitations/accept" element={<AcceptInvitationPage />} />
 
         <Route element={<ProtectedShell />}>
           <Route path="/" element={<HomeDashboardPage />} />

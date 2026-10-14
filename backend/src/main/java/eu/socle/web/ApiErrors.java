@@ -48,6 +48,13 @@ public final class ApiErrors {
     public static final String PAT_EXPIRY_INVALID = "pat_expiry_invalid";
     /** Jeton d'accès personnel : 10 jetons actifs au maximum. */
     public static final String PAT_LIMIT_REACHED = "pat_limit_reached";
+    /** Acceptation d'invitation refusée (403 générique côté utilisateur). */
+    public static final String INVITATION_REJECTED = "invitation_rejected";
+    public static final String INVITATION_EXPIRED = "invitation_expired";
+    public static final String INVITATION_ALREADY_USED = "invitation_already_used";
+    public static final String INVITATION_EMAIL_MISMATCH = "invitation_email_mismatch";
+    public static final String INVITATION_EMAIL_UNVERIFIED = "invitation_email_unverified";
+    public static final String INVITATION_EMAIL_EXISTS = "invitation_email_exists";
     /** Route interdite à l'authentification par jeton d'accès personnel. */
     public static final String PAT_NOT_ALLOWED = "pat_not_allowed";
     /** Jeton {@code read} : méthodes GET / HEAD / OPTIONS uniquement. */
@@ -263,6 +270,20 @@ public final class ApiErrors {
                 HttpStatus.CONFLICT,
                 BRANDING_SENDER_NOT_CONFIGURED,
                 "Adresse d'expédition non configurée");
+    }
+
+    public static CodedStatusException invitationRejected() {
+        return new CodedStatusException(
+                HttpStatus.FORBIDDEN, INVITATION_REJECTED, "Invitation refusée");
+    }
+
+    public static CodedStatusException invitationUi(String code, String detail) {
+        return new CodedStatusException(HttpStatus.FORBIDDEN, code, detail);
+    }
+
+    public static CodedStatusException invitationEmailExists() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT, INVITATION_EMAIL_EXISTS, "Un compte existe déjà pour cet e-mail");
     }
 
     public static CodedStatusException gitPurgeFailed(UUID documentId) {

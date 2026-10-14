@@ -33,6 +33,14 @@ x-backend-env: &backend-env
   OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET must be set}
   OIDC_FRONTEND_CLIENT_ID: ${OIDC_FRONTEND_CLIENT_ID:-socle-frontend}
   SOCLE_PAT_PEPPER: ${SOCLE_PAT_PEPPER:?SOCLE_PAT_PEPPER must be set (>= 32 bytes, openssl rand -base64 48)}
+  SOCLE_INVITE_PEPPER: ${SOCLE_INVITE_PEPPER:?SOCLE_INVITE_PEPPER must be set (>= 32 bytes, openssl rand -base64 48)}
+  SOCLE_INVITE_TRUSTED_ISSUERS: ${SOCLE_INVITE_TRUSTED_ISSUERS:-}
+  SOCLE_SMTP_HOST: ${SOCLE_SMTP_HOST:-}
+  SOCLE_SMTP_PORT: ${SOCLE_SMTP_PORT:-1025}
+  SOCLE_SMTP_USERNAME: ${SOCLE_SMTP_USERNAME:-}
+  SOCLE_SMTP_PASSWORD: ${SOCLE_SMTP_PASSWORD:-}
+  SOCLE_SMTP_FROM: ${SOCLE_SMTP_FROM:-}
+  SOCLE_SMTP_TLS: ${SOCLE_SMTP_TLS:-}
   SOCLE_IDENTITY_ROLE_SOURCE: ${SOCLE_IDENTITY_ROLE_SOURCE:-CLAIMS}
   SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS: ${SOCLE_IDENTITY_BOOTSTRAP_ADMIN_SUBJECTS:-}
   SOCLE_INSTANCE_DISPLAY_NAME: ${SOCLE_INSTANCE_DISPLAY_NAME:-Socle}
@@ -283,6 +291,16 @@ services:
     depends_on:
       - backend
       - frontend
+    restart: unless-stopped
+
+  # DEMO ONLY — SMTP catcher (UI http://127.0.0.1:8025). Use with profile demo-idp.
+  # Backend: SOCLE_SMTP_HOST=mailpit SOCLE_SMTP_TLS=none SPRING_PROFILES_ACTIVE=local
+  mailpit:
+    profiles: ["demo-idp"]
+    image: axllent/mailpit:v1.21
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
     restart: unless-stopped
 
   # DEMO ONLY — local IdP; do not use in production.

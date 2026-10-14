@@ -261,6 +261,12 @@ jobs:
           BACKEND_CID="$(bash e2e/scripts/compose-e2e.sh ps -q backend)"
           bash e2e/scripts/verify-embedded-licence-key.sh "$BACKEND_CID" e2e/.ci-licence-keys/public.b64
           bash e2e/scripts/import-ci-licence.sh .env.ci
+          # Mêmes identifiants bootstrap que le Keycloak e2e (.env.ci), pour l’API d’admin du realm.
+          KEYCLOAK_ADMIN="$(grep -E '^KEYCLOAK_ADMIN=' deploy/compose/.env.ci | tail -1 | cut -d= -f2-)"
+          KEYCLOAK_ADMIN_PASSWORD="$(grep -E '^KEYCLOAK_ADMIN_PASSWORD=' deploy/compose/.env.ci | tail -1 | cut -d= -f2-)"
+          test -n "$KEYCLOAK_ADMIN"
+          test -n "$KEYCLOAK_ADMIN_PASSWORD"
+          export KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD
           cd e2e
           npm install
           npx playwright install chromium --with-deps
@@ -333,6 +339,7 @@ jobs:
             --set secrets.postgresPassword=TestPass1! \
             --set secrets.oidcClientSecret=TestOidc1! \
             --set secrets.patPepper=ci-helm-pat-pepper-not-a-secret-0123456789 \
+            --set secrets.invitePepper=ci-helm-invite-pepper-not-a-secret-0123456789 \
             --set postgres.host=pg.example \
             >/tmp/helm-out.yaml 2>/tmp/helm-err.txt; then
             echo "expected helm template to fail for git + replicas=2" >&2
@@ -355,6 +362,7 @@ jobs:
             --set secrets.postgresPassword=TestPass1! \
             --set secrets.oidcClientSecret=TestOidc1! \
             --set secrets.patPepper=ci-helm-pat-pepper-not-a-secret-0123456789 \
+            --set secrets.invitePepper=ci-helm-invite-pepper-not-a-secret-0123456789 \
             --set postgres.host=pg.example \
             >/tmp/helm-blob-out.yaml 2>/tmp/helm-blob-err.txt; then
             echo "expected helm template to fail for blob.local + replicas=2" >&2
