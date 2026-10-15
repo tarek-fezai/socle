@@ -161,6 +161,9 @@ public class TrashService {
     @Transactional
     public SoftDeleteResult softDeleteDocument(Jwt jwt, UUID documentId) {
         var user = userSyncService.syncFromJwt(jwt);
+        if (eu.socle.folder.FolderPages.isPage(jdbcTemplate, documentId)) {
+            throw ApiErrors.folderPageLocked();
+        }
         authorizationService.requireDocumentRelation(user.getId(), documentId, "editor");
         DocRow doc = requireActiveDocument(documentId);
         if (legalHoldService != null) {
@@ -266,6 +269,9 @@ public class TrashService {
 
         switch (item.resourceType()) {
             case "document" -> {
+                if (eu.socle.folder.FolderPages.isPage(jdbcTemplate, item.resourceId())) {
+                    throw ApiErrors.folderPageLocked();
+                }
                 message = reparentDocumentToRootIfParentTrashed(item.resourceId());
                 restoreDocument(item.resourceId());
                 restoredDocs.add(item.resourceId());
@@ -649,6 +655,8 @@ public class TrashService {
         } else {
             jdbcTemplate.update("DELETE FROM attachments WHERE document_id = ?", documentId);
         }
+        jdbcTemplate.update(
+                "UPDATE folders SET page_document_id = NULL WHERE page_document_id = ?", documentId);
         int deleted = jdbcTemplate.update(
                 "DELETE FROM documents WHERE id = ? AND deleted_at IS NOT NULL", documentId);
         if (deleted > 0 && historyPurgeService != null) {

@@ -6,6 +6,7 @@ import eu.socle.authz.DocumentScope;
 import eu.socle.document.ContentHealthDtos.ContentHealthResponse;
 import eu.socle.document.ContentHealthDtos.StaleDocumentItem;
 import eu.socle.user.UserSyncService;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,17 +27,20 @@ public class ContentHealthService {
     private final StalenessService stalenessService;
     private final AuthorizationService authorizationService;
     private final UserSyncService userSyncService;
+    private final JdbcTemplate jdbc;
 
     public ContentHealthService(
             DocumentRepository documentRepository,
             StalenessService stalenessService,
             AuthorizationService authorizationService,
-            UserSyncService userSyncService
+            UserSyncService userSyncService,
+            JdbcTemplate jdbc
     ) {
         this.documentRepository = documentRepository;
         this.stalenessService = stalenessService;
         this.authorizationService = authorizationService;
         this.userSyncService = userSyncService;
+        this.jdbc = jdbc;
     }
 
     @Transactional(readOnly = true)
@@ -46,12 +50,13 @@ public class ContentHealthService {
 
         Set<UUID> viewable = new HashSet<>(
                 authorizationService.listViewableDocumentIds(user.getId(), DocumentScope.space(spaceId)));
+        Set<UUID> pageIds = pageDocumentIds(spaceId);
         List<DocumentEntity> inSpace = documentRepository.findActiveBySpaceId(spaceId);
 
         List<StaleDocumentItem> stale = new ArrayList<>();
         int viewableInSpace = 0;
         for (DocumentEntity d : inSpace) {
-            if (!viewable.contains(d.getId())) {
+            if (pageIds.contains(d.getId()) || !viewable.contains(d.getId())) {
                 continue;
             }
             viewableInSpace++;
@@ -75,5 +80,22 @@ public class ContentHealthService {
                 stale.size(),
                 List.copyOf(stale)
         );
+    }
+
+    private Set<UUID> pageDocumentIds(UUID spaceId) {
+        if (jdbc == null) {
+            return Set.of();
+        }
+        List<UUID> ids = jdbc.query(
+                """
+                SELECT page_document_id FROM folders
+                 WHERE space_id = ? AND page_document_id IS NOT NULL
+                """,
+                (rs, i) -> (UUID) rs.getObject(1),
+                spaceId);
+        if (ids == null || ids.isEmpty()) {
+            return Set.of();
+        }
+        return new HashSet<>(ids);
     }
 }

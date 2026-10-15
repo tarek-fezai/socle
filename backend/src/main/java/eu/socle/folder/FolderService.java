@@ -6,8 +6,11 @@ import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.authz.DocumentScope;
 import eu.socle.config.SocleProperties;
+import eu.socle.folder.FolderDtos.ActorRef;
 import eu.socle.folder.FolderDtos.CreateFolderRequest;
 import eu.socle.folder.FolderDtos.FolderView;
+import eu.socle.folder.FolderDtos.OwnerGroupRef;
+import eu.socle.folder.FolderDtos.StatusCounts;
 import eu.socle.folder.FolderDtos.MoveDocumentRequest;
 import eu.socle.folder.FolderDtos.MoveFolderRequest;
 import eu.socle.folder.FolderDtos.SpaceTreeResponse;
@@ -16,6 +19,7 @@ import eu.socle.folder.FolderDtos.TreeFolderNode;
 import eu.socle.folder.FolderDtos.UpdateFolderRequest;
 import eu.socle.trash.TrashService;
 import eu.socle.user.UserSyncService;
+import eu.socle.web.ApiErrors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -24,6 +28,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -76,7 +82,7 @@ public class FolderService {
         int folderCount = (int) vis.allFolders().stream()
                 .filter(f -> folderId.equals(f.parentFolderId()) && vis.visibleFolderIds().contains(f.id()))
                 .count();
-        return toView(row, docCount, folderCount);
+        return toView(row, docCount, folderCount, loadEnrichment(row));
     }
 
     @Transactional
@@ -144,12 +150,12 @@ public class FolderService {
         boolean renamed = !newName.equals(row.name());
 
         try {
-            int updated = jdbc.update("""
+            int updated =             jdbc.update("""
                     UPDATE folders
-                       SET name = ?, position = ?, updated_at = now()
+                       SET name = ?, position = ?, updated_at = now(), updated_by = ?
                      WHERE id = ? AND deleted_at IS NULL
                     """,
-                    newName, newPos, folderId);
+                    newName, newPos, user.getId(), folderId);
             if (updated == 0) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dossier introuvable");
             }
@@ -159,6 +165,14 @@ public class FolderService {
         }
 
         if (renamed) {
+            if (row.pageDocumentId() != null) {
+                jdbc.update("""
+                        UPDATE documents
+                           SET title = ?, updated_at = now(), updated_by = ?
+                         WHERE id = ?
+                        """,
+                        newName, user.getId(), row.pageDocumentId());
+            }
             auditService.record(user.getId(), false, AuditActions.FOLDER_RENAMED,
                     "folder", folderId,
                     Map.of("from", row.name(), "to", newName),
@@ -258,6 +272,9 @@ public class FolderService {
     @Transactional
     public Map<String, Object> moveDocument(Jwt jwt, UUID documentId, MoveDocumentRequest request) {
         var user = userSyncService.syncFromJwt(jwt);
+        if (FolderPages.isPage(jdbc, documentId)) {
+            throw ApiErrors.folderPageLocked();
+        }
         authorizationService.requireDocumentRelation(user.getId(), documentId, "editor");
 
         DocRow doc = requireActiveDocument(documentId);
@@ -394,7 +411,8 @@ public class FolderService {
         }
 
         List<FolderRow> allFolders = jdbc.query("""
-                SELECT id, space_id, parent_folder_id, name, position, created_by, created_at, updated_at
+                SELECT id, space_id, parent_folder_id, name, position, created_by, created_at, updated_at,
+                       status, owner_group_id, page_document_id, updated_by
                   FROM folders
                  WHERE space_id = ? AND deleted_at IS NULL
                  ORDER BY position ASC, lower(name) ASC
@@ -429,16 +447,12 @@ public class FolderService {
         args.add(spaceId);
         args.addAll(viewableDocIds);
         return jdbc.query(
-                """
-                SELECT id, space_id, folder_id, title, status, visibility, position
-                  FROM documents
-                 WHERE space_id = ? AND deleted_at IS NULL
-                   AND id IN ("""
-                        + placeholders
-                        + """
-                   )
-                 ORDER BY position ASC, lower(title) ASC
-                """,
+                "SELECT id, space_id, folder_id, title, status, visibility, position"
+                        + " FROM documents d"
+                        + " WHERE space_id = ? AND deleted_at IS NULL"
+                        + " AND " + FolderPages.EXCLUDE_SQL
+                        + " AND id IN (" + placeholders + ")"
+                        + " ORDER BY position ASC, lower(title) ASC",
                 (rs, i) -> mapDoc(rs),
                 args.toArray());
     }
@@ -636,7 +650,8 @@ public class FolderService {
 
     private FolderRow requireActiveFolder(UUID id) {
         List<FolderRow> rows = jdbc.query("""
-                SELECT id, space_id, parent_folder_id, name, position, created_by, created_at, updated_at
+                SELECT id, space_id, parent_folder_id, name, position, created_by, created_at, updated_at,
+                       status, owner_group_id, page_document_id, updated_by
                   FROM folders WHERE id = ? AND deleted_at IS NULL
                 """,
                 (rs, i) -> mapFolder(rs), id);
@@ -658,10 +673,17 @@ public class FolderService {
         return rows.getFirst();
     }
 
-    private static FolderView toView(FolderRow row, int docs, int folders) {
+    private FolderView toView(FolderRow row, int docs, int folders) {
+        return toView(row, docs, folders, loadEnrichment(row));
+    }
+
+    private FolderView toView(FolderRow row, int docs, int folders, Enrichment enrichment) {
+        Enrichment e = enrichment == null ? Enrichment.fromRow(row) : enrichment;
         return new FolderView(
                 row.id(), row.spaceId(), row.parentFolderId(), row.name(), row.position(),
-                row.createdBy(), row.createdAt(), row.updatedAt(), docs, folders);
+                row.createdBy(), row.createdAt(), row.updatedAt(), docs, folders,
+                row.pageDocumentId(), e.status(), e.creator(), e.lastModifiedBy(),
+                e.lastModifiedAt(), e.ownerGroup(), e.reliabilityAverage(), e.statusCounts());
     }
 
     private FolderView toViewWithVisibilityCounts(UUID userId, FolderRow row) {
@@ -676,6 +698,7 @@ public class FolderService {
     private static FolderRow mapFolder(java.sql.ResultSet rs) throws java.sql.SQLException {
         Timestamp created = rs.getTimestamp("created_at");
         Timestamp updated = rs.getTimestamp("updated_at");
+        String status = rs.getString("status");
         return new FolderRow(
                 (UUID) rs.getObject("id"),
                 (UUID) rs.getObject("space_id"),
@@ -684,7 +707,11 @@ public class FolderService {
                 rs.getInt("position"),
                 (UUID) rs.getObject("created_by"),
                 created != null ? created.toInstant() : null,
-                updated != null ? updated.toInstant() : null
+                updated != null ? updated.toInstant() : null,
+                status == null || status.isBlank() ? "active" : status,
+                (UUID) rs.getObject("owner_group_id"),
+                (UUID) rs.getObject("page_document_id"),
+                (UUID) rs.getObject("updated_by")
         );
     }
 
@@ -700,9 +727,114 @@ public class FolderService {
         );
     }
 
+    private Enrichment loadEnrichment(FolderRow row) {
+        List<Enrichment> rows = jdbc.query("""
+                /* folder-page-enrichment */
+                SELECT
+                  (SELECT u.display_name FROM users u WHERE u.id = f.created_by) AS created_name,
+                  (SELECT g.name FROM groups g WHERE g.id = f.owner_group_id) AS group_name,
+                  lm.ts AS last_ts,
+                  lm.uid AS last_uid,
+                  (SELECT u.display_name FROM users u WHERE u.id = lm.uid) AS last_name,
+                  st.avg_rel,
+                  st.validated,
+                  st.in_review,
+                  st.draft,
+                  st.n
+                FROM folders f
+                LEFT JOIN LATERAL (
+                  SELECT ts, uid FROM (
+                    SELECT f.updated_at AS ts, f.updated_by AS uid
+                    UNION ALL
+                    SELECT d.updated_at, d.updated_by
+                      FROM documents d
+                     WHERE d.id = f.page_document_id AND d.deleted_at IS NULL
+                    UNION ALL
+                    SELECT d.updated_at, d.updated_by
+                      FROM documents d
+                     WHERE d.folder_id = f.id AND d.deleted_at IS NULL
+                       AND d.id IS DISTINCT FROM f.page_document_id
+                  ) c
+                  ORDER BY ts DESC NULLS LAST
+                  LIMIT 1
+                ) lm ON true
+                LEFT JOIN LATERAL (
+                  SELECT AVG(d.reliability_score) AS avg_rel,
+                         COUNT(*) FILTER (WHERE d.status = 'valide') AS validated,
+                         COUNT(*) FILTER (WHERE d.status = 'en_revue') AS in_review,
+                         COUNT(*) FILTER (WHERE d.status = 'brouillon') AS draft,
+                         COUNT(*) AS n
+                    FROM documents d
+                   WHERE d.folder_id = f.id AND d.deleted_at IS NULL
+                     AND d.id IS DISTINCT FROM f.page_document_id
+                ) st ON true
+                WHERE f.id = ?
+                """,
+                (rs, i) -> mapEnrichment(row, rs),
+                row.id());
+        if (rows == null || rows.isEmpty()) {
+            return Enrichment.fromRow(row);
+        }
+        return rows.getFirst();
+    }
+
+    private static Enrichment mapEnrichment(FolderRow row, java.sql.ResultSet rs) throws java.sql.SQLException {
+        Timestamp last = rs.getTimestamp("last_ts");
+        UUID lastUid = (UUID) rs.getObject("last_uid");
+        String lastName = rs.getString("last_name");
+        int n = rs.getInt("n");
+        BigDecimal avg = rs.getBigDecimal("avg_rel");
+        if (n == 0) {
+            avg = null;
+        } else if (avg != null) {
+            avg = avg.setScale(2, RoundingMode.HALF_UP);
+        }
+        return new Enrichment(
+                apiStatus(row.status()),
+                new ActorRef(row.createdBy() == null ? "system" : "user", row.createdBy(), rs.getString("created_name")),
+                new ActorRef(lastUid == null ? "system" : "user", lastUid, lastName),
+                last != null ? last.toInstant() : row.updatedAt(),
+                ownerGroupRef(row.ownerGroupId(), rs.getString("group_name")),
+                avg,
+                new StatusCounts(rs.getInt("validated"), rs.getInt("in_review"), rs.getInt("draft")));
+    }
+
+    private static String apiStatus(String db) {
+        return "archived".equals(db) ? "archivé" : "actif";
+    }
+
+    private static OwnerGroupRef ownerGroupRef(UUID id, String name) {
+        return id == null ? null : new OwnerGroupRef(id, name);
+    }
+
+    private record Enrichment(
+            String status,
+            ActorRef creator,
+            ActorRef lastModifiedBy,
+            java.time.Instant lastModifiedAt,
+            OwnerGroupRef ownerGroup,
+            BigDecimal reliabilityAverage,
+            StatusCounts statusCounts
+    ) {
+        static Enrichment fromRow(FolderRow row) {
+            ActorRef creator = new ActorRef(
+                    row.createdBy() == null ? "system" : "user", row.createdBy(), null);
+            UUID lastId = row.updatedBy() != null ? row.updatedBy() : row.createdBy();
+            return new Enrichment(
+                    apiStatus(row.status()),
+                    creator,
+                    new ActorRef(lastId == null ? "system" : "user", lastId, null),
+                    row.updatedAt(),
+                    ownerGroupRef(row.ownerGroupId(), null),
+                    null,
+                    new StatusCounts(0, 0, 0));
+        }
+    }
+
     private record FolderRow(
             UUID id, UUID spaceId, UUID parentFolderId, String name, int position,
-            UUID createdBy, java.time.Instant createdAt, java.time.Instant updatedAt
+            UUID createdBy, java.time.Instant createdAt, java.time.Instant updatedAt,
+            String status, UUID ownerGroupId, UUID pageDocumentId, UUID updatedBy
     ) {}
 
     private record DocRow(

@@ -16,6 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.nio.file.Path;
@@ -53,6 +55,7 @@ class StalenessServiceTest {
     @Mock DocumentVersionRepository versionRepository;
     @Mock AuthorizationService authorizationService;
     @Mock UserSyncService userSyncService;
+    @Mock JdbcTemplate jdbc;
 
     StalenessProperties properties;
     RelationalDocumentStore relationalStore;
@@ -68,7 +71,7 @@ class StalenessServiceTest {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         staleness = new StalenessService(relationalStore, properties, clock);
         contentHealth = new ContentHealthService(
-                documentRepository, staleness, authorizationService, userSyncService);
+                documentRepository, staleness, authorizationService, userSyncService, jdbc);
 
         UserEntity user = new UserEntity();
         user.setId(USER);
@@ -143,6 +146,27 @@ class StalenessServiceTest {
         assertThat(String.valueOf(r)).doesNotContain("Secret stale interdit");
         assertThat(r.viewableDocumentCount()).isEqualTo(2);
         assertThat(r.staleCount()).isEqualTo(1);
+    }
+
+    @Test
+    void contentHealth_excludesFolderPage() {
+        Instant old = NOW.minus(200, ChronoUnit.DAYS);
+        DocumentEntity page = entity(DOC_OLD, "Page", old);
+        DocumentEntity sibling = entity(DOC_FRESH, "Frère", old);
+
+        when(authorizationService.listViewableDocumentIds(eq(USER), any()))
+                .thenReturn(List.of(DOC_OLD, DOC_FRESH));
+        when(documentRepository.findActiveBySpaceId(SPACE)).thenReturn(List.of(page, sibling));
+        when(jdbc.query(org.mockito.ArgumentMatchers.contains("page_document_id"),
+                org.mockito.ArgumentMatchers.any(RowMapper.class), eq(SPACE)))
+                .thenReturn(List.of(DOC_OLD));
+        when(versionRepository.findByDocumentIdOrderByVersionNoDesc(any(), any()))
+                .thenAnswer(inv -> org.springframework.data.domain.Page.empty(inv.getArgument(1)));
+
+        ContentHealthResponse r = contentHealth.forSpace(jwt(), SPACE);
+
+        assertThat(r.viewableDocumentCount()).isEqualTo(1);
+        assertThat(r.staleDocuments()).extracting(i -> i.id()).containsExactly(DOC_FRESH);
     }
 
     @Test

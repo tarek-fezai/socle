@@ -61,6 +61,9 @@ public final class ApiErrors {
     public static final String CANNOT_DISABLE_SELF = "cannot_disable_self";
     /** Dernier ADMINISTRATEUR_SYSTEME encore actif. */
     public static final String LAST_SYSTEM_ADMIN = "last_system_admin";
+    /** La page de dossier ne se déplace, ne se supprime ni ne se restaure seule. */
+    public static final String FOLDER_PAGE_LOCKED = "folder_page_locked";
+    public static final String FOLDER_PAGE_TITLE_LOCKED = "folder_page_title_locked";
     /** Route interdite à l'authentification par jeton d'accès personnel. */
     public static final String PAT_NOT_ALLOWED = "pat_not_allowed";
     /** Jeton {@code read} : méthodes GET / HEAD / OPTIONS uniquement. */
@@ -313,6 +316,20 @@ public final class ApiErrors {
                 HttpStatus.CONFLICT,
                 LAST_SYSTEM_ADMIN,
                 "Impossible de désactiver le dernier ADMINISTRATEUR_SYSTEME");
+    }
+
+    public static CodedStatusException folderPageLocked() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                FOLDER_PAGE_LOCKED,
+                "La page de dossier suit le dossier : elle ne peut pas être déplacée, supprimée ou restaurée seule");
+    }
+
+    public static CodedStatusException folderPageTitleLocked() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                FOLDER_PAGE_TITLE_LOCKED,
+                "Le titre de la page de dossier est le nom du dossier");
     }
 
     public static CodedStatusException gitPurgeFailed(UUID documentId) {

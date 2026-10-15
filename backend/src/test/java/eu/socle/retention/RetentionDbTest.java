@@ -100,7 +100,9 @@ class RetentionDbTest {
         jdbc.update("DELETE FROM document_drafts");
         jdbc.update("DELETE FROM document_versions");
         jdbc.update("DELETE FROM attachments");
+        jdbc.update("UPDATE folders SET page_document_id = NULL");
         jdbc.update("DELETE FROM documents");
+        jdbc.update("DELETE FROM folders");
         jdbc.update("DELETE FROM spaces");
         jdbc.update("""
                 UPDATE instance_settings
@@ -438,6 +440,61 @@ class RetentionDbTest {
     }
 
     @Test
+    void purge_archivedSpaceWithFolderPage_removesPageFolderAndSpace() {
+        Instant old = NOW.minusSeconds(8L * 365 * 86400);
+        UUID archivedSpace = newSpace("Avec page");
+        UUID folder = newFolder(archivedSpace, "Procédures");
+        UUID page = newDocument(archivedSpace, "Procédures", "archive", old);
+        UUID sibling = newDocument(archivedSpace, "Consigne", "archive", old);
+        jdbc.update("UPDATE documents SET folder_id = ? WHERE id IN (?, ?)", folder, page, sibling);
+        jdbc.update("UPDATE folders SET page_document_id = ? WHERE id = ?", page, folder);
+
+        RetentionPurgeResult r = purge.run();
+
+        assertThat(r.failures()).isZero();
+        assertThat(r.archivedSpacesPurged()).isEqualTo(1);
+        assertThat(spaceExists(archivedSpace)).isFalse();
+        assertThat(exists(page)).isFalse();
+        assertThat(exists(sibling)).isFalse();
+        assertThat(count("SELECT count(*) FROM folders WHERE id = '" + folder + "'")).isZero();
+        verify(auditService).record(isNull(), eq(true), eq(AuditActions.SPACE_PURGED), eq("space"),
+                eq(archivedSpace), anyMap(), isNull());
+    }
+
+    @Test
+    void purge_archivedFolderPage_isKept_whileIsolatedArchivedDocumentIsPurged() {
+        Instant old = NOW.minusSeconds(8L * 365 * 86400);
+        UUID folder = newFolder(space, "Actif");
+        UUID page = newDocument(space, "Actif", "archive", old);
+        jdbc.update("UPDATE documents SET folder_id = ? WHERE id = ?", folder, page);
+        jdbc.update("UPDATE folders SET page_document_id = ? WHERE id = ?", page, folder);
+        UUID isolated = newDocument(space, "Isolé", "archive", old);
+
+        RetentionPurgeResult r = purge.run();
+
+        assertThat(r.failures()).isZero();
+        assertThat(r.archivedSpacesPurged()).isZero();
+        assertThat(r.archivedDocumentsPurged()).isEqualTo(1);
+        assertThat(exists(page)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT page_document_id FROM folders WHERE id = ?", UUID.class, folder))
+                .isEqualTo(page);
+        assertThat(exists(isolated)).isFalse();
+        assertThat(exists(doc)).isTrue();
+    }
+
+    @Test
+    void legalHold_coversFolderPage() {
+        UUID folder = newFolder(space, "Gelé");
+        UUID page = newDocument(space, "Gelé", "archive", NOW);
+        jdbc.update("UPDATE documents SET folder_id = ? WHERE id = ?", folder, page);
+        jdbc.update("UPDATE folders SET page_document_id = ? WHERE id = ?", page, folder);
+
+        holds.place(jwt, new PlaceLegalHoldRequest("document", page, "Gel de la page"));
+
+        assertThat(holds.heldDocumentIds(List.of(page, doc))).contains(page);
+    }
+
+    @Test
     void purge_alwaysAuditsRun() {
         purge.run();
         verify(auditService, atLeastOnce()).record(isNull(), eq(true), eq(AuditActions.RETENTION_PURGE_RAN),
@@ -472,6 +529,12 @@ class RetentionDbTest {
     static UUID newSpace(String name) {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO spaces (id, name) VALUES (?, ?)", id, name);
+        return id;
+    }
+
+    static UUID newFolder(UUID spaceId, String name) {
+        UUID id = UUID.randomUUID();
+        jdbc.update("INSERT INTO folders (id, space_id, name) VALUES (?, ?, ?)", id, spaceId, name);
         return id;
     }
 

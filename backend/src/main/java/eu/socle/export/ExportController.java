@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
@@ -35,8 +36,16 @@ public class ExportController {
     @GetMapping("/folders/{id}/export")
     public ResponseEntity<byte[]> exportFolder(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable UUID id
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "pdf") String format
     ) {
+        if ("zip".equalsIgnoreCase(format)) {
+            return toResponse(exportService.exportFolderZip(jwt, id));
+        }
+        if (!"pdf".equalsIgnoreCase(format)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "format : pdf ou zip");
+        }
         return toResponse(exportService.exportFolder(jwt, id));
     }
 

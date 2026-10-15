@@ -109,6 +109,11 @@ class TagAdminServiceTest {
                 CREATE TABLE global_roles (id UUID PRIMARY KEY, name TEXT NOT NULL)
                 """);
         jdbc.execute("""
+                CREATE TABLE folders (
+                  id UUID PRIMARY KEY, page_document_id UUID
+                )
+                """);
+        jdbc.execute("""
                 CREATE TABLE documents (
                   id UUID PRIMARY KEY, title TEXT NOT NULL, space_id UUID, deleted_at TIMESTAMPTZ, doc_type TEXT
                 )
@@ -326,6 +331,25 @@ class TagAdminServiceTest {
         TagAdminView v = service.list(jwt).tags().stream()
                 .filter(t -> t.id().equals(id)).findFirst().orElseThrow();
         assertThat(v.createdByDisplayName()).isNull();
+    }
+
+    @Test
+    void summaryAndTagCount_excludeFolderPage() {
+        long before = service.summary(jwt).totalDocumentCount();
+        UUID page = UUID.randomUUID();
+        UUID ordinary = UUID.randomUUID();
+        jdbc.update("INSERT INTO documents (id, title) VALUES (?, 'Page dossier'), (?, 'Ordinaire')",
+                page, ordinary);
+        jdbc.update("INSERT INTO folders (id, page_document_id) VALUES (?, ?)", UUID.randomUUID(), page);
+        UUID tag = insertTag("Compte page");
+        jdbc.update("INSERT INTO document_tags (document_id, tag_id) VALUES (?, ?), (?, ?)",
+                page, tag, ordinary, tag);
+
+        var summary = service.summary(jwt);
+        assertThat(summary.totalDocumentCount()).isEqualTo(before + 1);
+        assertThat(summary.taggedDocumentCount()).isEqualTo(1);
+        assertThat(service.list(jwt).tags().stream().filter(t -> t.id().equals(tag)).findFirst().orElseThrow()
+                .documentCount()).isEqualTo(1);
     }
 
     private UUID insertTag(String name) {

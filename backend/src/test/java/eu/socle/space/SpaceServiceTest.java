@@ -120,6 +120,7 @@ class SpaceServiceTest {
                 CREATE TABLE folders (
                   id UUID PRIMARY KEY,
                   space_id UUID NOT NULL REFERENCES spaces(id),
+                  page_document_id UUID,
                   deleted_at TIMESTAMPTZ
                 )
                 """);
@@ -310,6 +311,30 @@ class SpaceServiceTest {
         when(authorizationService.listViewableSpaceIds(USER_B)).thenReturn(List.of(spaceId));
         when(authorizationService.filterByDocumentViewer(eq(USER_B), any(), eq("spaces-document-count")))
                 .thenReturn(List.of(visible));
+
+        List<SpaceView> listed = service.list(jwt(USER_B));
+        assertThat(listed).anySatisfy(s -> {
+            assertThat(s.id()).isEqualTo(spaceId);
+            assertThat(s.documentCount()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void list_documentCount_excludesFolderPage() {
+        UUID spaceId = UUID.randomUUID();
+        UUID sibling = UUID.randomUUID();
+        UUID page = UUID.randomUUID();
+        UUID folder = UUID.randomUUID();
+        jdbc.update("INSERT INTO spaces (id, name, color) VALUES (?,?,?)", spaceId, "Page", null);
+        jdbc.update("INSERT INTO space_owners (space_id, user_id, is_responsible) VALUES (?,?,true)",
+                spaceId, USER_B);
+        jdbc.update("INSERT INTO documents (id, space_id, title) VALUES (?, ?, 'Frère'), (?, ?, 'Page')",
+                sibling, spaceId, page, spaceId);
+        jdbc.update("INSERT INTO folders (id, space_id, page_document_id) VALUES (?, ?, ?)",
+                folder, spaceId, page);
+        when(authorizationService.listViewableSpaceIds(USER_B)).thenReturn(List.of(spaceId));
+        when(authorizationService.filterByDocumentViewer(eq(USER_B), any(), eq("spaces-document-count")))
+                .thenAnswer(inv -> inv.getArgument(1));
 
         List<SpaceView> listed = service.list(jwt(USER_B));
         assertThat(listed).anySatisfy(s -> {

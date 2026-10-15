@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 @Service
 public class DocumentService {
@@ -313,6 +314,15 @@ public class DocumentService {
 
     @Transactional
     public DocumentResponse create(Jwt jwt, CreateDocumentRequest request) {
+        return create(jwt, request, null);
+    }
+
+    /**
+     * {@code afterPersisted} s'exécute après le flush du document et avant l'audit,
+     * pour qu'un rattachement {@code folders.page_document_id} soit visible des événements.
+     */
+    @Transactional
+    public DocumentResponse create(Jwt jwt, CreateDocumentRequest request, Consumer<UUID> afterPersisted) {
         var user = userSyncService.syncFromJwt(jwt);
         if (request.spaceId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spaceId requis");
@@ -416,18 +426,21 @@ public class DocumentService {
             createMeta.put("templateId", template.templateId().toString());
             createMeta.put("templateVersion", template.version());
         }
+        // Les écritures JDBC suivantes (page de dossier, tags de modèle) référencent documents(id).
+        repository.flush();
+        if (afterPersisted != null) {
+            afterPersisted.accept(saved.getId());
+        }
         auditService.record(
                 user.getId(),
                 false,
                 AuditActions.DOCUMENT_CREATED,
                 "document",
                 saved.getId(),
-                createMeta,
+                withFolderPage(createMeta, saved.getId()),
                 null
         );
         if (template != null) {
-            // Les INSERT JDBC (document_tags) référencent documents(id) : flush JPA d'abord.
-            repository.flush();
             templateService.afterDocumentCreated(user.getId(), template, saved.getId(), spaceId);
         }
         return toResponse(saved, user.getId());
@@ -464,7 +477,7 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VISIBILITY_CHANGED,
                 "document",
                 saved.getId(),
-                meta,
+                withFolderPage(meta, saved.getId()),
                 null
         );
         return toResponse(saved, user.getId());
@@ -501,6 +514,35 @@ public class DocumentService {
         return "space:" + entity.getSpaceId();
     }
 
+    /** {@code folderPage} et {@code folderId} lus sur {@code folders.page_document_id}, pas sur l'appelant. */
+    private Map<String, Object> withFolderPage(Map<String, Object> meta, UUID documentId) {
+        UUID folderId = pageFolderId(documentId);
+        if (folderId == null) {
+            return meta == null ? Map.of() : meta;
+        }
+        Map<String, Object> copy = new LinkedHashMap<>();
+        if (meta != null) {
+            copy.putAll(meta);
+        }
+        copy.put("folderPage", Boolean.TRUE);
+        copy.put("folderId", folderId.toString());
+        return copy;
+    }
+
+    private UUID pageFolderId(UUID documentId) {
+        if (jdbc == null || documentId == null) {
+            return null;
+        }
+        List<UUID> ids = jdbc.query(
+                "SELECT id FROM folders WHERE page_document_id = ?",
+                (rs, i) -> (UUID) rs.getObject("id"),
+                documentId);
+        if (ids == null || ids.isEmpty()) {
+            return null;
+        }
+        return ids.getFirst();
+    }
+
     /**
      * Update : archive l'ancien body, applique la règle de statut, incrémente la version —
      * même transaction.
@@ -514,6 +556,17 @@ public class DocumentService {
         assertExpectedVersion(entity, request.expectedVersionNo());
         assertNoApprovalInProgress(id);
         String previousTitle = entity.getTitle();
+        String nextTitle = request.title().trim();
+        if (jdbc != null) {
+            List<String> pageNames = jdbc.query(
+                    "SELECT name FROM folders WHERE page_document_id = ?",
+                    (rs, i) -> rs.getString("name"),
+                    id);
+            if (pageNames != null && !pageNames.isEmpty() && pageNames.getFirst() != null
+                    && !pageNames.getFirst().equals(nextTitle)) {
+                throw ApiErrors.folderPageTitleLocked();
+            }
+        }
         Map<String, Object> previousBody = copyBody(
                 documentStore.readCurrentContent(entity.getId(), entity.getBody()));
         int archivedVersionNo = entity.getCurrentVersionNo();
@@ -535,7 +588,7 @@ public class DocumentService {
                 archivedSummary
         );
 
-        entity.setTitle(request.title().trim());
+        entity.setTitle(nextTitle);
         if (request.docType() != null) {
             entity.setDocType(blankToNull(request.docType()));
         }
@@ -567,10 +620,10 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VERSION_CREATED,
                 "document",
                 saved.getId(),
-                Map.of(
+                withFolderPage(Map.of(
                         "versionNo", archivedVersionNo,
                         "newCurrentVersionNo", saved.getCurrentVersionNo()
-                ),
+                ), saved.getId()),
                 null
         );
         Map<String, Object> updateMeta = new LinkedHashMap<>();
@@ -585,7 +638,7 @@ public class DocumentService {
                 AuditActions.DOCUMENT_UPDATED,
                 "document",
                 saved.getId(),
-                updateMeta,
+                withFolderPage(updateMeta, saved.getId()),
                 null
         );
         if (activityEventService != null
@@ -917,11 +970,11 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VERSION_CREATED,
                 "document",
                 saved.getId(),
-                Map.of(
+                withFolderPage(Map.of(
                         "versionNo", archivedVersionNo,
                         "newCurrentVersionNo", saved.getCurrentVersionNo(),
                         "reason", "restore"
-                ),
+                ), saved.getId()),
                 null
         );
         Map<String, Object> restoreMeta = new LinkedHashMap<>();
@@ -935,7 +988,7 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VERSION_RESTORED,
                 "document",
                 saved.getId(),
-                restoreMeta,
+                withFolderPage(restoreMeta, saved.getId()),
                 null
         );
         return toResponse(saved, user.getId());

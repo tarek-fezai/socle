@@ -132,6 +132,10 @@ class DocumentRestoreRulesTest {
                   id UUID PRIMARY KEY, comment_policy TEXT, default_visibility TEXT, deleted_at TIMESTAMPTZ
                 )""");
         jdbc.execute("""
+                CREATE TABLE folders (
+                  id UUID PRIMARY KEY, name TEXT, page_document_id UUID
+                )""");
+        jdbc.execute("""
                 CREATE TABLE space_owners (
                   space_id UUID, user_id UUID, is_responsible BOOLEAN DEFAULT false,
                   created_at TIMESTAMPTZ DEFAULT now()

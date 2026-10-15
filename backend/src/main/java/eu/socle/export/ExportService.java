@@ -10,6 +10,7 @@ import eu.socle.document.DocumentRepository;
 import eu.socle.document.TransclusionResolver;
 import eu.socle.export.TipTapPdfRenderer.NamedBody;
 import eu.socle.storage.DocumentStore;
+import eu.socle.storage.TipTapMarkdown;
 import eu.socle.user.UserSyncService;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,11 +19,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * Export PDF documentaire — réutilise {@link TransclusionResolver} et
@@ -108,6 +116,80 @@ public class ExportService {
                 "folder", folderId, meta, null);
 
         return new ExportFile(safeFilename(folder.name()) + ".pdf", "application/pdf", pdf);
+    }
+
+    /**
+     * Archive du dossier. La page est {@code _dossier.md} à la racine, pas un document frère.
+     */
+    @Transactional(readOnly = true)
+    public ExportFile exportFolderZip(Jwt jwt, UUID folderId) {
+        var user = userSyncService.syncFromJwt(jwt);
+        authorizationService.requireFolderRelation(user.getId(), folderId, "viewer");
+        FolderRow folder = requireActiveFolder(folderId);
+
+        List<UUID> viewableIds = authorizationService.listViewableDocumentIds(
+                user.getId(), DocumentScope.folder(folderId));
+        Set<UUID> pageIds = new HashSet<>(jdbc.query(
+                "SELECT page_document_id FROM folders WHERE id = ? AND page_document_id IS NOT NULL",
+                (rs, i) -> (UUID) rs.getObject(1),
+                folderId));
+        List<DocumentEntity> included = documentRepository.findAllActiveByIdIn(viewableIds).stream()
+                .filter(d -> !pageIds.contains(d.getId()))
+                .sorted((a, b) -> a.getTitle().compareToIgnoreCase(b.getTitle()))
+                .toList();
+
+        byte[] zip = zipFolder(user.getId(), pageIds, included);
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("format", "zip");
+        meta.put("title", folder.name());
+        meta.put("documentCount", included.size());
+        meta.put("folderPage", !pageIds.isEmpty());
+        auditService.record(
+                user.getId(), false, AuditActions.FOLDER_EXPORTED,
+                "folder", folderId, meta, null);
+        return new ExportFile(safeFilename(folder.name()) + ".zip", "application/zip", zip);
+    }
+
+    private byte[] zipFolder(UUID userId, Set<UUID> pageIds, List<DocumentEntity> documents) {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(buffer, StandardCharsets.UTF_8)) {
+            for (UUID pageId : pageIds) {
+                documentRepository.findActiveById(pageId).ifPresent(page ->
+                        writeMarkdown(zip, userId, page, "_dossier.md"));
+            }
+            Set<String> used = new HashSet<>();
+            used.add("_dossier.md");
+            for (DocumentEntity doc : documents) {
+                String name = uniqueName(safeFilename(doc.getTitle()) + ".md", used);
+                writeMarkdown(zip, userId, doc, name);
+            }
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Export ZIP impossible");
+        }
+        return buffer.toByteArray();
+    }
+
+    private void writeMarkdown(ZipOutputStream zip, UUID userId, DocumentEntity doc, String entryName) {
+        try {
+            Map<String, Object> raw = documentStore.readCurrentContent(doc.getId(), doc.getBody());
+            Map<String, Object> resolved = transclusionResolver.resolve(userId, doc.getId(), raw);
+            zip.putNextEntry(new ZipEntry(entryName));
+            zip.write(TipTapMarkdown.toMarkdown(resolved).getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Export ZIP impossible");
+        }
+    }
+
+    private static String uniqueName(String name, Set<String> used) {
+        String candidate = name;
+        int n = 2;
+        while (!used.add(candidate)) {
+            int dot = name.lastIndexOf('.');
+            candidate = dot < 0 ? name + "-" + n : name.substring(0, dot) + "-" + n + name.substring(dot);
+            n++;
+        }
+        return candidate;
     }
 
     @Transactional(readOnly = true)
