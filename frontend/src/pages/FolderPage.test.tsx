@@ -6,11 +6,16 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 const getMock = vi.fn()
 const postMock = vi.fn()
+vi.mock('../auth/AuthProvider', () => ({
+  useAuth: () => ({ me: { id: 'me-1', displayName: 'Tarek Fezai', avatarInitials: 'TF' } }),
+}))
+
 vi.mock('../lib/api', () => ({
   api: {
     get: (...args: unknown[]) => getMock(...args),
     post: (...args: unknown[]) => postMock(...args),
     patch: vi.fn(),
+    put: vi.fn(() => Promise.resolve({ data: { id: 'page-1', permissions: { canEdit: true } } })),
     delete: vi.fn(),
   },
 }))
@@ -53,6 +58,16 @@ const tree = {
   ],
 }
 
+const perms = (canEdit: boolean) => ({
+  canEdit,
+  canPublish: false,
+  canManageAccess: false,
+  canComment: canEdit,
+  canManageAttestations: false,
+})
+
+let pageResponse: { status: number; data: unknown } = { status: 204, data: '' }
+
 function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -73,6 +88,7 @@ describe('FolderPage', () => {
   beforeEach(() => {
     getMock.mockReset()
     postMock.mockReset()
+    pageResponse = { status: 204, data: '' }
     getMock.mockImplementation((url: string) => {
       if (url === '/api/v1/folders/proc') {
         return Promise.resolve({
@@ -86,6 +102,24 @@ describe('FolderPage', () => {
         })
       }
       if (url === `/api/v1/spaces/${SPACE}/tree`) return Promise.resolve({ data: tree })
+      if (url === '/api/v1/folders/proc/page') return Promise.resolve(pageResponse)
+      if (String(url).startsWith('/api/v1/documents/')) {
+        return Promise.resolve({
+          data: {
+            id: String(url).split('/').pop(),
+            title: '',
+            status: 'valide',
+            docType: null,
+            updatedAt: '2026-09-12T10:00:00.000Z',
+            updatedBy: { id: 'u1', displayName: 'Tarek Fezai' },
+            tags: [],
+            permissions: perms(true),
+            body: { type: 'doc', content: [{ type: 'paragraph' }] },
+            spaceId: SPACE,
+          },
+        })
+      }
+      if (String(url).includes('/favorites/')) return Promise.resolve({ data: { favorited: false } })
       return Promise.reject(new Error(`unexpected ${url}`))
     })
   })
@@ -99,19 +133,17 @@ describe('FolderPage', () => {
     expect(spaceLink.getAttribute('href')).toBe('/spaces/s1/tree')
     expect(within(crumbs).getByText('Procédures').getAttribute('aria-current')).toBe('page')
 
-    const subs = await screen.findByRole('list', { name: 'Sous-dossiers' })
-    expect(within(subs).getByText('Revues')).toBeTruthy()
-    const docs = screen.getByRole('list', { name: 'Documents' })
-    expect(within(docs).getByText('Provisioning des comptes')).toBeTruthy()
-    expect(within(docs).getByText('Registre')).toBeTruthy()
-    expect(within(docs).queryByText('Politique')).toBeNull() // document racine
-    expect(screen.getByText(/2 documents/)).toBeTruthy()
+    expect(screen.queryByText('Revues')).toBeNull()
+    expect(screen.getAllByText('Provisioning des comptes').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Registre').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Politique')).toBeNull()
+    expect(screen.getByText(/2 documents · sous-dossier de l'espace/)).toBeTruthy()
   })
 
-  it('« Nouveau document ici » crée dans ce dossier puis ouvre le document', async () => {
+  it('« + Nouveau document » crée dans ce dossier puis ouvre le document', async () => {
     postMock.mockResolvedValue({ data: { id: 'new-doc', spaceId: SPACE, title: 'Sans titre' } })
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Nouveau document ici' }))
+    fireEvent.click(await screen.findByRole('button', { name: '+ Nouveau document' }))
 
     await waitFor(() =>
       expect(postMock).toHaveBeenCalledWith(
@@ -146,5 +178,45 @@ describe('FolderPage', () => {
         name: 'Archives',
       }),
     )
+  })
+
+  it('lecteur : page en lecture seule, sans barre ni création', async () => {
+    pageResponse = {
+      status: 200,
+      data: {
+        id: 'page-1',
+        title: 'Procédures',
+        body: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Déjà écrit' }] }] },
+        status: 'brouillon',
+        spaceId: SPACE,
+        permissions: perms(false),
+      },
+    }
+    renderPage()
+    expect(await screen.findByRole('heading', { name: 'Procédures' })).toBeTruthy()
+    expect(await screen.findByText('Déjà écrit')).toBeTruthy()
+    expect(screen.queryByRole('toolbar', { name: 'Mise en forme' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '+ Sous-dossier' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '+ Nouveau document' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Renommer le dossier' })).toBeNull()
+  })
+
+  it('contributeur : barre d’outils et création', async () => {
+    pageResponse = {
+      status: 200,
+      data: {
+        id: 'page-1',
+        title: 'Procédures',
+        body: { type: 'doc', content: [{ type: 'paragraph' }] },
+        status: 'brouillon',
+        spaceId: SPACE,
+        permissions: perms(true),
+      },
+    }
+    renderPage()
+    expect(await screen.findByRole('toolbar', { name: 'Mise en forme' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '+ Sous-dossier' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '+ Nouveau document' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Renommer le dossier' })).toBeTruthy()
   })
 })

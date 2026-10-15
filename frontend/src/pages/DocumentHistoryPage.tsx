@@ -45,8 +45,16 @@ function compareHref(docId: string, from: number, to: number): string {
   return `/docs/${docId}/history/compare?from=${from}&to=${to}`
 }
 
-export function DocumentHistoryPage() {
-  const { id = '' } = useParams()
+export function DocumentHistoryPage({
+  documentId,
+  embedded = false,
+}: {
+  documentId?: string
+  /** Liste des versions seule (page de dossier), sans la chrome document. */
+  embedded?: boolean
+} = {}) {
+  const params = useParams()
+  const id = documentId || params.id || ''
   const doc = useQuery({
     queryKey: ['document', id],
     queryFn: () => getDocument(api, id),
@@ -74,10 +82,10 @@ export function DocumentHistoryPage() {
     )
   }
 
-  return <HistorySurface doc={doc.data} />
+  return <HistorySurface doc={doc.data} embedded={embedded} />
 }
 
-function HistorySurface({ doc }: { doc: DocumentDetail }) {
+function HistorySurface({ doc, embedded = false }: { doc: DocumentDetail; embedded?: boolean }) {
   const id = doc.id
   const qc = useQueryClient()
   const { me } = useAuth()
@@ -216,7 +224,7 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
 
   /* ------------------------------ Mobile ------------------------------ */
 
-  if (isMobile) {
+  if (isMobile && !embedded) {
     return (
       <div className="doc-page hist-page" data-testid="document-history-page" data-mock-id="hist-page">
         <HistoryMobileTop title="Historique" backTo={`/docs/${id}`} />
@@ -285,13 +293,19 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
   /* ------------------------------ Desktop ------------------------------ */
 
   return (
-    <div className="doc-page hist-page" data-testid="document-history-page" data-mock-id="hist-page">
-      <HistoryTopBar crumbs={crumbs} mockPrefix="hist">
-        <Link to={`/docs/${id}`} className="hist-ghost" data-mock-id="hist-back">
-          Retour à la page
-        </Link>
-      </HistoryTopBar>
-      <DocumentTabs {...tabProps} />
+    <div
+      className={embedded ? 'fp-history' : 'doc-page hist-page'}
+      data-testid={embedded ? 'folder-page-history' : 'document-history-page'}
+      data-mock-id={embedded ? undefined : 'hist-page'}
+    >
+      {!embedded && (
+        <HistoryTopBar crumbs={crumbs} mockPrefix="hist">
+          <Link to={`/docs/${id}`} className="hist-ghost" data-mock-id="hist-back">
+            Retour à la page
+          </Link>
+        </HistoryTopBar>
+      )}
+      {!embedded && <DocumentTabs {...tabProps} />}
 
       <div className="hist-content">
         <div className="hist-column">
@@ -396,7 +410,7 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
         </div>
       </div>
 
-      <DocumentMobileTabs {...tabProps} />
+      {!embedded && <DocumentMobileTabs {...tabProps} />}
       {restoreDialog}
     </div>
   )

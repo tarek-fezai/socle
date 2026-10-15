@@ -1,9 +1,27 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import type { AxiosInstance } from 'axios'
+import type { DocumentDetail } from './documents'
 
 /* ------------------------------------------------------------------ */
 /* Types API                                                           */
 /* ------------------------------------------------------------------ */
+
+export type ActorRef = {
+  kind: string
+  id?: string | null
+  displayName?: string | null
+}
+
+export type OwnerGroupRef = {
+  id: string
+  name: string
+}
+
+export type StatusCounts = {
+  validated: number
+  inReview: number
+  draft: number
+}
 
 export type Folder = {
   id: string
@@ -16,6 +34,15 @@ export type Folder = {
   updatedAt?: string | null
   documentCount?: number
   folderCount?: number
+  pageDocumentId?: string | null
+  /** `actif` ou `archivé`. */
+  status?: string | null
+  creator?: ActorRef | null
+  lastModifiedBy?: ActorRef | null
+  lastModifiedAt?: string | null
+  ownerGroup?: OwnerGroupRef | null
+  reliabilityAverage?: number | string | null
+  statusCounts?: StatusCounts | null
 }
 
 /** Dossier dans l'arborescence (liste plate + `parentFolderId`). */
@@ -97,6 +124,28 @@ export type BreadcrumbItem = { label: string; to?: string }
 
 export async function getFolder(api: AxiosInstance, id: string) {
   const { data } = await api.get<Folder>(`/api/v1/folders/${id}`)
+  return data
+}
+
+/** `null` tant que la page n'a pas été écrite (204). */
+export async function getFolderPage(api: AxiosInstance, id: string): Promise<DocumentDetail | null> {
+  const res = await api.get<DocumentDetail | ''>(`/api/v1/folders/${id}/page`, {
+    validateStatus: (status) => status === 200 || status === 204,
+  })
+  if (res.status === 204 || res.data == null || res.data === '') return null
+  return res.data
+}
+
+export async function saveFolderPage(
+  api: AxiosInstance,
+  id: string,
+  body: Record<string, unknown>,
+  changeSummary?: string,
+) {
+  const { data } = await api.put<DocumentDetail>(`/api/v1/folders/${id}/page`, {
+    body,
+    ...(changeSummary ? { changeSummary } : {}),
+  })
   return data
 }
 

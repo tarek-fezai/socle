@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactN
 import { UploadStrip } from '../components/attachments/UploadStrip'
 import { useAttachmentUploads, type UploadKind } from '../components/attachments/useAttachmentUploads'
 import { DEFAULT_PLACEHOLDER_HINT, PLACEHOLDER_NODE_TYPE, TEMPLATE_VARIABLES } from '../lib/templates'
-import { EditToolbar } from './document/EditToolbar'
+import { EditToolbar, type ToolbarAttachments } from './document/EditToolbar'
+import { FolderFormatBar } from './folder/FolderFormatBar'
 import { documentEditorExtensions } from './document/documentEditorExtensions'
 
 type Props = {
@@ -18,6 +19,11 @@ type Props = {
    * barre d'outils complète, `titleSlot` entre la barre et le corps, aucun cadre.
    */
   variant?: 'classic' | 'document'
+  /**
+   * Variante `document` : `full` = barre Modifier, `folder` = barre compacte de la page de dossier,
+   * `body` = corps seul (lecture).
+   */
+  chrome?: 'full' | 'folder' | 'body'
   /** Variante `document` : contenu rendu entre la barre d'outils et le corps (titre). */
   titleSlot?: ReactNode
   /** Instance TipTap disponible (aller au paragraphe, focus…) ; `null` au démontage. */
@@ -37,6 +43,7 @@ export function DocumentEditor({
   editable = true,
   templateTools = false,
   variant = 'classic',
+  chrome = 'full',
   titleSlot,
   onEditorReady,
   hidden = false,
@@ -65,9 +72,17 @@ export function DocumentEditor({
     editorProps: {
       attributes: {
         class: documentVariant
-          ? 'edit-prose focus:outline-none'
+          ? chrome === 'full'
+            ? 'edit-prose focus:outline-none'
+            : 'fp-prose'
           : 'prose prose-slate max-w-none min-h-[280px] focus:outline-none px-1 py-2',
-        ...(documentVariant ? { 'aria-label': 'Contenu du document', 'data-testid': 'edit-prosemirror' } : {}),
+        ...(documentVariant
+          ? {
+              'aria-label': 'Contenu du document',
+              'data-testid': 'edit-prosemirror',
+              ...(chrome === 'full' ? {} : { 'data-mock-id': 'fp-body' }),
+            }
+          : {}),
       },
       // Coller une image (capture d'écran…) : envoi puis insertion à la sélection.
       handlePaste: (_view, event) => {
@@ -141,16 +156,22 @@ export function DocumentEditor({
   }
 
   if (documentVariant) {
+    const attachments: ToolbarAttachments = {
+      enabled: Boolean(documentId),
+      pick: (kind) => (kind === 'image' ? imageInput : kind === 'video' ? videoInput : fileInput).current?.click(),
+    }
+    const folderChrome = chrome === 'folder' || chrome === 'body'
     return (
-      <div className="edit-editor" hidden={hidden} data-testid="edit-editor">
-        <EditToolbar
-          editor={editor}
-          readOnly={!editable}
-          attachments={{
-            enabled: Boolean(documentId),
-            pick: (kind) => (kind === 'image' ? imageInput : kind === 'video' ? videoInput : fileInput).current?.click(),
-          }}
-        />
+      <div
+        className={folderChrome ? 'fp-editor' : 'edit-editor'}
+        hidden={hidden}
+        data-testid={folderChrome ? 'folder-page-editor' : 'edit-editor'}
+      >
+        {chrome === 'folder' ? (
+          <FolderFormatBar editor={editor} readOnly={!editable} attachments={attachments} />
+        ) : chrome === 'body' ? null : (
+          <EditToolbar editor={editor} readOnly={!editable} attachments={attachments} />
+        )}
         <input
           ref={imageInput}
           type="file"
