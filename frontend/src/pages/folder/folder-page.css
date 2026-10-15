@@ -381,6 +381,12 @@
   -webkit-font-smoothing: auto;
 }
 
+/* ProseMirror injecte liga 0. La maquette ligature « fi » (modification). */
+.fp-prose.ProseMirror {
+  font-variant-ligatures: normal;
+  font-feature-settings: normal;
+}
+
 .fp-prose p {
   font-size: 15px;
   line-height: 1.7;
