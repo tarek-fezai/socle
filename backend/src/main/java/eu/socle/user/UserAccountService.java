@@ -7,6 +7,7 @@ import eu.socle.identity.AccessDecisionCache;
 import eu.socle.identity.PlatformRoleRepository;
 import eu.socle.identity.SocleRole;
 import eu.socle.pat.PatService;
+import eu.socle.web.ApiErrors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,6 +58,9 @@ public class UserAccountService {
         if (STATUS_DISABLED.equalsIgnoreCase(user.getStatus())) {
             return user;
         }
+        if (actorId != null && actorId.equals(userId)) {
+            throw ApiErrors.cannotDisableSelf();
+        }
         guardLastSystemAdmin(userId);
         String previousStatus = user.getStatus() == null ? "" : user.getStatus();
         user.setStatus(STATUS_DISABLED);
@@ -100,9 +104,7 @@ public class UserAccountService {
         // Dernier titulaire du rôle, ou dernier titulaire dont le compte n'est pas déjà désactivé.
         if (platformRoleRepository.countByRole(role) <= 1
                 || platformRoleRepository.countEnabledByRole(role) <= 1) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Impossible de désactiver le dernier ADMINISTRATEUR_SYSTEME");
+            throw ApiErrors.lastSystemAdmin();
         }
     }
 

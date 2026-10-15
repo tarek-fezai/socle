@@ -55,6 +55,12 @@ public final class ApiErrors {
     public static final String INVITATION_EMAIL_MISMATCH = "invitation_email_mismatch";
     public static final String INVITATION_EMAIL_UNVERIFIED = "invitation_email_unverified";
     public static final String INVITATION_EMAIL_EXISTS = "invitation_email_exists";
+    /** Envoi d'invitation impossible (SMTP, URL publique ou TLS). */
+    public static final String INVITATIONS_NOT_CONFIGURED = "invitations_not_configured";
+    /** Un administrateur ne peut pas désactiver son propre compte. */
+    public static final String CANNOT_DISABLE_SELF = "cannot_disable_self";
+    /** Dernier ADMINISTRATEUR_SYSTEME encore actif. */
+    public static final String LAST_SYSTEM_ADMIN = "last_system_admin";
     /** Route interdite à l'authentification par jeton d'accès personnel. */
     public static final String PAT_NOT_ALLOWED = "pat_not_allowed";
     /** Jeton {@code read} : méthodes GET / HEAD / OPTIONS uniquement. */
@@ -284,6 +290,29 @@ public final class ApiErrors {
     public static CodedStatusException invitationEmailExists() {
         return new CodedStatusException(
                 HttpStatus.CONFLICT, INVITATION_EMAIL_EXISTS, "Un compte existe déjà pour cet e-mail");
+    }
+
+    public static CodedStatusException invitationsNotConfigured(List<String> missing) {
+        List<String> names = missing == null ? List.of() : List.copyOf(missing);
+        return new CodedStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                INVITATIONS_NOT_CONFIGURED,
+                "L'envoi d'invitations n'est pas configuré",
+                Map.of("missing", names));
+    }
+
+    public static CodedStatusException cannotDisableSelf() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                CANNOT_DISABLE_SELF,
+                "Impossible de désactiver votre propre compte");
+    }
+
+    public static CodedStatusException lastSystemAdmin() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                LAST_SYSTEM_ADMIN,
+                "Impossible de désactiver le dernier ADMINISTRATEUR_SYSTEME");
     }
 
     public static CodedStatusException gitPurgeFailed(UUID documentId) {

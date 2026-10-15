@@ -21,14 +21,21 @@ import java.util.UUID;
 public class InvitationAdminController {
 
     private final InvitationService service;
+    private final InvitationCapability capability;
 
-    public InvitationAdminController(InvitationService service) {
+    public InvitationAdminController(InvitationService service, InvitationCapability capability) {
         this.service = service;
+        this.capability = capability;
     }
 
     @GetMapping
     public List<InvitationDtos.InvitationView> list(@AuthenticationPrincipal Jwt jwt) {
         return service.list(jwt);
+    }
+
+    @GetMapping("/capability")
+    public InvitationCapability.Snapshot capability() {
+        return capability.snapshot();
     }
 
     @PostMapping
@@ -37,6 +44,7 @@ public class InvitationAdminController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody InvitationDtos.CreateRequest body
     ) {
+        capability.requireEnabled();
         return service.create(jwt, body);
     }
 
@@ -45,6 +53,7 @@ public class InvitationAdminController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id
     ) {
+        capability.requireEnabled();
         return service.resend(jwt, id);
     }
 

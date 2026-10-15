@@ -92,7 +92,7 @@ class RoleProviderTest {
         platformRoleService.grantBootstrapAdminIfNeeded(USER, "bootstrap-sub");
 
         verify(platformRoleRepository).save(any(PlatformRoleEntity.class));
-        verify(auditService).record(eq(USER), eq(false), any(), eq("user"), eq(USER), any(), eq(null));
+        verify(auditService).recordSync(eq(USER), eq(false), any(), eq("user"), eq(USER), any(), eq(null));
     }
 
     @Test

@@ -13,12 +13,11 @@ class SmtpTlsStartupTest {
             .withUserConfiguration(SmtpConfig.class);
 
     @Test
-    void hostWithoutTls_outsideDev_refused() {
+    void hostWithoutTls_outsideDev_startsWithoutCleartext() {
         runner.withPropertyValues("socle.smtp.host=smtp.example", "socle.smtp.tls=")
                 .run(ctx -> {
-                    assertThat(ctx).hasFailed();
-                    assertThat(ctx.getStartupFailure()).rootCause()
-                            .hasMessageContaining("SOCLE_SMTP_TLS obligatoire");
+                    assertThat(ctx).hasNotFailed();
+                    assertThat(ctx.getBean(BrandingMailSender.class).channel()).isEqualTo("log");
                 });
     }
 

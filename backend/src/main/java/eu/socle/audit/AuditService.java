@@ -12,8 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,7 +25,9 @@ import java.util.UUID;
  * INSERT uniquement — jamais UPDATE/DELETE (contraint aussi en base, V5).
  *
  * <p>{@link #recordSync} : échec → exception (événements conformité critiques).<br>
- * {@link #record} : async, échec → log ERROR + métrique {@code socle.audit.write.failures}.
+ * {@link #record} : insertion asynchrone après commit de la transaction appelante
+ * (rien si elle est annulée). Sans transaction : insertion asynchrone immédiate.
+ * Échec → log ERROR + métrique {@code socle.audit.write.failures}.
  *
  * <p>Après INSERT réussi : enqueue SIEM async best-effort (jamais bloquant, même pour
  * les événements sync).
@@ -38,6 +43,7 @@ public class AuditService {
     private final ObjectMapper objectMapper;
     private final Counter writeFailures;
     private final SiemDeliveryEnqueueService siemEnqueue;
+    private final ObjectProvider<AuditService> self;
 
     /**
      * Constructeur Spring — unique candidat d'injection ({@code @Autowired} explicite
@@ -49,18 +55,19 @@ public class AuditService {
             JdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper,
             MeterRegistry meterRegistry,
-            ObjectProvider<SiemDeliveryEnqueueService> siemEnqueue
+            ObjectProvider<SiemDeliveryEnqueueService> siemEnqueue,
+            ObjectProvider<AuditService> self
     ) {
-        this(jdbcTemplate, objectMapper, meterRegistry, siemEnqueue.getIfAvailable());
+        this(jdbcTemplate, objectMapper, meterRegistry, siemEnqueue.getIfAvailable(), self);
     }
 
-    /** Constructeur de test (SIEM optionnel). */
+    /** Constructeur de test (SIEM optionnel, pas de proxy async). */
     public AuditService(
             JdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper,
             MeterRegistry meterRegistry
     ) {
-        this(jdbcTemplate, objectMapper, meterRegistry, (SiemDeliveryEnqueueService) null);
+        this(jdbcTemplate, objectMapper, meterRegistry, (SiemDeliveryEnqueueService) null, null);
     }
 
     AuditService(
@@ -69,20 +76,59 @@ public class AuditService {
             MeterRegistry meterRegistry,
             SiemDeliveryEnqueueService siemEnqueue
     ) {
+        this(jdbcTemplate, objectMapper, meterRegistry, siemEnqueue, null);
+    }
+
+    private AuditService(
+            JdbcTemplate jdbcTemplate,
+            ObjectMapper objectMapper,
+            MeterRegistry meterRegistry,
+            SiemDeliveryEnqueueService siemEnqueue,
+            ObjectProvider<AuditService> self
+    ) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
         this.writeFailures = Counter.builder(METRIC_WRITE_FAILURES)
                 .description("Échecs d'écriture async dans audit_log_events")
                 .register(meterRegistry);
         this.siemEnqueue = siemEnqueue;
+        this.self = self;
     }
 
     /**
      * Écriture asynchrone (ex. document.created/updated).
+     * Transaction Spring active : l'INSERT part dans {@code afterCommit} uniquement.
+     * Annulation : aucune ligne. Sans transaction : comportement immédiat.
      * En cas d'échec : log ERROR + incrément métrique — ne propage pas.
      */
-    @Async
     public void record(
+            UUID actorId,
+            boolean actorIsSystem,
+            String action,
+            String resourceType,
+            UUID resourceId,
+            Map<String, Object> metadata,
+            String ipAddress
+    ) {
+        Map<String, Object> snapshot = snapshot(metadata);
+        if (TransactionSynchronizationManager.isActualTransactionActive()
+                && TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    dispatchAsync(actorId, actorIsSystem, action, resourceType, resourceId, snapshot, ipAddress);
+                }
+            });
+            return;
+        }
+        dispatchAsync(actorId, actorIsSystem, action, resourceType, resourceId, snapshot, ipAddress);
+    }
+
+    /**
+     * INSERT async. Public pour le proxy Spring ({@code @Async} ignoré sur un appel interne).
+     */
+    @Async
+    public void insertAsync(
             UUID actorId,
             boolean actorIsSystem,
             String action,
@@ -98,6 +144,30 @@ public class AuditService {
             log.error("Échec écriture audit_log_events (async) action={} resource={}:{} — métrique {}",
                     action, resourceType, resourceId, METRIC_WRITE_FAILURES, e);
         }
+    }
+
+    private void dispatchAsync(
+            UUID actorId,
+            boolean actorIsSystem,
+            String action,
+            String resourceType,
+            UUID resourceId,
+            Map<String, Object> metadata,
+            String ipAddress
+    ) {
+        AuditService proxy = self == null ? null : self.getIfAvailable();
+        if (proxy != null && proxy != this) {
+            proxy.insertAsync(actorId, actorIsSystem, action, resourceType, resourceId, metadata, ipAddress);
+            return;
+        }
+        insertAsync(actorId, actorIsSystem, action, resourceType, resourceId, metadata, ipAddress);
+    }
+
+    private static Map<String, Object> snapshot(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return Map.of();
+        }
+        return new LinkedHashMap<>(metadata);
     }
 
     /**

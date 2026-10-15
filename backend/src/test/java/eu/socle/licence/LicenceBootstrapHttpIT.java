@@ -17,10 +17,15 @@ import dev.openfga.sdk.api.client.model.ClientBatchCheckResponse;
 import dev.openfga.sdk.api.client.model.ClientBatchCheckSingleResponse;
 import dev.openfga.sdk.api.client.model.ClientListObjectsResponse;
 import eu.socle.SocleBackendApplication;
+import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
+import eu.socle.identity.SocleRole;
 import eu.socle.identity.IdentityFacade;
 import eu.socle.identity.IdentityProperties;
+import eu.socle.identity.PlatformRoleService;
 import eu.socle.web.ApiErrors;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.temporal.client.WorkflowClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +41,9 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -60,8 +68,13 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -149,6 +162,12 @@ class LicenceBootstrapHttpIT {
 
     @Autowired MockMvc mockMvc;
     @Autowired JdbcTemplate jdbc;
+    @Autowired PlatformRoleService platformRoleService;
+    @Autowired PlatformTransactionManager transactionManager;
+    @Autowired MeterRegistry meterRegistry;
+
+    @MockitoSpyBean
+    AuditService auditService;
 
     @MockBean WorkflowClient workflowClient;
     @MockBean OpenFgaClient openFgaClient;
@@ -210,6 +229,82 @@ class LicenceBootstrapHttpIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(LicenceService.STATUS_VALIDE))
                 .andExpect(jsonPath("$.maxUsers").value(10));
+    }
+
+    @Test
+    void firstLogin_bootstrapSubject_writesExactlyOneRoleGranted() throws Exception {
+        double failuresBefore = auditWriteFailures();
+
+        mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION,
+                        bearer(BOOTSTRAP_SUB, "bootstrap@example.com", "Bootstrap Admin")))
+                .andExpect(status().isOk());
+
+        Long granted = jdbc.queryForObject(
+                "SELECT count(*) FROM audit_log_events WHERE action = ?",
+                Long.class, AuditActions.PLATFORM_ROLE_GRANTED);
+        assertThat(granted).isEqualTo(1L);
+        Map<String, Object> auditRow = jdbc.queryForMap(
+                "SELECT actor_id, actor_is_system FROM audit_log_events WHERE action = ?",
+                AuditActions.PLATFORM_ROLE_GRANTED);
+        assertThat(auditRow.get("actor_is_system")).isEqualTo(false);
+        UUID actorId = (UUID) auditRow.get("actor_id");
+        assertThat(actorId).isEqualTo(UUID.fromString(BOOTSTRAP_SUB));
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM users WHERE id = ?", Long.class, actorId)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT count(*) FROM user_platform_roles
+                 WHERE user_id = ? AND role = 'ADMINISTRATEUR_SYSTEME'
+                """,
+                Long.class, actorId)).isEqualTo(1L);
+
+        long accessGranted = 0;
+        for (int i = 0; i < 40; i++) {
+            Long n = jdbc.queryForObject(
+                    "SELECT count(*) FROM audit_log_events WHERE action = 'auth.access_granted'",
+                    Long.class);
+            accessGranted = n == null ? 0 : n;
+            if (accessGranted > 0) {
+                break;
+            }
+            Thread.sleep(50);
+        }
+        assertThat(accessGranted).isEqualTo(1L);
+        assertThat(auditWriteFailures()).isEqualTo(failuresBefore);
+    }
+
+    @Test
+    void rolledBackTransaction_writesNoAuditRow() throws Exception {
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            auditService.record(
+                    null, true, "test.audit_rollback_probe", "document", UUID.randomUUID(), null, null);
+            status.setRollbackOnly();
+        });
+        Thread.sleep(200);
+        Long n = jdbc.queryForObject(
+                "SELECT count(*) FROM audit_log_events WHERE action = 'test.audit_rollback_probe'",
+                Long.class);
+        assertThat(n).isZero();
+    }
+
+    @Test
+    void recordSyncFailure_doesNotGrantRole() {
+        String sub = "44444444-4444-4444-4444-444444444444";
+        seedUser(sub, "role-fail@example.com", false);
+        UUID id = UUID.fromString(sub);
+        doThrow(new AuditService.AuditWriteException("forced", new RuntimeException("forced")))
+                .when(auditService).recordSync(
+                        any(), anyBoolean(), eq(AuditActions.PLATFORM_ROLE_GRANTED),
+                        any(), any(), any(), any());
+        try {
+            assertThatThrownBy(() -> platformRoleService.grant(id, id, SocleRole.CONTRIBUTEUR))
+                    .isInstanceOf(AuditService.AuditWriteException.class);
+        } finally {
+            reset(auditService);
+        }
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM user_platform_roles WHERE user_id = ? AND role = 'CONTRIBUTEUR'",
+                Long.class, id)).isZero();
     }
 
     @Test
@@ -334,6 +429,11 @@ class LicenceBootstrapHttpIT {
                     VALUES (?, 'ADMINISTRATEUR_SYSTEME', now())
                     """, id);
         }
+    }
+
+    private double auditWriteFailures() {
+        Counter counter = meterRegistry.find(AuditService.METRIC_WRITE_FAILURES).counter();
+        return counter == null ? 0 : counter.count();
     }
 
     private long countUsers() {

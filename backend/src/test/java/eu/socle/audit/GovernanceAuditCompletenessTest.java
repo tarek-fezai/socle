@@ -148,7 +148,7 @@ class GovernanceAuditCompletenessTest {
         new GroupService(jdbc, userSyncService, authorizationService, auditService, mock(eu.socle.identity.IdentityFacade.class))
                 .create(jwt(), new CreateGroupRequest("Equipe"));
 
-        verify(auditService).record(
+        verify(auditService).recordSync(
                 eq(USER), eq(false), eq(AuditActions.GROUP_CREATED),
                 eq("group"), any(UUID.class), anyMap(), isNull());
     }

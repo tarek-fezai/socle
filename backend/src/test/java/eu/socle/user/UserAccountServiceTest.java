@@ -9,6 +9,8 @@ import eu.socle.identity.PlatformRoleEntity;
 import eu.socle.identity.PlatformRoleRepository;
 import eu.socle.identity.SocleRole;
 import eu.socle.pat.PatService;
+import eu.socle.web.ApiErrors;
+import eu.socle.web.CodedStatusException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,12 +103,30 @@ class UserAccountServiceTest {
         when(platformRoleRepository.countEnabledByRole(ADMIN)).thenReturn(1L);
 
         assertThatThrownBy(() -> service.disable(ACTOR, TARGET))
-                .isInstanceOfSatisfying(ResponseStatusException.class,
-                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+                .isInstanceOfSatisfying(CodedStatusException.class, e -> {
+                    assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getCode()).isEqualTo(ApiErrors.LAST_SYSTEM_ADMIN);
+                });
 
         verify(userRepository, never()).save(any());
         verify(auditService, never()).record(any(), eq(false), eq(AuditActions.USER_DISABLED),
                 any(), any(), anyMap(), any());
+    }
+
+    @Test
+    void disable_self_isRefused() {
+        UserEntity self = user("active");
+        self.setId(ACTOR);
+        when(userRepository.findById(ACTOR)).thenReturn(Optional.of(self));
+
+        assertThatThrownBy(() -> service.disable(ACTOR, ACTOR))
+                .isInstanceOfSatisfying(CodedStatusException.class, e -> {
+                    assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getCode()).isEqualTo(ApiErrors.CANNOT_DISABLE_SELF);
+                });
+
+        verify(userRepository, never()).save(any());
+        verify(platformRoleRepository, never()).countByRole(any());
     }
 
     @Test

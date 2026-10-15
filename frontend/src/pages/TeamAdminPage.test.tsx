@@ -10,24 +10,23 @@ const listInvitations = vi.fn()
 const resendInvitation = vi.fn()
 const revokeInvitation = vi.fn()
 
+const getInvitationCapability = vi.fn()
+
 vi.mock('../lib/invitations', () => ({
   invitationsKey: () => ['admin', 'invitations'],
   listInvitations: (...args: unknown[]) => listInvitations(...args),
   resendInvitation: (...args: unknown[]) => resendInvitation(...args),
   revokeInvitation: (...args: unknown[]) => revokeInvitation(...args),
   createInvitation: vi.fn(),
+  getInvitationCapability: (...args: unknown[]) => getInvitationCapability(...args),
+  invitationNotConfiguredMessage: (missing: string[]) =>
+    `L'envoi d'invitations n'est pas configuré (${missing.join(', ')}).`,
 }))
 
+const listAdminUsers = vi.fn()
+
 vi.mock('../lib/directory', () => ({
-  listAdminUsers: () =>
-    Promise.resolve({
-      users: [],
-      total: 0,
-      activeCount: 1,
-      teamCount: 1,
-      offset: 0,
-      limit: 200,
-    }),
+  listAdminUsers: (...args: unknown[]) => listAdminUsers(...args),
   disableUser: vi.fn(),
   enableUser: vi.fn(),
 }))
@@ -54,7 +53,7 @@ vi.mock('../lib/platformRoles', () => ({
 }))
 
 vi.mock('../auth/AuthProvider', () => ({
-  useAuth: () => ({ organizationName: 'Organisation Démo' }),
+  useAuth: () => ({ organizationName: 'Organisation Démo', me: { id: 'self-admin' } }),
 }))
 
 import { TeamAdminPage } from './TeamAdminPage'
@@ -112,14 +111,44 @@ async function pressButton(name: string, key: 'Enter' | ' ') {
   await act(async () => {})
 }
 
+const EMPTY_USERS = {
+  users: [],
+  total: 0,
+  activeCount: 1,
+  teamCount: 1,
+  offset: 0,
+  limit: 200,
+}
+
 describe('TeamAdminPage invitations', () => {
   beforeEach(() => {
     listInvitations.mockReset()
     resendInvitation.mockReset()
     revokeInvitation.mockReset()
+    getInvitationCapability.mockReset()
+    listAdminUsers.mockReset()
     listInvitations.mockResolvedValue([INVITE])
     resendInvitation.mockResolvedValue(INVITE)
     revokeInvitation.mockResolvedValue(undefined)
+    getInvitationCapability.mockResolvedValue({ enabled: true, missing: [] })
+    listAdminUsers.mockResolvedValue(EMPTY_USERS)
+  })
+
+  it('désactive l’invitation quand l’envoi n’est pas configuré', async () => {
+    getInvitationCapability.mockResolvedValue({
+      enabled: false,
+      missing: ['SOCLE_PUBLIC_BASE_URL', 'SOCLE_SMTP_HOST'],
+    })
+    renderPage()
+    await waitFor(() => {
+      const invite = screen.getByRole('button', { name: '+ Inviter un membre' }) as HTMLButtonElement
+      expect(invite.disabled).toBe(true)
+    })
+    expect(
+      screen.getByText(
+        "L'envoi d'invitations n'est pas configuré (SOCLE_PUBLIC_BASE_URL, SOCLE_SMTP_HOST).",
+      ),
+    ).toBeTruthy()
   })
 
   it('Renvoyer et Annuler sont des boutons : focus, Entrée et Espace', async () => {
@@ -144,6 +173,46 @@ describe('TeamAdminPage invitations', () => {
     expect(revokeInvitation).toHaveBeenCalledWith(expect.anything(), 'i1')
 
     expect(screen.getByText(/expirent après 14 jours/)).toBeTruthy()
+  })
+
+  it('désactive Désactiver pour soi-même et pour le dernier administrateur', async () => {
+    listAdminUsers.mockResolvedValue({
+      ...EMPTY_USERS,
+      users: [
+        {
+          id: 'self-admin',
+          displayName: 'Moi',
+          email: 'moi@example.com',
+          initials: 'MO',
+          platformRoles: ['CONTRIBUTEUR'],
+          teams: [],
+          status: 'active',
+          lastActivityAt: null,
+        },
+        {
+          id: 'other',
+          displayName: 'Autre',
+          email: 'autre@example.com',
+          initials: 'AU',
+          platformRoles: ['ADMINISTRATEUR_SYSTEME'],
+          teams: [],
+          status: 'active',
+          lastActivityAt: null,
+        },
+      ],
+    })
+    renderPage()
+    const buttons = await screen.findAllByRole('button', { name: 'Désactiver' })
+    const self = buttons[0] as HTMLButtonElement
+    const other = buttons[1] as HTMLButtonElement
+    expect(self.disabled).toBe(true)
+    expect(self.parentElement?.getAttribute('title')).toBe(
+      'Vous ne pouvez pas désactiver votre propre compte.',
+    )
+    expect(other.disabled).toBe(true)
+    expect(other.parentElement?.getAttribute('title')).toBe(
+      'Impossible de désactiver le dernier administrateur système.',
+    )
   })
 
   it('désactive le bouton pendant la requête', async () => {

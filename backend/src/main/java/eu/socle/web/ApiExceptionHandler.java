@@ -57,7 +57,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(CodedStatusException.class)
     public ResponseEntity<ProblemDetail> handleCoded(CodedStatusException ex, HttpServletRequest request) {
-        ResponseEntity<ProblemDetail> response = toBusinessProblem(ex, ex.getCode(), request);
+        ResponseEntity<ProblemDetail> response;
+        if (ex.getStatusCode().isSameCodeAs(HttpStatus.SERVICE_UNAVAILABLE)) {
+            response = clientError(ex, ex.getStatusCode(), ex.getReason(), ex.getCode(), request);
+        } else {
+            response = toBusinessProblem(ex, ex.getCode(), request);
+        }
         ProblemDetail body = response.getBody();
         if (body != null && !ex.getProperties().isEmpty()) {
             ex.getProperties().forEach(body::setProperty);

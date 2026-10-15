@@ -138,8 +138,8 @@ socle:
     username: ${SOCLE_SMTP_USERNAME:}
     password: ${SOCLE_SMTP_PASSWORD:}
     from: ${SOCLE_SMTP_FROM:}
-    # starttls | implicit — obligatoire hors dev/local dès que host est posé.
-    # none : uniquement profils dev/local (Mailpit).
+    # starttls | implicit. none hors dev/local : pas d'arrêt, canal journal (pas d'envoi en clair),
+    # invitations désactivées. none toléré en dev/local (Mailpit, GreenMail).
     tls: ${SOCLE_SMTP_TLS:starttls}
   openfga:
     api-url: ${OPENFGA_API_URL:http://localhost:8082}

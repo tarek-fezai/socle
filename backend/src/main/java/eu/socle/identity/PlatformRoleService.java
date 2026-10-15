@@ -4,6 +4,8 @@ package eu.socle.identity;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.user.UserRepository;
+import jakarta.persistence.EntityManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,15 +23,37 @@ public class PlatformRoleService {
     private final PlatformRoleRepository platformRoleRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final EntityManager entityManager;
 
+    /** Tests unitaires : pas de contexte JPA. */
     public PlatformRoleService(
             PlatformRoleRepository platformRoleRepository,
             UserRepository userRepository,
             AuditService auditService
     ) {
+        this(platformRoleRepository, userRepository, auditService, null);
+    }
+
+    @Autowired
+    public PlatformRoleService(
+            PlatformRoleRepository platformRoleRepository,
+            UserRepository userRepository,
+            AuditService auditService,
+            EntityManager entityManager
+    ) {
         this.platformRoleRepository = platformRoleRepository;
         this.userRepository = userRepository;
         this.auditService = auditService;
+        this.entityManager = entityManager;
+    }
+
+    /**
+     * L'audit JDBC doit voir les lignes JPA pas encore flushées (FK {@code actor_id}).
+     */
+    private void flushBeforeAudit() {
+        if (entityManager != null) {
+            entityManager.flush();
+        }
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +87,8 @@ public class PlatformRoleService {
         entity.setGrantedBy(actorId);
         entity.setGrantedAt(Instant.now());
         PlatformRoleEntity saved = platformRoleRepository.save(entity);
-        auditService.record(
+        flushBeforeAudit();
+        auditService.recordSync(
                 actorId, false,
                 AuditActions.PLATFORM_ROLE_GRANTED,
                 "user", userId,
@@ -92,7 +117,8 @@ public class PlatformRoleService {
             }
         }
         platformRoleRepository.deleteByUserIdAndRole(userId, role.name());
-        auditService.record(
+        flushBeforeAudit();
+        auditService.recordSync(
                 actorId, false,
                 AuditActions.PLATFORM_ROLE_REVOKED,
                 "user", userId,
@@ -113,10 +139,11 @@ public class PlatformRoleService {
         entity.setGrantedBy(null);
         entity.setGrantedAt(Instant.now());
         platformRoleRepository.save(entity);
+        flushBeforeAudit();
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("role", SocleRole.ADMINISTRATEUR_SYSTEME.name());
         meta.put("bootstrapSubject", subject);
-        auditService.record(
+        auditService.recordSync(
                 userId, false,
                 AuditActions.PLATFORM_ROLE_GRANTED,
                 "user", userId,
