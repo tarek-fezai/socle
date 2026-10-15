@@ -373,9 +373,12 @@
 .fp-prose {
   outline: none;
   margin: 0 0 12px;
-  /* La maquette ne ligature pas « fi » (ex. « modification »). */
-  font-variant-ligatures: none;
-  font-feature-settings: 'liga' 0, 'clig' 0;
+  /* :root force optimizeLegibility, qui ligature « fi » autrement que la maquette. */
+  text-rendering: auto;
+}
+
+.fp-prose * {
+  text-rendering: auto;
 }
 
 .fp-prose p {
