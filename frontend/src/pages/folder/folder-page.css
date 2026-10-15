@@ -103,7 +103,7 @@
   gap: 8px;
 }
 
-/* Même boîte que .more-btn des maquettes (appearance: none → content-box). */
+/* Même boîte que le bouton des maquettes : border-box 32 px (bord inclus), fond plat. */
 .fp-page button.fp-more {
   appearance: none;
   background: none;
@@ -111,7 +111,7 @@
   padding: 0;
   font: inherit;
   cursor: pointer;
-  box-sizing: content-box;
+  box-sizing: border-box;
   width: 32px;
   height: 32px;
   border-radius: 7px;
