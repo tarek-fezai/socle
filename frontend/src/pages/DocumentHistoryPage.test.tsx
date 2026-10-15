@@ -195,6 +195,46 @@ describe('DocumentHistoryPage', () => {
     expect(within(screen.getByTestId('history-row-12')).getByTestId('history-current-badge')).toBeTruthy()
   })
 
+  it('page de dossier : la version courante propose Comparer vers la précédente', async () => {
+    listVersions.mockResolvedValue({
+      items: [
+        {
+          versionNo: 2,
+          authorId: ME,
+          authorDisplayName: 'Tarek Fezai',
+          authorInitials: 'TF',
+          changeSummary: 'Page de dossier',
+          createdAt: local(2026, 10, 15, 17, 43),
+          linesAdded: 1,
+          linesRemoved: 1,
+          current: true,
+        },
+        {
+          versionNo: 1,
+          authorId: ME,
+          authorDisplayName: 'Tarek Fezai',
+          authorInitials: 'TF',
+          changeSummary: 'Création du document',
+          createdAt: local(2026, 10, 15, 17, 43),
+          linesAdded: 1,
+          linesRemoved: 0,
+          current: false,
+        },
+      ],
+      offset: 0,
+      limit: 50,
+      total: 2,
+    })
+    getDocument.mockResolvedValue(docDetail({ currentVersionNo: 2, title: 'Dossier E2E' }))
+    render(wrap(<DocumentHistoryPage documentId={DOC} embedded />))
+    const row2 = await screen.findByTestId('history-row-2')
+    expect(within(row2).getByText('Comparer').closest('a')!.getAttribute('href')).toBe(
+      `/docs/${DOC}/history/compare?from=1&to=2`,
+    )
+    expect(within(row2).queryByRole('button', { name: 'Restaurer' })).toBeNull()
+    expect(within(screen.getByTestId('history-row-1')).queryByText('Comparer')).toBeNull()
+  })
+
   it('canEdit : Comparer / Restaurer jamais sur la version courante', async () => {
     render(wrap(<DocumentHistoryPage />))
     const row12 = await screen.findByTestId('history-row-12')

@@ -61,7 +61,9 @@ test.describe.serial('Page de dossier', () => {
 
     await page.getByRole('tab', { name: 'Historique' }).click()
     await expect(page.getByTestId('folder-page-history')).toContainText('2 versions publiées')
-    await expect(page.getByRole('link', { name: 'Comparer' }).first()).toBeVisible()
+    await page.getByRole('link', { name: 'Comparer' }).first().click()
+    await expect(page).toHaveURL(new RegExp(`/docs/${pageId}/history/compare`))
+    await expect(page.getByTestId('document-compare-page')).toBeVisible({ timeout: 20_000 })
   })
 
   test('lecteur : la page n’est pas modifiable', async ({ page }) => {

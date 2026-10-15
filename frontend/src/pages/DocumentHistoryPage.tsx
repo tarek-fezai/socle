@@ -45,6 +45,22 @@ function compareHref(docId: string, from: number, to: number): string {
   return `/docs/${docId}/history/compare?from=${from}&to=${to}`
 }
 
+/**
+ * Historique document : aucune action sur la version courante.
+ * Page de dossier (embedded) : avec deux versions, seule la courante a une précédente —
+ * « Comparer » y est proposé, sans « Restaurer ».
+ */
+function historyRowActions(
+  v: VersionRow,
+  { canAct, mobile, embedded }: { canAct: boolean; mobile: boolean; embedded: boolean },
+) {
+  const actions = versionRowActions(v, { canAct, mobile })
+  if (embedded && canAct && v.isCurrent && v.previousVersionNo != null) {
+    return { compare: true, restore: false }
+  }
+  return actions
+}
+
 export function DocumentHistoryPage({
   documentId,
   embedded = false,
@@ -233,7 +249,11 @@ function HistorySurface({ doc, embedded = false }: { doc: DocumentDetail; embedd
           {listState}
           {rows.map((v, i) => {
             const author = versionAuthor(v)
-            const { compare: showCompare, restore: showRestore } = versionRowActions(v, { canAct, mobile: true })
+            const { compare: showCompare, restore: showRestore } = historyRowActions(v, {
+              canAct,
+              mobile: true,
+              embedded,
+            })
             const hasActions = showCompare || showRestore
             return (
               <div className="hist-m-item" key={v.versionNo} data-testid={`history-row-${v.versionNo}`}>
@@ -325,7 +345,11 @@ function HistorySurface({ doc, embedded = false }: { doc: DocumentDetail; embedd
               const author = versionAuthor(v)
               const added = formatLinesAdded(v.linesAdded)
               const removed = formatLinesRemoved(v.linesRemoved)
-              const { compare: showCompare, restore: showRestore } = versionRowActions(v, { canAct })
+              const { compare: showCompare, restore: showRestore } = historyRowActions(v, {
+                canAct,
+                mobile: false,
+                embedded,
+              })
               const mid = (field: string) => `hist-r${i}-${field}`
               return (
                 <li
