@@ -45,11 +45,23 @@ Une seule invitation `pending` par e-mail (index unique partiel).
 | `SOCLE_SMTP_USERNAME` | Identifiant (optionnel). |
 | `SOCLE_SMTP_PASSWORD` | Mot de passe. **Jamais loggé.** |
 | `SOCLE_SMTP_FROM` | Expéditeur technique (`From`). Priorité UI branding si l’admin a configuré un expéditeur. |
-| `SOCLE_SMTP_TLS` | `starttls` \| `implicit`. |
+| `SOCLE_SMTP_TLS` | `starttls` \| `implicit` \| `none`. |
 
-**TLS obligatoire** dès que `SOCLE_SMTP_HOST` est posé, **hors** profils
-`dev` / `local` : démarrage refusé sinon. En `dev`/`local`, l’absence de TLS
-est tolérée (Mailpit).
+**TLS** dès que `SOCLE_SMTP_HOST` est posé. Hors profils `dev` / `local`,
+`none` (ou valeur vide) **n’arrête pas** le processus : aucun e-mail en clair
+n’est envoyé (canal journal) et l’envoi d’invitations est désactivé.
+En `dev`/`local`, l’absence de TLS est tolérée (Mailpit, GreenMail).
+
+L’envoi est impossible si `SOCLE_SMTP_HOST` manque, si `SOCLE_PUBLIC_BASE_URL`
+manque, ou si `SOCLE_SMTP_TLS` vaut `none` hors `dev`/`local`. Au démarrage :
+**un seul WARN**, les noms de variables, jamais leurs valeurs. Le processus
+démarre quand même (les invitations sont optionnelles).
+
+`GET /api/v1/admin/invitations/capability` (administrateur) renvoie
+`{ "enabled": false, "missing": ["SOCLE_PUBLIC_BASE_URL", "SOCLE_SMTP_HOST"] }`
+— uniquement les noms. `POST /api/v1/admin/invitations` (et le renvoi) vérifie
+cette capacité **avant toute écriture** et répond **503**
+`code: invitations_not_configured` avec la même liste `missing`. Plus de 500.
 
 Le bouton admin « Envoyer un e-mail de test » (branding) utilise **le même**
 service d’envoi (`BrandingMailSender`).

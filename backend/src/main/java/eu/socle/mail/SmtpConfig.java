@@ -14,7 +14,8 @@ import org.springframework.core.env.Profiles;
 
 /**
  * SMTP : TLS obligatoire hors {@code dev}/{@code local} dès que {@code SOCLE_SMTP_HOST} est posé.
- * Mot de passe / username jamais loggés.
+ * {@code none} hors ces profils n'arrête pas le processus (invitations optionnelles) :
+ * le canal repasse au journal, sans envoi en clair. Mot de passe / username jamais loggés.
  */
 @Configuration
 @EnableConfigurationProperties(SmtpProperties.class)
@@ -32,8 +33,8 @@ public class SmtpConfig {
         boolean dev = environment.acceptsProfiles(DEV_PROFILES);
         SmtpProperties.TlsMode tls = properties.tlsMode();
         if (!dev && tls == SmtpProperties.TlsMode.NONE) {
-            throw new IllegalStateException(
-                    "SOCLE_SMTP_TLS obligatoire (starttls|implicit) hors profil dev : démarrage refusé");
+            // Les invitations sont optionnelles : pas d'arrêt. Pas d'envoi en clair.
+            return new LoggingBrandingMailSender();
         }
         log.info("SMTP configuré port={} tls={} auth={}",
                 properties.port(),

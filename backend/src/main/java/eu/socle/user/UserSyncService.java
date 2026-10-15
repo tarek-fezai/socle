@@ -20,8 +20,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -171,22 +169,12 @@ public class UserSyncService {
     }
 
     /**
-     * Audit {@code auth.access_granted} (actor_id → users) : après commit pour que la FK soit
-     * satisfaite par l'écriture asynchrone.
+     * Audit {@code auth.access_granted}. {@link eu.socle.audit.AuditService#record} diffère
+     * lui-même l'INSERT jusqu'au commit : un second {@code afterCommit} perdrait l'événement.
      */
     private void auditAccessGrantedAfterCommit(UUID userId, String issuer, String subject) {
         IdentityProperties.AccessMode mode = identityProperties.getAccessPolicy().getMode();
-        Runnable audit = () -> accessAuditService.recordGranted(userId, issuer, subject, mode);
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    audit.run();
-                }
-            });
-        } else {
-            audit.run();
-        }
+        accessAuditService.recordGranted(userId, issuer, subject, mode);
     }
 
     /**

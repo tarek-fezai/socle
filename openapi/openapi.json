@@ -6281,6 +6281,24 @@
         }
       }
     },
+    "/api/v1/admin/invitations/capability" : {
+      "get" : {
+        "tags" : [ "invitation-admin-controller" ],
+        "operationId" : "capability",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Snapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/authz/visibility-drift" : {
       "get" : {
         "tags" : [ "visibility-migration-controller" ],
@@ -10617,6 +10635,20 @@
           "activeCount" : {
             "type" : "integer",
             "format" : "int64"
+          }
+        }
+      },
+      "Snapshot" : {
+        "type" : "object",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "missing" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
           }
         }
       },

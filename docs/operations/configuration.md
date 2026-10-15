@@ -60,12 +60,12 @@ Sans cela le démarrage s’arrête sur V48.
 
 | Name | Default | Required | Secret | Description |
 |------|---------|----------|--------|-------------|
-| `SOCLE_SMTP_HOST` | empty | no | no | SMTP host. Empty = not configured (log channel in `dev`). Demo-idp: Mailpit. |
+| `SOCLE_SMTP_HOST` | empty | no | no | SMTP host. Empty = invitations cannot be sent (startup WARN, `GET /api/v1/admin/invitations/capability` `enabled: false`, `POST` **503** `invitations_not_configured`). Names only, never values. Demo-idp: Mailpit. |
 | `SOCLE_SMTP_PORT` | `587` (yml) / `1025` (compose default) | no | no | SMTP port |
 | `SOCLE_SMTP_USERNAME` | empty | no | **yes** | SMTP auth user. Never logged. |
 | `SOCLE_SMTP_PASSWORD` | empty | no | **yes** | SMTP password. Never logged. Helm: `secrets.smtpPassword`. |
 | `SOCLE_SMTP_FROM` | empty | when SMTP host set | no | Envelope From (overridden by branding sender if set) |
-| `SOCLE_SMTP_TLS` | `starttls` (yml) | **yes** outside `dev`/`local` when host is set | no | `starttls` \| `implicit`. `none` only with `dev`/`local` (Mailpit). Startup refused otherwise. |
+| `SOCLE_SMTP_TLS` | `starttls` (yml) | no | no | `starttls` \| `implicit` \| `none`. `none` (or blank) outside `dev`/`local` does **not** stop startup: mail falls back to the log channel (no cleartext) and invitations stay disabled (`missing` includes `SOCLE_SMTP_TLS`). `dev`/`local`: Mailpit / GreenMail. |
 
 Actuator health indicator `smtp`: `up` / `down` / `not_configured` — no secrets.
 
@@ -80,7 +80,7 @@ Actuator health indicator `smtp`: `up` / `down` / `not_configured` — no secret
 |------|---------|----------|--------|-------------|
 | `SOCLE_INSTANCE_DISPLAY_NAME` | `Socle` | no | no | Product name in UI (`socle.instance.display-name`) |
 | `SOCLE_DATA_RESIDENCE_LABEL` | *(empty)* | no | no | Data-residence label shown in Admin › Retention & compliance (`socle.instance.data-residence-label`); never hardcoded |
-| `SOCLE_PUBLIC_BASE_URL` | *(empty)* | no | no | Public application URL (`socle.instance.public-base-url`); read-only in the admin branding API (`publicBaseUrl`) |
+| `SOCLE_PUBLIC_BASE_URL` | *(empty)* | no | no | Public application URL (`socle.instance.public-base-url`); read-only in the admin branding API (`publicBaseUrl`). Required to send invitations (accept link). Missing → startup WARN and **503** `invitations_not_configured` (name only, the value is never returned). |
 | `SOCLE_STORAGE_PROVIDER` | `relational` (local yml); Compose example `git` | **yes** | no | `relational` or `git` — no silent default at runtime |
 | `SOCLE_STORAGE_GIT_PATH` | `./data/git-content` | when `git` | no | Git repo path (`socle.storage.git-repository-path`) |
 | `SOCLE_STORAGE_GIT_REPOSITORY_PATH` | — | no | no | Compose `.env` alias; mapped to `SOCLE_STORAGE_GIT_PATH` in stack |

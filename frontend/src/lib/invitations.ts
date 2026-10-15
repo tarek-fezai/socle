@@ -34,6 +34,32 @@ export async function listInvitations(api: Pick<AxiosInstance, 'get'>) {
   return data
 }
 
+export type InvitationCapability = {
+  enabled: boolean
+  missing: string[]
+}
+
+export function invitationNotConfiguredMessage(missing: string[]): string {
+  return `L'envoi d'invitations n'est pas configuré (${missing.join(', ')}).`
+}
+
+export async function getInvitationCapability(
+  api: Pick<AxiosInstance, 'get'>,
+): Promise<InvitationCapability> {
+  const { data } = await api.get<InvitationCapability | unknown>('/api/v1/admin/invitations/capability')
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { enabled: true, missing: [] }
+  }
+  const row = data as { enabled?: unknown; missing?: unknown }
+  if (typeof row.enabled !== 'boolean') {
+    return { enabled: true, missing: [] }
+  }
+  const missing = Array.isArray(row.missing)
+    ? row.missing.filter((name): name is string => typeof name === 'string')
+    : []
+  return { enabled: row.enabled, missing }
+}
+
 export async function createInvitation(api: Pick<AxiosInstance, 'post'>, body: CreateInvitationBody) {
   const { data } = await api.post<InvitationView>('/api/v1/admin/invitations', body)
   return data

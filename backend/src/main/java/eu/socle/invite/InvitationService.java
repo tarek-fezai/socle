@@ -56,6 +56,7 @@ public class InvitationService {
     private final InvitationMailer mailer;
     private final AuditService auditService;
     private final Clock clock;
+    private final InvitationCapability capability;
 
     public InvitationService(
             InvitationRepository repository,
@@ -71,7 +72,8 @@ public class InvitationService {
             LicenceService licenceService,
             InvitationMailer mailer,
             AuditService auditService,
-            Clock clock
+            Clock clock,
+            InvitationCapability capability
     ) {
         this.repository = repository;
         this.hasher = hasher;
@@ -87,6 +89,7 @@ public class InvitationService {
         this.mailer = mailer;
         this.auditService = auditService;
         this.clock = clock;
+        this.capability = capability;
     }
 
     public boolean hasPendingForVerifiedEmail(String email, boolean emailVerified) {
@@ -104,6 +107,7 @@ public class InvitationService {
 
     @Transactional
     public InvitationDtos.InvitationView create(Jwt jwt, InvitationDtos.CreateRequest request) {
+        capability.requireEnabled();
         UserEntity admin = requireAdmin(jwt);
         String email = normalizeEmail(request.email());
         if (!userRepository.findAllByEmailIgnoreCase(email).isEmpty()) {
@@ -155,6 +159,7 @@ public class InvitationService {
 
     @Transactional
     public InvitationDtos.InvitationView resend(Jwt jwt, UUID id) {
+        capability.requireEnabled();
         UserEntity admin = requireAdmin(jwt);
         InvitationRow row = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation introuvable"));

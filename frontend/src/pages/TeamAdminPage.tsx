@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import { FormEvent, useState, type CSSProperties } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../auth/AuthProvider'
 import { AdminShell } from '../components/admin/AdminShell'
 import { CanvasModal } from '../components/CanvasModal'
 import { PeoplePicker, type PickerValue } from '../components/PeoplePicker'
@@ -21,6 +22,8 @@ import { SocleRole } from '../lib/auth'
 import { getLicence } from '../lib/licenceAdmin'
 import {
   createInvitation,
+  getInvitationCapability,
+  invitationNotConfiguredMessage,
   invitationsKey,
   listInvitations,
   resendInvitation,
@@ -78,6 +81,14 @@ export function TeamAdminPage() {
     queryKey: invitationsKey(),
     queryFn: () => listInvitations(api),
   })
+  const capability = useQuery({
+    queryKey: ['admin', 'invitations', 'capability'],
+    queryFn: () => getInvitationCapability(api),
+  })
+  const inviteBlocked = capability.data?.enabled === false
+  const inviteMissingMessage = inviteBlocked
+    ? invitationNotConfiguredMessage(capability.data?.missing ?? [])
+    : null
   const pendingCount = invites.data?.length ?? 0
   return (
     <AdminShell
@@ -110,15 +121,21 @@ export function TeamAdminPage() {
             </div>
             <Lead />
           </div>
-          <button
-            type="button"
-            data-mock-id="team-invite-cta"
-            onClick={() => setInviteOpen(true)}
-            className="shrink-0 rounded-[7px] bg-socle-accent px-4 py-2 text-[13px] font-semibold text-white"
-            style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, fontWeight: 600 }}
-          >
-            + Inviter un membre
-          </button>
+          <div className="flex shrink-0 flex-col items-end">
+            <button
+              type="button"
+              data-mock-id="team-invite-cta"
+              disabled={inviteBlocked}
+              onClick={() => setInviteOpen(true)}
+              className="shrink-0 rounded-[7px] bg-socle-accent px-4 py-2 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, fontWeight: 600 }}
+            >
+              + Inviter un membre
+            </button>
+            {inviteMissingMessage && (
+              <p className="mt-1 max-w-[280px] text-right text-[12px] text-[#9B9BA1]">{inviteMissingMessage}</p>
+            )}
+          </div>
         </div>
 
         <div className="mb-4 mt-[22px] flex shrink-0 items-center justify-between">
@@ -188,7 +205,13 @@ export function TeamAdminPage() {
         {tab === 'equipes' && <TeamsTab />}
         {tab === 'invitations' && <InvitationsTab />}
       </div>
-      {inviteOpen && <InviteMemberModal onClose={() => setInviteOpen(false)} />}
+      {inviteOpen && (
+        <InviteMemberModal
+          onClose={() => setInviteOpen(false)}
+          inviteBlocked={inviteBlocked}
+          inviteMissingMessage={inviteMissingMessage}
+        />
+      )}
     </AdminShell>
   )
 }
@@ -251,6 +274,7 @@ function TabBtn({
 
 function MembersTab({ q }: { q: string }) {
   const qc = useQueryClient()
+  const { me } = useAuth()
   const [pending, setPending] = useState<AdminUserRow | null>(null)
   const [roleError, setRoleError] = useState<string | null>(null)
   const page = useQuery({
@@ -296,6 +320,19 @@ function MembersTab({ q }: { q: string }) {
         {(page.data?.users ?? []).map((row, i) => {
           const team = row.teams[0]
           const isAdmin = row.platformRoles.includes(SocleRole.ADMINISTRATEUR_SYSTEME)
+          const enabledAdmins = (page.data?.users ?? []).filter(
+            (user) =>
+              user.status !== 'disabled' &&
+              user.platformRoles.includes(SocleRole.ADMINISTRATEUR_SYSTEME),
+          ).length
+          const disableReason =
+            row.status === 'disabled'
+              ? null
+              : me?.id === row.id
+                ? 'Vous ne pouvez pas désactiver votre propre compte.'
+                : isAdmin && enabledAdmins <= 1
+                  ? 'Impossible de désactiver le dernier administrateur système.'
+                  : null
           return (
             <div
               key={row.id}
@@ -359,13 +396,16 @@ function MembersTab({ q }: { q: string }) {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    className="text-[12px] underline"
-                    onClick={() => setPending(row)}
-                  >
-                    {row.status === 'disabled' ? 'Activer' : 'Désactiver'}
-                  </button>
+                  <span title={disableReason ?? undefined} className="inline-flex">
+                    <button
+                      type="button"
+                      className="text-[12px] underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+                      disabled={disableReason != null}
+                      onClick={() => setPending(row)}
+                    >
+                      {row.status === 'disabled' ? 'Activer' : 'Désactiver'}
+                    </button>
+                  </span>
                 )}
               </div>
             </div>
@@ -636,7 +676,15 @@ function InvitationsTab() {
   )
 }
 
-function InviteMemberModal({ onClose }: { onClose: () => void }) {
+function InviteMemberModal({
+  onClose,
+  inviteBlocked,
+  inviteMissingMessage,
+}: {
+  onClose: () => void
+  inviteBlocked: boolean
+  inviteMissingMessage: string | null
+}) {
   const qc = useQueryClient()
   const org = useBrandingInstanceName() || 'Socle'
   const [email, setEmail] = useState('')
@@ -675,7 +723,10 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
   })
 
   const sendBlocked =
-    !email.trim() || send.isPending || (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
+    inviteBlocked ||
+    !email.trim() ||
+    send.isPending ||
+    (globalRole === 'ADMINISTRATEUR_SYSTEME' && !confirmAdmin)
 
   return (
     <CanvasModal onClose={onClose}>
@@ -950,7 +1001,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               data-mock-id="invite-submit"
-              disabled={send.isPending}
+              disabled={send.isPending || inviteBlocked}
               onClick={() => {
                 if (sendBlocked) return
                 send.mutate()
@@ -981,6 +1032,9 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
+        {inviteMissingMessage && (
+          <p className="mt-2 text-[12px] text-[#9B9BA1]">{inviteMissingMessage}</p>
+        )}
       </div>
     </CanvasModal>
   )

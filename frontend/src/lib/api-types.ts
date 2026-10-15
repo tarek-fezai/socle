@@ -2420,6 +2420,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/invitations/capability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["capability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/authz/visibility-drift": {
         parameters: {
             query?: never;
@@ -4201,6 +4217,10 @@ export interface components {
             holds?: components["schemas"]["LegalHoldView"][];
             /** Format: int64 */
             activeCount?: number;
+        };
+        Snapshot: {
+            enabled?: boolean;
+            missing?: string[];
         };
         FieldListResponse: {
             fields?: components["schemas"]["FieldAdminView"][];
@@ -9097,6 +9117,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LicenceView"];
+                };
+            };
+        };
+    };
+    capability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Snapshot"];
                 };
             };
         };

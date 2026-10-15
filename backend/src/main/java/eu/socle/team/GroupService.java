@@ -79,7 +79,7 @@ public class GroupService {
                 "INSERT INTO groups (id, name, created_by, created_at) VALUES (?, ?, ?, now())",
                 id, request.name().trim(), user.getId());
         insertMember(id, user.getId(), TeamRole.proprietaire);
-        auditService.record(
+        auditService.recordSync(
                 user.getId(), false, AuditActions.GROUP_CREATED, "group", id,
                 Map.of("name", request.name().trim()), null);
         return loadView(id, user.getId(), isSystemAdmin(jwt));
@@ -122,7 +122,7 @@ public class GroupService {
                 ? TeamRole.contributeur
                 : TeamRole.parse(request.role());
         insertMember(groupId, request.userId(), role);
-        auditService.record(
+        auditService.recordSync(
                 user.getId(), false, AuditActions.GROUP_MEMBER_ADDED, "group", groupId,
                 Map.of("memberUserId", request.userId().toString(), "role", role.name()), null);
         return loadView(groupId, user.getId(), isSystemAdmin(jwt));
@@ -150,7 +150,7 @@ public class GroupService {
         meta.put("memberUserId", memberUserId.toString());
         meta.put("before", current.name());
         meta.put("after", next.name());
-        auditService.record(
+        auditService.recordSync(
                 user.getId(), false, AuditActions.GROUP_MEMBER_ROLE_CHANGED, "group", groupId, meta, null);
         return loadView(groupId, user.getId(), isSystemAdmin(jwt));
     }
@@ -171,7 +171,7 @@ public class GroupService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Membre introuvable dans le groupe");
         }
         authorizationService.revokePermission("group", groupId, current.name(), "user", memberUserId);
-        auditService.record(
+        auditService.recordSync(
                 user.getId(), false, AuditActions.GROUP_MEMBER_REMOVED, "group", groupId,
                 Map.of("memberUserId", memberUserId.toString(), "role", current.name()), null);
         return loadView(groupId, user.getId(), isSystemAdmin(jwt));
@@ -189,7 +189,7 @@ public class GroupService {
         requireExists(groupId);
         requireUserExists(userId);
         insertMember(groupId, userId, role);
-        auditService.record(
+        auditService.recordSync(
                 actorId, false, AuditActions.GROUP_MEMBER_ADDED, "group", groupId,
                 Map.of("memberUserId", userId.toString(), "role", role.name(), "source", "invitation"), null);
     }

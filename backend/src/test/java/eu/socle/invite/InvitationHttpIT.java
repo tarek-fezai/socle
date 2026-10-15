@@ -238,6 +238,15 @@ class InvitationHttpIT {
     }
 
     @Test
+    void capability_enabledWhenSmtpAndPublicUrlPresent() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/invitations/capability")
+                        .header(HttpHeaders.AUTHORIZATION, adminBearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(true))
+                .andExpect(jsonPath("$.missing").isEmpty());
+    }
+
+    @Test
     void happyPath_createsUserTeamAndRole() throws Exception {
         String token = sendInvite(INVITE_EMAIL);
         mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, inviteeBearer(true)))
