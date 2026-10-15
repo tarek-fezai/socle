@@ -373,12 +373,12 @@
 .fp-prose {
   outline: none;
   margin: 0 0 12px;
-  /* :root force optimizeLegibility, qui ligature « fi » autrement que la maquette. */
-  text-rendering: auto;
 }
 
+.fp-prose,
 .fp-prose * {
   text-rendering: auto;
+  -webkit-font-smoothing: auto;
 }
 
 .fp-prose p {
