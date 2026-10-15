@@ -69,12 +69,13 @@ test.describe.serial('Page de dossier', () => {
   test('lecteur : la page n’est pas modifiable', async ({ page }) => {
     const readerToken = await fetchPasswordToken(READER, READER_PASS)
     const me = await apiJson<MeResponse>('/api/v1/me', readerToken)
-    const grant = await fetch(`${process.env.API_BASE_URL ?? process.env.BASE_URL ?? 'http://127.0.0.1'}/api/v1/access/folder/${folderId}`, {
+    const grant = await fetch(`${process.env.API_BASE_URL ?? process.env.BASE_URL ?? 'http://127.0.0.1'}/api/v1/access/space/${spaceId}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ relation: 'viewer', subjectType: 'user', subjectId: me.id }),
     })
-    expect([200, 201, 204, 409].includes(grant.status)).toBeTruthy()
+    const grantBody = await grant.text()
+    expect([200, 201, 204, 409].includes(grant.status), `${grant.status} ${grantBody}`).toBeTruthy()
 
     await loginViaUi(page, READER, READER_PASS)
     await page.goto(`/folders/${folderId}`)
