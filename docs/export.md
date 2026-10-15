@@ -13,7 +13,8 @@ la lecture normale.
 | Résolution contenu | Réutilise **`TransclusionResolver.resolve`** | Pas de second chemin de rendu — dette Transclusion fermée. |
 | Collection dossier/tag | ∩ **`listViewableDocumentIds`** | Même famille Search / Graphe / ContentHealth. |
 | Bloc transclus interdit | Libellé **« Contenu non accessible »** (jamais omis, jamais le contenu) | Aligné vue web (`CompositePage`). |
-| Format V1 | **PDF** synchrone (OpenPDF) | Maquettes prévoient aussi ZIP/Word — hors scope V1. |
+| Format V1 | **PDF** synchrone (OpenPDF) | Maquettes prévoient aussi Word — hors scope V1. |
+| ZIP dossier | `GET /folders/{id}/export?format=zip` | La page de dossier est `_dossier.md` à la racine. Le PDF fusionné reste le défaut. |
 | Job async `folder_exports` | **Non utilisé** pour V1 | Génération à la demande ; table schéma inchangée pour une évolution future. |
 | Audit | **Oui** — `document.exported` / `folder.exported` / `tag.exported` | Un export est un vecteur de fuite a posteriori ; traçabilité cohérente Spaces/Groupes. |
 | RGPD `ExportPersonalData` | **Hors scope** | Sujet distinct (données personnelles de l'utilisateur). |

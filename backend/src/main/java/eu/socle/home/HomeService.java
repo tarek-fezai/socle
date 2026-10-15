@@ -127,7 +127,8 @@ public class HomeService {
                   FROM documents d
                  WHERE d.deleted_at IS NULL
                    AND %s
-                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                   AND %s
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
                 ps -> authorizationService.bindReadable(ps, 1, readable),
                 rs -> {
                     rs.next();
@@ -163,7 +164,8 @@ public class HomeService {
                  WHERE d.deleted_at IS NULL
                    AND c.day BETWEEN ? AND ?
                    AND %s
-                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                   AND %s
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
                 ps -> {
                     ps.setDate(1, java.sql.Date.valueOf(start));
                     ps.setDate(2, java.sql.Date.valueOf(end));
@@ -188,9 +190,10 @@ public class HomeService {
                    AND d.status = 'brouillon'
                    AND d.updated_by = ?
                    AND %s
+                   AND %s
                  ORDER BY d.updated_at DESC
                  LIMIT ?
-                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
                 ps -> {
                     ps.setObject(1, userId);
                     int idx = authorizationService.bindReadable(ps, 2, readable);
@@ -223,9 +226,10 @@ public class HomeService {
                  WHERE d.deleted_at IS NULL
                    AND d.status = 'valide'
                    AND %s
+                   AND %s
                  ORDER BY d.updated_at DESC
                  LIMIT ?
-                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
                 ps -> {
                     int idx = authorizationService.bindReadable(ps, 1, readable);
                     ps.setInt(idx, candidateLimit);
@@ -286,9 +290,10 @@ public class HomeService {
                   JOIN documents d ON d.id = ae.document_id
                  WHERE d.deleted_at IS NULL
                    AND %s
+                   AND %s
                  ORDER BY ae.created_at DESC
                  LIMIT ?
-                """.formatted(AuthorizationService.READABLE_PREDICATE),
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
                 ps -> {
                     int idx = authorizationService.bindReadable(ps, 1, readable);
                     ps.setInt(idx, candidateLimit);

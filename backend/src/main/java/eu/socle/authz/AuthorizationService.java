@@ -581,9 +581,10 @@ public class AuthorizationService {
                  WHERE d.deleted_at IS NULL
                    AND %s
                    AND %s
+                   AND %s
                  ORDER BY d.updated_at DESC
                  LIMIT ? OFFSET ?
-                """.formatted(READABLE_PREDICATE, scopeSqlPredicate(scope)),
+                """.formatted(READABLE_PREDICATE, scopeSqlPredicate(scope), eu.socle.folder.FolderPages.EXCLUDE_SQL),
                 ps -> {
                     int idx = bindReadableAndScope(ps, 1, readable, scope, folderTree);
                     ps.setInt(idx++, limit);
@@ -610,7 +611,8 @@ public class AuthorizationService {
                  WHERE d.deleted_at IS NULL
                    AND %s
                    AND %s
-                """.formatted(READABLE_PREDICATE, scopeSqlPredicate(scope)),
+                   AND %s
+                """.formatted(READABLE_PREDICATE, scopeSqlPredicate(scope), eu.socle.folder.FolderPages.EXCLUDE_SQL),
                 ps -> bindReadableAndScope(ps, 1, readable, scope, folderTree),
                 (rs, i) -> rs.getInt(1)).stream().findFirst().orElse(0);
     }
@@ -625,7 +627,8 @@ public class AuthorizationService {
                  WHERE d.deleted_at IS NULL
                    AND %s
                    AND %s
-                """.formatted(READABLE_PREDICATE, scopeSqlPredicate(scope)),
+                   AND %s
+                """.formatted(READABLE_PREDICATE, scopeSqlPredicate(scope), eu.socle.folder.FolderPages.EXCLUDE_SQL),
                 ps -> bindReadableAndScope(ps, 1, readable, scope, folderTree),
                 (rs, i) -> (UUID) rs.getObject("id"));
     }

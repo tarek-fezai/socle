@@ -22,13 +22,23 @@ public final class SearchDtos {
             Instant updatedAt,
             double rank,
             List<TagRef> tags,
-            boolean isFavorite
+            boolean isFavorite,
+            /** Dossier dont ce document est la page. Null pour un document ordinaire. */
+            UUID folderId
     ) {
+        public SearchHit(
+                UUID id, String title, String excerpt, UUID spaceId, String spaceName,
+                String docType, String status, Instant updatedAt, double rank,
+                List<TagRef> tags, boolean isFavorite
+        ) {
+            this(id, title, excerpt, spaceId, spaceName, docType, status, updatedAt, rank, tags, isFavorite, null);
+        }
+
         public SearchHit(
                 UUID id, String title, String excerpt, UUID spaceId, String spaceName,
                 String docType, String status, Instant updatedAt, double rank
         ) {
-            this(id, title, excerpt, spaceId, spaceName, docType, status, updatedAt, rank, List.of(), false);
+            this(id, title, excerpt, spaceId, spaceName, docType, status, updatedAt, rank, List.of(), false, null);
         }
     }
 

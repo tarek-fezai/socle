@@ -195,7 +195,7 @@ class FolderServiceTest {
         fx.folder(F1, SPACE, null, "A").folder(F2, SPACE, null, "B");
         FolderService service = fx.service(5);
         doThrow(new DataIntegrityViolationException("uq_folders_sibling_name"))
-                .when(fx.jdbc).update(contains("UPDATE folders"), any(), any(), any());
+                .when(fx.jdbc).update(contains("UPDATE folders"), any(), any(), any(), any());
 
         assertThatThrownBy(() -> service.update(jwt, F2, new UpdateFolderRequest("A", null)))
                 .isInstanceOf(ResponseStatusException.class)

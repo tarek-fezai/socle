@@ -95,6 +95,11 @@ class GitSearchProjectionTest {
                 )
                 """);
         jdbc.execute("""
+                CREATE TABLE folders (
+                  id UUID PRIMARY KEY, name TEXT, page_document_id UUID
+                )
+                """);
+        jdbc.execute("""
                 CREATE TABLE documents (
                   id UUID PRIMARY KEY,
                   space_id UUID NOT NULL REFERENCES spaces(id),

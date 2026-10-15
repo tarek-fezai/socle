@@ -70,6 +70,30 @@ public class DocumentService {
     private EditLockService editLockService;
     private DiffProperties diffProperties;
     private TipTapContentValidator tipTapContentValidator = new TipTapContentValidator();
+    /** Posé par {@link eu.socle.folder.FolderPageService} le temps d'un create/update de page. */
+    private static final ThreadLocal<Map<String, Object>> FOLDER_PAGE_AUDIT = new ThreadLocal<>();
+
+    /** Les {@code document.*} émis ensuite portent {@code folderPage} et {@code folderId}. */
+    public void useFolderPageAudit(UUID folderId) {
+        FOLDER_PAGE_AUDIT.set(Map.of("folderPage", Boolean.TRUE, "folderId", folderId.toString()));
+    }
+
+    public void clearFolderPageAudit() {
+        FOLDER_PAGE_AUDIT.remove();
+    }
+
+    private Map<String, Object> folderPageMeta(Map<String, Object> meta) {
+        Map<String, Object> extra = FOLDER_PAGE_AUDIT.get();
+        if (extra == null || extra.isEmpty()) {
+            return meta == null ? Map.of() : meta;
+        }
+        Map<String, Object> copy = new LinkedHashMap<>();
+        if (meta != null) {
+            copy.putAll(meta);
+        }
+        copy.putAll(extra);
+        return copy;
+    }
 
     /**
      * Constructeur tests unitaires — provider relational implicite ;
@@ -422,12 +446,12 @@ public class DocumentService {
                 AuditActions.DOCUMENT_CREATED,
                 "document",
                 saved.getId(),
-                createMeta,
+                folderPageMeta(createMeta),
                 null
         );
+        // Les écritures JDBC suivantes (page de dossier, tags de modèle) référencent documents(id).
+        repository.flush();
         if (template != null) {
-            // Les INSERT JDBC (document_tags) référencent documents(id) : flush JPA d'abord.
-            repository.flush();
             templateService.afterDocumentCreated(user.getId(), template, saved.getId(), spaceId);
         }
         return toResponse(saved, user.getId());
@@ -514,6 +538,16 @@ public class DocumentService {
         assertExpectedVersion(entity, request.expectedVersionNo());
         assertNoApprovalInProgress(id);
         String previousTitle = entity.getTitle();
+        String nextTitle = request.title().trim();
+        if (jdbc != null) {
+            List<String> pageNames = jdbc.query(
+                    "SELECT name FROM folders WHERE page_document_id = ?",
+                    (rs, i) -> rs.getString("name"),
+                    id);
+            if (pageNames != null && !pageNames.isEmpty() && pageNames.getFirst() != null) {
+                nextTitle = pageNames.getFirst();
+            }
+        }
         Map<String, Object> previousBody = copyBody(
                 documentStore.readCurrentContent(entity.getId(), entity.getBody()));
         int archivedVersionNo = entity.getCurrentVersionNo();
@@ -535,7 +569,7 @@ public class DocumentService {
                 archivedSummary
         );
 
-        entity.setTitle(request.title().trim());
+        entity.setTitle(nextTitle);
         if (request.docType() != null) {
             entity.setDocType(blankToNull(request.docType()));
         }
@@ -567,10 +601,10 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VERSION_CREATED,
                 "document",
                 saved.getId(),
-                Map.of(
+                folderPageMeta(Map.of(
                         "versionNo", archivedVersionNo,
                         "newCurrentVersionNo", saved.getCurrentVersionNo()
-                ),
+                )),
                 null
         );
         Map<String, Object> updateMeta = new LinkedHashMap<>();
@@ -585,7 +619,7 @@ public class DocumentService {
                 AuditActions.DOCUMENT_UPDATED,
                 "document",
                 saved.getId(),
-                updateMeta,
+                folderPageMeta(updateMeta),
                 null
         );
         if (activityEventService != null

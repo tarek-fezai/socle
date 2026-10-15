@@ -88,7 +88,8 @@ class FavoriteServiceTest {
                 """);
         jdbc.execute("""
                 CREATE TABLE folders (
-                  id UUID PRIMARY KEY, space_id UUID NOT NULL, name TEXT NOT NULL, deleted_at TIMESTAMPTZ
+                  id UUID PRIMARY KEY, space_id UUID NOT NULL, name TEXT NOT NULL,
+                  page_document_id UUID, deleted_at TIMESTAMPTZ
                 )
                 """);
         jdbc.execute("""

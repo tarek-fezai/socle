@@ -474,6 +474,130 @@
         }
       }
     },
+    "/api/v1/folders/{id}/page" : {
+      "get" : {
+        "tags" : [ "folder-page-controller" ],
+        "operationId" : "get_4",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "folder-page-controller" ],
+        "operationId" : "save",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveFolderPageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/folders/{id}/page" : {
+      "get" : {
+        "tags" : [ "folder-page-controller" ],
+        "operationId" : "get_5",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "folder-page-controller" ],
+        "operationId" : "save_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveFolderPageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/favorites/{type}/{id}" : {
       "put" : {
         "tags" : [ "favorite-controller" ],
@@ -610,7 +734,7 @@
     "/api/v1/documents/{id}/feedback" : {
       "get" : {
         "tags" : [ "feedback-controller" ],
-        "operationId" : "get_4",
+        "operationId" : "get_6",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -672,7 +796,7 @@
     "/api/documents/{id}/draft" : {
       "get" : {
         "tags" : [ "document-draft-controller" ],
-        "operationId" : "get_5",
+        "operationId" : "get_7",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -752,7 +876,7 @@
     "/api/v1/documents/{id}/draft" : {
       "get" : {
         "tags" : [ "document-draft-controller" ],
-        "operationId" : "get_6",
+        "operationId" : "get_8",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -877,7 +1001,7 @@
     "/api/v1/documents/{id}" : {
       "get" : {
         "tags" : [ "document-controller" ],
-        "operationId" : "get_7",
+        "operationId" : "get_9",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -965,7 +1089,7 @@
     "/api/documents/{id}" : {
       "get" : {
         "tags" : [ "document-controller" ],
-        "operationId" : "get_8",
+        "operationId" : "get_10",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -1053,7 +1177,7 @@
     "/api/v1/approval-workflows/{id}" : {
       "get" : {
         "tags" : [ "approval-workflow-definition-controller" ],
-        "operationId" : "get_9",
+        "operationId" : "get_11",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -1198,7 +1322,7 @@
     "/api/v1/admin/retention" : {
       "get" : {
         "tags" : [ "retention-admin-controller" ],
-        "operationId" : "get_10",
+        "operationId" : "get_12",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -1304,7 +1428,7 @@
     "/api/v1/admin/branding" : {
       "get" : {
         "tags" : [ "branding-admin-controller" ],
-        "operationId" : "get_11",
+        "operationId" : "get_13",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -4124,7 +4248,7 @@
     "/api/v1/templates/{id}" : {
       "get" : {
         "tags" : [ "template-controller" ],
-        "operationId" : "get_12",
+        "operationId" : "get_14",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -4204,7 +4328,7 @@
     "/api/v1/folders/{id}" : {
       "get" : {
         "tags" : [ "folder-controller" ],
-        "operationId" : "get_13",
+        "operationId" : "get_15",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -4292,7 +4416,7 @@
     "/api/folders/{id}" : {
       "get" : {
         "tags" : [ "folder-controller" ],
-        "operationId" : "get_14",
+        "operationId" : "get_16",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -4857,7 +4981,7 @@
     "/api/v1/public/branding" : {
       "get" : {
         "tags" : [ "public-branding-controller" ],
-        "operationId" : "get_15",
+        "operationId" : "get_17",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -4948,7 +5072,7 @@
     "/api/v1/polls/{id}" : {
       "get" : {
         "tags" : [ "poll-controller" ],
-        "operationId" : "get_16",
+        "operationId" : "get_18",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5127,6 +5251,14 @@
             "type" : "string",
             "format" : "uuid"
           }
+        }, {
+          "name" : "format",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "pdf"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -5154,6 +5286,14 @@
           "schema" : {
             "type" : "string",
             "format" : "uuid"
+          }
+        }, {
+          "name" : "format",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "pdf"
           }
         } ],
         "responses" : {
@@ -6065,7 +6205,7 @@
     "/api/v1/attachments/{id}" : {
       "get" : {
         "tags" : [ "attachment-controller" ],
-        "operationId" : "get_17",
+        "operationId" : "get_19",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6100,7 +6240,7 @@
     "/api/v1/approvals/{requestId}" : {
       "get" : {
         "tags" : [ "approval-controller" ],
-        "operationId" : "get_18",
+        "operationId" : "get_20",
         "parameters" : [ {
           "name" : "requestId",
           "in" : "path",
@@ -6266,7 +6406,7 @@
     "/api/v1/admin/licence" : {
       "get" : {
         "tags" : [ "licence-admin-controller" ],
-        "operationId" : "get_19",
+        "operationId" : "get_21",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -6945,52 +7085,18 @@
         },
         "required" : [ "role" ]
       },
-      "FavoriteItem" : {
+      "SaveFolderPageRequest" : {
         "type" : "object",
         "properties" : {
-          "targetType" : {
+          "body" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "changeSummary" : {
             "type" : "string"
-          },
-          "targetId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "createdAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "title" : {
-            "type" : "string"
-          },
-          "status" : {
-            "type" : "string"
-          },
-          "updatedAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "spaceId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "spaceName" : {
-            "type" : "string"
-          },
-          "documentCount" : {
-            "type" : "integer",
-            "format" : "int32"
-          }
-        }
-      },
-      "UpdateVisibilityRequest" : {
-        "type" : "object",
-        "properties" : {
-          "visibility" : {
-            "type" : "string",
-            "minLength" : 1
           }
         },
-        "required" : [ "visibility" ]
+        "required" : [ "body" ]
       },
       "DocumentPermissions" : {
         "type" : "object",
@@ -7137,6 +7243,53 @@
             "type" : "boolean"
           }
         }
+      },
+      "FavoriteItem" : {
+        "type" : "object",
+        "properties" : {
+          "targetType" : {
+            "type" : "string"
+          },
+          "targetId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "spaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "spaceName" : {
+            "type" : "string"
+          },
+          "documentCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "UpdateVisibilityRequest" : {
+        "type" : "object",
+        "properties" : {
+          "visibility" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "visibility" ]
       },
       "PutFeedbackRequest" : {
         "type" : "object",
@@ -8063,6 +8216,21 @@
           }
         }
       },
+      "ActorRef" : {
+        "type" : "object",
+        "properties" : {
+          "kind" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          }
+        }
+      },
       "FolderView" : {
         "type" : "object",
         "properties" : {
@@ -8102,6 +8270,61 @@
             "format" : "int32"
           },
           "folderCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pageDocumentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "creator" : {
+            "$ref" : "#/components/schemas/ActorRef"
+          },
+          "lastModifiedBy" : {
+            "$ref" : "#/components/schemas/ActorRef"
+          },
+          "lastModifiedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ownerGroup" : {
+            "$ref" : "#/components/schemas/OwnerGroupRef"
+          },
+          "reliabilityAverage" : {
+            "type" : "number"
+          },
+          "statusCounts" : {
+            "$ref" : "#/components/schemas/StatusCounts"
+          }
+        }
+      },
+      "OwnerGroupRef" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        }
+      },
+      "StatusCounts" : {
+        "type" : "object",
+        "properties" : {
+          "validated" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "inReview" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "draft" : {
             "type" : "integer",
             "format" : "int32"
           }
@@ -9529,6 +9752,10 @@
           },
           "isFavorite" : {
             "type" : "boolean"
+          },
+          "folderId" : {
+            "type" : "string",
+            "format" : "uuid"
           }
         }
       },

@@ -104,8 +104,12 @@ public class FavoriteService {
             byType.computeIfAbsent(r.type(), k -> new ArrayList<>()).add(r.id());
         }
 
+        Set<UUID> pageDocumentIds = new HashSet<>(jdbc.query(
+                "SELECT page_document_id FROM folders WHERE page_document_id IS NOT NULL",
+                (rs, i) -> (UUID) rs.getObject(1)));
         Set<UUID> okDocs = new HashSet<>(authorizationService.filterByDocumentViewer(
                 user.getId(), byType.getOrDefault("document", List.of()), "favorites"));
+        okDocs.removeAll(pageDocumentIds);
         Set<UUID> okFolders = new HashSet<>(authorizationService.filterByFolderViewer(
                 user.getId(), byType.getOrDefault("folder", List.of())));
         Set<UUID> okSpaces = new HashSet<>(authorizationService.filterBySpaceViewer(
@@ -118,6 +122,9 @@ public class FavoriteService {
 
         List<FavoriteItem> out = new ArrayList<>();
         for (Row r : rows) {
+            if ("document".equals(r.type()) && pageDocumentIds.contains(r.id())) {
+                continue;
+            }
             boolean ok = switch (r.type()) {
                 case "document" -> okDocs.contains(r.id());
                 case "folder" -> okFolders.contains(r.id());
@@ -279,8 +286,9 @@ public class FavoriteService {
         List<UUID> docIds = new ArrayList<>();
         Map<UUID, UUID> docToSpace = new HashMap<>();
         jdbc.query(
-                ("SELECT id, space_id FROM documents WHERE deleted_at IS NULL AND space_id IN (%s)"
-                        .formatted(placeholders)),
+                ("SELECT d.id, d.space_id FROM documents d WHERE d.deleted_at IS NULL AND d.space_id IN (%s)"
+                        + " AND " + eu.socle.folder.FolderPages.EXCLUDE_SQL)
+                        .formatted(placeholders),
                 rs -> {
                     while (rs.next()) {
                         UUID docId = (UUID) rs.getObject("id");
