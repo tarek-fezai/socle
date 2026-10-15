@@ -2,6 +2,9 @@
 package eu.socle.folder;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -47,7 +50,9 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -578,6 +583,253 @@ abstract class FolderPageHttpSuite {
         throw new AssertionError("audit absent : " + action);
     }
 
+    /**
+     * Les deux maquettes sont créées par l'API. Les colonnes sans écriture
+     * (horodatages, {@code created_by} nul d'une migration, groupe propriétaire,
+     * scores, approbation en cours) reçoivent les instants de l'horloge du test.
+     * Seuls les identifiants peuvent différer des fixtures.
+     */
+    @Test
+    void get_matchesVisualKitFixtures() throws Exception {
+        UUID claire = UUID.fromString("c2222222-2222-4222-8222-222222222222");
+        UUID yanis = UUID.fromString("c3333333-3333-4333-8333-333333333333");
+        UUID rania = UUID.fromString("c4444444-4444-4444-8444-444444444444");
+        UUID sami = UUID.fromString("c5555555-5555-4555-8555-555555555555");
+        seed(claire, "claire.dubois@example.com");
+        seed(yanis, "yanis.m@example.com");
+        seed(rania, "rania.lefevre@example.com");
+        seed(sami, "sami.lahlou@example.com");
+        name(CONTRIBUTOR, "Tarek Fezai", "TF");
+        name(claire, "Claire Dubois", "CD");
+        name(yanis, "Yanis M.", "YM");
+        name(rania, "Rania Lefèvre", "RL");
+        name(sami, "Sami Lahlou", "SL");
+
+        String auth = jwt(CONTRIBUTOR, "Tarek Fezai");
+        String proceduresId = createMockupFolder(auth, "Procédures", claire, yanis, null, true);
+        String referenceId = createMockupFolder(auth, "Référence", rania, sami, rania, false);
+
+        assertMatchesFixture(proceduresId, auth, "folder-procedures-view.json");
+        assertMatchesFixture(referenceId, auth, "folder-reference-view.json");
+    }
+
+    private void name(UUID id, String displayName, String initials) {
+        jdbc.update(
+                "UPDATE users SET display_name = ?, avatar_initials = ? WHERE id = ?",
+                displayName, initials, id);
+    }
+
+    private String createMockupFolder(
+            String auth,
+            String folderName,
+            UUID secondAuthor,
+            UUID thirdAuthor,
+            UUID ownerUser,
+            boolean procedures
+    ) throws Exception {
+        MvcResult space = mockMvc.perform(post("/api/v1/spaces")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Identité & accès\",\"color\":\"#3730E0\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String spaceId = MAPPER.readTree(space.getResponse().getContentAsString()).path("id").asText();
+
+        MvcResult folder = mockMvc.perform(post("/api/v1/folders")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"spaceId":"%s","name":"%s"}
+                                """.formatted(spaceId, folderName)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String folderId = MAPPER.readTree(folder.getResponse().getContentAsString()).path("id").asText();
+
+        record DocSeed(String title, String docType, String status, UUID author, Instant updatedAt,
+                       Instant reviewSince, int reliability, String[] tags) {}
+        List<DocSeed> docs = procedures
+                ? List.of(
+                new DocSeed("Provisioning des comptes", "procedure", "valide", CONTRIBUTOR,
+                        Instant.parse("2026-09-12T10:00:00Z"), null, 88, new String[]{"IAM", "Critique"}),
+                new DocSeed("Dé-provisioning des comptes", "procedure", "valide", secondAuthor,
+                        Instant.parse("2026-08-03T10:00:00Z"), null, 88, new String[]{"IAM"}),
+                new DocSeed("Revue périodique des droits", "procedure", "en_revue", thirdAuthor,
+                        Instant.parse("2026-09-20T08:00:00Z"), Instant.parse("2026-09-20T08:00:00Z"),
+                        88, new String[]{"Critique"}))
+                : List.of(
+                new DocSeed("Rôles & habilitations", "Référence", "valide", secondAuthor,
+                        Instant.parse("2026-07-18T10:00:00Z"), null, 95, new String[]{"IAM"}),
+                new DocSeed("Glossaire des permissions", "Référence", "valide", thirdAuthor,
+                        Instant.parse("2026-09-02T10:00:00Z"), null, 95, new String[]{"IAM"}));
+
+        List<String> docIds = new ArrayList<>();
+        int position = 0;
+        for (DocSeed doc : docs) {
+            MvcResult created = mockMvc.perform(post("/api/v1/documents")
+                            .header("Authorization", auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"title":"%s","docType":"%s","spaceId":"%s","folderId":"%s","body":{"type":"doc","content":[{"type":"paragraph"}]}}
+                                    """.formatted(doc.title(), doc.docType(), spaceId, folderId)))
+                    .andExpect(status().isCreated())
+                    .andReturn();
+            String docId = MAPPER.readTree(created.getResponse().getContentAsString()).path("id").asText();
+            docIds.add(docId);
+            jdbc.update("""
+                    UPDATE documents
+                       SET status = ?, updated_at = ?, updated_by = ?, reliability_score = ?, position = ?
+                     WHERE id = ?::uuid
+                    """,
+                    doc.status(), Timestamp.from(doc.updatedAt()), doc.author(), doc.reliability(),
+                    position++, docId);
+            for (String tag : doc.tags()) {
+                mockMvc.perform(post("/api/v1/documents/" + docId + "/tags")
+                                .header("Authorization", auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\":\"" + tag + "\"}"))
+                        .andExpect(status().is2xxSuccessful());
+            }
+            if (doc.reviewSince() != null) {
+                UUID workflowId = UUID.randomUUID();
+                jdbc.update(
+                        "INSERT INTO approval_workflows (id, name, status) VALUES (?, 'Revue maquette', 'active')",
+                        workflowId);
+                jdbc.update("""
+                        INSERT INTO approval_requests
+                          (id, document_id, workflow_id, temporal_workflow_id, requested_by, status, created_at)
+                        VALUES (?, ?::uuid, ?, ?, ?, 'en_cours', ?)
+                        """,
+                        UUID.randomUUID(), docId, workflowId, "mockup-" + docId, doc.author(),
+                        Timestamp.from(doc.reviewSince()));
+            }
+        }
+
+        mockMvc.perform(put("/api/v1/folders/" + folderId + "/page")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Page"}]}]}}
+                                """))
+                .andExpect(status().isOk());
+
+        MvcResult group = mockMvc.perform(post("/api/v1/groups")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Équipe Identité\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String groupId = MAPPER.readTree(group.getResponse().getContentAsString()).path("id").asText();
+        if (ownerUser != null) {
+            mockMvc.perform(post("/api/v1/groups/" + groupId + "/members")
+                            .header("Authorization", auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"userId\":\"" + ownerUser + "\",\"role\":\"proprietaire\"}"))
+                    .andExpect(status().isOk());
+            mockMvc.perform(put("/api/v1/groups/" + groupId + "/members/" + CONTRIBUTOR)
+                            .header("Authorization", auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"role\":\"contributeur\"}"))
+                    .andExpect(status().isOk());
+        }
+        jdbc.update("UPDATE folders SET owner_group_id = ?::uuid WHERE id = ?::uuid", groupId, folderId);
+
+        jdbc.update("UPDATE tags SET color = '#3730E0', created_at = ? WHERE lower(name) = 'iam'",
+                Timestamp.from(Instant.parse("2026-01-01T00:00:00Z")));
+        jdbc.update("UPDATE tags SET color = '#B54708', created_at = ? WHERE lower(name) = 'critique'",
+                Timestamp.from(Instant.parse("2026-01-02T00:00:00Z")));
+        UUID roleId = jdbc.queryForObject("SELECT id FROM global_roles LIMIT 1", UUID.class);
+        Integer governed = jdbc.queryForObject(
+                "SELECT count(*) FROM approval_role_assignments WHERE scope_type = 'tag' AND lower(scope_ref) = (SELECT id::text FROM tags WHERE lower(name) = 'critique')",
+                Integer.class);
+        if (governed == null || governed == 0) {
+            String critiqueId = jdbc.queryForObject(
+                    "SELECT id::text FROM tags WHERE lower(name) = 'critique'", String.class);
+            jdbc.update("""
+                    INSERT INTO approval_role_assignments
+                      (id, role_id, subject_type, subject_id, scope_type, scope_ref, granted_by)
+                    VALUES (?, ?, 'user', ?, 'tag', ?, ?)
+                    """,
+                    UUID.randomUUID(), roleId, CONTRIBUTOR, critiqueId, CONTRIBUTOR);
+        }
+
+        Instant createdAt = procedures
+                ? Instant.parse("2026-07-14T10:00:00Z")
+                : Instant.parse("2026-06-03T10:00:00Z");
+        Instant folderUpdatedAt = procedures
+                ? Instant.parse("2026-09-20T10:00:00Z")
+                : Instant.parse("2026-07-18T10:00:00Z");
+        UUID folderUpdatedBy = procedures ? CONTRIBUTOR : secondAuthor;
+        jdbc.update("""
+                UPDATE documents
+                   SET updated_at = ?, language = 'fr'
+                 WHERE id = (SELECT page_document_id FROM folders WHERE id = ?::uuid)
+                """,
+                Timestamp.from(createdAt), folderId);
+        jdbc.update("""
+                UPDATE folders
+                   SET created_by = NULL, created_at = ?, updated_at = ?, updated_by = ?
+                 WHERE id = ?::uuid
+                """,
+                Timestamp.from(createdAt), Timestamp.from(folderUpdatedAt), folderUpdatedBy, folderId);
+        return folderId;
+    }
+
+    private void assertMatchesFixture(String folderId, String auth, String fixtureName) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/v1/folders/" + folderId).header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode actual = canon(MAPPER.readTree(result.getResponse().getContentAsString()));
+        JsonNode expected = canon(MAPPER.readTree(Files.readString(fixture(fixtureName))));
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    private static Path fixture(String name) {
+        Path direct = Path.of("frontend", "e2e-visual", "fixtures", name);
+        if (Files.exists(direct)) {
+            return direct;
+        }
+        return Path.of("..", "frontend", "e2e-visual", "fixtures", name);
+    }
+
+    /** Identifiants : la valeur peut différer, null reste null. */
+    private static boolean isIdentifier(String field) {
+        return "id".equals(field) || "createdBy".equals(field) || field.endsWith("Id");
+    }
+
+    private static JsonNode canon(JsonNode node) {
+        if (node.isObject()) {
+            ObjectNode out = MAPPER.createObjectNode();
+            List<String> names = new ArrayList<>();
+            node.fieldNames().forEachRemaining(names::add);
+            names.sort(String::compareTo);
+            for (String field : names) {
+                JsonNode child = node.get(field);
+                if (isIdentifier(field)) {
+                    out.set(field, child == null || child.isNull() ? child : TextNode.valueOf("id"));
+                } else {
+                    out.set(field, canon(child));
+                }
+            }
+            return out;
+        }
+        if (node.isArray()) {
+            ArrayNode out = MAPPER.createArrayNode();
+            node.forEach(child -> out.add(canon(child)));
+            return out;
+        }
+        if (node.isTextual()) {
+            try {
+                return TextNode.valueOf(Instant.parse(node.asText()).toString());
+            } catch (DateTimeParseException ignored) {
+                return node;
+            }
+        }
+        if (node.isNumber()) {
+            return TextNode.valueOf(node.decimalValue().stripTrailingZeros().toPlainString());
+        }
+        return node;
+    }
+
     private void seed(UUID id, String email) {
         jdbc.update("""
                 INSERT INTO users (id, email, display_name, status, last_login_at)
@@ -629,6 +881,10 @@ abstract class FolderPageHttpSuite {
     }
 
     static String jwt(UUID userId) throws Exception {
+        return jwt(userId, "Test");
+    }
+
+    static String jwt(UUID userId, String name) throws Exception {
         Instant now = Instant.now();
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .issuer(ISSUER)
@@ -637,7 +893,7 @@ abstract class FolderPageHttpSuite {
                 .expirationTime(Date.from(now.plusSeconds(3600)))
                 .claim("email", userId + "@example.com")
                 .claim("email_verified", true)
-                .claim("name", "Test")
+                .claim("name", name)
                 .claim("realm_access", Map.of("roles", List.of("contributeur")))
                 .build();
         SignedJWT jwt = new SignedJWT(

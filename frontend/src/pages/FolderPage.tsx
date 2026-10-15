@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
+import { MoveDialog } from '../components/MoveDialog'
 import { NewFolderDialog } from '../components/NewFolderDialog'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/apiError'
-import { createDocument, emptyDocBody, getDocument, type DocumentDetail, type TagRef } from '../lib/documents'
+import { createDocument, emptyDocBody, type TagRef } from '../lib/documents'
 import {
   addFavorite,
   favoriteKey,
@@ -15,7 +16,6 @@ import {
   removeFavorite,
 } from '../lib/favorites'
 import {
-  childrenOf,
   folderPath,
   deleteFolder,
   documentEditHref,
@@ -30,8 +30,10 @@ import {
   updateFolder,
   type ActorRef,
   type Folder,
+  type FolderDocumentCard,
   type StatusCounts,
 } from '../lib/folders'
+import { isPlatformAdmin } from '../lib/platformRoles'
 import { initialsOf, tagColors } from './document/documentPageUtils'
 import { DocumentEditor } from './DocumentEditor'
 import { DocumentHistoryPage } from './DocumentHistoryPage'
@@ -84,15 +86,22 @@ function cardTone(status: string, docType: string | null | undefined): CardTone 
   return { label: status, color: '#43434A', dot: '#9B9BA1', review: false }
 }
 
-function reliabilityCaption(
-  details: Array<DocumentDetail | undefined>,
-  counts: StatusCounts,
-): string {
-  const loaded = details.filter((d): d is DocumentDetail => Boolean(d))
+const LANGUAGE_LABELS: Record<string, string> = {
+  fr: 'Français',
+  en: 'Anglais',
+}
+
+/** « Français » seulement quand la langue est absente. Un code connu est libellé, un code inconnu reste brut. */
+function languageLabel(code: string | null | undefined): string {
+  if (code == null || code === '') return 'Français'
+  return LANGUAGE_LABELS[code] ?? code
+}
+
+function reliabilityCaption(cards: FolderDocumentCard[], counts: StatusCounts): string {
   const allReference =
-    loaded.length > 0 && loaded.every((d) => isReferenceType(d.docType)) && counts.inReview === 0
+    cards.length > 0 && cards.every((d) => isReferenceType(d.docType)) && counts.inReview === 0
   if (allReference) {
-    const n = loaded.length
+    const n = cards.length
     return `${n} document${n > 1 ? 's' : ''} de référence à jour`
   }
   const v = counts.validated
@@ -148,7 +157,15 @@ function FolderFavorite({ folderId }: { folderId: string }) {
   )
 }
 
-function PersonMark({ actor, self }: { actor: ActorRef | null | undefined; self: boolean }) {
+function PersonMark({
+  actor,
+  initials,
+  self,
+}: {
+  actor: ActorRef | null | undefined
+  initials?: string | null
+  self: boolean
+}) {
   if (systemActor(actor)) {
     return (
       <span className="fp-gear" aria-hidden>
@@ -156,9 +173,10 @@ function PersonMark({ actor, self }: { actor: ActorRef | null | undefined; self:
       </span>
     )
   }
+  const letters = (initials && initials.trim()) || initialsOf(actor!.displayName!)
   return (
     <span className={self ? 'fp-avatar' : 'fp-avatar fp-avatar--other'} aria-hidden>
-      {initialsOf(actor!.displayName!)}
+      {letters}
     </span>
   )
 }
@@ -174,6 +192,7 @@ export function FolderPage() {
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [moveOpen, setMoveOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState<Record<string, unknown> | null>(null)
 
@@ -195,23 +214,8 @@ export function FolderPage() {
   })
 
   const treeFolders = useMemo(() => tree.data?.folders ?? [], [tree.data])
-  const pageDocumentId = folder.data?.pageDocumentId ?? page.data?.id ?? null
-  const children = useMemo(() => {
-    const raw = childrenOf({ folders: treeFolders, documents: tree.data?.documents ?? [] }, id)
-    return {
-      folders: raw.folders,
-      documents: raw.documents.filter((d) => d.id !== pageDocumentId),
-    }
-  }, [treeFolders, tree.data, id, pageDocumentId])
-
-  const docQueries = useQueries({
-    queries: children.documents.map((d) => ({
-      queryKey: ['document', d.id],
-      queryFn: () => getDocument(api, d.id),
-    })),
-  })
-
-  const canEdit = page.data ? Boolean(page.data.permissions?.canEdit) : page.isSuccess
+  const canEdit = Boolean(folder.data?.canEdit)
+  const canDelete = Boolean(folder.data?.canDelete)
   const content = draft ?? (page.data?.body as Record<string, unknown> | undefined) ?? emptyDocBody
 
   const save = useMutation({
@@ -297,17 +301,20 @@ export function FolderPage() {
   const pct = reliabilityPercent(f.reliabilityAverage)
   const created = formatLong(f.createdAt)
   const counts = f.statusCounts ?? { validated: 0, inReview: 0, draft: 0 }
-  const details = docQueries.map((q) => q.data)
-  const docCount = children.documents.length
+  const cards = f.documents ?? []
+  const docCount = cards.length
   const tags = new Map<string, TagRef>()
-  for (const d of details) {
-    for (const t of d?.tags ?? []) {
+  for (const d of cards) {
+    for (const t of d.tags ?? []) {
       if (t.id && !tags.has(t.id)) tags.set(t.id, t)
     }
   }
   const tagList = [...tags.values()]
   const ownerName = f.ownerGroup?.name ?? null
-  const ownerActor = f.lastModifiedBy?.kind === 'user' ? f.lastModifiedBy : null
+  const owner = f.ownerGroup?.owner
+  const ownerActor: ActorRef | null = owner
+    ? { kind: 'user', id: owner.id, displayName: owner.displayName }
+    : null
   const selfActor = (actor: ActorRef | null | undefined) =>
     Boolean(actor?.kind === 'user' && actor.id && me?.id && actor.id === me.id)
 
@@ -422,6 +429,16 @@ export function FolderPage() {
               >
                 + Nouveau document
               </a>
+              <FolderActionsMenu
+                canDelete={canDelete}
+                onRename={() => {
+                  setNameDraft(f.name)
+                  setRenaming(true)
+                }}
+                onMove={() => setMoveOpen(true)}
+                onTemplate={() => navigate(`/docs/new?spaceId=${f.spaceId}&folderId=${id}`)}
+                onDelete={() => setConfirmDelete(true)}
+              />
             </>
           )}
         </div>
@@ -500,11 +517,11 @@ export function FolderPage() {
                     <line x1="2" y1="12" x2="22" y2="12" />
                     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                   </svg>
-                  Français
+                  {languageLabel(f.language)}
                 </span>
               </div>
 
-              {page.isSuccess && (
+              {(canEdit || page.data) && (
                 <DocumentEditor
                   variant="document"
                   chrome={canEdit ? 'folder' : 'body'}
@@ -519,6 +536,7 @@ export function FolderPage() {
                   }}
                 />
               )}
+              {!canEdit && !page.data && titleSlot}
 
               <p className="fp-count" data-mock-id="fp-count">
                 {docCount} document{docCount === 1 ? '' : 's'} · sous-dossier de l&apos;espace{' '}
@@ -526,17 +544,15 @@ export function FolderPage() {
               </p>
 
               <div className="fp-cards">
-                {children.documents.map((doc, i) => {
-                  const detail = details[i]
-                  const tone = cardTone(detail?.status ?? doc.status, detail?.docType)
-                  const when = formatLong(detail?.updatedAt)
-                  const author = detail?.updatedBy?.displayName || (detail ? 'Système (migration)' : '')
-                  const meta =
-                    when && author
-                      ? tone.review
-                        ? `En revue depuis le ${when} · ${author}`
-                        : `Révisé le ${when} · ${author}`
-                      : null
+                {cards.map((doc, i) => {
+                  const tone = cardTone(doc.status, doc.docType)
+                  const when = formatLong(tone.review ? doc.reviewSince : doc.updatedAt)
+                  const author = doc.updatedBy?.trim() || 'Système (migration)'
+                  const meta = when
+                    ? tone.review
+                      ? `En revue depuis le ${when} · ${author}`
+                      : `Révisé le ${when} · ${author}`
+                    : null
                   return (
                     <Link
                       key={doc.id}
@@ -548,7 +564,7 @@ export function FolderPage() {
                         <span className="fp-check" role="checkbox" aria-checked="false" aria-label="" />
                         <span className="fp-card-dot" style={{ background: tone.dot }} />
                         <span>
-                          <span className="fp-card-title">{detail?.title || doc.title}</span>
+                          <span className="fp-card-title">{doc.title}</span>
                           {meta && <span className="fp-card-meta">{meta}</span>}
                         </span>
                       </span>
@@ -568,7 +584,7 @@ export function FolderPage() {
             <div data-mock-id="fp-rail-docs">
               <div className="fp-rail-label">Documents</div>
               <div className="fp-rail-docs">
-                {children.documents.map((doc) => (
+                {cards.map((doc) => (
                   <Link key={doc.id} to={documentHref(doc.id)} className="fp-rail-link">
                     {doc.title}
                   </Link>
@@ -579,7 +595,9 @@ export function FolderPage() {
             <Link to={`/folders/${id}/access`} className="fp-rail-block" data-mock-id="fp-rail-owner">
               <div className="fp-rail-label">Propriétaire</div>
               <div className="fp-person">
-                <PersonMark actor={ownerActor} self={selfActor(ownerActor)} />
+                {ownerActor && (
+                  <PersonMark actor={ownerActor} initials={owner?.initials} self={selfActor(ownerActor)} />
+                )}
                 <span className="fp-person-name">{ownerName ?? '—'}</span>
               </div>
             </Link>
@@ -616,9 +634,11 @@ export function FolderPage() {
             <div className="fp-rail-block" data-mock-id="fp-rail-tags">
               <div className="fp-tags-head">
                 <div className="fp-rail-label">Tags</div>
-                <Link to="/admin/tags" className="fp-manage">
-                  Gérer →
-                </Link>
+                {isPlatformAdmin(me?.roles) && (
+                  <Link to="/admin/tags" className="fp-manage">
+                    Gérer →
+                  </Link>
+                )}
               </div>
               <div className="fp-tags">
                 {tagList.map((t, i) => {
@@ -645,7 +665,7 @@ export function FolderPage() {
                   {pct == null ? '— · moyenne du dossier' : `${pct}% · moyenne du dossier`}
                 </span>
               </div>
-              <div className="fp-rel-sub">{reliabilityCaption(details, counts)}</div>
+              <div className="fp-rel-sub">{reliabilityCaption(cards, counts)}</div>
             </div>
 
             <div className="fp-rail-block" data-mock-id="fp-rail-export">
@@ -654,39 +674,27 @@ export function FolderPage() {
               </Link>
             </div>
 
-            {canEdit && (
-              <div className="fp-delete">
-                {confirmDelete ? (
-                  <div role="group" aria-label="Confirmer la suppression du dossier">
-                    <span className="fp-delete-q">Déplacer ce dossier vers la corbeille ?</span>
-                    <button type="button" className="fp-delete-cancel" onClick={() => setConfirmDelete(false)} disabled={remove.isPending}>
-                      Annuler
-                    </button>
-                    <button
-                      type="button"
-                      className="fp-delete-confirm"
-                      data-testid="folder-delete-confirm"
-                      onClick={() => remove.mutate()}
-                      disabled={remove.isPending}
-                    >
-                      {remove.isPending ? 'Suppression…' : 'Confirmer'}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="fp-delete-btn"
-                    data-testid="folder-delete"
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    Supprimer le dossier
-                  </button>
-                )}
-              </div>
-            )}
           </div>
         </aside>
       </div>
+
+      {confirmDelete && (
+        <div className="fp-delete-banner" role="group" aria-label="Confirmer la suppression du dossier">
+          <span className="fp-delete-q">Déplacer ce dossier vers la corbeille ?</span>
+          <button type="button" className="fp-delete-cancel" onClick={() => setConfirmDelete(false)} disabled={remove.isPending}>
+            Annuler
+          </button>
+          <button
+            type="button"
+            className="fp-delete-confirm"
+            data-testid="folder-delete-confirm"
+            onClick={() => remove.mutate()}
+            disabled={remove.isPending}
+          >
+            {remove.isPending ? 'Suppression…' : 'Confirmer'}
+          </button>
+        </div>
+      )}
 
       <NewFolderDialog
         open={newFolderOpen}
@@ -696,6 +704,143 @@ export function FolderPage() {
         folders={treeFolders}
         defaultParentFolderId={id}
       />
+      <MoveDialog
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        spaceId={f.spaceId}
+        spaceName={spaceName || 'Espace'}
+        folders={treeFolders}
+        target={{ kind: 'folder', id, name: f.name, currentParentId: f.parentFolderId }}
+        onMoved={() => {
+          void qc.invalidateQueries({ queryKey: ['folder', id] })
+          void qc.invalidateQueries({ queryKey: spaceTreeKey(f.spaceId) })
+        }}
+      />
+    </div>
+  )
+}
+
+function FolderActionsMenu({
+  canDelete,
+  onRename,
+  onMove,
+  onTemplate,
+  onDelete,
+}: {
+  canDelete: boolean
+  onRename: () => void
+  onMove: () => void
+  onTemplate: () => void
+  onDelete: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const menuId = useId()
+  const items = [
+    { label: 'Renommer', run: onRename },
+    { label: 'Déplacer', run: onMove },
+    { label: 'Depuis un modèle', run: onTemplate },
+    ...(canDelete ? [{ label: 'Supprimer', run: onDelete }] : []),
+  ]
+
+  useEffect(() => {
+    if (!open) return
+    itemRefs.current[active]?.focus()
+  }, [open, active])
+
+  useEffect(() => {
+    if (!open) return
+    function onDoc(e: MouseEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+
+  function choose(index: number) {
+    const item = items[index]
+    if (!item) return
+    setOpen(false)
+    item.run()
+  }
+
+  function onKey(e: ReactKeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setOpen(false)
+      buttonRef.current?.focus()
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActive((i) => (i + 1) % items.length)
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((i) => (i - 1 + items.length) % items.length)
+      return
+    }
+    if (e.key === 'Home') {
+      e.preventDefault()
+      setActive(0)
+      return
+    }
+    if (e.key === 'End') {
+      e.preventDefault()
+      setActive(items.length - 1)
+      return
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      choose(active)
+    }
+  }
+
+  return (
+    <div className="fp-more-wrap" ref={rootRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="fp-more"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        aria-label="Autres actions du dossier"
+        title="Renommer, Déplacer, Depuis un modèle, Supprimer"
+        onClick={() => {
+          setActive(0)
+          setOpen((v) => !v)
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#43434A" stroke="none" aria-hidden>
+          <circle cx="5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="19" cy="12" r="1.8" />
+        </svg>
+      </button>
+      {open && (
+        <div id={menuId} className="fp-menu" role="menu" aria-label="Autres actions du dossier" onKeyDown={onKey}>
+          {items.map((item, i) => (
+            <button
+              key={item.label}
+              ref={(el) => {
+                itemRefs.current[i] = el
+              }}
+              type="button"
+              role="menuitem"
+              className="fp-menu-item"
+              tabIndex={-1}
+              onClick={() => choose(i)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

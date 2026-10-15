@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 /**
  * Données d'écran dossier (réponses API explicites, pas de mutation du DOM).
- * Les dates et les auteurs sont ceux que GET /folders/{id} et GET /documents/{id} renvoient.
+ * GET /folders/{id} est le JSON de fixtures/ : même forme que le backend, y compris
+ * les fiches. Les identifiants de la fixture sont stables ; un test Postgres
+ * accepte des identifiants différents.
  */
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { ME_TAREK, NOTIFICATIONS_SEED, SPACE_IDENTITE, VISUAL_NOW } from './dashboard-fixtures.mjs'
 import { mockBaseApis, json } from './visual-parity-kit.mjs'
 
@@ -166,32 +171,11 @@ const REF_DOCS = [
   }),
 ]
 
+const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
+
 function folderView(kind) {
-  const procedures = kind === 'procedures'
-  return {
-    id: procedures ? FOLDER_PROC : FOLDER_REF,
-    spaceId: SPACE_IDENTITE.id,
-    parentFolderId: null,
-    name: procedures ? 'Procédures' : 'Référence',
-    position: 0,
-    createdBy: null,
-    createdAt: procedures ? '2026-07-14T10:00:00.000Z' : '2026-06-03T10:00:00.000Z',
-    updatedAt: procedures ? '2026-09-20T10:00:00.000Z' : '2026-07-18T10:00:00.000Z',
-    documentCount: procedures ? 3 : 2,
-    folderCount: 0,
-    pageDocumentId: procedures ? PAGE_PROC : PAGE_REF,
-    status: 'actif',
-    creator: { kind: 'system', id: null, displayName: null },
-    lastModifiedBy: procedures
-      ? { kind: 'user', id: ME_TAREK.id, displayName: 'Tarek Fezai' }
-      : { kind: 'user', id: '44444444-4444-4444-4444-444444444444', displayName: 'Rania Lefèvre' },
-    lastModifiedAt: procedures ? '2026-09-20T10:00:00.000Z' : '2026-07-18T10:00:00.000Z',
-    ownerGroup: { id: 'g0000001-0000-4000-8000-000000000001', name: 'Équipe Identité' },
-    reliabilityAverage: procedures ? 88 : 95,
-    statusCounts: procedures
-      ? { validated: 2, inReview: 1, draft: 0 }
-      : { validated: 2, inReview: 0, draft: 0 },
-  }
+  const file = kind === 'procedures' ? 'folder-procedures-view.json' : 'folder-reference-view.json'
+  return JSON.parse(readFileSync(join(FIXTURE_DIR, file), 'utf8'))
 }
 
 function pageView(kind) {

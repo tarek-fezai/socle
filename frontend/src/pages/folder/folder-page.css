@@ -103,6 +103,67 @@
   gap: 8px;
 }
 
+/* Même boîte que .more-btn des maquettes (appearance: none → content-box). */
+.fp-page button.fp-more {
+  appearance: none;
+  background: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  box-sizing: content-box;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid #ececee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fp-more-wrap {
+  position: relative;
+  display: flex;
+}
+
+.fp-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 196px;
+  margin: 0;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #ececee;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(14, 14, 16, 0.12);
+}
+
+.fp-page button.fp-menu-item {
+  appearance: none;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #43434a;
+  cursor: pointer;
+}
+
+.fp-page button.fp-menu-item:hover,
+.fp-page button.fp-menu-item:focus {
+  background: #f5f5f7;
+  outline: none;
+}
+
 .fp-icon-btn {
   width: 32px;
   height: 32px;
@@ -645,9 +706,24 @@
   font-weight: 600;
 }
 
-.fp-delete {
-  border-top: 1px solid #ececee;
-  padding-top: 16px;
+.fp-delete-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 40;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid #ececee;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(14, 14, 16, 0.12);
+}
+
+.fp-delete-banner .fp-delete-q {
+  margin-bottom: 0;
 }
 
 .fp-delete-btn,

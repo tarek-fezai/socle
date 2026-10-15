@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.folder;
 
+import eu.socle.document.DocumentDtos.TagRef;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -33,7 +34,30 @@ public final class FolderDtos {
      */
     public record ActorRef(String kind, UUID id, String displayName) {}
 
-    public record OwnerGroupRef(UUID id, String name) {}
+    /** Membre au rôle {@code proprietaire} de l'équipe propriétaire du dossier. */
+    public record OwnerPerson(UUID id, String displayName, String initials) {}
+
+    public record OwnerGroupRef(UUID id, String name, OwnerPerson owner) {
+        public OwnerGroupRef(UUID id, String name) {
+            this(id, name, null);
+        }
+    }
+
+    /**
+     * Document direct du dossier (la page est exclue), dans l'ordre {@code position}.
+     * {@code updatedBy} est le nom affiché. {@code reviewSince} est la date de soumission
+     * de l'approbation {@code en_cours}, sinon null.
+     */
+    public record FolderDocumentCard(
+            UUID id,
+            String title,
+            String status,
+            String docType,
+            Instant updatedAt,
+            String updatedBy,
+            Instant reviewSince,
+            List<TagRef> tags
+    ) {}
 
     /** Documents directs du dossier, page exclue. */
     public record StatusCounts(int validated, int inReview, int draft) {}
@@ -58,7 +82,18 @@ public final class FolderDtos {
             OwnerGroupRef ownerGroup,
             /** Moyenne des documents directs, page exclue. Null s'il n'y en a aucun. */
             BigDecimal reliabilityAverage,
-            StatusCounts statusCounts
+            StatusCounts statusCounts,
+            /** Relation OpenFGA {@code editor} sur le dossier. */
+            boolean canEdit,
+            /**
+             * Même porte que {@code DELETE /folders/{id}} : {@code editor} du dossier
+             * et droit de gestion du parent (propriétaire d'espace, éditeur du dossier
+             * parent, ou éditeur d'espace à la racine).
+             */
+            boolean canDelete,
+            /** Langue du document de page, ou null s'il n'y a pas de page. */
+            String language,
+            List<FolderDocumentCard> documents
     ) {
         public FolderView(
                 UUID id,
@@ -78,7 +113,8 @@ public final class FolderDtos {
                     null, "actif",
                     new ActorRef(createdBy == null ? "system" : "user", createdBy, null),
                     new ActorRef(createdBy == null ? "system" : "user", createdBy, null),
-                    updatedAt, null, null, new StatusCounts(0, 0, 0));
+                    updatedAt, null, null, new StatusCounts(0, 0, 0),
+                    false, false, null, List.of());
         }
     }
 

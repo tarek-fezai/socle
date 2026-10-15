@@ -1,0 +1,61 @@
+{
+  "id": "f0000001-0000-4000-8000-0000000000a2",
+  "spaceId": "s0000001-0000-4000-8000-000000000001",
+  "parentFolderId": null,
+  "name": "Référence",
+  "position": 0,
+  "createdBy": null,
+  "createdAt": "2026-06-03T10:00:00Z",
+  "updatedAt": "2026-07-18T10:00:00Z",
+  "documentCount": 2,
+  "folderCount": 0,
+  "pageDocumentId": "d0000001-0000-4000-8000-0000000000p2",
+  "status": "actif",
+  "creator": { "kind": "system", "id": null, "displayName": null },
+  "lastModifiedBy": {
+    "kind": "user",
+    "id": "55555555-5555-5555-5555-555555555555",
+    "displayName": "Sami Lahlou"
+  },
+  "lastModifiedAt": "2026-09-02T10:00:00Z",
+  "ownerGroup": {
+    "id": "g0000001-0000-4000-8000-000000000002",
+    "name": "Équipe Identité",
+    "owner": {
+      "id": "44444444-4444-4444-4444-444444444444",
+      "displayName": "Rania Lefèvre",
+      "initials": "RL"
+    }
+  },
+  "reliabilityAverage": 95,
+  "statusCounts": { "validated": 2, "inReview": 0, "draft": 0 },
+  "canEdit": true,
+  "canDelete": true,
+  "language": "fr",
+  "documents": [
+    {
+      "id": "d0000001-0000-4000-8000-000000000021",
+      "title": "Rôles & habilitations",
+      "status": "valide",
+      "docType": "Référence",
+      "updatedAt": "2026-07-18T10:00:00Z",
+      "updatedBy": "Rania Lefèvre",
+      "reviewSince": null,
+      "tags": [
+        { "id": "t0000001-0000-4000-8000-000000000001", "name": "IAM", "color": "#3730E0", "governed": false }
+      ]
+    },
+    {
+      "id": "d0000001-0000-4000-8000-000000000022",
+      "title": "Glossaire des permissions",
+      "status": "valide",
+      "docType": "Référence",
+      "updatedAt": "2026-09-02T10:00:00Z",
+      "updatedBy": "Sami Lahlou",
+      "reviewSince": null,
+      "tags": [
+        { "id": "t0000001-0000-4000-8000-000000000001", "name": "IAM", "color": "#3730E0", "governed": false }
+      ]
+    }
+  ]
+}

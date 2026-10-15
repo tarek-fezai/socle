@@ -5,7 +5,7 @@
  * FolderProcedures.dc.html vs /folders/:id @ 1440×900.
  * Texte inclus, seuil 1 % par section. La sidebar du shell n'est pas comparée
  * (décision DP-2026-10-10). Dates et auteurs viennent des réponses API mockées
- * (mêmes champs que GET /folders/{id}, GET /folders/{id}/page, GET /documents/{id}).
+ * (mêmes champs que GET /folders/{id} et GET /folders/{id}/page).
  */
 import { test } from '@playwright/test'
 import {

@@ -6,8 +6,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 const getMock = vi.fn()
 const postMock = vi.fn()
+const authState = vi.hoisted(() => ({ roles: [] as string[] }))
 vi.mock('../auth/AuthProvider', () => ({
-  useAuth: () => ({ me: { id: 'me-1', displayName: 'Tarek Fezai', avatarInitials: 'TF' } }),
+  useAuth: () => ({
+    me: { id: 'me-1', displayName: 'Tarek Fezai', avatarInitials: 'TF', roles: authState.roles },
+  }),
 }))
 
 vi.mock('../lib/api', () => ({
@@ -67,6 +70,30 @@ const perms = (canEdit: boolean) => ({
 })
 
 let pageResponse: { status: number; data: unknown } = { status: 204, data: '' }
+let folderRights = { canEdit: true, canDelete: true }
+
+const folderDocuments = [
+  {
+    id: 'prov',
+    title: 'Provisioning des comptes',
+    status: 'valide',
+    docType: 'procedure',
+    updatedAt: '2026-09-12T10:00:00.000Z',
+    updatedBy: 'Tarek Fezai',
+    reviewSince: null,
+    tags: [{ id: 't1', name: 'IAM', color: '#3730E0', governed: false }],
+  },
+  {
+    id: 'reg',
+    title: 'Registre',
+    status: 'en_revue',
+    docType: 'procedure',
+    updatedAt: '2026-08-01T10:00:00.000Z',
+    updatedBy: 'Claire Dubois',
+    reviewSince: '2026-08-01T10:00:00.000Z',
+    tags: [],
+  },
+]
 
 function renderPage() {
   const client = new QueryClient({
@@ -78,6 +105,7 @@ function renderPage() {
         <Routes>
           <Route path="/folders/:id" element={<FolderPage />} />
           <Route path="/docs/:id/edit" element={<div>Page document</div>} />
+          <Route path="/docs/new" element={<div>Nouveau depuis un modèle</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -88,7 +116,9 @@ describe('FolderPage', () => {
   beforeEach(() => {
     getMock.mockReset()
     postMock.mockReset()
+    authState.roles = []
     pageResponse = { status: 204, data: '' }
+    folderRights = { canEdit: true, canDelete: true }
     getMock.mockImplementation((url: string) => {
       if (url === '/api/v1/folders/proc') {
         return Promise.resolve({
@@ -98,6 +128,14 @@ describe('FolderPage', () => {
             parentFolderId: null,
             name: 'Procédures',
             position: 0,
+            language: 'fr',
+            documents: folderDocuments,
+            ownerGroup: {
+              id: 'g1',
+              name: 'Équipe Identité',
+              owner: { id: 'me-1', displayName: 'Tarek Fezai', initials: 'TF' },
+            },
+            ...folderRights,
           },
         })
       }
@@ -138,6 +176,11 @@ describe('FolderPage', () => {
     expect(screen.getAllByText('Registre').length).toBeGreaterThan(0)
     expect(screen.queryByText('Politique')).toBeNull()
     expect(screen.getByText(/2 documents · sous-dossier de l'espace/)).toBeTruthy()
+    expect(screen.getByText(/En revue depuis le 1 août 2026/)).toBeTruthy()
+
+    const urls = getMock.mock.calls.map((call) => String(call[0]))
+    expect(urls.filter((url) => url.startsWith('/api/v1/documents/'))).toEqual([])
+    expect(urls.filter((url) => url === '/api/v1/folders/proc')).toHaveLength(1)
   })
 
   it('« + Nouveau document » crée dans ce dossier puis ouvre le document', async () => {
@@ -181,6 +224,7 @@ describe('FolderPage', () => {
   })
 
   it('lecteur : page en lecture seule, sans barre ni création', async () => {
+    folderRights = { canEdit: false, canDelete: false }
     pageResponse = {
       status: 200,
       data: {
@@ -199,6 +243,7 @@ describe('FolderPage', () => {
     expect(screen.queryByRole('button', { name: '+ Sous-dossier' })).toBeNull()
     expect(screen.queryByRole('button', { name: '+ Nouveau document' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Renommer le dossier' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Autres actions du dossier' })).toBeNull()
   })
 
   it('contributeur : barre d’outils et création', async () => {
@@ -218,5 +263,68 @@ describe('FolderPage', () => {
     expect(screen.getByRole('button', { name: '+ Sous-dossier' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '+ Nouveau document' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Renommer le dossier' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Autres actions du dossier' })).toBeTruthy()
+  })
+
+  it('page 204 : l’éditeur suit canEdit, pas le 204', async () => {
+    const first = renderPage()
+    expect(await screen.findByRole('toolbar', { name: 'Mise en forme' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Autres actions du dossier' })).toBeTruthy()
+    first.unmount()
+
+    folderRights = { canEdit: false, canDelete: false }
+    renderPage()
+    expect(await screen.findByRole('heading', { name: 'Procédures' })).toBeTruthy()
+    expect(screen.queryByRole('toolbar', { name: 'Mise en forme' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Autres actions du dossier' })).toBeNull()
+  })
+
+  it('contributeur : menu sans Supprimer', async () => {
+    folderRights = { canEdit: true, canDelete: false }
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Autres actions du dossier' }))
+    const menu = await screen.findByRole('menu')
+    expect(within(menu).getByRole('menuitem', { name: 'Renommer' })).toBeTruthy()
+    expect(within(menu).getByRole('menuitem', { name: 'Déplacer' })).toBeTruthy()
+    expect(within(menu).getByRole('menuitem', { name: 'Depuis un modèle' })).toBeTruthy()
+    expect(within(menu).queryByRole('menuitem', { name: 'Supprimer' })).toBeNull()
+    fireEvent.keyDown(menu, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('contributeur autorisé à supprimer : le menu confirme dans la page', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockImplementation(() => {
+      throw new Error('confirm')
+    })
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Autres actions du dossier' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Supprimer' }))
+    expect(screen.getByText('Déplacer ce dossier vers la corbeille ?')).toBeTruthy()
+    expect(screen.getByTestId('folder-delete-confirm')).toBeTruthy()
+    expect(confirm).not.toHaveBeenCalled()
+    confirm.mockRestore()
+  })
+
+  it('Déplacer ouvre la boîte existante, Depuis un modèle quitte vers /docs/new', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Autres actions du dossier' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Déplacer' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Déplacer' })
+    expect(dialog).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fermer' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Autres actions du dossier' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Depuis un modèle' }))
+    expect(await screen.findByText('Nouveau depuis un modèle')).toBeTruthy()
+  })
+
+  it('Gérer les tags n’est visible que pour un administrateur', async () => {
+    renderPage()
+    expect(await screen.findByRole('heading', { name: 'Procédures' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Gérer →' })).toBeNull()
+
+    authState.roles = ['ADMINISTRATEUR_SYSTEME']
+    renderPage()
+    expect(await screen.findByRole('link', { name: 'Gérer →' })).toBeTruthy()
   })
 })

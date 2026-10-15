@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import type { AxiosInstance } from 'axios'
-import type { DocumentDetail } from './documents'
+import type { DocumentDetail, TagRef } from './documents'
 
 /* ------------------------------------------------------------------ */
 /* Types API                                                           */
@@ -12,9 +12,30 @@ export type ActorRef = {
   displayName?: string | null
 }
 
+export type OwnerPerson = {
+  id: string
+  displayName: string
+  initials: string
+}
+
 export type OwnerGroupRef = {
   id: string
   name: string
+  owner?: OwnerPerson | null
+}
+
+/** Document direct du dossier (page exclue), tel que renvoyé par GET /folders/{id}. */
+export type FolderDocumentCard = {
+  id: string
+  title: string
+  status: string
+  docType?: string | null
+  updatedAt?: string | null
+  /** Nom affiché du dernier modificateur. */
+  updatedBy?: string | null
+  /** Soumission de l'approbation en cours, sinon null. */
+  reviewSince?: string | null
+  tags?: TagRef[]
 }
 
 export type StatusCounts = {
@@ -43,6 +64,13 @@ export type Folder = {
   ownerGroup?: OwnerGroupRef | null
   reliabilityAverage?: number | string | null
   statusCounts?: StatusCounts | null
+  /** Relation OpenFGA `editor` du dossier. */
+  canEdit?: boolean
+  /** Même porte que DELETE /folders/{id}. */
+  canDelete?: boolean
+  /** Langue du document de page, ou null sans page. */
+  language?: string | null
+  documents?: FolderDocumentCard[]
 }
 
 /** Dossier dans l'arborescence (liste plate + `parentFolderId`). */

@@ -84,13 +84,36 @@ test.describe.serial('Page de dossier', () => {
     await expect(page.getByTestId('folder-format-bar')).toHaveCount(0)
     await expect(page.getByRole('button', { name: '+ Sous-dossier' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: '+ Nouveau document' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Autres actions du dossier' })).toHaveCount(0)
     await expect(page.getByTestId('edit-prosemirror')).toHaveAttribute('contenteditable', 'false')
+  })
+
+  test('déplacer le dossier depuis le menu', async ({ page }) => {
+    const dest = await apiJson<Folder>('/api/v1/folders', token, {
+      method: 'POST',
+      body: JSON.stringify({ spaceId, name: `Destination ${Date.now()}` }),
+    })
+    await loginViaUi(page, USER, PASS)
+    await page.goto(`/folders/${folderId}`)
+    await page.getByRole('button', { name: 'Autres actions du dossier' }).click()
+    await page.getByRole('menuitem', { name: 'Déplacer' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('radio', { name: dest.name }).click()
+    const moved = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && r.url().includes(`/folders/${folderId}/move`),
+    )
+    await dialog.getByRole('button', { name: 'Déplacer ici' }).click()
+    const res = await moved
+    expect(res.ok()).toBeTruthy()
+    const body = (await res.json()) as { parentFolderId?: string | null }
+    expect(body.parentFolderId).toBe(dest.id)
   })
 
   test('supprimer le dossier confirme dans la page et envoie la page à la corbeille', async ({ page }) => {
     await loginViaUi(page, USER, PASS)
     await page.goto(`/folders/${folderId}`)
-    await page.getByTestId('folder-delete').click()
+    await page.getByRole('button', { name: 'Autres actions du dossier' }).click()
+    await page.getByRole('menuitem', { name: 'Supprimer' }).click()
     const deleted = page.waitForResponse(
       (r) => r.request().method() === 'DELETE' && r.url().includes(`/folders/${folderId}`),
     )
