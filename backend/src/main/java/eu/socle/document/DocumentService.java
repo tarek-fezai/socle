@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 @Service
 public class DocumentService {
@@ -70,30 +71,6 @@ public class DocumentService {
     private EditLockService editLockService;
     private DiffProperties diffProperties;
     private TipTapContentValidator tipTapContentValidator = new TipTapContentValidator();
-    /** Posé par {@link eu.socle.folder.FolderPageService} le temps d'un create/update de page. */
-    private static final ThreadLocal<Map<String, Object>> FOLDER_PAGE_AUDIT = new ThreadLocal<>();
-
-    /** Les {@code document.*} émis ensuite portent {@code folderPage} et {@code folderId}. */
-    public void useFolderPageAudit(UUID folderId) {
-        FOLDER_PAGE_AUDIT.set(Map.of("folderPage", Boolean.TRUE, "folderId", folderId.toString()));
-    }
-
-    public void clearFolderPageAudit() {
-        FOLDER_PAGE_AUDIT.remove();
-    }
-
-    private Map<String, Object> folderPageMeta(Map<String, Object> meta) {
-        Map<String, Object> extra = FOLDER_PAGE_AUDIT.get();
-        if (extra == null || extra.isEmpty()) {
-            return meta == null ? Map.of() : meta;
-        }
-        Map<String, Object> copy = new LinkedHashMap<>();
-        if (meta != null) {
-            copy.putAll(meta);
-        }
-        copy.putAll(extra);
-        return copy;
-    }
 
     /**
      * Constructeur tests unitaires — provider relational implicite ;
@@ -337,6 +314,15 @@ public class DocumentService {
 
     @Transactional
     public DocumentResponse create(Jwt jwt, CreateDocumentRequest request) {
+        return create(jwt, request, null);
+    }
+
+    /**
+     * {@code afterPersisted} s'exécute après le flush du document et avant l'audit,
+     * pour qu'un rattachement {@code folders.page_document_id} soit visible des événements.
+     */
+    @Transactional
+    public DocumentResponse create(Jwt jwt, CreateDocumentRequest request, Consumer<UUID> afterPersisted) {
         var user = userSyncService.syncFromJwt(jwt);
         if (request.spaceId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spaceId requis");
@@ -440,17 +426,20 @@ public class DocumentService {
             createMeta.put("templateId", template.templateId().toString());
             createMeta.put("templateVersion", template.version());
         }
+        // Les écritures JDBC suivantes (page de dossier, tags de modèle) référencent documents(id).
+        repository.flush();
+        if (afterPersisted != null) {
+            afterPersisted.accept(saved.getId());
+        }
         auditService.record(
                 user.getId(),
                 false,
                 AuditActions.DOCUMENT_CREATED,
                 "document",
                 saved.getId(),
-                folderPageMeta(createMeta),
+                withFolderPage(createMeta, saved.getId()),
                 null
         );
-        // Les écritures JDBC suivantes (page de dossier, tags de modèle) référencent documents(id).
-        repository.flush();
         if (template != null) {
             templateService.afterDocumentCreated(user.getId(), template, saved.getId(), spaceId);
         }
@@ -488,7 +477,7 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VISIBILITY_CHANGED,
                 "document",
                 saved.getId(),
-                meta,
+                withFolderPage(meta, saved.getId()),
                 null
         );
         return toResponse(saved, user.getId());
@@ -525,6 +514,35 @@ public class DocumentService {
         return "space:" + entity.getSpaceId();
     }
 
+    /** {@code folderPage} et {@code folderId} lus sur {@code folders.page_document_id}, pas sur l'appelant. */
+    private Map<String, Object> withFolderPage(Map<String, Object> meta, UUID documentId) {
+        UUID folderId = pageFolderId(documentId);
+        if (folderId == null) {
+            return meta == null ? Map.of() : meta;
+        }
+        Map<String, Object> copy = new LinkedHashMap<>();
+        if (meta != null) {
+            copy.putAll(meta);
+        }
+        copy.put("folderPage", Boolean.TRUE);
+        copy.put("folderId", folderId.toString());
+        return copy;
+    }
+
+    private UUID pageFolderId(UUID documentId) {
+        if (jdbc == null || documentId == null) {
+            return null;
+        }
+        List<UUID> ids = jdbc.query(
+                "SELECT id FROM folders WHERE page_document_id = ?",
+                (rs, i) -> (UUID) rs.getObject("id"),
+                documentId);
+        if (ids == null || ids.isEmpty()) {
+            return null;
+        }
+        return ids.getFirst();
+    }
+
     /**
      * Update : archive l'ancien body, applique la règle de statut, incrémente la version —
      * même transaction.
@@ -544,8 +562,9 @@ public class DocumentService {
                     "SELECT name FROM folders WHERE page_document_id = ?",
                     (rs, i) -> rs.getString("name"),
                     id);
-            if (pageNames != null && !pageNames.isEmpty() && pageNames.getFirst() != null) {
-                nextTitle = pageNames.getFirst();
+            if (pageNames != null && !pageNames.isEmpty() && pageNames.getFirst() != null
+                    && !pageNames.getFirst().equals(nextTitle)) {
+                throw ApiErrors.folderPageTitleLocked();
             }
         }
         Map<String, Object> previousBody = copyBody(
@@ -601,10 +620,10 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VERSION_CREATED,
                 "document",
                 saved.getId(),
-                folderPageMeta(Map.of(
+                withFolderPage(Map.of(
                         "versionNo", archivedVersionNo,
                         "newCurrentVersionNo", saved.getCurrentVersionNo()
-                )),
+                ), saved.getId()),
                 null
         );
         Map<String, Object> updateMeta = new LinkedHashMap<>();
@@ -619,7 +638,7 @@ public class DocumentService {
                 AuditActions.DOCUMENT_UPDATED,
                 "document",
                 saved.getId(),
-                folderPageMeta(updateMeta),
+                withFolderPage(updateMeta, saved.getId()),
                 null
         );
         if (activityEventService != null
@@ -951,11 +970,11 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VERSION_CREATED,
                 "document",
                 saved.getId(),
-                Map.of(
+                withFolderPage(Map.of(
                         "versionNo", archivedVersionNo,
                         "newCurrentVersionNo", saved.getCurrentVersionNo(),
                         "reason", "restore"
-                ),
+                ), saved.getId()),
                 null
         );
         Map<String, Object> restoreMeta = new LinkedHashMap<>();
@@ -969,7 +988,7 @@ public class DocumentService {
                 AuditActions.DOCUMENT_VERSION_RESTORED,
                 "document",
                 saved.getId(),
-                restoreMeta,
+                withFolderPage(restoreMeta, saved.getId()),
                 null
         );
         return toResponse(saved, user.getId());

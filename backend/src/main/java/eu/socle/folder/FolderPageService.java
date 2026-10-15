@@ -60,37 +60,32 @@ public class FolderPageService {
         var user = userSyncService.syncFromJwt(jwt);
         FolderRef folder = lockActive(folderId);
         authorizationService.requireFolderRelation(user.getId(), folderId, "editor");
-        documentService.useFolderPageAudit(folderId);
-        try {
-            if (folder.pageDocumentId() == null) {
-                return createPage(jwt, folder, request);
-            }
-            return documentService.update(jwt, folder.pageDocumentId(), new UpdateDocumentRequest(
-                    folder.name(), request.body(), request.changeSummary()));
-        } finally {
-            documentService.clearFolderPageAudit();
+        if (folder.pageDocumentId() == null) {
+            return createPage(jwt, folder, request);
         }
+        return documentService.update(jwt, folder.pageDocumentId(), new UpdateDocumentRequest(
+                folder.name(), request.body(), request.changeSummary()));
     }
 
     private DocumentResponse createPage(Jwt jwt, FolderRef folder, SaveFolderPageRequest request) {
-        DocumentResponse created = documentService.create(jwt, new CreateDocumentRequest(
+        return documentService.create(jwt, new CreateDocumentRequest(
                 folder.name(),
                 request.body(),
                 null,
                 folder.spaceId(),
                 null,
-                folder.id()));
-        int claimed = jdbc.update("""
-                UPDATE folders
-                   SET page_document_id = ?
-                 WHERE id = ? AND page_document_id IS NULL
-                """,
-                created.id(), folder.id());
-        if (claimed != 1) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Page de dossier déjà créée");
-        }
-        return created;
+                folder.id()), documentId -> {
+            int claimed = jdbc.update("""
+                    UPDATE folders
+                       SET page_document_id = ?
+                     WHERE id = ? AND page_document_id IS NULL
+                    """,
+                    documentId, folder.id());
+            if (claimed != 1) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Page de dossier déjà créée");
+            }
+        });
     }
 
     private FolderRef requireActive(UUID folderId) {

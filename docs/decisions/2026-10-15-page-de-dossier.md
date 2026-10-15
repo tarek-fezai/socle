@@ -28,6 +28,10 @@ Déplacer, supprimer ou restaurer la page seule répond `409` `folder_page_locke
 
 Lire la page exige de pouvoir lire le dossier. La modifier exige le droit d’édition du dossier. Les tuples OpenFGA du document sont ceux d’un document du dossier.
 
-Les événements `document.*` portent `metadata.folderPage = true` et `folderId`.
+Les événements `document.*` émis par `DocumentService` portent `metadata.folderPage = true` et `folderId` dès que `folders.page_document_id` désigne le document, quel que soit le chemin d'appel.
+
+Un `PUT /documents/{id}` dont le titre diffère du nom du dossier répond `409` `folder_page_title_locked`. Le même titre est accepté. Le renommage du dossier reste la seule façon de changer ce titre.
+
+La page n'est pas purgée seule par la rétention des documents archivés. Elle part avec son dossier quand l'espace archivé est purgé : la référence `page_document_id` est retirée dans la même transaction, avant le `DELETE`.
 
 L’export ZIP du dossier (`GET /api/v1/folders/{id}/export?format=zip`) place la page dans `_dossier.md` à la racine de l’archive. L’export PDF existant ne change pas.

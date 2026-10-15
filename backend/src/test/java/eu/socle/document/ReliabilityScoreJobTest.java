@@ -66,6 +66,12 @@ class ReliabilityScoreJobTest {
         int n = service.recalculateStaleValideDocuments();
         assertThat(n).isEqualTo(1);
 
+        org.mockito.ArgumentCaptor<String> sql = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate, org.mockito.Mockito.atLeastOnce()).query(
+                sql.capture(), any(RowMapper.class), any(Timestamp.class));
+        assertThat(sql.getAllValues())
+                .anySatisfy(q -> assertThat(q).contains("reliability_computed_at").doesNotContain("page_document_id"));
+
         ArgumentCaptor<Object> scoreCap = ArgumentCaptor.forClass(Object.class);
         verify(jdbcTemplate).update(
                 contains("SET reliability_score"),

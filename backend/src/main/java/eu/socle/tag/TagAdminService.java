@@ -72,7 +72,10 @@ public class TagAdminService {
         List<TagAdminView> tags = jdbc.query("""
                 SELECT t.id, t.name, t.color, t.created_at,
                        u.display_name AS created_by_display,
-                       (SELECT count(*) FROM document_tags dt WHERE dt.tag_id = t.id) AS document_count,
+                       (SELECT count(*) FROM document_tags dt
+                          WHERE dt.tag_id = t.id
+                            AND NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = dt.document_id)
+                       ) AS document_count,
                        """ + GOVERNED_EXPR + """
                        AS governed
                   FROM tags t
@@ -242,10 +245,15 @@ public class TagAdminService {
 
     private TagAdminSummary summaryInternal() {
         Long tagCount = jdbc.queryForObject("SELECT count(*) FROM tags", Long.class);
-        Long tagged = jdbc.queryForObject(
-                "SELECT count(DISTINCT document_id) FROM document_tags", Long.class);
-        Long total = jdbc.queryForObject(
-                "SELECT count(*) FROM documents WHERE deleted_at IS NULL", Long.class);
+        Long tagged = jdbc.queryForObject("""
+                SELECT count(DISTINCT dt.document_id) FROM document_tags dt
+                 WHERE NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = dt.document_id)
+                """, Long.class);
+        Long total = jdbc.queryForObject("""
+                SELECT count(*) FROM documents d
+                 WHERE d.deleted_at IS NULL
+                   AND NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = d.id)
+                """, Long.class);
         return new TagAdminSummary(
                 tagCount == null ? 0 : tagCount,
                 tagged == null ? 0 : tagged,
@@ -264,7 +272,10 @@ public class TagAdminService {
         List<TagAdminView> rows = jdbc.query("""
                 SELECT t.id, t.name, t.color, t.created_at,
                        u.display_name AS created_by_display,
-                       (SELECT count(*) FROM document_tags dt WHERE dt.tag_id = t.id) AS document_count,
+                       (SELECT count(*) FROM document_tags dt
+                          WHERE dt.tag_id = t.id
+                            AND NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = dt.document_id)
+                       ) AS document_count,
                        """ + GOVERNED_EXPR + """
                        AS governed
                   FROM tags t

@@ -450,8 +450,9 @@ public class SpaceService {
         Set<UUID> out = new HashSet<>();
         jdbc.query(
                 """
-                SELECT DISTINCT space_id FROM documents
-                 WHERE deleted_at IS NULL AND visibility = 'organisation'
+                SELECT DISTINCT d.space_id FROM documents d
+                 WHERE d.deleted_at IS NULL AND d.visibility = 'organisation'
+                   AND NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = d.id)
                 """,
                 rs -> {
                     while (rs.next()) {
@@ -572,8 +573,9 @@ public class SpaceService {
         List<UUID> docIds = new ArrayList<>();
         Map<UUID, UUID> docToSpace = new HashMap<>();
         jdbc.query(
-                ("SELECT id, space_id FROM documents WHERE deleted_at IS NULL AND space_id IN (%s)"
-                        .formatted(placeholders)),
+                ("SELECT d.id, d.space_id FROM documents d WHERE d.deleted_at IS NULL AND d.space_id IN (%s)"
+                        + " AND " + eu.socle.folder.FolderPages.EXCLUDE_SQL)
+                        .formatted(placeholders),
                 rs -> {
                     while (rs.next()) {
                         UUID docId = (UUID) rs.getObject("id");

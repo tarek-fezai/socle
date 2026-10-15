@@ -22,6 +22,7 @@ import dev.openfga.sdk.api.client.model.ClientListUsersResponse;
 import dev.openfga.sdk.api.client.model.ClientWriteResponse;
 import eu.socle.SocleBackendApplication;
 import eu.socle.audit.AuditActions;
+import eu.socle.retention.RetentionPurgeService;
 import eu.socle.storage.DocumentStore;
 import eu.socle.storage.GitDocumentStore;
 import eu.socle.storage.StorageProperties;
@@ -107,6 +108,7 @@ abstract class FolderPageHttpSuite {
     @Autowired JdbcTemplate jdbc;
     @Autowired DocumentStore documentStore;
     @Autowired StorageProperties storageProperties;
+    @Autowired RetentionPurgeService retentionPurge;
 
     @MockBean WorkflowClient workflowClient;
     @MockBean OpenFgaClient openFgaClient;
@@ -132,6 +134,7 @@ abstract class FolderPageHttpSuite {
             jdbc.update("DELETE FROM trash_items");
             jdbc.update("DELETE FROM favorites");
             jdbc.update("DELETE FROM document_versions");
+            jdbc.update("DELETE FROM git_purge_queue");
             jdbc.update("DELETE FROM documents");
             jdbc.update("DELETE FROM folders");
             jdbc.update("DELETE FROM groups");
@@ -411,6 +414,116 @@ abstract class FolderPageHttpSuite {
                 .andExpect(status().isCreated())
                 .andReturn();
         return MAPPER.readTree(created.getResponse().getContentAsString()).path("plaintext").asText();
+    }
+
+    @Test
+    void documentPut_sameTitleAuditsFolderPage_otherTitleIs409() throws Exception {
+        String pageId = createPage();
+        String other = """
+                {"title":"Autre titre","body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"autre"}]}]}}
+                """;
+        mockMvc.perform(put("/api/v1/documents/" + pageId)
+                        .header("Authorization", jwt(CONTRIBUTOR))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(other))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(ApiErrors.FOLDER_PAGE_TITLE_LOCKED));
+        assertThat(jdbc.queryForObject("SELECT title FROM documents WHERE id = ?::uuid", String.class, pageId))
+                .isEqualTo("Procédures");
+
+        String same = """
+                {"title":"Procédures","body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"via document"}]}]}}
+                """;
+        mockMvc.perform(put("/api/v1/documents/" + pageId)
+                        .header("Authorization", jwt(CONTRIBUTOR))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(same))
+                .andExpect(status().isOk());
+        JsonNode updated = awaitAudit(AuditActions.DOCUMENT_UPDATED);
+        assertThat(updated.path("folderPage").asBoolean()).isTrue();
+        assertThat(updated.path("folderId").asText()).isEqualTo(folderId.toString());
+    }
+
+    @Test
+    void retention_archivedSpaceWithPage_purgesTogether() throws Exception {
+        String pageId = createPage();
+        String siblingId = createSibling();
+        archiveOld(pageId, siblingId);
+
+        var result = retentionPurge.run();
+
+        assertThat(result.failures()).isZero();
+        assertThat(result.archivedSpacesPurged()).isEqualTo(1);
+        assertThat(countRows("SELECT count(*) FROM documents WHERE id = ?::uuid", pageId)).isZero();
+        assertThat(countRows("SELECT count(*) FROM documents WHERE id = ?::uuid", siblingId)).isZero();
+        assertThat(countRows("SELECT count(*) FROM folders WHERE id = ?", folderId)).isZero();
+        assertThat(countRows("SELECT count(*) FROM spaces WHERE id = ?", spaceId)).isZero();
+        awaitAudit(AuditActions.SPACE_PURGED);
+        assertPurgeQueueClean();
+    }
+
+    @Test
+    void retention_archivedPage_stays_isolatedSiblingIsPurged() throws Exception {
+        String pageId = createPage();
+        String siblingId = createSibling();
+        String liveId = createSibling();
+        archiveOld(pageId, siblingId);
+
+        var result = retentionPurge.run();
+
+        assertThat(result.failures()).isZero();
+        assertThat(result.archivedSpacesPurged()).isZero();
+        assertThat(result.archivedDocumentsPurged()).isEqualTo(1);
+        assertThat(countRows("SELECT count(*) FROM documents WHERE id = ?::uuid", pageId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT page_document_id::text FROM folders WHERE id = ?", String.class, folderId))
+                .isEqualTo(pageId);
+        assertThat(countRows("SELECT count(*) FROM documents WHERE id = ?::uuid", siblingId)).isZero();
+        assertThat(countRows("SELECT count(*) FROM documents WHERE id = ?::uuid", liveId)).isEqualTo(1);
+        assertPurgeQueueClean();
+    }
+
+    private String createSibling() throws Exception {
+        MvcResult sibling = mockMvc.perform(post("/api/v1/documents")
+                        .header("Authorization", jwt(CONTRIBUTOR))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Consigne","body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"frère"}]}]},"spaceId":"%s","folderId":"%s"}
+                                """.formatted(spaceId, folderId)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return MAPPER.readTree(sibling.getResponse().getContentAsString()).path("id").asText();
+    }
+
+    private void archiveOld(String... documentIds) {
+        for (String id : documentIds) {
+            jdbc.update("""
+                    UPDATE documents
+                       SET status = 'archive', updated_at = now() - interval '8 years'
+                     WHERE id = ?::uuid
+                    """, id);
+        }
+    }
+
+    private int countRows(String sql, Object id) {
+        Integer n = jdbc.queryForObject(sql, Integer.class, id);
+        return n == null ? 0 : n;
+    }
+
+    private void assertPurgeQueueClean() throws Exception {
+        for (int i = 0; i < 40; i++) {
+            Integer failed = jdbc.queryForObject(
+                    "SELECT count(*) FROM git_purge_queue WHERE status = 'failed'", Integer.class);
+            Integer pending = jdbc.queryForObject(
+                    "SELECT count(*) FROM git_purge_queue WHERE status IN ('pending', 'running')", Integer.class);
+            if ((failed == null || failed == 0) && (pending == null || pending == 0)) {
+                return;
+            }
+            if (failed != null && failed > 0) {
+                throw new AssertionError("purge Git en échec");
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("purge Git encore en cours");
     }
 
     private int pageCount() {
