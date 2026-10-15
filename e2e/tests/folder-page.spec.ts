@@ -9,7 +9,8 @@ const READER_PASS = process.env.E2E_PASS_AUDITOR ?? 'auditeur'
 
 type Folder = { id: string; name: string; pageDocumentId?: string | null }
 type PageDoc = { id: string; body?: { content?: Array<{ content?: Array<{ text?: string }> }> } }
-type TrashPage = { items: Array<{ resourceType?: string; resourceId?: string; title?: string }> }
+type TrashItem = { resourceType?: string; resourceId?: string; title?: string }
+type TrashPage = { items?: TrashItem[]; total?: number }
 
 test.describe.serial('Page de dossier', () => {
   let token = ''
@@ -90,12 +91,31 @@ test.describe.serial('Page de dossier', () => {
     await loginViaUi(page, USER, PASS)
     await page.goto(`/folders/${folderId}`)
     await page.getByTestId('folder-delete').click()
+    const deleted = page.waitForResponse(
+      (r) => r.request().method() === 'DELETE' && r.url().includes(`/folders/${folderId}`),
+    )
     await page.getByTestId('folder-delete-confirm').click()
+    const del = await deleted
+    expect(del.ok()).toBeTruthy()
+    const counts = (await del.json()) as { documents?: number; folders?: number }
+    expect(counts.folders).toBeGreaterThanOrEqual(1)
+    expect(counts.documents).toBeGreaterThanOrEqual(1)
     await page.waitForURL(/\/(spaces|trash|folders)\//, { timeout: 20_000 })
 
-    const trash = await apiJson<TrashPage>('/api/v1/trash?limit=100', token)
-    const items = trash.items ?? []
-    expect(items.some((i) => i.resourceType === 'folder' && i.resourceId === folderId)).toBeTruthy()
-    expect(items.some((i) => i.resourceType === 'document' && i.resourceId === pageId)).toBeTruthy()
+    const items: TrashItem[] = []
+    let total = 0
+    for (const resourceType of ['folder', 'document'] as const) {
+      const trash = await apiJson<TrashPage>(`/api/v1/trash?resourceType=${resourceType}&limit=200`, token)
+      total += trash.total ?? trash.items?.length ?? 0
+      items.push(...(trash.items ?? []))
+    }
+    const dump = JSON.stringify({
+      total,
+      folderId,
+      pageId,
+      sample: items.slice(0, 8).map((i) => ({ t: i.resourceType, id: i.resourceId, title: i.title })),
+    })
+    expect(items.some((i) => i.resourceType === 'folder' && i.resourceId === folderId), dump).toBeTruthy()
+    expect(items.some((i) => i.resourceType === 'document' && i.resourceId === pageId), dump).toBeTruthy()
   })
 })
