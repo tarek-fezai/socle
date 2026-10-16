@@ -6,9 +6,13 @@ import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.authz.DocumentScope;
 import eu.socle.config.SocleProperties;
+import eu.socle.document.DocumentDtos;
+import eu.socle.document.DocumentDtos.PersonRef;
 import eu.socle.folder.FolderDtos.ActorRef;
 import eu.socle.folder.FolderDtos.CreateFolderRequest;
+import eu.socle.folder.FolderDtos.FolderDocumentCard;
 import eu.socle.folder.FolderDtos.FolderView;
+import eu.socle.folder.FolderDtos.OwnerPerson;
 import eu.socle.folder.FolderDtos.OwnerGroupRef;
 import eu.socle.folder.FolderDtos.StatusCounts;
 import eu.socle.folder.FolderDtos.MoveDocumentRequest;
@@ -82,7 +86,7 @@ public class FolderService {
         int folderCount = (int) vis.allFolders().stream()
                 .filter(f -> folderId.equals(f.parentFolderId()) && vis.visibleFolderIds().contains(f.id()))
                 .count();
-        return toView(row, docCount, folderCount, loadEnrichment(row));
+        return toView(row, docCount, folderCount, user.getId());
     }
 
     @Transactional
@@ -136,7 +140,7 @@ public class FolderService {
                 null);
 
         FolderRow row = requireActiveFolder(id);
-        return toView(row, 0, 0);
+        return toView(row, 0, 0, user.getId());
     }
 
     @Transactional
@@ -673,18 +677,156 @@ public class FolderService {
         return rows.getFirst();
     }
 
-    private FolderView toView(FolderRow row, int docs, int folders) {
-        return toView(row, docs, folders, loadEnrichment(row));
+    private FolderView toView(FolderRow row, int docs, int folders, UUID userId) {
+        return toView(row, docs, folders, loadEnrichment(row), userId);
     }
 
-    private FolderView toView(FolderRow row, int docs, int folders, Enrichment enrichment) {
+    private FolderView toView(FolderRow row, int docs, int folders, Enrichment enrichment, UUID userId) {
         Enrichment e = enrichment == null ? Enrichment.fromRow(row) : enrichment;
+        boolean canEdit = userId != null
+                && authorizationService.hasRelation(userId, "folder", row.id(), "editor");
+        boolean canDelete = canEdit && canManageParent(userId, row.spaceId(), row.parentFolderId());
+        OwnerGroupRef group = e.ownerGroup();
+        if (group != null) {
+            group = new OwnerGroupRef(group.id(), group.name(), loadOwnerPerson(group.id()));
+        }
         return new FolderView(
                 row.id(), row.spaceId(), row.parentFolderId(), row.name(), row.position(),
                 row.createdBy(), row.createdAt(), row.updatedAt(), docs, folders,
                 row.pageDocumentId(), e.status(), e.creator(), e.lastModifiedBy(),
-                e.lastModifiedAt(), e.ownerGroup(), e.reliabilityAverage(), e.statusCounts());
+                e.lastModifiedAt(), group, e.reliabilityAverage(), e.statusCounts(),
+                canEdit, canDelete, pageLanguage(row.pageDocumentId()), loadFolderDocuments(row));
     }
+
+    /** Même condition que {@link #requireManageInParent}, sans lever d'exception. */
+    private boolean canManageParent(UUID userId, UUID spaceId, UUID parentFolderId) {
+        if (authorizationService.hasRelation(userId, "space", spaceId, "owner")) {
+            return true;
+        }
+        if (parentFolderId != null) {
+            return authorizationService.hasRelation(userId, "folder", parentFolderId, "editor");
+        }
+        return authorizationService.hasRelation(userId, "space", spaceId, "editor");
+    }
+
+    private String pageLanguage(UUID pageDocumentId) {
+        if (pageDocumentId == null) {
+            return null;
+        }
+        List<String> rows = jdbc.query("""
+                SELECT language FROM documents WHERE id = ? AND deleted_at IS NULL
+                """,
+                (rs, i) -> rs.getString(1),
+                pageDocumentId);
+        return rows.isEmpty() ? null : rows.getFirst();
+    }
+
+    /**
+     * Premier propriétaire par date d'ajout : {@code group.member_added}, sinon
+     * {@code groups.created_at} pour le créateur (ajouté sans événement dédié).
+     */
+    private OwnerPerson loadOwnerPerson(UUID groupId) {
+        List<OwnerPerson> rows = jdbc.query("""
+                SELECT u.id, u.display_name, u.avatar_initials
+                  FROM group_members gm
+                  JOIN groups g ON g.id = gm.group_id
+                  JOIN users u ON u.id = gm.user_id
+                  LEFT JOIN LATERAL (
+                    SELECT MIN(e.created_at) AS added_at
+                      FROM audit_log_events e
+                     WHERE e.action = 'group.member_added'
+                       AND e.resource_type = 'group'
+                       AND e.resource_id = gm.group_id
+                       AND e.metadata ->> 'memberUserId' = gm.user_id::text
+                  ) added ON true
+                 WHERE gm.group_id = ? AND gm.role = 'proprietaire'
+                 ORDER BY COALESCE(added.added_at, CASE WHEN u.id = g.created_by THEN g.created_at END)
+                          ASC NULLS LAST,
+                          u.id
+                 LIMIT 1
+                """,
+                (rs, i) -> {
+                    String name = rs.getString("display_name");
+                    String initials = rs.getString("avatar_initials");
+                    if (initials == null || initials.isBlank()) {
+                        initials = PersonRef.initialsOf(name);
+                    }
+                    return new OwnerPerson((UUID) rs.getObject("id"), name, initials);
+                },
+                groupId);
+        return rows.isEmpty() ? null : rows.getFirst();
+    }
+
+    private List<FolderDocumentCard> loadFolderDocuments(FolderRow row) {
+        List<CardRow> cards = jdbc.query("""
+                SELECT d.id, d.title, d.status, d.doc_type, d.updated_at,
+                       u.display_name AS updated_name,
+                       (SELECT MIN(ar.created_at) FROM approval_requests ar
+                         WHERE ar.document_id = d.id AND ar.status = 'en_cours') AS review_since
+                  FROM documents d
+                  LEFT JOIN users u ON u.id = d.updated_by
+                 WHERE d.folder_id = ? AND d.deleted_at IS NULL
+                   AND d.id IS DISTINCT FROM ?
+                 ORDER BY d.position ASC, lower(d.title) ASC
+                """,
+                (rs, i) -> {
+                    Timestamp updated = rs.getTimestamp("updated_at");
+                    Timestamp review = rs.getTimestamp("review_since");
+                    return new CardRow(
+                            (UUID) rs.getObject("id"),
+                            rs.getString("title"),
+                            rs.getString("status"),
+                            rs.getString("doc_type"),
+                            updated != null ? updated.toInstant() : null,
+                            rs.getString("updated_name"),
+                            review != null ? review.toInstant() : null);
+                },
+                row.id(), row.pageDocumentId());
+        if (cards.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, List<DocumentDtos.TagRef>> tags = loadTags(cards.stream().map(CardRow::id).toList());
+        List<FolderDocumentCard> out = new ArrayList<>();
+        for (CardRow card : cards) {
+            out.add(new FolderDocumentCard(
+                    card.id(), card.title(), card.status(), card.docType(),
+                    card.updatedAt(), card.updatedBy(), card.reviewSince(),
+                    tags.getOrDefault(card.id(), List.of())));
+        }
+        return out;
+    }
+
+    /** Étiquettes d'un document : date de création de l'étiquette, puis nom. */
+    private Map<UUID, List<DocumentDtos.TagRef>> loadTags(List<UUID> documentIds) {
+        String placeholders = String.join(",", documentIds.stream().map(id -> "?").toList());
+        Map<UUID, List<DocumentDtos.TagRef>> byDoc = new LinkedHashMap<>();
+        jdbc.query("""
+                SELECT dt.document_id, t.id, t.name, t.color,
+                       EXISTS (SELECT 1 FROM approval_role_assignments ara
+                                WHERE ara.scope_type = 'tag'
+                                  AND lower(ara.scope_ref) = t.id::text) AS governed
+                  FROM document_tags dt
+                  JOIN tags t ON t.id = dt.tag_id
+                 WHERE dt.document_id IN (""" + placeholders + """
+                )
+                 ORDER BY t.created_at ASC NULLS LAST, lower(t.name)
+                """,
+                rs -> {
+                    UUID docId = (UUID) rs.getObject("document_id");
+                    byDoc.computeIfAbsent(docId, id -> new ArrayList<>()).add(new DocumentDtos.TagRef(
+                            (UUID) rs.getObject("id"),
+                            rs.getString("name"),
+                            rs.getString("color"),
+                            rs.getBoolean("governed")));
+                },
+                documentIds.toArray());
+        return byDoc;
+    }
+
+    private record CardRow(
+            UUID id, String title, String status, String docType,
+            java.time.Instant updatedAt, String updatedBy, java.time.Instant reviewSince
+    ) {}
 
     private FolderView toViewWithVisibilityCounts(UUID userId, FolderRow row) {
         Visibility vis = resolveSpaceVisibility(userId, row.spaceId());
@@ -692,7 +834,7 @@ public class FolderService {
         int folderCount = (int) vis.allFolders().stream()
                 .filter(f -> row.id().equals(f.parentFolderId()) && vis.visibleFolderIds().contains(f.id()))
                 .count();
-        return toView(row, docCount, folderCount);
+        return toView(row, docCount, folderCount, userId);
     }
 
     private static FolderRow mapFolder(java.sql.ResultSet rs) throws java.sql.SQLException {

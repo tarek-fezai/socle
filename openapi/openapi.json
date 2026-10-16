@@ -8231,6 +8231,41 @@
           }
         }
       },
+      "FolderDocumentCard" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "docType" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          },
+          "reviewSince" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagRef"
+            }
+          }
+        }
+      },
       "FolderView" : {
         "type" : "object",
         "properties" : {
@@ -8298,6 +8333,21 @@
           },
           "statusCounts" : {
             "$ref" : "#/components/schemas/StatusCounts"
+          },
+          "canEdit" : {
+            "type" : "boolean"
+          },
+          "canDelete" : {
+            "type" : "boolean"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "documents" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FolderDocumentCard"
+            }
           }
         }
       },
@@ -8309,6 +8359,24 @@
             "format" : "uuid"
           },
           "name" : {
+            "type" : "string"
+          },
+          "owner" : {
+            "$ref" : "#/components/schemas/OwnerPerson"
+          }
+        }
+      },
+      "OwnerPerson" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "initials" : {
             "type" : "string"
           }
         }

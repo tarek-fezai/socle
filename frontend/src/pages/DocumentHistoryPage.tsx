@@ -45,8 +45,32 @@ function compareHref(docId: string, from: number, to: number): string {
   return `/docs/${docId}/history/compare?from=${from}&to=${to}`
 }
 
-export function DocumentHistoryPage() {
-  const { id = '' } = useParams()
+/**
+ * Historique document : aucune action sur la version courante.
+ * Page de dossier (embedded) : avec deux versions, seule la courante a une précédente —
+ * « Comparer » y est proposé, sans « Restaurer ».
+ */
+function historyRowActions(
+  v: VersionRow,
+  { canAct, mobile, embedded }: { canAct: boolean; mobile: boolean; embedded: boolean },
+) {
+  const actions = versionRowActions(v, { canAct, mobile })
+  if (embedded && canAct && v.isCurrent && v.previousVersionNo != null) {
+    return { compare: true, restore: false }
+  }
+  return actions
+}
+
+export function DocumentHistoryPage({
+  documentId,
+  embedded = false,
+}: {
+  documentId?: string
+  /** Liste des versions seule (page de dossier), sans la chrome document. */
+  embedded?: boolean
+} = {}) {
+  const params = useParams()
+  const id = documentId || params.id || ''
   const doc = useQuery({
     queryKey: ['document', id],
     queryFn: () => getDocument(api, id),
@@ -74,10 +98,10 @@ export function DocumentHistoryPage() {
     )
   }
 
-  return <HistorySurface doc={doc.data} />
+  return <HistorySurface doc={doc.data} embedded={embedded} />
 }
 
-function HistorySurface({ doc }: { doc: DocumentDetail }) {
+function HistorySurface({ doc, embedded = false }: { doc: DocumentDetail; embedded?: boolean }) {
   const id = doc.id
   const qc = useQueryClient()
   const { me } = useAuth()
@@ -216,7 +240,7 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
 
   /* ------------------------------ Mobile ------------------------------ */
 
-  if (isMobile) {
+  if (isMobile && !embedded) {
     return (
       <div className="doc-page hist-page" data-testid="document-history-page" data-mock-id="hist-page">
         <HistoryMobileTop title="Historique" backTo={`/docs/${id}`} />
@@ -225,7 +249,11 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
           {listState}
           {rows.map((v, i) => {
             const author = versionAuthor(v)
-            const { compare: showCompare, restore: showRestore } = versionRowActions(v, { canAct, mobile: true })
+            const { compare: showCompare, restore: showRestore } = historyRowActions(v, {
+              canAct,
+              mobile: true,
+              embedded,
+            })
             const hasActions = showCompare || showRestore
             return (
               <div className="hist-m-item" key={v.versionNo} data-testid={`history-row-${v.versionNo}`}>
@@ -285,13 +313,19 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
   /* ------------------------------ Desktop ------------------------------ */
 
   return (
-    <div className="doc-page hist-page" data-testid="document-history-page" data-mock-id="hist-page">
-      <HistoryTopBar crumbs={crumbs} mockPrefix="hist">
-        <Link to={`/docs/${id}`} className="hist-ghost" data-mock-id="hist-back">
-          Retour à la page
-        </Link>
-      </HistoryTopBar>
-      <DocumentTabs {...tabProps} />
+    <div
+      className={embedded ? 'fp-history' : 'doc-page hist-page'}
+      data-testid={embedded ? 'folder-page-history' : 'document-history-page'}
+      data-mock-id={embedded ? undefined : 'hist-page'}
+    >
+      {!embedded && (
+        <HistoryTopBar crumbs={crumbs} mockPrefix="hist">
+          <Link to={`/docs/${id}`} className="hist-ghost" data-mock-id="hist-back">
+            Retour à la page
+          </Link>
+        </HistoryTopBar>
+      )}
+      {!embedded && <DocumentTabs {...tabProps} />}
 
       <div className="hist-content">
         <div className="hist-column">
@@ -311,7 +345,11 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
               const author = versionAuthor(v)
               const added = formatLinesAdded(v.linesAdded)
               const removed = formatLinesRemoved(v.linesRemoved)
-              const { compare: showCompare, restore: showRestore } = versionRowActions(v, { canAct })
+              const { compare: showCompare, restore: showRestore } = historyRowActions(v, {
+                canAct,
+                mobile: false,
+                embedded,
+              })
               const mid = (field: string) => `hist-r${i}-${field}`
               return (
                 <li
@@ -396,7 +434,7 @@ function HistorySurface({ doc }: { doc: DocumentDetail }) {
         </div>
       </div>
 
-      <DocumentMobileTabs {...tabProps} />
+      {!embedded && <DocumentMobileTabs {...tabProps} />}
       {restoreDialog}
     </div>
   )

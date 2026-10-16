@@ -268,7 +268,7 @@ function insertLinkPreview(ed: Editor) {
     .run()
 }
 
-function insertHyperlink(ed: Editor) {
+export function insertHyperlink(ed: Editor) {
   const prev = String(ed.getAttributes('link').href ?? '')
   const raw = window.prompt('URL du lien', prev || 'https://')
   if (raw === null) return
@@ -433,6 +433,78 @@ const INSERT_GROUPS: Array<{ title: string; items: InsertItem[] }> = [
   },
 ]
 
+export function InsertPanel({
+  editor,
+  attachments,
+  onDone,
+}: {
+  editor: Editor
+  attachments?: ToolbarAttachments
+  onDone: () => void
+}) {
+  const [q, setQ] = useState('')
+  const needle = q.trim().toLowerCase()
+  return (
+    <div className="edit-insert-panel" role="dialog" aria-label="Insérer un bloc" data-testid="edit-insert-panel">
+      <label className="edit-insert-search">
+        <Svg size={12} stroke={MUTED} round={false}>
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </Svg>
+        <input
+          type="text"
+          value={q}
+          placeholder="Rechercher un bloc…"
+          aria-label="Rechercher un bloc"
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </label>
+      {INSERT_GROUPS.map((g) => {
+        const items = g.items.filter((i) => !needle || i.label.toLowerCase().includes(needle))
+        if (items.length === 0) return null
+        return (
+          <div key={g.title}>
+            <div className="edit-insert-title">{g.title}</div>
+            <div className="edit-insert-grid">
+              {items.map((it) => {
+                const live = Boolean(it.run || it.pick)
+                const unavailable = Boolean(it.pick) && !attachments?.enabled
+                return (
+                  <button
+                    key={it.id}
+                    type="button"
+                    className={`edit-insert-item${live ? '' : ' is-soon'}`}
+                    aria-disabled={!live || unavailable ? true : undefined}
+                    title={live ? undefined : SOON_TITLE}
+                    data-soon={live ? undefined : 'true'}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      if (it.pick) {
+                        if (unavailable) return
+                        attachments?.pick(it.pick)
+                        onDone()
+                        return
+                      }
+                      if (!it.run) return
+                      it.run(editor)
+                      onDone()
+                    }}
+                  >
+                    <span className="edit-insert-icon" style={{ background: it.bg }}>
+                      {it.icon}
+                    </span>
+                    <span className="edit-insert-label">{it.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function InsertMenu({
   editor,
   readOnly,
@@ -443,9 +515,7 @@ function InsertMenu({
   attachments?: ToolbarAttachments
 }) {
   const [open, setOpen] = useState(false)
-  const [q, setQ] = useState('')
   const ref = useDismiss(open, () => setOpen(false))
-  const needle = q.trim().toLowerCase()
   return (
     <span className="edit-pop-anchor" ref={ref}>
       <button
@@ -465,66 +535,7 @@ function InsertMenu({
         </Svg>
         <span>Insérer</span>
       </button>
-      {open && (
-        <div className="edit-insert-panel" role="dialog" aria-label="Insérer un bloc" data-testid="edit-insert-panel">
-          <label className="edit-insert-search">
-            <Svg size={12} stroke={MUTED} round={false}>
-              <circle cx="11" cy="11" r="7" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </Svg>
-            <input
-              type="text"
-              value={q}
-              placeholder="Rechercher un bloc…"
-              aria-label="Rechercher un bloc"
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </label>
-          {INSERT_GROUPS.map((g) => {
-            const items = g.items.filter((i) => !needle || i.label.toLowerCase().includes(needle))
-            if (items.length === 0) return null
-            return (
-              <div key={g.title}>
-                <div className="edit-insert-title">{g.title}</div>
-                <div className="edit-insert-grid">
-                  {items.map((it) => {
-                    const live = Boolean(it.run || it.pick)
-                    // Fichier joint : branché, mais inactif sans document porteur (modèle).
-                    const unavailable = Boolean(it.pick) && !attachments?.enabled
-                    return (
-                      <button
-                        key={it.id}
-                        type="button"
-                        className={`edit-insert-item${live ? '' : ' is-soon'}`}
-                        aria-disabled={!live || unavailable ? true : undefined}
-                        title={live ? undefined : SOON_TITLE}
-                        data-soon={live ? undefined : 'true'}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          if (it.pick) {
-                            if (unavailable) return
-                            attachments?.pick(it.pick)
-                            setOpen(false)
-                            return
-                          }
-                          if (!it.run) return
-                          it.run(editor)
-                          setOpen(false)
-                        }}
-                      >
-                        <span className="edit-insert-icon" style={{ background: it.bg }}>
-                          {it.icon}
-                        </span>
-                        <span className="edit-insert-label">{it.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {open && <InsertPanel editor={editor} attachments={attachments} onDone={() => setOpen(false)} />}
     </span>
   )
 }

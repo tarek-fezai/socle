@@ -3254,6 +3254,19 @@ export interface components {
             id?: string;
             displayName?: string;
         };
+        FolderDocumentCard: {
+            /** Format: uuid */
+            id?: string;
+            title?: string;
+            status?: string;
+            docType?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            updatedBy?: string;
+            /** Format: date-time */
+            reviewSince?: string;
+            tags?: components["schemas"]["TagRef"][];
+        };
         FolderView: {
             /** Format: uuid */
             id?: string;
@@ -3284,11 +3297,22 @@ export interface components {
             ownerGroup?: components["schemas"]["OwnerGroupRef"];
             reliabilityAverage?: number;
             statusCounts?: components["schemas"]["StatusCounts"];
+            canEdit?: boolean;
+            canDelete?: boolean;
+            language?: string;
+            documents?: components["schemas"]["FolderDocumentCard"][];
         };
         OwnerGroupRef: {
             /** Format: uuid */
             id?: string;
             name?: string;
+            owner?: components["schemas"]["OwnerPerson"];
+        };
+        OwnerPerson: {
+            /** Format: uuid */
+            id?: string;
+            displayName?: string;
+            initials?: string;
         };
         StatusCounts: {
             /** Format: int32 */

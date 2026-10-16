@@ -26,7 +26,9 @@ DISCOVERY="${ISSUER}/.well-known/openid-configuration"
 
 cd "$COMPOSE_DIR"
 
-if ! bash "${ROOT}/e2e/scripts/compose-e2e.sh" ps | grep -q 'socle-e2e-'; then
+# Pas de `ps | grep -q` : grep ferme le pipe, et pipefail prend le SIGPIPE pour un échec.
+stack="$(bash "${ROOT}/e2e/scripts/compose-e2e.sh" ps)"
+if ! grep -q 'socle-e2e-' <<< "${stack}"; then
   echo "e2e: la pile socle-e2e n'est pas démarrée. Arrêt sans toucher à une autre instance." >&2
   exit 1
 fi

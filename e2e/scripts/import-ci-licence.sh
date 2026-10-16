@@ -9,7 +9,9 @@ if [[ "${COMPOSE_PROJECT_NAME:-}" == "socle-production" || "${ENV_FILE}" == *".e
   echo "e2e: refus — ne jamais lancer l'e2e sur une instance d'exploitation." >&2
   exit 1
 fi
-if ! bash "${ROOT}/e2e/scripts/compose-e2e.sh" ps | grep -q 'socle-e2e-'; then
+# Pas de `ps | grep -q` : grep ferme le pipe, et pipefail prend le SIGPIPE pour un échec.
+stack="$(bash "${ROOT}/e2e/scripts/compose-e2e.sh" ps)"
+if ! grep -q 'socle-e2e-' <<< "${stack}"; then
   echo "e2e: la pile socle-e2e n'est pas démarrée. Aucune licence n'est importée." >&2
   exit 1
 fi

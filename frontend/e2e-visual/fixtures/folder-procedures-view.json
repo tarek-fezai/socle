@@ -1,0 +1,74 @@
+{
+  "id": "f0000001-0000-4000-8000-0000000000a1",
+  "spaceId": "s0000001-0000-4000-8000-000000000001",
+  "parentFolderId": null,
+  "name": "Procédures",
+  "position": 0,
+  "createdBy": null,
+  "createdAt": "2026-07-14T10:00:00Z",
+  "updatedAt": "2026-09-20T10:00:00Z",
+  "documentCount": 3,
+  "folderCount": 0,
+  "pageDocumentId": "d0000001-0000-4000-8000-0000000000p1",
+  "status": "actif",
+  "creator": { "kind": "system", "id": null, "displayName": null },
+  "lastModifiedBy": {
+    "kind": "user",
+    "id": "11111111-1111-1111-1111-111111111111",
+    "displayName": "Tarek Fezai"
+  },
+  "lastModifiedAt": "2026-09-20T10:00:00Z",
+  "ownerGroup": {
+    "id": "g0000001-0000-4000-8000-000000000001",
+    "name": "Équipe Identité",
+    "owner": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "displayName": "Tarek Fezai",
+      "initials": "TF"
+    }
+  },
+  "reliabilityAverage": 88,
+  "statusCounts": { "validated": 2, "inReview": 1, "draft": 0 },
+  "canEdit": true,
+  "canDelete": true,
+  "language": "fr",
+  "documents": [
+    {
+      "id": "d0000001-0000-4000-8000-000000000011",
+      "title": "Provisioning des comptes",
+      "status": "valide",
+      "docType": "procedure",
+      "updatedAt": "2026-09-12T10:00:00Z",
+      "updatedBy": "Tarek Fezai",
+      "reviewSince": null,
+      "tags": [
+        { "id": "t0000001-0000-4000-8000-000000000001", "name": "IAM", "color": "#3730E0", "governed": false },
+        { "id": "t0000001-0000-4000-8000-000000000002", "name": "Critique", "color": "#B54708", "governed": true }
+      ]
+    },
+    {
+      "id": "d0000001-0000-4000-8000-000000000012",
+      "title": "Dé-provisioning des comptes",
+      "status": "valide",
+      "docType": "procedure",
+      "updatedAt": "2026-08-03T10:00:00Z",
+      "updatedBy": "Claire Dubois",
+      "reviewSince": null,
+      "tags": [
+        { "id": "t0000001-0000-4000-8000-000000000001", "name": "IAM", "color": "#3730E0", "governed": false }
+      ]
+    },
+    {
+      "id": "d0000001-0000-4000-8000-000000000013",
+      "title": "Revue périodique des droits",
+      "status": "en_revue",
+      "docType": "procedure",
+      "updatedAt": "2026-09-20T08:00:00Z",
+      "updatedBy": "Yanis M.",
+      "reviewSince": "2026-09-20T08:00:00Z",
+      "tags": [
+        { "id": "t0000001-0000-4000-8000-000000000002", "name": "Critique", "color": "#B54708", "governed": true }
+      ]
+    }
+  ]
+}
