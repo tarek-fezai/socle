@@ -378,6 +378,20 @@ export function ancestorFolderIds(folders: TreeFolder[], folderId: string | null
   return folderPath(folders, folderId).map((f) => f.id)
 }
 
+/**
+ * Retrait de la sidebar. La maquette pose 10 px à gauche d'un dossier racine
+ * et 22 px pour un document dans ce dossier. Chaque niveau de plus, absent
+ * de la maquette, ajoute 12 px. `depth` 0 est la racine de l'espace.
+ */
+export function shellFolderIndent(depth: number): number {
+  return 10 + Math.max(0, depth) * 12
+}
+
+export function shellDocumentIndent(depth: number): number {
+  if (depth <= 0) return 10
+  return 22 + (depth - 1) * 12
+}
+
 /** Ids de tous les descendants d'un dossier (sans lui-même). */
 export function descendantFolderIds(folders: TreeFolder[], folderId: string): Set<string> {
   const out = new Set<string>()

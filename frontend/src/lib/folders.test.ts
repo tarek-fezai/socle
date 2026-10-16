@@ -9,6 +9,8 @@ import {
   flattenFolderOptions,
   folderPath,
   normalizeSpaceTree,
+  shellDocumentIndent,
+  shellFolderIndent,
   type SpaceTree,
 } from './folders'
 
@@ -145,6 +147,16 @@ describe('chemins et descendants', () => {
       { id: 'y', name: 'Y', parentFolderId: 'x', position: 0, documentCount: 0, folderCount: 0 },
     ]
     expect(folderPath(cyc, 'x').length).toBe(2)
+  })
+
+  it('retrait sidebar : 22 px dans un dossier, +12 px par niveau', () => {
+    expect(shellDocumentIndent(0)).toBe(10)
+    expect(shellDocumentIndent(1)).toBe(22)
+    expect(shellDocumentIndent(2)).toBe(34)
+    expect(shellDocumentIndent(3)).toBe(46)
+    expect(shellFolderIndent(0)).toBe(10)
+    expect(shellFolderIndent(1)).toBe(22)
+    expect(shellFolderIndent(2)).toBe(34)
   })
 
   it('ancestorFolderIds / descendantFolderIds', () => {

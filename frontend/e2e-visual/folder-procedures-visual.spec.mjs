@@ -3,8 +3,11 @@
  * Règles : docs/visual-parity.md
  *
  * FolderProcedures.dc.html vs /folders/:id @ 1440×900.
- * Texte inclus, seuil 1 % par section. La sidebar du shell n'est pas comparée
- * (décision DP-2026-10-10). Dates et auteurs viennent des réponses API mockées
+ * Texte inclus, seuil 1 % par section. Le chrome de la sidebar (repli, Document /
+ * Dossier, absence de Favoris) reste celui de l'ancienne maquette : DP-2026-10-10
+ * conserve le shell de l'app, donc la sidebar entière n'est pas comparée.
+ * `shell-tree-folders` compare le dossier courant et ses documents, bloc commun
+ * à la maquette et au shell. Dates et auteurs viennent des réponses API mockées
  * (mêmes champs que GET /folders/{id} et GET /folders/{id}/page).
  * Barre du haut : Page / Graphe / Index. Barre d'onglets pleine largeur.
  * Plus de section toolbar (maquettes v159, DP-2026-10-16).
@@ -58,6 +61,8 @@ test('desktop FolderProcedures — sections pixel ≤ 1 % (texte inclus)', async
   await page.waitForSelector('[data-mock-id="fp-title"]')
   await page.waitForSelector('text=Révisé le 12 septembre 2026')
   await page.waitForSelector('text=En revue depuis le 20 septembre 2026')
+  await page.waitForSelector('[data-mock-id="shell-tree-folders"]')
+  await page.waitForSelector('.shell-sidebar >> text=Provisioning des comptes')
   await settleFonts(page)
   const compare = compareSectionShots()
   const results = []
