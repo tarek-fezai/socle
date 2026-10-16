@@ -18,7 +18,7 @@ export type DevicePreferences = {
   highContrast: boolean
   fontScale: FontScale
   reduceMotion: boolean
-  /** Menu latéral réduit. Défaut : agrandi. */
+  /** Menu latéral réduit. Défaut : agrandi. Mémorisé sur cet appareil (navigateur), sans stockage serveur. */
   sidebarCollapsed: boolean
 }
 

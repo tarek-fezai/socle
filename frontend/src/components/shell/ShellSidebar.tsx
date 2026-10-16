@@ -211,7 +211,7 @@ export function ShellSidebar({ onOpenSearch }: Props) {
       data-collapsed={collapsed ? 'true' : 'false'}
       aria-label="Navigation"
     >
-      <div className="shell-brand">
+      <div className="shell-brand" data-mock-id="shell-brand-row">
         <Link to="/" className="shell-logo" data-mock-id="shell-logo">
           {logoUrl ? (
             <img className="shell-logo-mark shell-logo-mark--img" src={logoUrl} alt="" width={24} height={24} aria-hidden />
