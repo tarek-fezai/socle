@@ -6,6 +6,8 @@
  * Texte inclus, seuil 1 % par section. La sidebar du shell n'est pas comparée
  * (décision DP-2026-10-10). Dates et auteurs viennent des réponses API mockées
  * (mêmes champs que GET /folders/{id} et GET /folders/{id}/page).
+ * Barre du haut : Page / Graphe / Index. Barre d'onglets pleine largeur.
+ * Plus de section toolbar (maquettes v159, DP-2026-10-16).
  */
 import { test } from '@playwright/test'
 import {

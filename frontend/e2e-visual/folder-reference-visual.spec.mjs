@@ -4,6 +4,8 @@
  *
  * FolderReference.dc.html vs /folders/:id @ 1440×900.
  * Texte inclus, seuil 1 % par section. Sidebar du shell non comparée (DP-2026-10-10).
+ * Barre du haut : Page / Graphe / Index. Barre d'onglets pleine largeur.
+ * Plus de section toolbar (maquettes v159, DP-2026-10-16).
  */
 import { test } from '@playwright/test'
 import {

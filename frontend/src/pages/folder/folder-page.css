@@ -103,6 +103,45 @@
   gap: 8px;
 }
 
+/* Le sélecteur Page / Graphe / Index est celui de la page document.
+   `.fp-page a { color: inherit }` battrait `.doc-switch` / `.doc-tab`. */
+.fp-actions [data-testid='favorite-star'] + .doc-switch {
+  margin-left: 0;
+}
+
+.fp-page a.fp-export-icon {
+  margin-left: 18px;
+}
+
+.fp-page a.doc-switch {
+  color: #9b9ba1;
+  font-weight: 500;
+}
+
+.fp-page a.doc-switch:hover {
+  color: #0e0e10;
+}
+
+.fp-page .doc-tabs {
+  position: static;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+.fp-page a.doc-tab {
+  color: #9b9ba1;
+  font-weight: 500;
+}
+
+.fp-page a.doc-tab:hover {
+  color: #0e0e10;
+}
+
+.fp-page a.doc-tab.is-active {
+  color: #0e0e10;
+  font-weight: 600;
+}
+
 /* Même boîte que le bouton des maquettes : border-box 32 px (bord inclus), fond plat. */
 .fp-page button.fp-more {
   appearance: none;
@@ -392,10 +431,6 @@
   font-size: 36px;
   margin: 0;
   color: #0e0e10;
-  outline: none;
-  border-radius: 4px;
-  padding: 2px 4px;
-  margin-left: -4px;
   line-height: normal;
 }
 

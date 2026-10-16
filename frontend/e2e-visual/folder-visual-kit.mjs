@@ -231,6 +231,16 @@ export async function mockFolderApis(page, kind) {
   const folderId = kind === 'procedures' ? FOLDER_PROC : FOLDER_REF
   await mockBaseApis(page, { me: ME_TAREK, notifications: NOTIFICATIONS_SEED, spaces: [SPACE_IDENTITE] })
   await page.route(`**/api/v1/folders/${folderId}/page`, (route) => json(route, pageView(kind)))
+  const pageId = kind === 'procedures' ? PAGE_PROC : PAGE_REF
+  await page.route(`**/api/v1/documents/${pageId}/comments**`, (route) =>
+    json(route, {
+      documentId: pageId,
+      versionNo: 1,
+      threads: [],
+      detached: [],
+      openThreadCount: 0,
+    }),
+  )
   await page.route(`**/api/v1/folders/${folderId}`, (route) => json(route, folderView(kind)))
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}/tree**`, (route) => json(route, tree(kind)))
   await page.route(`**/api/v1/spaces/${SPACE_IDENTITE.id}`, (route) => json(route, SPACE_IDENTITE))
@@ -250,19 +260,19 @@ export async function annotateFolderMock(page) {
     const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
     const main = root.children[1]
     const topbar = main.children[0]
-    const content = main.children[1]
+    const tabs = main.children[1]
+    const content = main.children[2]
     set(topbar.children[0], 'fp-crumbs')
     set(topbar.children[1], 'fp-actions')
+    set(tabs, 'fp-tabs')
     const article = content.children[0]
     const rail = content.children[1]
     const k = [...article.children]
-    set(k[0], 'fp-tabs')
-    set(k[1], 'fp-meta')
-    set(k[2], 'fp-toolbar')
-    set(k[3], 'fp-title')
-    set(k[4], 'fp-body')
-    set(k[5], 'fp-count')
-    ;[...k[6].children].forEach((card, i) => set(card, `fp-card-${i}`))
+    set(k[0], 'fp-meta')
+    set(k[1], 'fp-title')
+    set(k[2], 'fp-body')
+    set(k[3], 'fp-count')
+    ;[...k[4].children].forEach((card, i) => set(card, `fp-card-${i}`))
     const blocks = [...rail.firstElementChild.children]
     ;['fp-rail-docs', 'fp-rail-owner', 'fp-rail-author', 'fp-rail-modified', 'fp-rail-tags', 'fp-rail-reliability', 'fp-rail-export'].forEach(
       (id, i) => set(blocks[i], id),
@@ -276,7 +286,6 @@ export function folderSections(cardCount) {
     { id: 'fp-actions', name: 'actions' },
     { id: 'fp-tabs', name: 'tabs' },
     { id: 'fp-meta', name: 'meta' },
-    { id: 'fp-toolbar', name: 'toolbar' },
     { id: 'fp-title', name: 'title' },
     { id: 'fp-body', name: 'body' },
     { id: 'fp-count', name: 'count' },

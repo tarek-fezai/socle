@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 const getMock = vi.fn()
 const postMock = vi.fn()
+const putMock = vi.fn()
 const authState = vi.hoisted(() => ({ roles: [] as string[] }))
 vi.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({
@@ -18,7 +19,7 @@ vi.mock('../lib/api', () => ({
     get: (...args: unknown[]) => getMock(...args),
     post: (...args: unknown[]) => postMock(...args),
     patch: vi.fn(),
-    put: vi.fn(() => Promise.resolve({ data: { id: 'page-1', permissions: { canEdit: true } } })),
+    put: (...args: unknown[]) => putMock(...args),
     delete: vi.fn(),
   },
 }))
@@ -71,6 +72,7 @@ const perms = (canEdit: boolean) => ({
 
 let pageResponse: { status: number; data: unknown } = { status: 204, data: '' }
 let folderRights = { canEdit: true, canDelete: true }
+let openThreads = 0
 
 const folderDocuments = [
   {
@@ -116,9 +118,14 @@ describe('FolderPage', () => {
   beforeEach(() => {
     getMock.mockReset()
     postMock.mockReset()
+    putMock.mockReset()
+    putMock.mockResolvedValue({
+      data: { id: 'page-1', permissions: { canEdit: true }, currentVersionNo: 1 },
+    })
     authState.roles = []
     pageResponse = { status: 204, data: '' }
     folderRights = { canEdit: true, canDelete: true }
+    openThreads = 0
     getMock.mockImplementation((url: string) => {
       if (url === '/api/v1/folders/proc') {
         return Promise.resolve({
@@ -141,6 +148,17 @@ describe('FolderPage', () => {
       }
       if (url === `/api/v1/spaces/${SPACE}/tree`) return Promise.resolve({ data: tree })
       if (url === '/api/v1/folders/proc/page') return Promise.resolve(pageResponse)
+      if (String(url).includes('/comments')) {
+        return Promise.resolve({
+          data: {
+            documentId: 'page-1',
+            versionNo: 1,
+            threads: [],
+            detached: [],
+            openThreadCount: openThreads,
+          },
+        })
+      }
       if (String(url).startsWith('/api/v1/documents/')) {
         return Promise.resolve({
           data: {
@@ -239,14 +257,17 @@ describe('FolderPage', () => {
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Procédures' })).toBeTruthy()
     expect(await screen.findByText('Déjà écrit')).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Lire' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.queryByRole('tab', { name: 'Modifier' })).toBeNull()
     expect(screen.queryByRole('toolbar', { name: 'Mise en forme' })).toBeNull()
     expect(screen.queryByRole('button', { name: '+ Sous-dossier' })).toBeNull()
     expect(screen.queryByRole('button', { name: '+ Nouveau document' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Renommer le dossier' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Autres actions du dossier' })).toBeNull()
+    expect(screen.queryByText('Page de dossier modifiable — comme un document')).toBeNull()
   })
 
-  it('contributeur : barre d’outils et création', async () => {
+  it('contributeur : Lire sans barre d’outils, avec création et Modifier', async () => {
     pageResponse = {
       status: 200,
       data: {
@@ -259,24 +280,75 @@ describe('FolderPage', () => {
       },
     }
     renderPage()
-    expect(await screen.findByRole('toolbar', { name: 'Mise en forme' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Procédures' })).toBeTruthy()
+    expect(screen.queryByRole('toolbar', { name: 'Mise en forme' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Renommer le dossier' })).toBeNull()
+    expect(screen.getByRole('tab', { name: 'Lire' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Modifier' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Historique' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Commentaires' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Accès' }).getAttribute('href')).toBe('/folders/proc/access')
+    expect(screen.getByRole('link', { name: 'Graphe' }).getAttribute('href')).toBe('/spaces/s1/graph')
+    expect((screen.getByRole('button', { name: 'Index' }) as HTMLButtonElement).disabled).toBe(true)
     expect(screen.getByRole('button', { name: '+ Sous-dossier' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '+ Nouveau document' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Renommer le dossier' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Autres actions du dossier' })).toBeTruthy()
   })
 
-  it('page 204 : l’éditeur suit canEdit, pas le 204', async () => {
+  it('page 204 : Modifier suit canEdit, Lire reste en lecture', async () => {
     const first = renderPage()
-    expect(await screen.findByRole('toolbar', { name: 'Mise en forme' })).toBeTruthy()
+    expect(await screen.findByRole('tab', { name: 'Modifier' })).toBeTruthy()
+    expect(screen.queryByRole('toolbar', { name: 'Mise en forme' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Autres actions du dossier' })).toBeTruthy()
     first.unmount()
 
     folderRights = { canEdit: false, canDelete: false }
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Procédures' })).toBeTruthy()
+    expect(screen.queryByRole('tab', { name: 'Modifier' })).toBeNull()
     expect(screen.queryByRole('toolbar', { name: 'Mise en forme' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Autres actions du dossier' })).toBeNull()
+  })
+
+  it('Modifier enregistre la page puis revient à Lire', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('tab', { name: 'Modifier' }))
+    expect(await screen.findByRole('toolbar', { name: 'Mise en forme' })).toBeTruthy()
+    fireEvent.click(screen.getByTestId('edit-save-version'))
+    fireEvent.click(await screen.findByTestId('edit-save-version-confirm'))
+    await waitFor(() =>
+      expect(putMock).toHaveBeenCalledWith(
+        '/api/v1/folders/proc/page',
+        expect.objectContaining({ body: expect.any(Object) }),
+      ),
+    )
+    await waitFor(() => expect(screen.queryByRole('toolbar', { name: 'Mise en forme' })).toBeNull())
+    expect(screen.getByRole('tab', { name: 'Lire' }).getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('Commentaires vide sans page', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('tab', { name: 'Commentaires' }))
+    expect(await screen.findByTestId('folder-comments-empty')).toBeTruthy()
+    expect(screen.queryByTestId('comments-panel')).toBeNull()
+  })
+
+  it('le compteur de commentaires suit le document de page', async () => {
+    openThreads = 3
+    pageResponse = {
+      status: 200,
+      data: {
+        id: 'page-1',
+        title: 'Procédures',
+        body: { type: 'doc', content: [{ type: 'paragraph' }] },
+        status: 'brouillon',
+        currentVersionNo: 1,
+        spaceId: SPACE,
+        permissions: perms(true),
+      },
+    }
+    renderPage()
+    expect((await screen.findByTestId('comments-badge')).textContent).toBe('3')
   })
 
   it('contributeur : menu sans Supprimer', async () => {
