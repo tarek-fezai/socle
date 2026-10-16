@@ -3,7 +3,19 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { documentHref, getSpaceTree, spaceBrowseHref, spaceTreeKey } from '../../lib/folders'
+import {
+  ancestorFolderIds,
+  buildSpaceTree,
+  documentHref,
+  folderHref,
+  getSpaceTree,
+  spaceBrowseHref,
+  spaceTreeKey,
+  shellDocumentIndent,
+  shellFolderIndent,
+  type FolderTreeNode,
+  type TreeDocument,
+} from '../../lib/folders'
 import { listSpaces } from '../../lib/spaces'
 import {
   loadExpandedSpaces,
@@ -59,6 +71,7 @@ export function ShellSidebar({ onOpenSearch }: Props) {
   const { me } = useAuth()
   const admin = isPlatformAdmin(me?.roles)
   const [expanded, setExpanded] = useState<Set<string>>(() => loadExpandedSpaces())
+  const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set())
   const [kbd, setKbd] = useState('⌘K')
 
   useEffect(() => {
@@ -72,11 +85,16 @@ export function ShellSidebar({ onOpenSearch }: Props) {
 
   const spaceList = spaces.data ?? []
 
+  const path = location.pathname
+  const routeDocId = docIdFromPath(path)
+  const routeFolderId = folderIdFromPath(path)
+  const locateInTree = Boolean(routeDocId || routeFolderId)
+
   const trees = useQueries({
     queries: spaceList.map((s) => ({
       queryKey: spaceTreeKey(s.id),
-      queryFn: () => getSpaceTree(api, s.id, 1),
-      enabled: expanded.has(s.id) || spaceList.length <= 8,
+      queryFn: () => getSpaceTree(api, s.id),
+      enabled: locateInTree || expanded.has(s.id) || spaceList.length <= 8,
     })),
   })
 
@@ -107,7 +125,49 @@ export function ShellSidebar({ onOpenSearch }: Props) {
     })
   }
 
-  const path = location.pathname
+  function toggleFolder(id: string) {
+    setOpenFolders((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const openTarget = useMemo(() => {
+    for (const space of spaceList) {
+      const tree = treeBySpace.get(space.id)
+      if (!tree) continue
+      if (routeFolderId && tree.folders.some((f) => f.id === routeFolderId)) {
+        return { spaceId: space.id, folderIds: ancestorFolderIds(tree.folders, routeFolderId) }
+      }
+      if (routeDocId) {
+        const doc = tree.documents.find((d) => d.id === routeDocId)
+        if (doc) {
+          return { spaceId: space.id, folderIds: ancestorFolderIds(tree.folders, doc.folderId) }
+        }
+      }
+    }
+    return null
+  }, [spaceList, treeBySpace, routeFolderId, routeDocId])
+
+  const toOpen = openTarget ? `${openTarget.spaceId}|${openTarget.folderIds.join(',')}` : ''
+  useEffect(() => {
+    if (!toOpen) return
+    const [spaceId, raw = ''] = toOpen.split('|')
+    const folderIds = raw ? raw.split(',').filter(Boolean) : []
+    setExpanded((prev) => {
+      if (prev.has(spaceId)) return prev
+      const next = new Set(prev)
+      next.add(spaceId)
+      saveExpandedSpaces(next)
+      return next
+    })
+    setOpenFolders((prev) => {
+      if (folderIds.every((id) => prev.has(id))) return prev
+      return new Set([...prev, ...folderIds])
+    })
+  }, [toOpen])
   const logoUrl = useBrandingLogoUrl()
   const accent = useBrandingAccent()
   const brandName = useBrandingInstanceName() || 'Socle'
@@ -168,10 +228,8 @@ export function ShellSidebar({ onOpenSearch }: Props) {
         {spaceList.map((space, idx) => {
           const open = expanded.has(space.id)
           const tree = treeBySpace.get(space.id)
-          const rootDocs = (tree?.documents ?? [])
-            .filter((d) => d.folderId == null)
-            .slice()
-            .sort((a, b) => a.position - b.position || a.title.localeCompare(b.title, 'fr'))
+          const view = tree ? buildSpaceTree(tree) : { folders: [], documents: [] }
+          const empty = Boolean(tree) && view.documents.length === 0 && view.folders.length === 0
           return (
             <Fragment key={space.id}>
               <button
@@ -184,20 +242,28 @@ export function ShellSidebar({ onOpenSearch }: Props) {
                 {space.name}
               </button>
               {open &&
-                rootDocs.map((doc, di) => {
-                  const active = path === documentHref(doc.id) || path.startsWith(`/docs/${doc.id}/`)
-                  return (
-                    <Link
-                      key={doc.id}
-                      to={documentHref(doc.id)}
-                      className={`shell-nav-link${active ? ' active' : ''}`}
-                      data-mock-id={idx === 0 && di === 0 ? 'shell-tree-doc' : undefined}
-                    >
-                      {doc.title}
-                    </Link>
-                  )
-                })}
-              {open && rootDocs.length === 0 && (
+                view.documents.map((doc, di) => (
+                  <DocLink
+                    key={doc.id}
+                    doc={doc}
+                    depth={0}
+                    path={path}
+                    mockId={idx === 0 && di === 0 ? 'shell-tree-doc' : undefined}
+                  />
+                ))}
+              {open &&
+                view.folders.map((node) => (
+                  <FolderBranch
+                    key={node.folder.id}
+                    node={node}
+                    depth={0}
+                    path={path}
+                    openFolders={openFolders}
+                    onToggle={toggleFolder}
+                    currentFolderId={routeFolderId}
+                  />
+                ))}
+              {open && empty && (
                 <Link to={spaceBrowseHref(space.id)} className="shell-nav-link">
                   Parcourir…
                 </Link>
@@ -209,5 +275,134 @@ export function ShellSidebar({ onOpenSearch }: Props) {
 
       <ShellUserMenu />
     </aside>
+  )
+}
+
+function docIdFromPath(path: string): string | null {
+  const m = /^\/docs\/([^/]+)/.exec(path)
+  if (!m || m[1] === 'new') return null
+  return m[1]
+}
+
+function folderIdFromPath(path: string): string | null {
+  const m = /^\/folders\/([^/]+)/.exec(path)
+  return m?.[1] ?? null
+}
+
+function docIsActive(path: string, id: string) {
+  return path === documentHref(id) || path.startsWith(`/docs/${id}/`)
+}
+
+function Chevron() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  )
+}
+
+function DocLink({
+  doc,
+  depth,
+  path,
+  mockId,
+}: {
+  doc: TreeDocument
+  depth: number
+  path: string
+  mockId?: string
+}) {
+  const active = docIsActive(path, doc.id)
+  const draft = doc.status === 'brouillon'
+  const nested = depth > 0
+  return (
+    <Link
+      to={documentHref(doc.id)}
+      style={nested ? { paddingLeft: shellDocumentIndent(depth) } : undefined}
+      className={['shell-nav-link', draft ? 'shell-nav-link--draft' : '', active ? 'active' : '']
+        .filter(Boolean)
+        .join(' ')}
+      data-mock-id={mockId}
+      aria-current={active ? 'page' : undefined}
+    >
+      {draft ? (
+        <>
+          <span>{doc.title}</span>
+          <span className="shell-draft-badge">brouillon</span>
+        </>
+      ) : (
+        doc.title
+      )}
+    </Link>
+  )
+}
+
+function FolderBranch({
+  node,
+  depth,
+  path,
+  openFolders,
+  onToggle,
+  currentFolderId,
+}: {
+  node: FolderTreeNode
+  depth: number
+  path: string
+  openFolders: Set<string>
+  onToggle: (id: string) => void
+  currentFolderId: string | null
+}) {
+  const { folder } = node
+  const open = openFolders.has(folder.id)
+  const active = folder.id === currentFolderId
+  return (
+    <div className="shell-folder-branch" data-mock-id={active ? 'shell-tree-folders' : undefined}>
+      <div
+        className={`shell-folder-row${active ? ' active' : ''}`}
+        style={depth > 0 ? { paddingLeft: shellFolderIndent(depth) } : undefined}
+      >
+        <button
+          type="button"
+          className="shell-folder-toggle"
+          aria-expanded={open}
+          aria-label={`${open ? 'Replier' : 'Déplier'} ${folder.name}`}
+          onClick={() => onToggle(folder.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight' && !open) {
+              e.preventDefault()
+              onToggle(folder.id)
+            } else if (e.key === 'ArrowLeft' && open) {
+              e.preventDefault()
+              onToggle(folder.id)
+            }
+          }}
+        >
+          <Chevron />
+        </button>
+        <Link
+          to={folderHref(folder.id)}
+          className="shell-folder-name"
+          aria-current={active ? 'page' : undefined}
+        >
+          {folder.name}
+        </Link>
+      </div>
+      {open &&
+        node.documents.map((doc) => (
+          <DocLink key={doc.id} doc={doc} depth={depth + 1} path={path} />
+        ))}
+      {open &&
+        node.folders.map((child) => (
+          <FolderBranch
+            key={child.folder.id}
+            node={child}
+            depth={depth + 1}
+            path={path}
+            openFolders={openFolders}
+            onToggle={onToggle}
+            currentFolderId={currentFolderId}
+          />
+        ))}
+    </div>
   )
 }

@@ -3,7 +3,9 @@
  * Règles : docs/visual-parity.md
  *
  * FolderReference.dc.html vs /folders/:id @ 1440×900.
- * Texte inclus, seuil 1 % par section. Sidebar du shell non comparée (DP-2026-10-10).
+ * Texte inclus, seuil 1 % par section. Le chrome de la sidebar reste celui de
+ * l'ancienne maquette (DP-2026-10-10) : seule la section `shell-tree-folders`
+ * (dossier courant et ses documents) est comparée à la maquette.
  * Barre du haut : Page / Graphe / Index. Barre d'onglets pleine largeur.
  * Plus de section toolbar (maquettes v159, DP-2026-10-16).
  */
@@ -56,6 +58,8 @@ test('desktop FolderReference — sections pixel ≤ 1 % (texte inclus)', async 
   await page.waitForSelector('[data-mock-id="fp-title"]')
   await page.waitForSelector('text=2 documents de référence à jour')
   await page.waitForSelector('text=Révisé le 2 septembre 2026')
+  await page.waitForSelector('[data-mock-id="shell-tree-folders"]')
+  await page.waitForSelector('.shell-sidebar >> text=Rôles & habilitations')
   await settleFonts(page)
   const compare = compareSectionShots()
   const results = []

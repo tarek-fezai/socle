@@ -258,6 +258,36 @@ export async function annotateFolderMock(page) {
   await page.evaluate(() => {
     const set = (el, id) => el?.setAttribute('data-mock-id', id)
     const root = document.querySelector('body div[style*="1440px"]') || document.body.firstElementChild
+    const sidebar = root?.children?.[0]
+    const tree = sidebar
+      ? [...sidebar.querySelectorAll('div')].find((d) => {
+          const st = d.getAttribute('style') || ''
+          return st.includes('flex-direction: column') && st.includes('gap: 1px')
+        })
+      : null
+    if (tree) {
+      const kids = [...tree.children]
+      const activeIdx = kids.findIndex((el) => {
+        const st = el.getAttribute('style') || ''
+        return st.includes('#F0EFFC') && st.includes('11.5px')
+      })
+      if (activeIdx >= 0) {
+        const group = [kids[activeIdx]]
+        for (let i = activeIdx + 1; i < kids.length; i++) {
+          const st = kids[i].getAttribute('style') || ''
+          if (st.includes('padding: 7px 10px 7px 22px')) group.push(kids[i])
+          else break
+        }
+        const wrap = document.createElement('div')
+        wrap.setAttribute('data-mock-id', 'shell-tree-folders')
+        wrap.setAttribute('style', 'display: flex; flex-direction: column; gap: 1px; min-width: 0;')
+        tree.insertBefore(wrap, kids[activeIdx])
+        for (const el of group) {
+          el.style.marginTop = '0'
+          wrap.appendChild(el)
+        }
+      }
+    }
     const main = root.children[1]
     const topbar = main.children[0]
     const tabs = main.children[1]
@@ -297,6 +327,7 @@ export function folderSections(cardCount) {
     { id: 'fp-rail-tags', name: 'rail-tags' },
     { id: 'fp-rail-reliability', name: 'rail-reliability' },
     { id: 'fp-rail-export', name: 'rail-export' },
+    { id: 'shell-tree-folders', name: 'shell-tree-folders' },
   ]
 }
 
