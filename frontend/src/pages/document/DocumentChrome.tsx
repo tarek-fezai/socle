@@ -164,6 +164,23 @@ export function DocumentCrumbs({ crumbs, mockPrefix = 'doc' }: { crumbs: Crumb[]
   )
 }
 
+/** Sélecteur Page / Graphe / Index, identique sur un document et sur un dossier. */
+export function DocumentSurfaceSwitch({ spaceId }: { spaceId: string }) {
+  return (
+    <>
+      <span className="doc-switch is-active" aria-current="page" data-mock-id="doc-switch-page">
+        Page
+      </span>
+      <Link to={`/spaces/${spaceId}/graph`} className="doc-switch" data-mock-id="doc-switch-graph">
+        Graphe
+      </Link>
+      <button type="button" className="doc-switch is-disabled" disabled title="bientôt" data-mock-id="doc-switch-index">
+        Index
+      </button>
+    </>
+  )
+}
+
 export function DocumentTopBar({
   documentId,
   spaceId,
@@ -220,17 +237,7 @@ export function DocumentTopBar({
           </a>
         ) : null}
         <FavoriteStar resourceType="document" resourceId={documentId} variant="page" />
-
-        <span className="doc-switch is-active" aria-current="page" data-mock-id="doc-switch-page">
-          Page
-        </span>
-        <Link to={`/spaces/${spaceId}/graph`} className="doc-switch" data-mock-id="doc-switch-graph">
-          Graphe
-        </Link>
-        <button type="button" className="doc-switch is-disabled" disabled title="bientôt" data-mock-id="doc-switch-index">
-          Index
-        </button>
-
+        <DocumentSurfaceSwitch spaceId={spaceId} />
         <ExportMenu documentId={documentId} onPrint={onPrint} onDownloadPdf={onDownloadPdf} busy={exporting} />
 
         {showPublish && (
@@ -259,56 +266,111 @@ export type DocTabsProps = {
   /** Onglet courant (défaut : Lire). */
   current?: 'read' | 'edit' | 'history' | 'access'
   /** Préfixe des `data-mock-id` (défaut : `doc`). */
-  mockPrefix?: 'doc' | 'edit' | 'hist' | 'access-doc'
+  mockPrefix?: string
+  /** Nom accessible du tablist (défaut : sections du document). */
+  ariaLabel?: string
   showEdit: boolean
   showAccess: boolean
   openComments: number
   commentsOpen: boolean
   onToggleComments: () => void
+  /**
+   * Page de dossier : Lire, Modifier et Historique restent sur place.
+   * Sans ce rappel, les onglets naviguent vers les routes du document.
+   */
+  onSelectTab?: (tab: 'read' | 'edit' | 'history') => void
+  /** Lien Accès quand il ne pointe pas vers le document. */
+  accessTo?: string
 }
 
 export function DocumentTabs({
   documentId,
   current = 'read',
   mockPrefix = 'doc',
+  ariaLabel = 'Sections du document',
   showEdit,
   showAccess,
   openComments,
   commentsOpen,
   onToggleComments,
+  onSelectTab,
+  accessTo,
 }: DocTabsProps) {
+  const stay = (tab: 'read' | 'edit' | 'history') => (e: { preventDefault: () => void }) => {
+    e.preventDefault()
+    onSelectTab?.(tab)
+  }
   return (
-    <div className="doc-tabs" role="tablist" aria-label="Sections du document" data-mock-id={`${mockPrefix}-tabs`}>
-      <Link
-        to={`/docs/${documentId}`}
-        role="tab"
-        aria-selected={current === 'read'}
-        className={`doc-tab${current === 'read' ? ' is-active' : ''}`}
-        data-mock-id={current === 'read' ? `${mockPrefix}-tab-read` : undefined}
-      >
-        Lire
-      </Link>
-      {showEdit && (
-        <Link
-          to={`/docs/${documentId}/edit`}
+    <div className="doc-tabs" role="tablist" aria-label={ariaLabel} data-mock-id={`${mockPrefix}-tabs`}>
+      {onSelectTab ? (
+        <a
+          href="#lire"
           role="tab"
-          aria-selected={current === 'edit'}
-          className={`doc-tab${current === 'edit' ? ' is-active' : ''}`}
-          data-testid="tab-edit"
-          data-mock-id={current === 'edit' ? `${mockPrefix}-tab-edit` : undefined}
+          aria-selected={current === 'read'}
+          className={`doc-tab${current === 'read' ? ' is-active' : ''}`}
+          data-mock-id={current === 'read' ? `${mockPrefix}-tab-read` : undefined}
+          onClick={stay('read')}
         >
-          Modifier
+          Lire
+        </a>
+      ) : (
+        <Link
+          to={`/docs/${documentId}`}
+          role="tab"
+          aria-selected={current === 'read'}
+          className={`doc-tab${current === 'read' ? ' is-active' : ''}`}
+          data-mock-id={current === 'read' ? `${mockPrefix}-tab-read` : undefined}
+        >
+          Lire
         </Link>
       )}
-      <Link
-        to={`/docs/${documentId}/history`}
-        role="tab"
-        aria-selected={current === 'history'}
-        className={`doc-tab${current === 'history' ? ' is-active' : ''}`}
-        data-mock-id={current === 'history' ? `${mockPrefix}-tab-history` : undefined}
-      >
-        Historique
-      </Link>
+      {showEdit &&
+        (onSelectTab ? (
+          <a
+            href="#modifier"
+            role="tab"
+            aria-selected={current === 'edit'}
+            className={`doc-tab${current === 'edit' ? ' is-active' : ''}`}
+            data-testid="tab-edit"
+            data-mock-id={current === 'edit' ? `${mockPrefix}-tab-edit` : undefined}
+            onClick={stay('edit')}
+          >
+            Modifier
+          </a>
+        ) : (
+          <Link
+            to={`/docs/${documentId}/edit`}
+            role="tab"
+            aria-selected={current === 'edit'}
+            className={`doc-tab${current === 'edit' ? ' is-active' : ''}`}
+            data-testid="tab-edit"
+            data-mock-id={current === 'edit' ? `${mockPrefix}-tab-edit` : undefined}
+          >
+            Modifier
+          </Link>
+        ))}
+      {onSelectTab ? (
+        <a
+          href="#historique"
+          role="tab"
+          aria-selected={current === 'history'}
+          className={`doc-tab${current === 'history' ? ' is-active' : ''}`}
+          data-mock-id={current === 'history' ? `${mockPrefix}-tab-history` : undefined}
+          onClick={stay('history')}
+        >
+          Historique
+        </a>
+      ) : (
+        <Link
+          to={`/docs/${documentId}/history`}
+          role="tab"
+          aria-selected={current === 'history'}
+          className={`doc-tab${current === 'history' ? ' is-active' : ''}`}
+          data-mock-id={current === 'history' ? `${mockPrefix}-tab-history` : undefined}
+        >
+          Historique
+        </Link>
+      )}
       <button
         type="button"
         role="tab"
@@ -326,7 +388,7 @@ export function DocumentTabs({
       </button>
       {showAccess && (
         <Link
-          to={`/documents/${documentId}/access`}
+          to={accessTo ?? `/documents/${documentId}/access`}
           role="tab"
           aria-selected={current === 'access'}
           className={`doc-tab${current === 'access' ? ' is-active' : ''}`}

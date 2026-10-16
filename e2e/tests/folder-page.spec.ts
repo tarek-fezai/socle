@@ -18,7 +18,7 @@ test.describe.serial('Page de dossier', () => {
   let folderId = ''
   let pageId = ''
 
-  test('contributeur écrit la page, la retrouve, et voit 2 versions', async ({ page }) => {
+  test('contributeur modifie la page, voit la version et commente', async ({ page }) => {
     token = await fetchPasswordToken(USER, PASS)
     const space = await apiJson<SpaceSummary>('/api/v1/spaces', token, {
       method: 'POST',
@@ -33,38 +33,42 @@ test.describe.serial('Page de dossier', () => {
 
     await loginViaUi(page, USER, PASS)
     await page.goto(`/folders/${folderId}`)
+    await page.getByRole('tab', { name: 'Modifier' }).click()
     const editor = page.getByTestId('edit-prosemirror')
     await editor.waitFor({ timeout: 60_000 })
     await editor.click()
+    await page.keyboard.type('Première phrase de la page.')
+    await expect(editor).toContainText('Première phrase de la page.')
 
-    const first = page.waitForResponse(
+    const saved = page.waitForResponse(
       (r) => r.request().method() === 'PUT' && r.url().includes(`/folders/${folderId}/page`),
       { timeout: 20_000 },
     )
-    await page.keyboard.type('Première phrase de la page.')
-    const created = await first
+    await page.getByTestId('edit-save-version').click()
+    await page.getByTestId('edit-save-version-confirm').click()
+    const created = await saved
     expect(created.ok()).toBeTruthy()
     const createdBody = (await created.json()) as PageDoc
     pageId = createdBody.id
 
-    const second = page.waitForResponse(
-      (r) => r.request().method() === 'PUT' && r.url().includes(`/folders/${folderId}/page`),
-      { timeout: 20_000 },
-    )
-    await page.keyboard.type(' Suite.')
-    const updated = await second
-    expect(updated.ok()).toBeTruthy()
-
-    await page.reload()
-    await expect(page.getByTestId('edit-prosemirror')).toContainText('Première phrase de la page. Suite.', {
+    await expect(page.getByTestId('edit-toolbar')).toHaveCount(0)
+    await expect(page.getByTestId('edit-prosemirror')).toContainText('Première phrase de la page.', {
       timeout: 20_000,
     })
 
     await page.getByRole('tab', { name: 'Historique' }).click()
-    await expect(page.getByTestId('folder-page-history')).toContainText('2 versions publiées')
-    await page.getByRole('link', { name: 'Comparer' }).first().click()
-    await expect(page).toHaveURL(new RegExp(`/docs/${pageId}/history/compare`))
-    await expect(page.getByTestId('document-compare-page')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('folder-page-history')).toContainText('1 version publiée', { timeout: 20_000 })
+
+    await page.getByRole('tab', { name: 'Commentaires' }).click()
+    await page.getByTestId('comment-composer').fill('Note de revue e2e')
+    const posted = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && r.url().includes(`/documents/${pageId}/comments`),
+      { timeout: 20_000 },
+    )
+    await page.getByRole('button', { name: 'Envoyer' }).click()
+    const comment = await posted
+    expect(comment.ok()).toBeTruthy()
+    await expect(page.getByText('Note de revue e2e')).toBeVisible()
   })
 
   test('lecteur : la page n’est pas modifiable', async ({ page }) => {
@@ -81,7 +85,9 @@ test.describe.serial('Page de dossier', () => {
     await loginViaUi(page, READER, READER_PASS)
     await page.goto(`/folders/${folderId}`)
     await page.getByTestId('edit-prosemirror').waitFor({ timeout: 60_000 })
+    await expect(page.getByRole('tab', { name: 'Modifier' })).toHaveCount(0)
     await expect(page.getByTestId('folder-format-bar')).toHaveCount(0)
+    await expect(page.getByTestId('edit-toolbar')).toHaveCount(0)
     await expect(page.getByRole('button', { name: '+ Sous-dossier' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: '+ Nouveau document' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Autres actions du dossier' })).toHaveCount(0)

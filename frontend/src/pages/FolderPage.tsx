@@ -5,8 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { MoveDialog } from '../components/MoveDialog'
 import { NewFolderDialog } from '../components/NewFolderDialog'
+import { CommentsPanel } from '../components/CommentsPanel'
 import { api } from '../lib/api'
 import { apiErrorMessage } from '../lib/apiError'
+import { listComments } from '../lib/comments'
 import { createDocument, emptyDocBody, type TagRef } from '../lib/documents'
 import {
   addFavorite,
@@ -35,9 +37,15 @@ import {
 } from '../lib/folders'
 import { isPlatformAdmin } from '../lib/platformRoles'
 import { initialsOf, tagColors } from './document/documentPageUtils'
+import { ChangeSummaryPopover } from './document/ChangeSummaryPopover'
+import { DocumentSurfaceSwitch, DocumentTabs } from './document/DocumentChrome'
 import { DocumentEditor } from './DocumentEditor'
 import { DocumentHistoryPage } from './DocumentHistoryPage'
+import './document/document-page.css'
+import './document/document-edit.css'
 import './folder/folder-page.css'
+
+type FolderSurface = 'lire' | 'modifier' | 'historique' | 'commentaires'
 
 const longDate = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
@@ -187,7 +195,7 @@ export function FolderPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [tab, setTab] = useState<'apercu' | 'historique'>('apercu')
+  const [tab, setTab] = useState<FolderSurface>('lire')
   const [newFolderOpen, setNewFolderOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
@@ -218,24 +226,28 @@ export function FolderPage() {
   const canDelete = Boolean(folder.data?.canDelete)
   const content = draft ?? (page.data?.body as Record<string, unknown> | undefined) ?? emptyDocBody
 
+  const pageDocumentId = page.data?.id ?? ''
+  const comments = useQuery({
+    queryKey: ['document-comments', pageDocumentId, 'ouvert', ''],
+    queryFn: () => listComments(api, pageDocumentId, { status: 'ouvert' }),
+    enabled: Boolean(pageDocumentId),
+  })
+  const openComments = comments.data?.openThreadCount ?? 0
+
   const save = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      saveFolderPage(api, id, body, 'Page de dossier'),
+    mutationFn: (input: { body: Record<string, unknown>; changeSummary?: string }) =>
+      saveFolderPage(api, id, input.body, input.changeSummary),
     onSuccess: (saved) => {
       qc.setQueryData(['folder-page', id], saved)
+      setDraft(null)
+      setTab('lire')
+      setError(null)
       void qc.invalidateQueries({ queryKey: ['folder', id] })
       void qc.invalidateQueries({ queryKey: ['document-versions', saved.id] })
+      void qc.invalidateQueries({ queryKey: ['document-comments', saved.id] })
     },
     onError: (e) => setError(apiErrorMessage(e, 'Enregistrement de la page impossible')),
   })
-
-  useEffect(() => {
-    if (!draft || !canEdit) return
-    const handle = window.setTimeout(() => save.mutate(draft), 800)
-    return () => window.clearTimeout(handle)
-    // save.mutate est stable ; le timer ne doit repartir que quand le brouillon change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, canEdit])
 
   const createDoc = useMutation({
     mutationFn: () => createDocument(api, 'Sans titre', spaceId, emptyDocBody, id),
@@ -338,21 +350,6 @@ export function FolderPage() {
   ) : (
     <div className="fp-title-row" data-mock-id="fp-title">
       <h1 className="fp-title">{f.name}</h1>
-      {canEdit && (
-        <button
-          type="button"
-          className="fp-rename"
-          aria-label="Renommer le dossier"
-          onClick={() => {
-            setNameDraft(f.name)
-            setRenaming(true)
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B9BA1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-          </svg>
-        </button>
-      )}
     </div>
   )
 
@@ -373,7 +370,7 @@ export function FolderPage() {
             </span>
           ))}
         </nav>
-        <div className="fp-actions" data-mock-id="fp-actions">
+        <div className="fp-actions doc-actions" data-mock-id="fp-actions">
           <a
             className="fp-icon-btn fp-icon-btn--help"
             href="https://docs.example.com"
@@ -392,9 +389,10 @@ export function FolderPage() {
             ?
           </a>
           <FolderFavorite folderId={id} />
+          <DocumentSurfaceSwitch spaceId={f.spaceId} />
           <Link
             to={`/folders/${id}/export`}
-            className="fp-icon-btn"
+            className="fp-icon-btn fp-export-icon"
             aria-label="Exporter le dossier"
             title="Exporter le dossier"
           >
@@ -444,41 +442,22 @@ export function FolderPage() {
         </div>
       </div>
 
+      <DocumentTabs
+        documentId={pageDocumentId || id}
+        mockPrefix="fp"
+        ariaLabel="Sections du dossier"
+        current={tab === 'historique' ? 'history' : tab === 'modifier' ? 'edit' : 'read'}
+        showEdit={canEdit}
+        showAccess
+        openComments={openComments}
+        commentsOpen={tab === 'commentaires'}
+        onToggleComments={() => setTab((current) => (current === 'commentaires' ? 'lire' : 'commentaires'))}
+        onSelectTab={(next) => setTab(next === 'read' ? 'lire' : next === 'edit' ? 'modifier' : 'historique')}
+        accessTo={`/folders/${id}/access`}
+      />
+
       <div className="fp-body-wrap">
         <div className="fp-main">
-          <div className="fp-tabs" data-mock-id="fp-tabs">
-            <div className="fp-tablist" role="tablist" aria-label="Dossier">
-              <a
-                href={`/folders/${id}`}
-                className={`fp-tab${tab === 'apercu' ? ' is-on' : ''}`}
-                role="tab"
-                aria-selected={tab === 'apercu'}
-                onClick={(e) => {
-                  e.preventDefault()
-                  setTab('apercu')
-                }}
-              >
-                Aperçu
-              </a>
-              <a
-                href={`/folders/${id}#historique`}
-                className={`fp-tab${tab === 'historique' ? ' is-on' : ''}`}
-                role="tab"
-                aria-selected={tab === 'historique'}
-                onClick={(e) => {
-                  e.preventDefault()
-                  setTab('historique')
-                }}
-              >
-                Historique
-              </a>
-              <Link className="fp-tab" to={`/folders/${id}/access`}>
-                Accès
-              </Link>
-            </div>
-            <span className="fp-tab-note">Page de dossier modifiable — comme un document</span>
-          </div>
-
           {error && (
             <p className="fp-error" role="alert">
               {error}
@@ -521,63 +500,100 @@ export function FolderPage() {
                 </span>
               </div>
 
-              {(canEdit || page.data) && (
-                <DocumentEditor
-                  variant="document"
-                  chrome={canEdit ? 'folder' : 'body'}
-                  editable={canEdit}
-                  content={content}
-                  documentId={page.data?.id}
-                  titleSlot={titleSlot}
-                  onChange={(json) => {
-                    if (!canEdit) return
-                    setDraft(json)
-                    setError(null)
-                  }}
-                />
+              {tab === 'modifier' && (
+                <div className="fp-edit-save">
+                  <ChangeSummaryPopover
+                    label="Enregistrer"
+                    buttonClassName="edit-ghost"
+                    testId="edit-save-version"
+                    disabled={save.isPending}
+                    title="Créer une version"
+                    onConfirm={(changeSummary) => {
+                      const body =
+                        draft ??
+                        (page.data?.body as Record<string, unknown> | undefined) ??
+                        emptyDocBody
+                      save.mutate({ body, changeSummary: changeSummary || undefined })
+                    }}
+                  />
+                </div>
               )}
-              {!canEdit && !page.data && titleSlot}
 
-              <p className="fp-count" data-mock-id="fp-count">
-                {docCount} document{docCount === 1 ? '' : 's'} · sous-dossier de l&apos;espace{' '}
-                <Link to={spaceBrowseHref(f.spaceId)}>{spaceName || 'Espace'}</Link>
-              </p>
+              <DocumentEditor
+                key={tab === 'modifier' ? 'modifier' : 'lire'}
+                variant="document"
+                chrome={tab === 'modifier' ? 'full' : 'body'}
+                editable={tab === 'modifier'}
+                content={content}
+                documentId={page.data?.id}
+                titleSlot={titleSlot}
+                onChange={(json) => {
+                  if (tab !== 'modifier') return
+                  setDraft(json)
+                  setError(null)
+                }}
+              />
 
-              <div className="fp-cards">
-                {cards.map((doc, i) => {
-                  const tone = cardTone(doc.status, doc.docType)
-                  const when = formatLong(tone.review ? doc.reviewSince : doc.updatedAt)
-                  const author = doc.updatedBy?.trim() || 'Système (migration)'
-                  const meta = when
-                    ? tone.review
-                      ? `En revue depuis le ${when} · ${author}`
-                      : `Révisé le ${when} · ${author}`
-                    : null
-                  return (
-                    <Link
-                      key={doc.id}
-                      to={documentHref(doc.id)}
-                      className="fp-card"
-                      data-mock-id={`fp-card-${i}`}
-                    >
-                      <span className="fp-card-main">
-                        <span className="fp-check" role="checkbox" aria-checked="false" aria-label="" />
-                        <span className="fp-card-dot" style={{ background: tone.dot }} />
-                        <span>
-                          <span className="fp-card-title">{doc.title}</span>
-                          {meta && <span className="fp-card-meta">{meta}</span>}
-                        </span>
-                      </span>
-                      <span className="fp-card-status" style={{ color: tone.color }}>
-                        {tone.label}
-                      </span>
-                    </Link>
-                  )
-                })}
-              </div>
+              {tab !== 'modifier' && (
+                <>
+                  <p className="fp-count" data-mock-id="fp-count">
+                    {docCount} document{docCount === 1 ? '' : 's'} · sous-dossier de l&apos;espace{' '}
+                    <Link to={spaceBrowseHref(f.spaceId)}>{spaceName || 'Espace'}</Link>
+                  </p>
+
+                  <div className="fp-cards">
+                    {cards.map((doc, i) => {
+                      const tone = cardTone(doc.status, doc.docType)
+                      const when = formatLong(tone.review ? doc.reviewSince : doc.updatedAt)
+                      const author = doc.updatedBy?.trim() || 'Système (migration)'
+                      const meta = when
+                        ? tone.review
+                          ? `En revue depuis le ${when} · ${author}`
+                          : `Révisé le ${when} · ${author}`
+                        : null
+                      return (
+                        <Link
+                          key={doc.id}
+                          to={documentHref(doc.id)}
+                          className="fp-card"
+                          data-mock-id={`fp-card-${i}`}
+                        >
+                          <span className="fp-card-main">
+                            <span className="fp-check" role="checkbox" aria-checked="false" aria-label="" />
+                            <span className="fp-card-dot" style={{ background: tone.dot }} />
+                            <span>
+                              <span className="fp-card-title">{doc.title}</span>
+                              {meta && <span className="fp-card-meta">{meta}</span>}
+                            </span>
+                          </span>
+                          <span className="fp-card-status" style={{ color: tone.color }}>
+                            {tone.label}
+                          </span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
+
+        {tab === 'commentaires' &&
+          (page.data ? (
+            <CommentsPanel
+              documentId={page.data.id}
+              versionNo={page.data.currentVersionNo}
+              canComment={canEdit}
+              spaceId={f.spaceId}
+              className="fp-comments"
+              onClose={() => setTab('lire')}
+            />
+          ) : (
+            <p className="fp-empty" data-testid="folder-comments-empty">
+              Aucune page de dossier pour l&apos;instant.
+            </p>
+          ))}
 
         <aside className="fp-rail" aria-label="Informations du dossier">
           <div className="fp-rail-sticky">
