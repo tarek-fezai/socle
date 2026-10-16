@@ -10,6 +10,7 @@ const KEYS = {
   highContrast: `${PREFIX}highContrast`,
   fontScale: `${PREFIX}fontScale`,
   reduceMotion: `${PREFIX}reduceMotion`,
+  sidebarCollapsed: `${PREFIX}sidebarCollapsed`,
 } as const
 
 export type DevicePreferences = {
@@ -17,6 +18,8 @@ export type DevicePreferences = {
   highContrast: boolean
   fontScale: FontScale
   reduceMotion: boolean
+  /** Menu latéral réduit. Défaut : agrandi. */
+  sidebarCollapsed: boolean
 }
 
 const DEFAULTS: DevicePreferences = {
@@ -24,6 +27,7 @@ const DEFAULTS: DevicePreferences = {
   highContrast: false,
   fontScale: 'normal',
   reduceMotion: false,
+  sidebarCollapsed: false,
 }
 
 function readStorage(key: string): string | null {
@@ -56,6 +60,7 @@ export function loadDevicePreferences(): DevicePreferences {
         ? fontScale
         : DEFAULTS.fontScale,
     reduceMotion: readStorage(KEYS.reduceMotion) === '1',
+    sidebarCollapsed: readStorage(KEYS.sidebarCollapsed) === '1',
   }
 }
 
@@ -66,6 +71,7 @@ export function saveDevicePreferences(patch: Partial<DevicePreferences>) {
   writeStorage(KEYS.highContrast, next.highContrast ? '1' : '0')
   writeStorage(KEYS.fontScale, next.fontScale)
   writeStorage(KEYS.reduceMotion, next.reduceMotion ? '1' : '0')
+  writeStorage(KEYS.sidebarCollapsed, next.sidebarCollapsed ? '1' : '0')
   applyDevicePreferences(next)
 }
 

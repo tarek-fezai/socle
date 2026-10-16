@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -51,6 +51,10 @@ function renderSidebar(path = '/') {
   }
   return render(<ShellSidebar onOpenSearch={() => undefined} />, { wrapper: Wrap })
 }
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 beforeEach(() => {
   localStorage.clear()
@@ -143,5 +147,67 @@ describe('ShellSidebar', () => {
       )
     })
     expect(screen.getByRole('link', { name: /Brouillon interne/ })).toBeTruthy()
+  })
+
+  it('bascule le menu réduit et agrandi, et mémorise le choix', async () => {
+    renderSidebar()
+    const toggle = await screen.findByRole('button', { name: 'Réduire ou agrandir le menu' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(toggle.querySelector('polyline')?.getAttribute('points')).toBe('15 18 9 12 15 6')
+    expect(document.querySelector('.shell-sidebar')?.className).not.toContain('is-collapsed')
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(toggle.querySelector('polyline')?.getAttribute('points')).toBe('9 18 15 12 9 6')
+    expect(document.querySelector('.shell-sidebar')?.className).toContain('is-collapsed')
+    expect(localStorage.getItem('socle.prefs.sidebarCollapsed')).toBe('1')
+    expect((await screen.findByTitle('Politique')).className).not.toContain('active')
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(localStorage.getItem('socle.prefs.sidebarCollapsed')).toBe('0')
+    expect(screen.getByRole('link', { name: 'Politique' })).toBeTruthy()
+  })
+
+  it('rouvre réduit si la préférence est déjà enregistrée, et marque l’élément actif', async () => {
+    localStorage.setItem('socle.prefs.sidebarCollapsed', '1')
+    renderSidebar('/docs/root')
+    const toggle = await screen.findByRole('button', { name: 'Réduire ou agrandir le menu' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    const active = await screen.findByTitle('Politique')
+    expect(active.className).toContain('active')
+    expect(active.getAttribute('title')).toBe('Politique')
+    expect(screen.getByTitle('Niveau 1').className).not.toContain('active')
+    expect(screen.queryByRole('link', { name: 'Favoris' })).toBeNull()
+  })
+
+  it('réduit au raccourci Ctrl+\\ et ignore la saisie', async () => {
+    renderSidebar()
+    await screen.findByRole('link', { name: 'Politique' })
+    fireEvent.keyDown(window, { key: '\\', ctrlKey: true })
+    expect(document.querySelector('.shell-sidebar')?.className).toContain('is-collapsed')
+
+    fireEvent.keyDown(window, { key: '\\', ctrlKey: true })
+    expect(document.querySelector('.shell-sidebar')?.className).not.toContain('is-collapsed')
+
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    fireEvent.keyDown(input, { key: '\\', ctrlKey: true })
+    expect(document.querySelector('.shell-sidebar')?.className).not.toContain('is-collapsed')
+    input.remove()
+  })
+
+  it('reste agrandi si le stockage est illisible, et bascule quand même s’il refuse l’écriture', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('indisponible')
+    })
+    renderSidebar()
+    const toggle = await screen.findByRole('button', { name: 'Réduire ou agrandir le menu' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota')
+    })
+    fireEvent.click(toggle)
+    expect(document.querySelector('.shell-sidebar')?.className).toContain('is-collapsed')
   })
 })
