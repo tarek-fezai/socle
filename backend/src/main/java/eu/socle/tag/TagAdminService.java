@@ -74,14 +74,16 @@ public class TagAdminService {
                        u.display_name AS created_by_display,
                        (SELECT count(*) FROM document_tags dt
                           WHERE dt.tag_id = t.id
-                            AND NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = dt.document_id)
+                            AND %s
                        ) AS document_count,
-                       """ + GOVERNED_EXPR + """
+                       %s
                        AS governed
                   FROM tags t
                   LEFT JOIN users u ON u.id = t.created_by
                  ORDER BY lower(t.name), t.id
-                """, TAG_MAPPER);
+                """.formatted(
+                eu.socle.document.PageDocuments.exclude("dt.document_id"),
+                GOVERNED_EXPR.strip()), TAG_MAPPER);
         return new TagListResponse(tags, summaryInternal());
     }
 
@@ -245,15 +247,14 @@ public class TagAdminService {
 
     private TagAdminSummary summaryInternal() {
         Long tagCount = jdbc.queryForObject("SELECT count(*) FROM tags", Long.class);
-        Long tagged = jdbc.queryForObject("""
-                SELECT count(DISTINCT dt.document_id) FROM document_tags dt
-                 WHERE NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = dt.document_id)
-                """, Long.class);
-        Long total = jdbc.queryForObject("""
-                SELECT count(*) FROM documents d
-                 WHERE d.deleted_at IS NULL
-                   AND NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = d.id)
-                """, Long.class);
+        Long tagged = jdbc.queryForObject(
+                "SELECT count(DISTINCT dt.document_id) FROM document_tags dt WHERE "
+                        + eu.socle.document.PageDocuments.exclude("dt.document_id"),
+                Long.class);
+        Long total = jdbc.queryForObject(
+                "SELECT count(*) FROM documents d WHERE d.deleted_at IS NULL AND "
+                        + eu.socle.document.PageDocuments.exclude("d.id"),
+                Long.class);
         return new TagAdminSummary(
                 tagCount == null ? 0 : tagCount,
                 tagged == null ? 0 : tagged,
@@ -274,14 +275,16 @@ public class TagAdminService {
                        u.display_name AS created_by_display,
                        (SELECT count(*) FROM document_tags dt
                           WHERE dt.tag_id = t.id
-                            AND NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = dt.document_id)
+                            AND %s
                        ) AS document_count,
-                       """ + GOVERNED_EXPR + """
+                       %s
                        AS governed
                   FROM tags t
                   LEFT JOIN users u ON u.id = t.created_by
                  WHERE t.id = ?
-                """, TAG_MAPPER, tagId);
+                """.formatted(
+                eu.socle.document.PageDocuments.exclude("dt.document_id"),
+                GOVERNED_EXPR.strip()), TAG_MAPPER, tagId);
         if (rows.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag introuvable");
         }

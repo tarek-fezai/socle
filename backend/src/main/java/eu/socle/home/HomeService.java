@@ -128,7 +128,7 @@ public class HomeService {
                  WHERE d.deleted_at IS NULL
                    AND %s
                    AND %s
-                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.document.PageDocuments.EXCLUDE_SQL),
                 ps -> authorizationService.bindReadable(ps, 1, readable),
                 rs -> {
                     rs.next();
@@ -165,7 +165,7 @@ public class HomeService {
                    AND c.day BETWEEN ? AND ?
                    AND %s
                    AND %s
-                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.document.PageDocuments.EXCLUDE_SQL),
                 ps -> {
                     ps.setDate(1, java.sql.Date.valueOf(start));
                     ps.setDate(2, java.sql.Date.valueOf(end));
@@ -193,7 +193,7 @@ public class HomeService {
                    AND %s
                  ORDER BY d.updated_at DESC
                  LIMIT ?
-                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.document.PageDocuments.EXCLUDE_SQL),
                 ps -> {
                     ps.setObject(1, userId);
                     int idx = authorizationService.bindReadable(ps, 2, readable);
@@ -229,7 +229,7 @@ public class HomeService {
                    AND %s
                  ORDER BY d.updated_at DESC
                  LIMIT ?
-                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.document.PageDocuments.EXCLUDE_SQL),
                 ps -> {
                     int idx = authorizationService.bindReadable(ps, 1, readable);
                     ps.setInt(idx, candidateLimit);
@@ -293,7 +293,7 @@ public class HomeService {
                    AND %s
                  ORDER BY ae.created_at DESC
                  LIMIT ?
-                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.folder.FolderPages.EXCLUDE_SQL),
+                """.formatted(AuthorizationService.READABLE_PREDICATE, eu.socle.document.PageDocuments.EXCLUDE_SQL),
                 ps -> {
                     int idx = authorizationService.bindReadable(ps, 1, readable);
                     ps.setInt(idx, candidateLimit);

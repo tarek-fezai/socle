@@ -8,6 +8,7 @@ import eu.socle.document.TransclusionGraphService;
 import eu.socle.space.SpaceDtos.AddOwnerRequest;
 import eu.socle.space.SpaceDtos.CreateSpaceRequest;
 import eu.socle.space.SpaceDtos.GovernanceView;
+import eu.socle.space.SpaceDtos.SpaceDetail;
 import eu.socle.space.SpaceDtos.SpaceView;
 import eu.socle.space.SpaceDtos.UpdateSpaceRequest;
 import jakarta.validation.Valid;
@@ -33,15 +34,18 @@ import java.util.UUID;
 public class SpaceController {
 
     private final SpaceService service;
+    private final SpaceHomeService homeService;
     private final TransclusionGraphService graphService;
     private final ContentHealthService contentHealthService;
 
     public SpaceController(
             SpaceService service,
+            SpaceHomeService homeService,
             TransclusionGraphService graphService,
             ContentHealthService contentHealthService
     ) {
         this.service = service;
+        this.homeService = homeService;
         this.graphService = graphService;
         this.contentHealthService = contentHealthService;
     }
@@ -52,8 +56,8 @@ public class SpaceController {
     }
 
     @GetMapping("/{id}")
-    public SpaceView get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return service.get(jwt, id);
+    public SpaceDetail get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return homeService.get(jwt, id);
     }
 
     /**

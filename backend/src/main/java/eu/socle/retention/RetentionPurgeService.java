@@ -2,7 +2,7 @@
 package eu.socle.retention;
 
 import eu.socle.attachment.AttachmentService;
-import eu.socle.folder.FolderPages;
+import eu.socle.document.PageDocuments;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.retention.RetentionDtos.RetentionPolicy;
@@ -203,7 +203,7 @@ public class RetentionPurgeService {
                  WHERE d.status = 'archive' AND d.deleted_at IS NULL AND d.updated_at < ?
                    AND %s
                  ORDER BY d.updated_at, d.id
-                """.formatted(FolderPages.EXCLUDE_SQL), (rs, i) -> (UUID) rs.getObject("id"), cutoff);
+                """.formatted(PageDocuments.EXCLUDE_SQL), (rs, i) -> (UUID) rs.getObject("id"), cutoff);
         Set<UUID> held = legalHolds.heldDocumentIds(docIds);
         skipped.addAndGet(held.size());
         List<UUID> eligible = new ArrayList<>(docIds);
@@ -255,6 +255,7 @@ public class RetentionPurgeService {
                 rs -> rs.next() ? rs.getString(1) : null, documentId);
         jdbc.update("DELETE FROM trash_items WHERE resource_type = 'document' AND resource_id = ?", documentId);
         jdbc.update("UPDATE folders SET page_document_id = NULL WHERE page_document_id = ?", documentId);
+        jdbc.update("UPDATE spaces SET page_document_id = NULL WHERE page_document_id = ?", documentId);
         jdbc.update("DELETE FROM documents WHERE id = ?", documentId);
         if (historyPurgeService != null) {
             historyPurgeService.purgeAfterCommit(null, documentId, GitPurgeMotif.RETENTION);

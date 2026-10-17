@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.space;
 
+import eu.socle.document.DocumentDtos.TagRef;
+import eu.socle.folder.FolderDtos.FolderDocumentCard;
+import eu.socle.folder.FolderDtos.OwnerGroupRef;
+import eu.socle.folder.FolderDtos.StatusCounts;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class SpaceDtos {
@@ -152,4 +159,63 @@ public final class SpaceDtos {
     public record SetResponsibleRequest(@NotNull Boolean responsible) {}
 
     public record GovernanceView(UUID spaceId, List<OwnerView> owners) {}
+
+    /** Corps TipTap de la page. Le titre reste le nom de l'espace. */
+    public record SaveSpacePageRequest(
+            @NotNull Map<String, Object> body,
+            String changeSummary
+    ) {}
+
+    /** Qui a agi en dernier, et quand. */
+    public record LastActivity(String who, Instant at) {}
+
+    /** Dossier à la racine de l'espace. Les compteurs excluent la page de dossier. */
+    public record SpaceFolderCard(
+            UUID id,
+            String name,
+            int documentCount,
+            int inReviewCount,
+            BigDecimal reliabilityAverage
+    ) {}
+
+    /**
+     * {@code GET /spaces/{id}} pour l'écran d'accueil (E2).
+     * Les champs de catalogue restent ceux de {@link SpaceView}.
+     * Les inventaires excluent la page d'espace.
+     */
+    public record SpaceDetail(
+            UUID id,
+            String name,
+            String color,
+            String createdAt,
+            String externalReference,
+            String defaultVisibility,
+            String commentPolicy,
+            boolean canManage,
+            boolean isOwner,
+            boolean isResponsible,
+            String membership,
+            String description,
+            int documentCount,
+            List<SpaceMemberPreview> memberPreview,
+            int memberExtraCount,
+            UUID pageDocumentId,
+            boolean canEdit,
+            boolean canDelete,
+            String language,
+            /** {@code actif}. */
+            String status,
+            OwnerGroupRef owner,
+            int memberCount,
+            int teamCount,
+            /** Quatre premières initiales, ordre du nom affiché. */
+            List<SpaceMemberPreview> members,
+            LastActivity lastActivity,
+            BigDecimal reliabilityAverage,
+            StatusCounts statusCounts,
+            List<SpaceFolderCard> folders,
+            List<FolderDocumentCard> rootDocuments,
+            List<FolderDocumentCard> toReview,
+            List<TagRef> tags
+    ) {}
 }

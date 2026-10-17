@@ -108,7 +108,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SpaceView"
+                  "$ref" : "#/components/schemas/SpaceDetail"
                 }
               }
             }
@@ -144,6 +144,130 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/SpaceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spaces/{id}/page" : {
+      "get" : {
+        "tags" : [ "space-page-controller" ],
+        "operationId" : "get_2",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "space-page-controller" ],
+        "operationId" : "save",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveSpacePageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{id}/page" : {
+      "get" : {
+        "tags" : [ "space-page-controller" ],
+        "operationId" : "get_3",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "space-page-controller" ],
+        "operationId" : "save_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveSpacePageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentResponse"
                 }
               }
             }
@@ -202,7 +326,7 @@
     "/api/v1/siem-connectors/{id}" : {
       "get" : {
         "tags" : [ "siem-connector-controller" ],
-        "operationId" : "get_2",
+        "operationId" : "get_4",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -319,7 +443,7 @@
     "/api/v1/groups/{id}" : {
       "get" : {
         "tags" : [ "group-controller" ],
-        "operationId" : "get_3",
+        "operationId" : "get_5",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -477,7 +601,7 @@
     "/api/v1/folders/{id}/page" : {
       "get" : {
         "tags" : [ "folder-page-controller" ],
-        "operationId" : "get_4",
+        "operationId" : "get_6",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -502,7 +626,7 @@
       },
       "put" : {
         "tags" : [ "folder-page-controller" ],
-        "operationId" : "save",
+        "operationId" : "save_2",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -539,7 +663,7 @@
     "/api/folders/{id}/page" : {
       "get" : {
         "tags" : [ "folder-page-controller" ],
-        "operationId" : "get_5",
+        "operationId" : "get_7",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -564,7 +688,7 @@
       },
       "put" : {
         "tags" : [ "folder-page-controller" ],
-        "operationId" : "save_1",
+        "operationId" : "save_3",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -734,7 +858,7 @@
     "/api/v1/documents/{id}/feedback" : {
       "get" : {
         "tags" : [ "feedback-controller" ],
-        "operationId" : "get_6",
+        "operationId" : "get_8",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -796,7 +920,7 @@
     "/api/documents/{id}/draft" : {
       "get" : {
         "tags" : [ "document-draft-controller" ],
-        "operationId" : "get_7",
+        "operationId" : "get_9",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -876,7 +1000,7 @@
     "/api/v1/documents/{id}/draft" : {
       "get" : {
         "tags" : [ "document-draft-controller" ],
-        "operationId" : "get_8",
+        "operationId" : "get_10",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -1001,7 +1125,7 @@
     "/api/v1/documents/{id}" : {
       "get" : {
         "tags" : [ "document-controller" ],
-        "operationId" : "get_9",
+        "operationId" : "get_11",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -1089,7 +1213,7 @@
     "/api/documents/{id}" : {
       "get" : {
         "tags" : [ "document-controller" ],
-        "operationId" : "get_10",
+        "operationId" : "get_12",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -1177,7 +1301,7 @@
     "/api/v1/approval-workflows/{id}" : {
       "get" : {
         "tags" : [ "approval-workflow-definition-controller" ],
-        "operationId" : "get_11",
+        "operationId" : "get_13",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -1322,7 +1446,7 @@
     "/api/v1/admin/retention" : {
       "get" : {
         "tags" : [ "retention-admin-controller" ],
-        "operationId" : "get_12",
+        "operationId" : "get_14",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -1428,7 +1552,7 @@
     "/api/v1/admin/branding" : {
       "get" : {
         "tags" : [ "branding-admin-controller" ],
-        "operationId" : "get_13",
+        "operationId" : "get_15",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -4248,7 +4372,7 @@
     "/api/v1/templates/{id}" : {
       "get" : {
         "tags" : [ "template-controller" ],
-        "operationId" : "get_14",
+        "operationId" : "get_16",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -4328,7 +4452,7 @@
     "/api/v1/folders/{id}" : {
       "get" : {
         "tags" : [ "folder-controller" ],
-        "operationId" : "get_15",
+        "operationId" : "get_17",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -4416,7 +4540,7 @@
     "/api/folders/{id}" : {
       "get" : {
         "tags" : [ "folder-controller" ],
-        "operationId" : "get_16",
+        "operationId" : "get_18",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -4894,6 +5018,78 @@
         }
       }
     },
+    "/api/v1/spaces/{id}/export" : {
+      "get" : {
+        "tags" : [ "export-controller" ],
+        "operationId" : "exportSpace",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "format",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "zip"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "byte"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spaces/{id}/export" : {
+      "get" : {
+        "tags" : [ "export-controller" ],
+        "operationId" : "exportSpace_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "format",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "zip"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "byte"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/spaces/{id}/content-health" : {
       "get" : {
         "tags" : [ "space-controller" ],
@@ -4981,7 +5177,7 @@
     "/api/v1/public/branding" : {
       "get" : {
         "tags" : [ "public-branding-controller" ],
-        "operationId" : "get_17",
+        "operationId" : "get_19",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -5072,7 +5268,7 @@
     "/api/v1/polls/{id}" : {
       "get" : {
         "tags" : [ "poll-controller" ],
-        "operationId" : "get_18",
+        "operationId" : "get_20",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6205,7 +6401,7 @@
     "/api/v1/attachments/{id}" : {
       "get" : {
         "tags" : [ "attachment-controller" ],
-        "operationId" : "get_19",
+        "operationId" : "get_21",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6240,7 +6436,7 @@
     "/api/v1/approvals/{requestId}" : {
       "get" : {
         "tags" : [ "approval-controller" ],
-        "operationId" : "get_20",
+        "operationId" : "get_22",
         "parameters" : [ {
           "name" : "requestId",
           "in" : "path",
@@ -6406,7 +6602,7 @@
     "/api/v1/admin/licence" : {
       "get" : {
         "tags" : [ "licence-admin-controller" ],
-        "operationId" : "get_21",
+        "operationId" : "get_23",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -6892,6 +7088,165 @@
           }
         }
       },
+      "SaveSpacePageRequest" : {
+        "type" : "object",
+        "properties" : {
+          "body" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "changeSummary" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "body" ]
+      },
+      "DocumentPermissions" : {
+        "type" : "object",
+        "properties" : {
+          "canEdit" : {
+            "type" : "boolean"
+          },
+          "canPublish" : {
+            "type" : "boolean"
+          },
+          "canManageAccess" : {
+            "type" : "boolean"
+          },
+          "canComment" : {
+            "type" : "boolean"
+          },
+          "canManageAttestations" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "DocumentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "spaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "folderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "docType" : {
+            "type" : "string"
+          },
+          "body" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "currentVersionNo" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "reliabilityScore" : {
+            "type" : "number"
+          },
+          "reliabilityComputedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "stale" : {
+            "type" : "boolean"
+          },
+          "contentModifiedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "stalenessThresholdDays" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "visibility" : {
+            "type" : "string"
+          },
+          "position" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "templateId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "templateVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "createdBy" : {
+            "$ref" : "#/components/schemas/PersonRef"
+          },
+          "updatedBy" : {
+            "$ref" : "#/components/schemas/PersonRef"
+          },
+          "owner" : {
+            "$ref" : "#/components/schemas/PersonRef"
+          },
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagRef"
+            }
+          },
+          "permissions" : {
+            "$ref" : "#/components/schemas/DocumentPermissions"
+          }
+        }
+      },
+      "PersonRef" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "initials" : {
+            "type" : "string"
+          }
+        }
+      },
+      "TagRef" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "color" : {
+            "type" : "string"
+          },
+          "governed" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "GovernanceView" : {
         "type" : "object",
         "properties" : {
@@ -7097,152 +7452,6 @@
           }
         },
         "required" : [ "body" ]
-      },
-      "DocumentPermissions" : {
-        "type" : "object",
-        "properties" : {
-          "canEdit" : {
-            "type" : "boolean"
-          },
-          "canPublish" : {
-            "type" : "boolean"
-          },
-          "canManageAccess" : {
-            "type" : "boolean"
-          },
-          "canComment" : {
-            "type" : "boolean"
-          },
-          "canManageAttestations" : {
-            "type" : "boolean"
-          }
-        }
-      },
-      "DocumentResponse" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "spaceId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "folderId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "title" : {
-            "type" : "string"
-          },
-          "docType" : {
-            "type" : "string"
-          },
-          "body" : {
-            "type" : "object",
-            "additionalProperties" : { }
-          },
-          "status" : {
-            "type" : "string"
-          },
-          "currentVersionNo" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "createdAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "updatedAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "reliabilityScore" : {
-            "type" : "number"
-          },
-          "reliabilityComputedAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "stale" : {
-            "type" : "boolean"
-          },
-          "contentModifiedAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "stalenessThresholdDays" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "visibility" : {
-            "type" : "string"
-          },
-          "position" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "templateId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "templateVersion" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "createdBy" : {
-            "$ref" : "#/components/schemas/PersonRef"
-          },
-          "updatedBy" : {
-            "$ref" : "#/components/schemas/PersonRef"
-          },
-          "owner" : {
-            "$ref" : "#/components/schemas/PersonRef"
-          },
-          "tags" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/TagRef"
-            }
-          },
-          "permissions" : {
-            "$ref" : "#/components/schemas/DocumentPermissions"
-          }
-        }
-      },
-      "PersonRef" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "displayName" : {
-            "type" : "string"
-          },
-          "initials" : {
-            "type" : "string"
-          }
-        }
-      },
-      "TagRef" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "name" : {
-            "type" : "string"
-          },
-          "color" : {
-            "type" : "string"
-          },
-          "governed" : {
-            "type" : "boolean"
-          }
-        }
       },
       "FavoriteItem" : {
         "type" : "object",
@@ -9577,6 +9786,163 @@
             "items" : {
               "$ref" : "#/components/schemas/CreationWarning"
             }
+          }
+        }
+      },
+      "LastActivity" : {
+        "type" : "object",
+        "properties" : {
+          "who" : {
+            "type" : "string"
+          },
+          "at" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "SpaceDetail" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "color" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string"
+          },
+          "externalReference" : {
+            "type" : "string"
+          },
+          "defaultVisibility" : {
+            "type" : "string"
+          },
+          "commentPolicy" : {
+            "type" : "string"
+          },
+          "canManage" : {
+            "type" : "boolean"
+          },
+          "isOwner" : {
+            "type" : "boolean"
+          },
+          "isResponsible" : {
+            "type" : "boolean"
+          },
+          "membership" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "documentCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "memberPreview" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SpaceMemberPreview"
+            }
+          },
+          "memberExtraCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pageDocumentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "canEdit" : {
+            "type" : "boolean"
+          },
+          "canDelete" : {
+            "type" : "boolean"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "owner" : {
+            "$ref" : "#/components/schemas/OwnerGroupRef"
+          },
+          "memberCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "teamCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "members" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SpaceMemberPreview"
+            }
+          },
+          "lastActivity" : {
+            "$ref" : "#/components/schemas/LastActivity"
+          },
+          "reliabilityAverage" : {
+            "type" : "number"
+          },
+          "statusCounts" : {
+            "$ref" : "#/components/schemas/StatusCounts"
+          },
+          "folders" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SpaceFolderCard"
+            }
+          },
+          "rootDocuments" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FolderDocumentCard"
+            }
+          },
+          "toReview" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FolderDocumentCard"
+            }
+          },
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagRef"
+            }
+          }
+        }
+      },
+      "SpaceFolderCard" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "documentCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "inReviewCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "reliabilityAverage" : {
+            "type" : "number"
           }
         }
       },

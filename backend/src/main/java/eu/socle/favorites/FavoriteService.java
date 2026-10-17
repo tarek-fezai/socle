@@ -105,7 +105,11 @@ public class FavoriteService {
         }
 
         Set<UUID> pageDocumentIds = new HashSet<>(jdbc.query(
-                "SELECT page_document_id FROM folders WHERE page_document_id IS NOT NULL",
+                """
+                SELECT page_document_id FROM folders WHERE page_document_id IS NOT NULL
+                UNION
+                SELECT page_document_id FROM spaces WHERE page_document_id IS NOT NULL
+                """,
                 (rs, i) -> (UUID) rs.getObject(1)));
         Set<UUID> okDocs = new HashSet<>(authorizationService.filterByDocumentViewer(
                 user.getId(), byType.getOrDefault("document", List.of()), "favorites"));
@@ -287,7 +291,7 @@ public class FavoriteService {
         Map<UUID, UUID> docToSpace = new HashMap<>();
         jdbc.query(
                 ("SELECT d.id, d.space_id FROM documents d WHERE d.deleted_at IS NULL AND d.space_id IN (%s)"
-                        + " AND " + eu.socle.folder.FolderPages.EXCLUDE_SQL)
+                        + " AND " + eu.socle.document.PageDocuments.EXCLUDE_SQL)
                         .formatted(placeholders),
                 rs -> {
                     while (rs.next()) {

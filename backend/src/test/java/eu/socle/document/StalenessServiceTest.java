@@ -158,7 +158,7 @@ class StalenessServiceTest {
                 .thenReturn(List.of(DOC_OLD, DOC_FRESH));
         when(documentRepository.findActiveBySpaceId(SPACE)).thenReturn(List.of(page, sibling));
         when(jdbc.query(org.mockito.ArgumentMatchers.contains("page_document_id"),
-                org.mockito.ArgumentMatchers.any(RowMapper.class), eq(SPACE)))
+                org.mockito.ArgumentMatchers.any(RowMapper.class), eq(SPACE), eq(SPACE)))
                 .thenReturn(List.of(DOC_OLD));
         when(versionRepository.findByDocumentIdOrderByVersionNoDesc(any(), any()))
                 .thenAnswer(inv -> org.springframework.data.domain.Page.empty(inv.getArgument(1)));

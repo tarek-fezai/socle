@@ -15,8 +15,9 @@ la lecture normale.
 | Bloc transclus interdit | Libellé **« Contenu non accessible »** (jamais omis, jamais le contenu) | Aligné vue web (`CompositePage`). |
 | Format V1 | **PDF** synchrone (OpenPDF) | Maquettes prévoient aussi Word — hors scope V1. |
 | ZIP dossier | `GET /folders/{id}/export?format=zip` | La page de dossier est `_dossier.md` à la racine. Le PDF fusionné reste le défaut. |
+| ZIP espace | `GET /spaces/{id}/export?format=zip` | La page d'espace est `_espace.md` à la racine. |
 | Job async `folder_exports` | **Non utilisé** pour V1 | Génération à la demande ; table schéma inchangée pour une évolution future. |
-| Audit | **Oui** — `document.exported` / `folder.exported` / `tag.exported` | Un export est un vecteur de fuite a posteriori ; traçabilité cohérente Spaces/Groupes. |
+| Audit | **Oui** — `document.exported` / `folder.exported` / `space.exported` / `tag.exported` | Un export est un vecteur de fuite a posteriori ; traçabilité cohérente Spaces/Groupes. |
 | RGPD `ExportPersonalData` | **Hors scope** | Sujet distinct (données personnelles de l'utilisateur). |
 
 ## API
@@ -25,6 +26,7 @@ la lecture normale.
 |----------|------|
 | `GET /api/v1/documents/{id}/export` | PDF du document (body résolu) |
 | `GET /api/v1/folders/{id}/export` | PDF fusionné des docs **lisibles** du dossier (+ sous-dossiers) |
+| `GET /api/v1/spaces/{id}/export?format=zip` | ZIP de l'espace ; la page est `_espace.md` à la racine |
 | `GET /api/v1/tags/{id}/export` | PDF fusionné des docs **lisibles** portant le tag |
 
 Réponse : `Content-Disposition: attachment`, `Cache-Control: no-store`.

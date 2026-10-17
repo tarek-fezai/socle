@@ -95,7 +95,8 @@ class SpaceServiceTest {
                   default_visibility TEXT NOT NULL DEFAULT 'organisation',
                   comment_policy TEXT NOT NULL DEFAULT 'members',
                   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                  deleted_at TIMESTAMPTZ
+                  deleted_at TIMESTAMPTZ,
+                  page_document_id UUID
                 )
                 """);
         jdbc.execute("""

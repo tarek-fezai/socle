@@ -168,10 +168,12 @@ public class SearchService {
                 SELECT d.id, d.title, d.space_id, s.name AS space_name, d.doc_type, d.status,
                        d.updated_at,
                        ts_rank(d.search_vector, plainto_tsquery('french', ?)) AS rank,
-                       fp.id AS page_folder_id, fp.name AS page_folder_name
+                       fp.id AS page_folder_id, fp.name AS page_folder_name,
+                       sp.id AS page_space_id, sp.name AS page_space_name
                   FROM documents d
                   JOIN spaces s ON s.id = d.space_id AND s.deleted_at IS NULL
                   LEFT JOIN folders fp ON fp.page_document_id = d.id
+                  LEFT JOIN spaces sp ON sp.page_document_id = d.id
                  WHERE d.deleted_at IS NULL
                    AND %s
                    AND d.search_vector @@ plainto_tsquery('french', ?)
@@ -203,7 +205,9 @@ public class SearchService {
                 toInstant(rs.getTimestamp("updated_at")),
                 rs.getDouble("rank"),
                 (UUID) rs.getObject("page_folder_id"),
-                rs.getString("page_folder_name")
+                rs.getString("page_folder_name"),
+                (UUID) rs.getObject("page_space_id"),
+                rs.getString("page_space_name")
         ));
     }
 
@@ -268,8 +272,11 @@ public class SearchService {
 
         List<SearchHit> hits = new ArrayList<>(accepted.size());
         for (Candidate c : accepted) {
-            boolean page = c.pageFolderId() != null;
-            String title = page ? "Dossier — " + c.pageFolderName() : c.title();
+            boolean folderPage = c.pageFolderId() != null;
+            boolean spacePage = !folderPage && c.pageSpaceId() != null;
+            String title = folderPage
+                    ? "Dossier — " + c.pageFolderName()
+                    : spacePage ? "Espace — " + c.pageSpaceName() : c.title();
             hits.add(new SearchHit(
                     c.id(),
                     title,
@@ -282,7 +289,7 @@ public class SearchService {
                     c.rank(),
                     tags.getOrDefault(c.id(), List.of()),
                     favoriteIds.contains(c.id()),
-                    page ? c.pageFolderId() : null));
+                    folderPage ? c.pageFolderId() : null));
         }
         return hits;
     }
@@ -368,6 +375,8 @@ public class SearchService {
             Instant updatedAt,
             double rank,
             UUID pageFolderId,
-            String pageFolderName
+            String pageFolderName,
+            UUID pageSpaceId,
+            String pageSpaceName
     ) {}
 }

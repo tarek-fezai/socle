@@ -9,11 +9,10 @@ import java.util.UUID;
 public final class FolderPages {
 
     /**
-     * À conjuguer avec l'alias {@code d} de {@code documents}.
-     * La page reste en base et en recherche ; elle sort des listes de documents.
+     * Exclusion commune (pages de dossier et pages d'espace).
+     * Préférer {@link eu.socle.document.PageDocuments#EXCLUDE_SQL}.
      */
-    public static final String EXCLUDE_SQL =
-            "NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = d.id)";
+    public static final String EXCLUDE_SQL = eu.socle.document.PageDocuments.EXCLUDE_SQL;
 
     private FolderPages() {}
 

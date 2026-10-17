@@ -64,6 +64,9 @@ public final class ApiErrors {
     /** La page de dossier ne se déplace, ne se supprime ni ne se restaure seule. */
     public static final String FOLDER_PAGE_LOCKED = "folder_page_locked";
     public static final String FOLDER_PAGE_TITLE_LOCKED = "folder_page_title_locked";
+    /** La page d'espace ne se déplace, ne se supprime ni ne se restaure seule. */
+    public static final String SPACE_PAGE_LOCKED = "space_page_locked";
+    public static final String SPACE_PAGE_TITLE_LOCKED = "space_page_title_locked";
     /** Route interdite à l'authentification par jeton d'accès personnel. */
     public static final String PAT_NOT_ALLOWED = "pat_not_allowed";
     /** Jeton {@code read} : méthodes GET / HEAD / OPTIONS uniquement. */
@@ -330,6 +333,20 @@ public final class ApiErrors {
                 HttpStatus.CONFLICT,
                 FOLDER_PAGE_TITLE_LOCKED,
                 "Le titre de la page de dossier est le nom du dossier");
+    }
+
+    public static CodedStatusException spacePageLocked() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                SPACE_PAGE_LOCKED,
+                "La page d'espace suit l'espace : elle ne peut pas être déplacée, supprimée ou restaurée seule");
+    }
+
+    public static CodedStatusException spacePageTitleLocked() {
+        return new CodedStatusException(
+                HttpStatus.CONFLICT,
+                SPACE_PAGE_TITLE_LOCKED,
+                "Le titre de la page d'espace est le nom de l'espace");
     }
 
     public static CodedStatusException gitPurgeFailed(UUID documentId) {
