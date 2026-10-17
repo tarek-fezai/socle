@@ -165,7 +165,7 @@ export function DocumentReadPage() {
   const crumbs = useMemo<Crumb[]>(() => {
     const items: Crumb[] = []
     if (doc.data) {
-      items.push({ label: spaceName || 'Espace', to: `/spaces/${doc.data.spaceId}/tree` })
+      items.push({ label: spaceName || 'Espace', to: `/spaces/${doc.data.spaceId}` })
       for (const f of folderPath(tree.data?.folders ?? [], folderId)) {
         items.push({ label: f.name, to: `/folders/${f.id}` })
       }

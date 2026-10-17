@@ -303,6 +303,16 @@ a.doc-crumb:hover {
   color: #0e0e10;
 }
 
+.doc-tab:disabled {
+  opacity: 1;
+  color: #9b9ba1;
+  cursor: default;
+}
+
+.doc-tab:disabled:hover {
+  color: #9b9ba1;
+}
+
 .doc-tab.is-active {
   font-weight: 600;
   color: #0e0e10;

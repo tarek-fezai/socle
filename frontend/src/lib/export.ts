@@ -34,6 +34,26 @@ export async function downloadExport(
   URL.revokeObjectURL(url)
 }
 
+/** ZIP de l'espace : GET /spaces/{id}/export?format=zip. */
+export async function downloadSpaceZip(
+  api: AxiosInstance,
+  id: string,
+  fallbackFilename: string,
+): Promise<void> {
+  const { data, headers } = await api.get<Blob>(`/api/v1/spaces/${id}/export`, {
+    params: { format: 'zip' },
+    responseType: 'blob',
+  })
+  const fromHeader = filenameFromContentDisposition(headers['content-disposition'])
+  const filename = fromHeader || fallbackFilename
+  const url = URL.createObjectURL(data)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function filenameFromContentDisposition(header: string | undefined): string | null {
   if (!header) return null
   const utf = /filename\*=UTF-8''([^;]+)/i.exec(header)

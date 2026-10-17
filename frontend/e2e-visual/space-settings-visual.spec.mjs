@@ -117,7 +117,7 @@ test.describe('space-settings visual', () => {
       })
     }
 
-    await page.goto(`/spaces/${SPACE_IDENTITE.id}`)
+    await page.goto(`/spaces/${SPACE_IDENTITE.id}/settings`)
     await page.waitForSelector('[data-mock-id="settings-title"]')
     await page.mouse.move(1, 1)
     await settleFonts(page)

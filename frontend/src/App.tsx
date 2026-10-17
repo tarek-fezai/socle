@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import { RequireAuth } from './auth/RequireAuth'
 import { AppShellLayout } from './components/shell/AppShell'
@@ -26,7 +26,7 @@ import { WorkflowsPage } from './pages/WorkflowsPage'
 import { ApprovalRolesPage } from './pages/ApprovalRolesPage'
 import { SpacesPage } from './pages/SpacesPage'
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage'
-import { SpaceBrowsePage } from './pages/SpaceBrowsePage'
+import { SpaceHomePage } from './pages/SpaceHomePage'
 import { FolderPage } from './pages/FolderPage'
 import { TeamPage } from './pages/TeamPage'
 import { TeamAdminPage } from './pages/TeamAdminPage'
@@ -45,6 +45,11 @@ import { AccountPage } from './pages/account/AccountPage'
 import { AdminHomePage } from './pages/admin/AdminHomePage'
 import { RequirePlatformAdmin } from './auth/RequirePlatformAdmin'
 import { AcceptInvitationPage } from './pages/AcceptInvitationPage'
+
+function SpaceTreeRedirect() {
+  const { spaceId = '' } = useParams()
+  return <Navigate to={`/spaces/${spaceId}`} replace />
+}
 
 function ProtectedShell() {
   return (
@@ -101,8 +106,9 @@ export default function App() {
           <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/integrations/webhooks/deliveries" element={<WebhookDeliveriesPage />} />
           <Route path="/spaces" element={<SpacesPage />} />
-          <Route path="/spaces/:spaceId" element={<SpaceSettingsPage />} />
-          <Route path="/spaces/:spaceId/tree" element={<SpaceBrowsePage />} />
+          <Route path="/spaces/:spaceId" element={<SpaceHomePage />} />
+          <Route path="/spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
+          <Route path="/spaces/:spaceId/tree" element={<SpaceTreeRedirect />} />
           <Route path="/folders/:id" element={<FolderPage />} />
           <Route path="/spaces/:spaceId/graph" element={<GraphPage />} />
           <Route path="/spaces/:spaceId/content-health" element={<ContentHealthPage />} />

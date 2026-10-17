@@ -62,6 +62,7 @@ import {
   TRASH_SEED,
 } from './parity-screens-fixtures.mjs'
 import { TEAM_ADMIN_USERS } from './team-fixtures.mjs'
+import { SPACE_HOME_DETAIL, SPACE_HOME_PAGE } from './space-home-fixtures.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const openapi = JSON.parse(readFileSync(resolve(root, 'openapi/openapi.json'), 'utf8'))
@@ -382,6 +383,16 @@ describe('e2e-visual fixtures ↔ OpenAPI', () => {
 
     it('FOLDER_PROCEDURES matches FolderView', () => {
       validate('FolderView', FOLDER_PROCEDURES)
+    })
+  })
+
+  describe('accueil d’espace', () => {
+    it('SPACE_HOME_DETAIL matches SpaceDetail', () => {
+      validate('SpaceDetail', SPACE_HOME_DETAIL)
+    })
+
+    it('SPACE_HOME_PAGE matches DocumentResponse', () => {
+      validate('DocumentResponse', SPACE_HOME_PAGE)
     })
   })
 })

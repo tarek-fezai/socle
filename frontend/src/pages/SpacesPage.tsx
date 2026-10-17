@@ -319,7 +319,7 @@ export function SpacesPage() {
               data-mock-id={`spaces-card-${i}-name`}
             >
               <Link
-                to={`/spaces/${s.id}/tree`}
+                to={`/spaces/${s.id}`}
                 className="after:absolute after:inset-0 after:rounded-[14px]"
               >
                 {s.name}

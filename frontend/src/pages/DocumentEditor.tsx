@@ -35,6 +35,8 @@ type Props = {
    * l'envoi est indisponible : boutons inactifs, glisser-déposer et collage ignorés.
    */
   documentId?: string
+  /** `data-mock-id` du corps en lecture (défaut `fp-body`, page de dossier). */
+  bodyMockId?: string
 }
 
 export function DocumentEditor({
@@ -48,6 +50,7 @@ export function DocumentEditor({
   onEditorReady,
   hidden = false,
   documentId,
+  bodyMockId,
 }: Props) {
   const [hint, setHint] = useState('')
   const lastEmitted = useRef<Record<string, unknown> | null>(null)
@@ -80,7 +83,7 @@ export function DocumentEditor({
           ? {
               'aria-label': 'Contenu du document',
               'data-testid': 'edit-prosemirror',
-              ...(chrome === 'full' ? {} : { 'data-mock-id': 'fp-body' }),
+              ...(chrome === 'full' ? {} : { 'data-mock-id': bodyMockId ?? 'fp-body' }),
             }
           : {}),
       },
