@@ -281,6 +281,10 @@ export type DocTabsProps = {
   onSelectTab?: (tab: 'read' | 'edit' | 'history') => void
   /** Lien Accès quand il ne pointe pas vers le document. */
   accessTo?: string
+  /** Pas de page encore : Historique ne navigue pas. */
+  historyDisabled?: boolean
+  /** Pas de page encore : Commentaires ne s'ouvrent pas. */
+  commentsDisabled?: boolean
 }
 
 export function DocumentTabs({
@@ -295,6 +299,8 @@ export function DocumentTabs({
   onToggleComments,
   onSelectTab,
   accessTo,
+  historyDisabled = false,
+  commentsDisabled = false,
 }: DocTabsProps) {
   const stay = (tab: 'read' | 'edit' | 'history') => (e: { preventDefault: () => void }) => {
     e.preventDefault()
@@ -349,7 +355,11 @@ export function DocumentTabs({
             Modifier
           </Link>
         ))}
-      {onSelectTab ? (
+      {historyDisabled ? (
+        <button type="button" role="tab" className="doc-tab" disabled aria-disabled="true">
+          Historique
+        </button>
+      ) : onSelectTab ? (
         <a
           href="#historique"
           role="tab"
@@ -377,6 +387,8 @@ export function DocumentTabs({
         aria-selected={commentsOpen}
         className={`doc-tab${commentsOpen ? ' is-open' : ''}`}
         onClick={onToggleComments}
+        disabled={commentsDisabled}
+        aria-disabled={commentsDisabled || undefined}
         data-testid="toggle-comments"
       >
         Commentaires

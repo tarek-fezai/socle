@@ -23,7 +23,7 @@ export function useDocumentCrumbs(doc: Pick<DocumentDetail, 'id' | 'spaceId' | '
   const spaceName = space.data?.name ?? tree.data?.spaceName ?? ''
   const folderId = doc.folderId ?? tree.data?.documents.find((d) => d.id === doc.id)?.folderId ?? null
   const crumbs = useMemo<Crumb[]>(() => {
-    const items: Crumb[] = [{ label: spaceName || 'Espace', to: `/spaces/${spaceId}/tree` }]
+    const items: Crumb[] = [{ label: spaceName || 'Espace', to: `/spaces/${spaceId}` }]
     for (const f of folderPath(tree.data?.folders ?? [], folderId)) {
       items.push({ label: f.name, to: `/folders/${f.id}` })
     }

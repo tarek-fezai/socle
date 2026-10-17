@@ -196,7 +196,7 @@ describe('buildBreadcrumb', () => {
       'Référence',
       'Rôles',
     ])
-    expect(items[2].to).toBe('/spaces/s1/tree')
+    expect(items[2].to).toBe('/spaces/s1')
     expect(items[3].to).toBe('/folders/a')
     expect(items[4].to).toBeUndefined()
   })
@@ -215,6 +215,6 @@ describe('buildBreadcrumb', () => {
       'Identité & accès',
       'Politique',
     ])
-    expect(items[2].to).toBe('/spaces/s1/tree')
+    expect(items[2].to).toBe('/spaces/s1')
   })
 })

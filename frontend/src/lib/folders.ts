@@ -243,8 +243,9 @@ export function documentEditHref(id: string) {
   return `/docs/${id}/edit`
 }
 
+/** Accueil de l'espace. `/spaces/:id/tree` redirige ici. */
 export function spaceBrowseHref(spaceId: string) {
-  return `/spaces/${spaceId}/tree`
+  return `/spaces/${spaceId}`
 }
 
 function byPositionThenLabel<T>(label: (t: T) => string, position: (t: T) => number) {

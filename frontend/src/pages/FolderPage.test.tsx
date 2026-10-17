@@ -186,7 +186,7 @@ describe('FolderPage', () => {
 
     const crumbs = screen.getByRole('navigation', { name: "Fil d'Ariane" })
     const spaceLink = await within(crumbs).findByRole('link', { name: 'Identité & accès' })
-    expect(spaceLink.getAttribute('href')).toBe('/spaces/s1/tree')
+    expect(spaceLink.getAttribute('href')).toBe('/spaces/s1')
     expect(within(crumbs).getByText('Procédures').getAttribute('aria-current')).toBe('page')
 
     expect(screen.queryByText('Revues')).toBeNull()

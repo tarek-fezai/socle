@@ -120,7 +120,7 @@ describe('SpacesPage', () => {
     ])
     render(wrap(<SpacesPage />))
     const link = await screen.findByRole('link', { name: 'Conformité' })
-    expect(link.getAttribute('href')).toBe('/spaces/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/tree')
+    expect(link.getAttribute('href')).toBe('/spaces/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
     expect(screen.getByText('RGPD, audits, registres réglementaires')).toBeTruthy()
     expect(screen.getByText('YM')).toBeTruthy()
     expect(screen.getByText('+3')).toBeTruthy()

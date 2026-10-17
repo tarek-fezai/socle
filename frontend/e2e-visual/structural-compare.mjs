@@ -396,7 +396,7 @@ export async function annotateDashboardMockup(page) {
         (a.textContent || '').includes('Membres'),
       )
       if (team) team.setAttribute('data-mock-id', 'shell-nav-team')
-      const section = Array.from(sidebar.querySelectorAll('div')).find((d) => {
+      const section = Array.from(sidebar.querySelectorAll('a, div')).find((d) => {
         const t = (d.textContent || '').trim()
         return d.children.length === 0 && t.startsWith('Identité')
       })
@@ -456,7 +456,7 @@ export async function annotateDashboardMockup(page) {
       }
     }
     if (sidebar) {
-      const spaceTitle = [...sidebar.querySelectorAll('div')].find((d) => {
+      const spaceTitle = [...sidebar.querySelectorAll('a, div')].find((d) => {
         const t = (d.textContent || '').trim()
         return d.children.length === 0 && t.startsWith('Identité')
       })

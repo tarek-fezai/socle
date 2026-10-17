@@ -175,7 +175,7 @@ export function SpaceSettingsPage() {
             + Nouveau document
           </Link>
           <Link
-            to={`/spaces/${spaceId}/tree`}
+            to={`/spaces/${spaceId}`}
             className="rounded-md px-2 py-2 text-[13px] font-semibold text-socle-accent hover:bg-[#F5F5F7]"
           >
             + Nouveau dossier
@@ -396,7 +396,7 @@ export function SpaceSettingsPage() {
       )}
 
       <div className="mt-4 flex flex-wrap gap-3 text-sm">
-        <Link to={`/spaces/${spaceId}/tree`} className="font-semibold text-socle-accent hover:underline">
+        <Link to={`/spaces/${spaceId}`} className="font-semibold text-socle-accent hover:underline">
           Parcourir l&apos;arborescence →
         </Link>
         <Link to={`/spaces/${spaceId}/graph`} className="font-semibold text-socle-accent hover:underline">

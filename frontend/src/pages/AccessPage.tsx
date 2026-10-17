@@ -448,7 +448,7 @@ function DocumentAccessChrome({
     retry: false,
   })
   const crumbs = [
-    { label: space.data?.name?.trim() || 'Espace', to: doc.data?.spaceId ? `/spaces/${doc.data.spaceId}/tree` : undefined },
+    { label: space.data?.name?.trim() || 'Espace', to: doc.data?.spaceId ? `/spaces/${doc.data.spaceId}` : undefined },
     { label: doc.data?.title?.trim() || 'Document' },
   ]
 

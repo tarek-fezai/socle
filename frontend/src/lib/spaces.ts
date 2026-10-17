@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 import type { AxiosInstance } from 'axios'
+import type { DocumentDetail, TagRef } from './documents'
+import type { FolderDocumentCard, OwnerGroupRef, StatusCounts } from './folders'
 
 export type Space = {
   id: string
@@ -23,6 +25,40 @@ export type Space = {
   memberExtraCount?: number
 }
 
+/** Dossier à la racine, tel que renvoyé par GET /spaces/{id}. */
+export type SpaceFolderCard = {
+  id: string
+  name: string
+  documentCount: number
+  inReviewCount: number
+  reliabilityAverage?: number | string | null
+}
+
+/**
+ * GET /spaces/{id} enrichi (E1) pour l'accueil.
+ * Les champs au-delà de {@link Space} sont absents de la liste.
+ */
+export type SpaceDetail = Space & {
+  pageDocumentId?: string | null
+  canEdit?: boolean
+  canDelete?: boolean
+  language?: string | null
+  /** `actif`. */
+  status?: string | null
+  owner?: OwnerGroupRef | null
+  memberCount?: number
+  teamCount?: number
+  /** Quatre premières initiales. */
+  members?: Array<{ initials: string }>
+  lastActivity?: { who?: string | null; at?: string | null } | null
+  reliabilityAverage?: number | string | null
+  statusCounts?: StatusCounts | null
+  folders?: SpaceFolderCard[]
+  rootDocuments?: FolderDocumentCard[]
+  toReview?: FolderDocumentCard[]
+  tags?: TagRef[]
+}
+
 export type SpaceOwner = {
   userId: string
   email: string
@@ -36,7 +72,29 @@ export async function listSpaces(api: AxiosInstance) {
 }
 
 export async function getSpace(api: AxiosInstance, id: string) {
-  const { data } = await api.get<Space>(`/api/v1/spaces/${id}`)
+  const { data } = await api.get<SpaceDetail>(`/api/v1/spaces/${id}`)
+  return data
+}
+
+/** `null` tant que la page d'accueil n'a pas été écrite (204). */
+export async function getSpacePage(api: AxiosInstance, id: string): Promise<DocumentDetail | null> {
+  const res = await api.get<DocumentDetail | ''>(`/api/v1/spaces/${id}/page`, {
+    validateStatus: (status) => status === 200 || status === 204,
+  })
+  if (res.status === 204 || res.data == null || res.data === '') return null
+  return res.data
+}
+
+export async function saveSpacePage(
+  api: AxiosInstance,
+  id: string,
+  body: Record<string, unknown>,
+  changeSummary?: string,
+) {
+  const { data } = await api.put<DocumentDetail>(`/api/v1/spaces/${id}/page`, {
+    body,
+    ...(changeSummary ? { changeSummary } : {}),
+  })
   return data
 }
 
