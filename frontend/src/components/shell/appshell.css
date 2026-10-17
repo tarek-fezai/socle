@@ -96,7 +96,7 @@ html[data-socle-reduce-motion='true'] .shell-sidebar {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  padding: 0;
+  padding: 1px 6px;
   margin: 0;
   color: #6b6b72;
   line-height: 0;
@@ -185,7 +185,6 @@ html[data-socle-reduce-motion='true'] .shell-sidebar {
   align-items: center;
   gap: 9px;
   flex: 0 1 auto;
-  padding: 0 2px;
   color: #0e0e10;
   text-decoration: none;
 }
