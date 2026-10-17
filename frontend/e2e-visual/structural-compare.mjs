@@ -379,14 +379,7 @@ export async function annotateDashboardMockup(page) {
       const logoName = Array.from(sidebar.querySelectorAll('div')).find(
         (d) => (d.textContent || '').trim() === 'Socle' && d.children.length === 0,
       )
-      if (logoName?.parentElement) {
-        const logo = logoName.parentElement
-        logo.setAttribute('data-mock-id', 'shell-logo')
-        // Dashboard.dc.html n'a pas de bouton de repli : le lien est étiré sur 223 px.
-        // L'app le laisse à sa largeur naturelle dans la ligne. Le harnais aligne l'ancre.
-        logo.style.alignSelf = 'flex-start'
-        logo.style.width = 'max-content'
-      }
+      if (logoName?.parentElement) logoName.parentElement.setAttribute('data-mock-id', 'shell-logo')
       const search = Array.from(sidebar.querySelectorAll('a')).find((a) =>
         (a.textContent || '').includes('Rechercher'),
       )

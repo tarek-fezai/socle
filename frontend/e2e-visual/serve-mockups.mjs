@@ -95,7 +95,6 @@ function rewriteHtml(rawHtml, name = '', collapsed = false) {
   .serif { font-family: 'Instrument Serif', serif; }
   a { color: inherit; text-decoration: none; }
   .sso:hover { background: #2C27C7; }
-  .collapse-btn { box-sizing: border-box; padding: 0; margin: 0; }
 </style>
 ${kept}
 </head>`,

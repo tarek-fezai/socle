@@ -77,21 +77,11 @@ async function logCollapseButton(page, label) {
   )
 }
 
-/**
- * Ancre la ligne logo + bouton. En mode agrandi, le lien de la maquette n'a pas le
- * padding 0 2px du shell (Dashboard) : le harnais l'aligne, sans modifier le fichier.
- */
-async function tagBrandRow(page, { padLogo = false } = {}) {
-  await page.evaluate((padLogo) => {
-    const row = document.querySelector('.collapse-btn')?.parentElement
-    if (!row) return
-    row.setAttribute('data-mock-id', 'shell-brand-row')
-    if (!padLogo) return
-    const link = row.querySelector('a')
-    if (!link) return
-    link.style.padding = '0 2px'
-    link.style.boxSizing = 'border-box'
-  }, padLogo)
+/** Ancre la ligne logo + bouton. data-mock-id seulement : la maquette n'est pas restylée. */
+async function tagBrandRow(page) {
+  await page.evaluate(() => {
+    document.querySelector('.collapse-btn')?.parentElement?.setAttribute('data-mock-id', 'shell-brand-row')
+  })
 }
 
 test('desktop sidebar réduite — pixel ≤ 1 %', async ({ page }, testInfo) => {
@@ -148,7 +138,7 @@ test('desktop shell-brand-row agrandie — pixel ≤ 1 %', async ({ page }, test
   await page.setViewportSize({ width: 1440, height: 900 })
 
   await page.goto(`${MOCK_ORIGIN}/FolderReference.dc.html`)
-  await tagBrandRow(page, { padLogo: true })
+  await tagBrandRow(page)
   await page.mouse.move(1, 1)
   await settleFonts(page)
   await logCollapseButton(page, 'expanded mock')
