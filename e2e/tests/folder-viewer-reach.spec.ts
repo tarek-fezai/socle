@@ -103,7 +103,7 @@ test('un lecteur de dossier atteint l’espace, le dossier vide et le document',
     await page.getByTestId('space-home').getByRole('link', { name: docsName }).click()
     await expect(page).toHaveURL(new RegExp(`/folders/${docs.id}$`))
     await expect(page.getByRole('heading', { name: docsName })).toBeVisible()
-    await page.getByTestId('folder-page').getByRole('link', { name: docTitle }).click()
+    await page.getByTestId('folder-page').getByRole('link', { name: docTitle }).first().click()
     await expect(page).toHaveURL(new RegExp(`/docs/${doc.id}$`))
     await expect(page.getByRole('heading', { name: docTitle })).toBeVisible()
 
