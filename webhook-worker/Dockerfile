@@ -20,6 +20,9 @@ LABEL org.opencontainers.image.licenses="LicenseRef-Socle-Proprietary"
 
 COPY --from=build /out/worker /worker
 
+ARG GIT_REVISION=unknown
+LABEL org.opencontainers.image.revision="${GIT_REVISION}"
+
 EXPOSE 8090
 
 # Distroless: no shell or HTTP client; use orchestrator HTTP probes against GET /healthz

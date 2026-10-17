@@ -244,19 +244,26 @@ class LicenceBootstrapHttpIT {
                 Long.class, AuditActions.PLATFORM_ROLE_GRANTED);
         assertThat(granted).isEqualTo(1L);
         Map<String, Object> auditRow = jdbc.queryForMap(
-                "SELECT actor_id, actor_is_system FROM audit_log_events WHERE action = ?",
+                """
+                SELECT actor_id, actor_is_system, resource_type, resource_id,
+                       metadata::text AS metadata
+                  FROM audit_log_events WHERE action = ?
+                """,
                 AuditActions.PLATFORM_ROLE_GRANTED);
-        assertThat(auditRow.get("actor_is_system")).isEqualTo(false);
-        UUID actorId = (UUID) auditRow.get("actor_id");
-        assertThat(actorId).isEqualTo(UUID.fromString(BOOTSTRAP_SUB));
+        assertThat(auditRow.get("actor_is_system")).isEqualTo(true);
+        assertThat(auditRow.get("actor_id")).isNull();
+        assertThat(auditRow.get("resource_type")).isEqualTo("user");
+        UUID userId = UUID.fromString(BOOTSTRAP_SUB);
+        assertThat(auditRow.get("resource_id")).isEqualTo(userId);
+        assertThat(String.valueOf(auditRow.get("metadata"))).contains("bootstrapSubject");
         assertThat(jdbc.queryForObject(
-                "SELECT count(*) FROM users WHERE id = ?", Long.class, actorId)).isEqualTo(1L);
+                "SELECT count(*) FROM users WHERE id = ?", Long.class, userId)).isEqualTo(1L);
         assertThat(jdbc.queryForObject(
                 """
                 SELECT count(*) FROM user_platform_roles
                  WHERE user_id = ? AND role = 'ADMINISTRATEUR_SYSTEME'
                 """,
-                Long.class, actorId)).isEqualTo(1L);
+                Long.class, userId)).isEqualTo(1L);
 
         long accessGranted = 0;
         for (int i = 0; i < 40; i++) {

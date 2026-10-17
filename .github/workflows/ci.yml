@@ -62,7 +62,7 @@ jobs:
         run: pnpm build
       - name: Install Playwright Chromium
         run: pnpm exec playwright install chromium --with-deps
-      - name: Visual login comparison
+      - name: Visual parity (all specs)
         shell: bash
         run: set -o pipefail && pnpm test:visual 2>&1 | tee playwright-visual.txt
       - name: Upload Vitest / visual artifacts

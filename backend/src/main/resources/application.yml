@@ -62,6 +62,13 @@ management:
       show-details: when_authorized
       probes:
         enabled: true
+  info:
+    env:
+      enabled: true
+
+# Révision Git de l'image (ARG GIT_REVISION → SOCLE_GIT_REVISION). Exposée par GET /actuator/info.
+info:
+  revision: ${SOCLE_GIT_REVISION:unknown}
 
 # OpenAPI / Swagger UI : en prod, désactiver via SOCLE_OPENAPI_ENABLED=false
 # ou s'appuyer sur le garde ROLE_administrateur-systeme (SecurityConfig).
