@@ -456,8 +456,11 @@ export async function annotateDashboardMockup(page) {
       }
     }
     if (sidebar) {
-      const tree = [...sidebar.children].find((c) => c.tagName === 'DIV')
-      tree?.setAttribute('data-mock-id', 'shell-tree')
+      const spaceTitle = [...sidebar.querySelectorAll('div')].find((d) => {
+        const t = (d.textContent || '').trim()
+        return d.children.length === 0 && t.startsWith('Identité')
+      })
+      spaceTitle?.parentElement?.setAttribute('data-mock-id', 'shell-tree')
     }
   })
 }
