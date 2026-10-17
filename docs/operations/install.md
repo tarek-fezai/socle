@@ -76,6 +76,18 @@ Temporal and OpenFGA run in-process with Postgres in the default Compose stack; 
    VERSION=local docker compose --env-file .env up -d --build
    ```
 
+   Pour que l'image locale porte `org.opencontainers.image.revision` et que
+   `GET /actuator/info` renvoie la même révision (PowerShell, depuis `deploy/compose`) :
+
+   ```powershell
+   $env:GIT_REVISION = git rev-parse HEAD
+   docker compose --env-file .env.production -f docker-compose.yml build
+   ```
+
+   Sans `GIT_REVISION`, les trois images reçoivent `unknown`. Les images publiées par
+   la release portent déjà ce label via `docker/metadata-action` ; cette variable ne
+   sert qu'au build local.
+
 7. **OpenFGA store/model** — with `OPENFGA_AUTO_INIT=true` (Compose default), the **backend** creates or reuses the unique store named `socle` and publishes the model. Do **not** rely on `openfga-init` to create stores (it only waits for OpenFGA health). Prefer setting `OPENFGA_STORE_ID` explicitly after the first bootstrap; see [`backup-restore.md`](backup-restore.md) if several stores named `socle` appear.
 
 ### Volumes and permissions (non-root backend UID 10001)

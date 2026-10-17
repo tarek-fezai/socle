@@ -64,6 +64,10 @@ ENV OPENFGA_AUTO_INIT=true
 ENV OPENFGA_STATE_DIR=/openfga-config
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
 
+ARG GIT_REVISION=unknown
+LABEL org.opencontainers.image.revision="${GIT_REVISION}"
+ENV SOCLE_GIT_REVISION=${GIT_REVISION}
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
