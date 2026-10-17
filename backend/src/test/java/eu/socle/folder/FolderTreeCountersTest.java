@@ -5,6 +5,7 @@ import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.authz.DocumentScope;
 import eu.socle.config.SocleProperties;
+import eu.socle.space.SpaceReachability;
 import eu.socle.trash.TrashService;
 import eu.socle.user.UserEntity;
 import eu.socle.user.UserSyncService;
@@ -62,7 +63,8 @@ class FolderTreeCountersTest {
     void setUp() {
         service = new FolderService(
                 jdbc, userSyncService, authorizationService, auditService, trashService,
-                new SocleProperties(null, null, null, null, new SocleProperties.Folders(5)));
+                new SocleProperties(null, null, null, null, new SocleProperties.Folders(5)),
+                new SpaceReachability(jdbc, authorizationService));
         UserEntity user = new UserEntity();
         user.setId(USER);
         when(userSyncService.syncFromJwt(jwt)).thenReturn(user);

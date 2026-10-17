@@ -28,26 +28,36 @@ public class SpacePageService {
     private final UserSyncService userSyncService;
     private final AuthorizationService authorizationService;
     private final eu.socle.document.DocumentService documentService;
+    private final SpaceReachability reachability;
 
     public SpacePageService(
             JdbcTemplate jdbc,
             UserSyncService userSyncService,
             AuthorizationService authorizationService,
-            eu.socle.document.DocumentService documentService
+            eu.socle.document.DocumentService documentService,
+            SpaceReachability reachability
     ) {
         this.jdbc = jdbc;
         this.userSyncService = userSyncService;
         this.authorizationService = authorizationService;
         this.documentService = documentService;
+        this.reachability = reachability;
     }
 
-    /** {@code null} si aucune page n'a encore été écrite (le contrôleur répond 204). */
+    /**
+     * {@code null} si aucune page n'est lisible (le contrôleur répond 204).
+     * L'espace inatteignable répond 404. Sans droit {@code viewer} sur le document
+     * de page, 204 : on ne révèle pas que la page existe.
+     */
     @Transactional(readOnly = true)
     public DocumentResponse get(Jwt jwt, UUID spaceId) {
         var user = userSyncService.syncFromJwt(jwt);
         SpaceRef space = requireActive(spaceId);
-        authorizationService.requireSpaceRelation(user.getId(), spaceId, "viewer");
-        if (space.pageDocumentId() == null) {
+        if (!reachability.reachable(user.getId(), space.id())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Espace introuvable");
+        }
+        if (space.pageDocumentId() == null
+                || !authorizationService.hasRelation(user.getId(), "document", space.pageDocumentId(), "viewer")) {
             return null;
         }
         return documentService.get(jwt, space.pageDocumentId());

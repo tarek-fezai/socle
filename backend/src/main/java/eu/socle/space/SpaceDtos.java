@@ -73,8 +73,8 @@ public final class SpaceDtos {
             boolean isOwner,
             boolean isResponsible,
             /**
-             * {@code member} — accès via relations espace ;
-             * {@code public-only} — uniquement via documents organisation lisibles.
+             * {@code member} — accès via relations espace ou propriétaire en table ;
+             * {@code public-only} — document lisible ou dossier {@code viewer}, sans membership.
              */
             String membership,
             /** Texte brut ; null si absent. */

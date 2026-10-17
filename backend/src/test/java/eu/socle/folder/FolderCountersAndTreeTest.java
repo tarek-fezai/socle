@@ -147,18 +147,19 @@ class FolderCountersAndTreeTest {
     }
 
     @Test
-    void tree_nonMember_withoutReadableDocs_returns404() {
+    void tree_nonMember_withoutReadableDocsOrFolderViewer_returns404() {
         fx.folder(F1, SPACE, null, "Racine");
         when(fx.authorizationService.hasRelation(eq(USER), eq("space"), eq(SPACE), eq("viewer")))
                 .thenReturn(false);
         when(fx.authorizationService.listViewableDocumentIds(USER, DocumentScope.space(SPACE)))
+                .thenReturn(List.of());
+        when(fx.authorizationService.filterByFolderViewer(eq(USER), anyCollection()))
                 .thenReturn(List.of());
 
         assertThatThrownBy(() -> service.tree(jwt, SPACE, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
-        verify(fx.authorizationService, never()).filterByFolderViewer(any(), anyCollection());
     }
 
     @Test

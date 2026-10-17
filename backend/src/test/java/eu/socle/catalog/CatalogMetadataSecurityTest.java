@@ -267,7 +267,9 @@ class CatalogMetadataSecurityTest {
         });
         when(identityFacade.isSystemAdmin(any())).thenReturn(false);
         var audit = mock(eu.socle.audit.AuditService.class);
-        spaceService = new SpaceService(jdbc, userSyncService, authz, audit, identityFacade);
+        spaceService = new SpaceService(
+                jdbc, userSyncService, authz, audit, identityFacade,
+                new eu.socle.space.SpaceReachability(jdbc, authz));
         favoriteService = new FavoriteService(
                 jdbc, userSyncService, authz, Clock.fixed(NOW, ZoneOffset.UTC));
         searchService = new SearchService(jdbc, userSyncService, authz);

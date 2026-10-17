@@ -21,6 +21,7 @@ import eu.socle.folder.FolderDtos.SpaceTreeResponse;
 import eu.socle.folder.FolderDtos.TreeDocumentNode;
 import eu.socle.folder.FolderDtos.TreeFolderNode;
 import eu.socle.folder.FolderDtos.UpdateFolderRequest;
+import eu.socle.space.SpaceReachability;
 import eu.socle.trash.TrashService;
 import eu.socle.user.UserSyncService;
 import eu.socle.web.ApiErrors;
@@ -54,6 +55,7 @@ public class FolderService {
     private final AuthorizationService authorizationService;
     private final AuditService auditService;
     private final TrashService trashService;
+    private final SpaceReachability reachability;
     private final int maxDepth;
 
     public FolderService(
@@ -62,13 +64,15 @@ public class FolderService {
             AuthorizationService authorizationService,
             AuditService auditService,
             TrashService trashService,
-            SocleProperties properties
+            SocleProperties properties,
+            SpaceReachability reachability
     ) {
         this.jdbc = jdbc;
         this.userSyncService = userSyncService;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
         this.trashService = trashService;
+        this.reachability = reachability;
         this.maxDepth = properties.folders() != null
                 ? properties.folders().effectiveMaxDepth()
                 : 5;
@@ -86,7 +90,7 @@ public class FolderService {
         int folderCount = (int) vis.allFolders().stream()
                 .filter(f -> folderId.equals(f.parentFolderId()) && vis.visibleFolderIds().contains(f.id()))
                 .count();
-        return toView(row, docCount, folderCount, user.getId());
+        return toView(row, docCount, folderCount, user.getId(), visibleDocumentIds(vis, folderId));
     }
 
     @Transactional
@@ -345,15 +349,17 @@ public class FolderService {
     }
 
     /**
-     * Arbre filtré selon les documents lisibles et/ou l'appartenance à l'espace.
-     * Non-membre sans document lisible → 404 (pas de 403 : on ne révèle pas l'espace).
-     * Dossier visible = viewer FGA OU ancêtre d'un document lisible.
+     * Arbre filtré. Espace inatteignable → 404 (pas de 403 : on ne révèle pas l'espace).
+     * Dossier visible = viewer FGA, ancêtre d'un dossier viewer, ou ancêtre d'un document lisible.
      * Compteurs post-filtrage, sans N+1 OpenFGA.
      */
     @Transactional(readOnly = true)
     public SpaceTreeResponse tree(Jwt jwt, UUID spaceId, Integer depth) {
         var user = userSyncService.syncFromJwt(jwt);
         String spaceName = requireActiveSpace(spaceId);
+        if (!reachability.reachable(user.getId(), spaceId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Espace introuvable");
+        }
         Visibility vis = resolveSpaceVisibility(user.getId(), spaceId);
         if (!vis.allowed()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Espace introuvable");
@@ -404,18 +410,23 @@ public class FolderService {
         );
     }
 
+    /** Dossiers visibles (viewer, ancêtres, chemin d'un document lisible). */
+    public Set<UUID> visibleFolderIds(UUID userId, UUID spaceId) {
+        return resolveSpaceVisibility(userId, spaceId).visibleFolderIds();
+    }
+
     /**
-     * Résout documents lisibles + dossiers visibles (viewer ∪ ancêtres des docs)
-     * pour un espace. Un seul {@code listViewableDocumentIds} + un
-     * {@code filterByFolderViewer} bornés à l'espace.
+     * Documents lisibles et dossiers visibles d'un espace.
+     * Arrêt si l'espace n'est pas atteignable ({@link SpaceReachability}).
+     * Visible = dossiers {@code viewer}, leurs ancêtres, et les ancêtres d'un document lisible.
      */
     Visibility resolveSpaceVisibility(UUID userId, UUID spaceId) {
+        if (!reachability.reachable(userId, spaceId)) {
+            return Visibility.empty();
+        }
         boolean spaceMember = authorizationService.hasRelation(userId, "space", spaceId, "viewer");
         List<UUID> viewableDocIds = authorizationService.listViewableDocumentIds(
                 userId, DocumentScope.space(spaceId));
-        if (viewableDocIds.isEmpty() && !spaceMember) {
-            return Visibility.empty();
-        }
 
         List<FolderRow> allFolders = jdbc.query("""
                 SELECT id, space_id, parent_folder_id, name, position, created_by, created_at, updated_at,
@@ -431,7 +442,7 @@ public class FolderService {
                 authorizationService.filterByFolderViewer(userId, allFolderIds));
 
         List<DocRow> docs = loadDocs(spaceId, viewableDocIds);
-        Set<UUID> seedFolderIds = new HashSet<>();
+        Set<UUID> seedFolderIds = new HashSet<>(viewerFolders);
         for (DocRow d : docs) {
             if (d.folderId() != null) {
                 seedFolderIds.add(d.folderId());
@@ -681,10 +692,23 @@ public class FolderService {
     }
 
     private FolderView toView(FolderRow row, int docs, int folders, UUID userId) {
-        return toView(row, docs, folders, loadEnrichment(row), userId);
+        return toView(row, docs, folders, userId, null);
+    }
+
+    private FolderView toView(
+            FolderRow row, int docs, int folders, UUID userId, Set<UUID> visibleDocumentIds
+    ) {
+        return toView(row, docs, folders, loadEnrichment(row), userId, visibleDocumentIds);
     }
 
     private FolderView toView(FolderRow row, int docs, int folders, Enrichment enrichment, UUID userId) {
+        return toView(row, docs, folders, enrichment, userId, null);
+    }
+
+    private FolderView toView(
+            FolderRow row, int docs, int folders, Enrichment enrichment, UUID userId,
+            Set<UUID> visibleDocumentIds
+    ) {
         Enrichment e = enrichment == null ? Enrichment.fromRow(row) : enrichment;
         boolean canEdit = userId != null
                 && authorizationService.hasRelation(userId, "folder", row.id(), "editor");
@@ -698,7 +722,27 @@ public class FolderService {
                 row.createdBy(), row.createdAt(), row.updatedAt(), docs, folders,
                 row.pageDocumentId(), e.status(), e.creator(), e.lastModifiedBy(),
                 e.lastModifiedAt(), group, e.reliabilityAverage(), e.statusCounts(),
-                canEdit, canDelete, pageLanguage(row.pageDocumentId()), loadFolderDocuments(row));
+                canEdit, canDelete, pageLanguage(row.pageDocumentId()),
+                visibleCards(loadFolderDocuments(row), visibleDocumentIds));
+    }
+
+    private static Set<UUID> visibleDocumentIds(Visibility vis, UUID folderId) {
+        Set<UUID> ids = new HashSet<>();
+        for (DocRow doc : vis.docs()) {
+            if (folderId.equals(doc.folderId())) {
+                ids.add(doc.id());
+            }
+        }
+        return ids;
+    }
+
+    private static List<FolderDocumentCard> visibleCards(
+            List<FolderDocumentCard> cards, Set<UUID> visibleDocumentIds
+    ) {
+        if (visibleDocumentIds == null || cards.isEmpty()) {
+            return cards;
+        }
+        return cards.stream().filter(card -> visibleDocumentIds.contains(card.id())).toList();
     }
 
     /** Même condition que {@link #requireManageInParent}, sans lever d'exception. */
@@ -837,7 +881,7 @@ public class FolderService {
         int folderCount = (int) vis.allFolders().stream()
                 .filter(f -> row.id().equals(f.parentFolderId()) && vis.visibleFolderIds().contains(f.id()))
                 .count();
-        return toView(row, docCount, folderCount, userId);
+        return toView(row, docCount, folderCount, userId, visibleDocumentIds(vis, row.id()));
     }
 
     private static FolderRow mapFolder(java.sql.ResultSet rs) throws java.sql.SQLException {

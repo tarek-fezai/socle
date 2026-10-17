@@ -4,6 +4,7 @@ package eu.socle.space;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.document.DocumentDtos.TagRef;
 import eu.socle.document.PageDocuments;
+import eu.socle.folder.FolderService;
 import eu.socle.folder.FolderDtos.FolderDocumentCard;
 import eu.socle.folder.FolderDtos.OwnerGroupRef;
 import eu.socle.folder.FolderDtos.OwnerPerson;
@@ -14,10 +15,12 @@ import eu.socle.space.SpaceDtos.SpaceFolderCard;
 import eu.socle.space.SpaceDtos.SpaceMemberPreview;
 import eu.socle.space.SpaceDtos.SpaceView;
 import eu.socle.user.UserSyncService;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -45,27 +48,40 @@ public class SpaceHomeService {
     private final UserSyncService userSyncService;
     private final AuthorizationService authorizationService;
     private final SpaceService spaceService;
+    private final SpaceReachability reachability;
+    private final FolderService folderService;
 
     public SpaceHomeService(
             JdbcTemplate jdbc,
             UserSyncService userSyncService,
             AuthorizationService authorizationService,
-            SpaceService spaceService
+            SpaceService spaceService,
+            SpaceReachability reachability,
+            FolderService folderService
     ) {
         this.jdbc = jdbc;
         this.userSyncService = userSyncService;
         this.authorizationService = authorizationService;
         this.spaceService = spaceService;
+        this.reachability = reachability;
+        this.folderService = folderService;
     }
 
     @Transactional(readOnly = true)
     public SpaceDetail get(Jwt jwt, UUID spaceId) {
-        SpaceView view = spaceService.get(jwt, spaceId);
         var user = userSyncService.syncFromJwt(jwt);
         UUID userId = user.getId();
-        boolean canEdit = authorizationService.hasRelation(userId, "space", spaceId, "editor");
+        if (!reachability.reachable(userId, spaceId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Espace introuvable");
+        }
+        SpaceView view = spaceService.get(jwt, spaceId);
+        boolean publicOnly = "public-only".equals(view.membership());
+        boolean canEdit = !publicOnly && authorizationService.hasRelation(userId, "space", spaceId, "editor");
 
         PageRow page = loadPage(spaceId);
+        if (page != null && !authorizationService.hasRelation(userId, "document", page.id(), "viewer")) {
+            page = null;
+        }
         List<DocRow> docs = loadDocuments(spaceId);
         Set<UUID> visibleIds = new HashSet<>(authorizationService.filterByDocumentViewer(
                 userId, docs.stream().map(DocRow::id).toList(), "space-home"));
@@ -239,8 +255,7 @@ public class SpaceHomeService {
                 """,
                 (rs, i) -> new FolderHead((UUID) rs.getObject("id"), rs.getString("name")),
                 spaceId);
-        Set<UUID> visibleFolders = new HashSet<>(authorizationService.filterByFolderViewer(
-                userId, folders.stream().map(FolderHead::id).toList()));
+        Set<UUID> visibleFolders = folderService.visibleFolderIds(userId, spaceId);
         List<SpaceFolderCard> out = new ArrayList<>();
         for (FolderHead folder : folders) {
             if (!visibleFolders.contains(folder.id())) {
