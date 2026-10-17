@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -202,6 +202,12 @@ describe('NotificationsPage — maquette', () => {
     listNotifications.mockReset()
     markNotificationRead.mockReset()
     markAllNotificationsRead.mockReset()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-10T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('« Tout marquer comme lu » appelle l’API ; lien Préférences → /account', async () => {
