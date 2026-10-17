@@ -80,6 +80,16 @@ Si le log contient `ALERT CRITICAL` après un grant/revoke :
 | **Intégrations** | `siem.connector_created` / `_updated` / `_deleted` | `SiemConnectorService` | async |
 | **Intégrations** | `webhook.endpoint_created` / `_updated` / `_deleted` | `WebhookEndpointService` | async |
 
+## Acteur de l'admin initial
+
+`platform.role_granted` écrit par `PlatformRoleService.grantBootstrapAdminIfNeeded`
+porte `actor_id` NULL et `actor_is_system` true. La ressource reste `user` / id du
+bénéficiaire ; `metadata.bootstrapSubject` identifie le sujet OIDC configuré.
+
+Avant cette version, la même attribution apparaissait avec l'utilisateur comme acteur
+(`actor_id` = bénéficiaire, `actor_is_system` false). Le journal est en ajout seul :
+les événements déjà écrits ne sont pas réécrits.
+
 ## `auth.login` — non capturé côté backend
 
 Le login est géré entièrement par Keycloak (redirect OIDC / `keycloak-js`).

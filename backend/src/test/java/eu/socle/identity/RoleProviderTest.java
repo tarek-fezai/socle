@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
 package eu.socle.identity;
 
+import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.user.UserEntity;
 import eu.socle.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -26,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -92,7 +95,16 @@ class RoleProviderTest {
         platformRoleService.grantBootstrapAdminIfNeeded(USER, "bootstrap-sub");
 
         verify(platformRoleRepository).save(any(PlatformRoleEntity.class));
-        verify(auditService).recordSync(eq(USER), eq(false), any(), eq("user"), eq(USER), any(), eq(null));
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> meta = ArgumentCaptor.forClass(Map.class);
+        verify(auditService).recordSync(
+                isNull(), eq(true),
+                eq(AuditActions.PLATFORM_ROLE_GRANTED),
+                eq("user"), eq(USER),
+                meta.capture(), isNull());
+        assertThat(meta.getValue())
+                .containsEntry("role", SocleRole.ADMINISTRATEUR_SYSTEME.name())
+                .containsEntry("bootstrapSubject", "bootstrap-sub");
     }
 
     @Test

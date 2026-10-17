@@ -144,7 +144,7 @@ public class PlatformRoleService {
         meta.put("role", SocleRole.ADMINISTRATEUR_SYSTEME.name());
         meta.put("bootstrapSubject", subject);
         auditService.recordSync(
-                userId, false,
+                null, true,
                 AuditActions.PLATFORM_ROLE_GRANTED,
                 "user", userId,
                 meta,
