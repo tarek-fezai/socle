@@ -321,7 +321,7 @@ abstract class SpacePageHttpSuite {
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/v1/spaces/" + spaceId + "/page").header("Authorization", jwt(STRANGER)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
         mockMvc.perform(put("/api/v1/spaces/" + spaceId + "/page")
                         .header("Authorization", jwt(STRANGER))
                         .contentType(MediaType.APPLICATION_JSON)
