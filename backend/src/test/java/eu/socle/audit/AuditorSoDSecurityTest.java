@@ -11,6 +11,7 @@ import eu.socle.integrations.SiemConnectorService;
 import eu.socle.integrations.WebhookEndpointController;
 import eu.socle.integrations.WebhookEndpointService;
 import eu.socle.space.SpaceController;
+import eu.socle.space.SpaceHomeService;
 import eu.socle.space.SpaceService;
 import eu.socle.team.GroupController;
 import eu.socle.team.GroupService;
@@ -52,6 +53,7 @@ class AuditorSoDSecurityTest {
     @Autowired MockMvc mockMvc;
 
     @MockBean SpaceService spaceService;
+    @MockBean SpaceHomeService spaceHomeService;
     @MockBean TransclusionGraphService graphService;
     @MockBean ContentHealthService contentHealthService;
     @MockBean GroupService groupService;
@@ -129,6 +131,14 @@ class AuditorSoDSecurityTest {
     @Test
     void export_auditeurSeul_cannotExportFolder() throws Exception {
         mockMvc.perform(get("/api/v1/folders/" + ID + "/export")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_auditeur"))))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(exportService);
+    }
+
+    @Test
+    void export_auditeurSeul_cannotExportSpace() throws Exception {
+        mockMvc.perform(get("/api/v1/spaces/" + ID + "/export")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_auditeur"))))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(exportService);

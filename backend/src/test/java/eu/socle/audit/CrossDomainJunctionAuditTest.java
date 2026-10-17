@@ -114,7 +114,8 @@ class CrossDomainJunctionAuditTest {
         jdbc.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
         jdbc.execute("""
                 CREATE TABLE spaces (
-                  id UUID PRIMARY KEY, name TEXT NOT NULL, deleted_at TIMESTAMPTZ
+                  id UUID PRIMARY KEY, name TEXT NOT NULL, deleted_at TIMESTAMPTZ,
+                  page_document_id UUID
                 )
                 """);
         jdbc.execute("""

@@ -110,6 +110,7 @@ public class SecurityConfig {
                                 .access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.GET, "/api/v1/documents/*/export").access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.GET, "/api/v1/folders/*/export").access(DENY_AUDITEUR_ONLY)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/spaces/*/export").access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/*/export").access(DENY_AUDITEUR_ONLY)
                         .requestMatchers(
                                 "/api-docs",

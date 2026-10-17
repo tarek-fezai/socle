@@ -83,7 +83,8 @@ class FavoriteServiceTest {
                 """);
         jdbc.execute("""
                 CREATE TABLE spaces (
-                  id UUID PRIMARY KEY, name TEXT NOT NULL, deleted_at TIMESTAMPTZ
+                  id UUID PRIMARY KEY, name TEXT NOT NULL, deleted_at TIMESTAMPTZ,
+                  page_document_id UUID
                 )
                 """);
         jdbc.execute("""

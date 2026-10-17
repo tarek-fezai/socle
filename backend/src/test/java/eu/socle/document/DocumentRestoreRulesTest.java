@@ -129,7 +129,8 @@ class DocumentRestoreRulesTest {
         // Tables lues par la construction de la réponse (vides : seul le schéma compte).
         jdbc.execute("""
                 CREATE TABLE spaces (
-                  id UUID PRIMARY KEY, comment_policy TEXT, default_visibility TEXT, deleted_at TIMESTAMPTZ
+                  id UUID PRIMARY KEY, name TEXT, comment_policy TEXT, default_visibility TEXT,
+                  deleted_at TIMESTAMPTZ, page_document_id UUID
                 )""");
         jdbc.execute("""
                 CREATE TABLE folders (

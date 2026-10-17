@@ -75,7 +75,7 @@ Si le log contient `ALERT CRITICAL` après un grant/revoke :
 | **Spaces** | `space.owner_added` / `space.owner_removed` / `space.responsible_changed` | `SpaceService` | async |
 | **Groupes** | `group.created` / `group.updated` / `group.deleted` | `GroupService` | async |
 | **Groupes** | `group.member_added` / `group.member_removed` | `GroupService` | async |
-| **Export** | `document.exported` / `folder.exported` / `tag.exported` | `ExportService` | async |
+| **Export** | `document.exported` / `folder.exported` / `space.exported` / `tag.exported` | `ExportService` | async |
 | **Workflows** | `workflow.created` / `workflow.updated` / `workflow.deleted` | `ApprovalWorkflowDefinitionService` | async |
 | **Intégrations** | `siem.connector_created` / `_updated` / `_deleted` | `SiemConnectorService` | async |
 | **Intégrations** | `webhook.endpoint_created` / `_updated` / `_deleted` | `WebhookEndpointService` | async |

@@ -138,7 +138,7 @@ public class ExportService {
                 .sorted((a, b) -> a.getTitle().compareToIgnoreCase(b.getTitle()))
                 .toList();
 
-        byte[] zip = zipFolder(user.getId(), pageIds, included);
+        byte[] zip = zipDocuments(user.getId(), pageIds, "_dossier.md", included);
         Map<String, Object> meta = new HashMap<>();
         meta.put("format", "zip");
         meta.put("title", folder.name());
@@ -150,15 +150,53 @@ public class ExportService {
         return new ExportFile(safeFilename(folder.name()) + ".zip", "application/zip", zip);
     }
 
-    private byte[] zipFolder(UUID userId, Set<UUID> pageIds, List<DocumentEntity> documents) {
+    /**
+     * Archive de l'espace. La page est {@code _espace.md} à la racine, pas un document frère.
+     */
+    @Transactional(readOnly = true)
+    public ExportFile exportSpaceZip(Jwt jwt, UUID spaceId) {
+        var user = userSyncService.syncFromJwt(jwt);
+        authorizationService.requireSpaceRelation(user.getId(), spaceId, "viewer");
+        String name = jdbc.query(
+                "SELECT name FROM spaces WHERE id = ? AND deleted_at IS NULL",
+                rs -> rs.next() ? rs.getString(1) : null,
+                spaceId);
+        if (name == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Espace introuvable");
+        }
+        Set<UUID> pageIds = new HashSet<>(jdbc.query(
+                "SELECT page_document_id FROM spaces WHERE id = ? AND page_document_id IS NOT NULL",
+                (rs, i) -> (UUID) rs.getObject(1),
+                spaceId));
+        List<UUID> viewableIds = authorizationService.listViewableDocumentIds(
+                user.getId(), DocumentScope.space(spaceId));
+        List<DocumentEntity> included = documentRepository.findAllActiveByIdIn(viewableIds).stream()
+                .filter(d -> !pageIds.contains(d.getId()))
+                .sorted((a, b) -> a.getTitle().compareToIgnoreCase(b.getTitle()))
+                .toList();
+        byte[] zip = zipDocuments(user.getId(), pageIds, "_espace.md", included);
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("format", "zip");
+        meta.put("title", name);
+        meta.put("documentCount", included.size());
+        meta.put("spacePage", !pageIds.isEmpty());
+        auditService.record(
+                user.getId(), false, AuditActions.SPACE_EXPORTED,
+                "space", spaceId, meta, null);
+        return new ExportFile(safeFilename(name) + ".zip", "application/zip", zip);
+    }
+
+    private byte[] zipDocuments(
+            UUID userId, Set<UUID> pageIds, String pageEntry, List<DocumentEntity> documents
+    ) {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(buffer, StandardCharsets.UTF_8)) {
             for (UUID pageId : pageIds) {
                 documentRepository.findActiveById(pageId).ifPresent(page ->
-                        writeMarkdown(zip, userId, page, "_dossier.md"));
+                        writeMarkdown(zip, userId, page, pageEntry));
             }
             Set<String> used = new HashSet<>();
-            used.add("_dossier.md");
+            used.add(pageEntry);
             for (DocumentEntity doc : documents) {
                 String name = uniqueName(safeFilename(doc.getTitle()) + ".md", used);
                 writeMarkdown(zip, userId, doc, name);

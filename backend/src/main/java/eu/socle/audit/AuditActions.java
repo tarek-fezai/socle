@@ -77,6 +77,7 @@ public final class AuditActions {
     /** Export documentaire (PDF) — traçabilité a posteriori (fuite potentielle). */
     public static final String DOCUMENT_EXPORTED = "document.exported";
     public static final String FOLDER_EXPORTED = "folder.exported";
+    public static final String SPACE_EXPORTED = "space.exported";
     public static final String TAG_EXPORTED = "tag.exported";
 
     /** Pièces jointes (pas d'audit sur les lectures). */

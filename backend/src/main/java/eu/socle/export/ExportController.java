@@ -49,6 +49,19 @@ public class ExportController {
         return toResponse(exportService.exportFolder(jwt, id));
     }
 
+    @GetMapping("/spaces/{id}/export")
+    public ResponseEntity<byte[]> exportSpace(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "zip") String format
+    ) {
+        if (!"zip".equalsIgnoreCase(format)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "format : zip");
+        }
+        return toResponse(exportService.exportSpaceZip(jwt, id));
+    }
+
     @GetMapping("/tags/{id}/export")
     public ResponseEntity<byte[]> exportTag(
             @AuthenticationPrincipal Jwt jwt,

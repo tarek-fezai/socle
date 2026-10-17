@@ -109,6 +109,11 @@ class TagAdminServiceTest {
                 CREATE TABLE global_roles (id UUID PRIMARY KEY, name TEXT NOT NULL)
                 """);
         jdbc.execute("""
+                CREATE TABLE spaces (
+                  id UUID PRIMARY KEY, page_document_id UUID
+                )
+                """);
+        jdbc.execute("""
                 CREATE TABLE folders (
                   id UUID PRIMARY KEY, page_document_id UUID
                 )

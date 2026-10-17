@@ -90,9 +90,12 @@ public class ContentHealthService {
                 """
                 SELECT page_document_id FROM folders
                  WHERE space_id = ? AND page_document_id IS NOT NULL
+                UNION
+                SELECT page_document_id FROM spaces
+                 WHERE id = ? AND page_document_id IS NOT NULL
                 """,
                 (rs, i) -> (UUID) rs.getObject(1),
-                spaceId);
+                spaceId, spaceId);
         if (ids == null || ids.isEmpty()) {
             return Set.of();
         }

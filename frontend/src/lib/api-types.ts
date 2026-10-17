@@ -36,6 +36,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/spaces/{id}/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_2"];
+        put: operations["save"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/spaces/{id}/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_3"];
+        put: operations["save_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/spaces/{id}/owners/{userId}/responsible": {
         parameters: {
             query?: never;
@@ -59,7 +91,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_2"];
+        get: operations["get_4"];
         put: operations["update_2"];
         post?: never;
         delete: operations["delete_1"];
@@ -91,7 +123,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_3"];
+        get: operations["get_5"];
         put: operations["update_3"];
         post?: never;
         delete: operations["delete_2"];
@@ -123,8 +155,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_4"];
-        put: operations["save"];
+        get: operations["get_6"];
+        put: operations["save_2"];
         post?: never;
         delete?: never;
         options?: never;
@@ -139,8 +171,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_5"];
-        put: operations["save_1"];
+        get: operations["get_7"];
+        put: operations["save_3"];
         post?: never;
         delete?: never;
         options?: never;
@@ -203,7 +235,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_6"];
+        get: operations["get_8"];
         put: operations["put_1"];
         post?: never;
         delete?: never;
@@ -219,7 +251,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_7"];
+        get: operations["get_9"];
         put: operations["put_2"];
         post?: never;
         delete: operations["delete_4"];
@@ -235,7 +267,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_8"];
+        get: operations["get_10"];
         put: operations["put_3"];
         post?: never;
         delete: operations["delete_5"];
@@ -267,7 +299,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_9"];
+        get: operations["get_11"];
         put: operations["update_4"];
         post?: never;
         delete: operations["softDelete"];
@@ -283,7 +315,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_10"];
+        get: operations["get_12"];
         put: operations["update_5"];
         post?: never;
         delete: operations["softDelete_1"];
@@ -299,7 +331,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_11"];
+        get: operations["get_13"];
         put: operations["update_6"];
         post?: never;
         delete: operations["delete_6"];
@@ -347,7 +379,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_12"];
+        get: operations["get_14"];
         put: operations["update_7"];
         post?: never;
         delete?: never;
@@ -379,7 +411,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_13"];
+        get: operations["get_15"];
         put: operations["update_9"];
         post?: never;
         delete?: never;
@@ -1483,7 +1515,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_14"];
+        get: operations["get_16"];
         put?: never;
         post?: never;
         delete: operations["delete_8"];
@@ -1499,7 +1531,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_15"];
+        get: operations["get_17"];
         put?: never;
         post?: never;
         delete: operations["delete_9"];
@@ -1515,7 +1547,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_16"];
+        get: operations["get_18"];
         put?: never;
         post?: never;
         delete: operations["delete_10"];
@@ -1684,6 +1716,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/spaces/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["exportSpace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/spaces/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["exportSpace_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/spaces/{id}/content-health": {
         parameters: {
             query?: never;
@@ -1723,7 +1787,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_17"];
+        get: operations["get_19"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1787,7 +1851,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_18"];
+        get: operations["get_20"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2331,7 +2395,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_19"];
+        get: operations["get_21"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2347,7 +2411,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_20"];
+        get: operations["get_22"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2443,7 +2507,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_21"];
+        get: operations["get_23"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2725,6 +2789,72 @@ export interface components {
             /** Format: int32 */
             memberExtraCount?: number;
         };
+        SaveSpacePageRequest: {
+            body: {
+                [key: string]: unknown;
+            };
+            changeSummary?: string;
+        };
+        DocumentPermissions: {
+            canEdit?: boolean;
+            canPublish?: boolean;
+            canManageAccess?: boolean;
+            canComment?: boolean;
+            canManageAttestations?: boolean;
+        };
+        DocumentResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            spaceId?: string;
+            /** Format: uuid */
+            folderId?: string;
+            title?: string;
+            docType?: string;
+            body?: {
+                [key: string]: unknown;
+            };
+            status?: string;
+            /** Format: int32 */
+            currentVersionNo?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            reliabilityScore?: number;
+            /** Format: date-time */
+            reliabilityComputedAt?: string;
+            stale?: boolean;
+            /** Format: date-time */
+            contentModifiedAt?: string;
+            /** Format: int32 */
+            stalenessThresholdDays?: number;
+            visibility?: string;
+            /** Format: int32 */
+            position?: number;
+            /** Format: uuid */
+            templateId?: string;
+            /** Format: int32 */
+            templateVersion?: number;
+            createdBy?: components["schemas"]["PersonRef"];
+            updatedBy?: components["schemas"]["PersonRef"];
+            owner?: components["schemas"]["PersonRef"];
+            tags?: components["schemas"]["TagRef"][];
+            permissions?: components["schemas"]["DocumentPermissions"];
+        };
+        PersonRef: {
+            /** Format: uuid */
+            id?: string;
+            displayName?: string;
+            initials?: string;
+        };
+        TagRef: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            color?: string;
+            governed?: boolean;
+        };
         GovernanceView: {
             /** Format: uuid */
             spaceId?: string;
@@ -2802,66 +2932,6 @@ export interface components {
                 [key: string]: unknown;
             };
             changeSummary?: string;
-        };
-        DocumentPermissions: {
-            canEdit?: boolean;
-            canPublish?: boolean;
-            canManageAccess?: boolean;
-            canComment?: boolean;
-            canManageAttestations?: boolean;
-        };
-        DocumentResponse: {
-            /** Format: uuid */
-            id?: string;
-            /** Format: uuid */
-            spaceId?: string;
-            /** Format: uuid */
-            folderId?: string;
-            title?: string;
-            docType?: string;
-            body?: {
-                [key: string]: unknown;
-            };
-            status?: string;
-            /** Format: int32 */
-            currentVersionNo?: number;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            reliabilityScore?: number;
-            /** Format: date-time */
-            reliabilityComputedAt?: string;
-            stale?: boolean;
-            /** Format: date-time */
-            contentModifiedAt?: string;
-            /** Format: int32 */
-            stalenessThresholdDays?: number;
-            visibility?: string;
-            /** Format: int32 */
-            position?: number;
-            /** Format: uuid */
-            templateId?: string;
-            /** Format: int32 */
-            templateVersion?: number;
-            createdBy?: components["schemas"]["PersonRef"];
-            updatedBy?: components["schemas"]["PersonRef"];
-            owner?: components["schemas"]["PersonRef"];
-            tags?: components["schemas"]["TagRef"][];
-            permissions?: components["schemas"]["DocumentPermissions"];
-        };
-        PersonRef: {
-            /** Format: uuid */
-            id?: string;
-            displayName?: string;
-            initials?: string;
-        };
-        TagRef: {
-            /** Format: uuid */
-            id?: string;
-            name?: string;
-            color?: string;
-            governed?: boolean;
         };
         FavoriteItem: {
             targetType?: string;
@@ -3794,6 +3864,60 @@ export interface components {
             spaceId?: string;
             warnings?: components["schemas"]["CreationWarning"][];
         };
+        LastActivity: {
+            who?: string;
+            /** Format: date-time */
+            at?: string;
+        };
+        SpaceDetail: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            color?: string;
+            createdAt?: string;
+            externalReference?: string;
+            defaultVisibility?: string;
+            commentPolicy?: string;
+            canManage?: boolean;
+            isOwner?: boolean;
+            isResponsible?: boolean;
+            membership?: string;
+            description?: string;
+            /** Format: int32 */
+            documentCount?: number;
+            memberPreview?: components["schemas"]["SpaceMemberPreview"][];
+            /** Format: int32 */
+            memberExtraCount?: number;
+            /** Format: uuid */
+            pageDocumentId?: string;
+            canEdit?: boolean;
+            canDelete?: boolean;
+            language?: string;
+            status?: string;
+            owner?: components["schemas"]["OwnerGroupRef"];
+            /** Format: int32 */
+            memberCount?: number;
+            /** Format: int32 */
+            teamCount?: number;
+            members?: components["schemas"]["SpaceMemberPreview"][];
+            lastActivity?: components["schemas"]["LastActivity"];
+            reliabilityAverage?: number;
+            statusCounts?: components["schemas"]["StatusCounts"];
+            folders?: components["schemas"]["SpaceFolderCard"][];
+            rootDocuments?: components["schemas"]["FolderDocumentCard"][];
+            toReview?: components["schemas"]["FolderDocumentCard"][];
+            tags?: components["schemas"]["TagRef"][];
+        };
+        SpaceFolderCard: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            /** Format: int32 */
+            documentCount?: number;
+            /** Format: int32 */
+            inReviewCount?: number;
+            reliabilityAverage?: number;
+        };
         SpaceTreeResponse: {
             /** Format: uuid */
             spaceId?: string;
@@ -4435,7 +4559,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["SpaceView"];
+                    "*/*": components["schemas"]["SpaceDetail"];
                 };
             };
         };
@@ -4462,6 +4586,102 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["SpaceView"];
+                };
+            };
+        };
+    };
+    get_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentResponse"];
+                };
+            };
+        };
+    };
+    save: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSpacePageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentResponse"];
+                };
+            };
+        };
+    };
+    get_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentResponse"];
+                };
+            };
+        };
+    };
+    save_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSpacePageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentResponse"];
                 };
             };
         };
@@ -4495,7 +4715,7 @@ export interface operations {
             };
         };
     };
-    get_2: {
+    get_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -4589,7 +4809,7 @@ export interface operations {
             };
         };
     };
-    get_3: {
+    get_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -4707,7 +4927,7 @@ export interface operations {
             };
         };
     };
-    get_4: {
+    get_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -4729,7 +4949,7 @@ export interface operations {
             };
         };
     };
-    save: {
+    save_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -4755,7 +4975,7 @@ export interface operations {
             };
         };
     };
-    get_5: {
+    get_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -4777,7 +4997,7 @@ export interface operations {
             };
         };
     };
-    save_1: {
+    save_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -4899,7 +5119,7 @@ export interface operations {
             };
         };
     };
-    get_6: {
+    get_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -4947,7 +5167,7 @@ export interface operations {
             };
         };
     };
-    get_7: {
+    get_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -5015,7 +5235,7 @@ export interface operations {
             };
         };
     };
-    get_8: {
+    get_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -5110,7 +5330,7 @@ export interface operations {
             };
         };
     };
-    get_9: {
+    get_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -5182,7 +5402,7 @@ export interface operations {
             };
         };
     };
-    get_10: {
+    get_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -5254,7 +5474,7 @@ export interface operations {
             };
         };
     };
-    get_11: {
+    get_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -5372,7 +5592,7 @@ export interface operations {
             };
         };
     };
-    get_12: {
+    get_14: {
         parameters: {
             query?: never;
             header?: never;
@@ -5464,7 +5684,7 @@ export interface operations {
             };
         };
     };
-    get_13: {
+    get_15: {
         parameters: {
             query?: never;
             header?: never;
@@ -7740,7 +7960,7 @@ export interface operations {
             };
         };
     };
-    get_14: {
+    get_16: {
         parameters: {
             query?: never;
             header?: never;
@@ -7808,7 +8028,7 @@ export interface operations {
             };
         };
     };
-    get_15: {
+    get_17: {
         parameters: {
             query?: never;
             header?: never;
@@ -7880,7 +8100,7 @@ export interface operations {
             };
         };
     };
-    get_16: {
+    get_18: {
         parameters: {
             query?: never;
             header?: never;
@@ -8228,6 +8448,54 @@ export interface operations {
             };
         };
     };
+    exportSpace: {
+        parameters: {
+            query?: {
+                format?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    exportSpace_1: {
+        parameters: {
+            query?: {
+                format?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
     contentHealth: {
         parameters: {
             query?: never;
@@ -8276,7 +8544,7 @@ export interface operations {
             };
         };
     };
-    get_17: {
+    get_19: {
         parameters: {
             query?: never;
             header?: never;
@@ -8362,7 +8630,7 @@ export interface operations {
             };
         };
     };
-    get_18: {
+    get_20: {
         parameters: {
             query?: never;
             header?: never;
@@ -9141,7 +9409,7 @@ export interface operations {
             };
         };
     };
-    get_19: {
+    get_21: {
         parameters: {
             query?: never;
             header?: {
@@ -9165,7 +9433,7 @@ export interface operations {
             };
         };
     };
-    get_20: {
+    get_22: {
         parameters: {
             query?: never;
             header?: never;
@@ -9294,7 +9562,7 @@ export interface operations {
             };
         };
     };
-    get_21: {
+    get_23: {
         parameters: {
             query?: never;
             header?: never;

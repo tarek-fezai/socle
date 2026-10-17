@@ -514,19 +514,65 @@ public class DocumentService {
         return "space:" + entity.getSpaceId();
     }
 
-    /** {@code folderPage} et {@code folderId} lus sur {@code folders.page_document_id}, pas sur l'appelant. */
+    /**
+     * {@code folderPage}/{@code folderId} et {@code spacePage}/{@code spaceId}
+     * lus sur les rattachements en base, pas sur l'appelant.
+     */
     private Map<String, Object> withFolderPage(Map<String, Object> meta, UUID documentId) {
         UUID folderId = pageFolderId(documentId);
-        if (folderId == null) {
+        UUID spacePageId = pageSpaceId(documentId);
+        if (folderId == null && spacePageId == null) {
             return meta == null ? Map.of() : meta;
         }
         Map<String, Object> copy = new LinkedHashMap<>();
         if (meta != null) {
             copy.putAll(meta);
         }
-        copy.put("folderPage", Boolean.TRUE);
-        copy.put("folderId", folderId.toString());
+        if (folderId != null) {
+            copy.put("folderPage", Boolean.TRUE);
+            copy.put("folderId", folderId.toString());
+        }
+        if (spacePageId != null) {
+            copy.put("spacePage", Boolean.TRUE);
+            copy.put("spaceId", spacePageId.toString());
+        }
         return copy;
+    }
+
+    private void assertPageTitleLocked(UUID id, String nextTitle) {
+        if (jdbc == null) {
+            return;
+        }
+        List<String> folderNames = jdbc.query(
+                "SELECT name FROM folders WHERE page_document_id = ?",
+                (rs, i) -> rs.getString("name"),
+                id);
+        if (folderNames != null && !folderNames.isEmpty() && folderNames.getFirst() != null
+                && !folderNames.getFirst().equals(nextTitle)) {
+            throw ApiErrors.folderPageTitleLocked();
+        }
+        List<String> spaceNames = jdbc.query(
+                "SELECT name FROM spaces WHERE page_document_id = ?",
+                (rs, i) -> rs.getString("name"),
+                id);
+        if (spaceNames != null && !spaceNames.isEmpty() && spaceNames.getFirst() != null
+                && !spaceNames.getFirst().equals(nextTitle)) {
+            throw ApiErrors.spacePageTitleLocked();
+        }
+    }
+
+    private UUID pageSpaceId(UUID documentId) {
+        if (jdbc == null || documentId == null) {
+            return null;
+        }
+        List<UUID> ids = jdbc.query(
+                "SELECT id FROM spaces WHERE page_document_id = ?",
+                (rs, i) -> (UUID) rs.getObject("id"),
+                documentId);
+        if (ids == null || ids.isEmpty()) {
+            return null;
+        }
+        return ids.getFirst();
     }
 
     private UUID pageFolderId(UUID documentId) {
@@ -557,16 +603,7 @@ public class DocumentService {
         assertNoApprovalInProgress(id);
         String previousTitle = entity.getTitle();
         String nextTitle = request.title().trim();
-        if (jdbc != null) {
-            List<String> pageNames = jdbc.query(
-                    "SELECT name FROM folders WHERE page_document_id = ?",
-                    (rs, i) -> rs.getString("name"),
-                    id);
-            if (pageNames != null && !pageNames.isEmpty() && pageNames.getFirst() != null
-                    && !pageNames.getFirst().equals(nextTitle)) {
-                throw ApiErrors.folderPageTitleLocked();
-            }
-        }
+        assertPageTitleLocked(id, nextTitle);
         Map<String, Object> previousBody = copyBody(
                 documentStore.readCurrentContent(entity.getId(), entity.getBody()));
         int archivedVersionNo = entity.getCurrentVersionNo();

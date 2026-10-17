@@ -181,6 +181,9 @@ public class SpaceService {
             }
         }
 
+        String previousName = jdbc.queryForObject(
+                "SELECT name FROM spaces WHERE id = ? AND deleted_at IS NULL",
+                String.class, spaceId);
         boolean clearDescription = request.description() != null && request.description().isBlank();
         String description = request.description() == null
                 ? null
@@ -194,7 +197,7 @@ public class SpaceService {
                   comment_policy = COALESCE(?, comment_policy),
                   description = CASE
                     WHEN ? THEN NULL
-                    WHEN ? IS NOT NULL THEN ?
+                    WHEN CAST(? AS text) IS NOT NULL THEN CAST(? AS text)
                     ELSE description
                   END
                  WHERE id = ? AND deleted_at IS NULL
@@ -208,6 +211,15 @@ public class SpaceService {
                 description,
                 description,
                 spaceId);
+        String nextName = request.name().trim();
+        if (previousName != null && !previousName.equals(nextName)) {
+            jdbc.update("""
+                    UPDATE documents
+                       SET title = ?, updated_at = now(), updated_by = ?
+                     WHERE id = (SELECT page_document_id FROM spaces WHERE id = ?)
+                    """,
+                    nextName, user.getId(), spaceId);
+        }
         Map<String, Object> meta = new java.util.LinkedHashMap<>();
         meta.put("name", request.name().trim());
         if (extRef != null) {
@@ -452,8 +464,8 @@ public class SpaceService {
                 """
                 SELECT DISTINCT d.space_id FROM documents d
                  WHERE d.deleted_at IS NULL AND d.visibility = 'organisation'
-                   AND NOT EXISTS (SELECT 1 FROM folders fp WHERE fp.page_document_id = d.id)
-                """,
+                   AND %s
+                """.formatted(eu.socle.document.PageDocuments.EXCLUDE_SQL),
                 rs -> {
                     while (rs.next()) {
                         out.add((UUID) rs.getObject("space_id"));
@@ -574,7 +586,7 @@ public class SpaceService {
         Map<UUID, UUID> docToSpace = new HashMap<>();
         jdbc.query(
                 ("SELECT d.id, d.space_id FROM documents d WHERE d.deleted_at IS NULL AND d.space_id IN (%s)"
-                        + " AND " + eu.socle.folder.FolderPages.EXCLUDE_SQL)
+                        + " AND " + eu.socle.document.PageDocuments.EXCLUDE_SQL)
                         .formatted(placeholders),
                 rs -> {
                     while (rs.next()) {

@@ -279,6 +279,9 @@ public class FolderService {
         if (FolderPages.isPage(jdbc, documentId)) {
             throw ApiErrors.folderPageLocked();
         }
+        if (eu.socle.document.PageDocuments.isSpacePage(jdbc, documentId)) {
+            throw ApiErrors.spacePageLocked();
+        }
         authorizationService.requireDocumentRelation(user.getId(), documentId, "editor");
 
         DocRow doc = requireActiveDocument(documentId);
@@ -454,7 +457,7 @@ public class FolderService {
                 "SELECT id, space_id, folder_id, title, status, visibility, position"
                         + " FROM documents d"
                         + " WHERE space_id = ? AND deleted_at IS NULL"
-                        + " AND " + FolderPages.EXCLUDE_SQL
+                        + " AND " + eu.socle.document.PageDocuments.EXCLUDE_SQL
                         + " AND id IN (" + placeholders + ")"
                         + " ORDER BY position ASC, lower(title) ASC",
                 (rs, i) -> mapDoc(rs),

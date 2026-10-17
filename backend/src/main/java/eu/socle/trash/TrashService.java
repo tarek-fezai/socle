@@ -164,6 +164,9 @@ public class TrashService {
         if (eu.socle.folder.FolderPages.isPage(jdbcTemplate, documentId)) {
             throw ApiErrors.folderPageLocked();
         }
+        if (eu.socle.document.PageDocuments.isSpacePage(jdbcTemplate, documentId)) {
+            throw ApiErrors.spacePageLocked();
+        }
         authorizationService.requireDocumentRelation(user.getId(), documentId, "editor");
         DocRow doc = requireActiveDocument(documentId);
         if (legalHoldService != null) {
@@ -271,6 +274,9 @@ public class TrashService {
             case "document" -> {
                 if (eu.socle.folder.FolderPages.isPage(jdbcTemplate, item.resourceId())) {
                     throw ApiErrors.folderPageLocked();
+                }
+                if (eu.socle.document.PageDocuments.isSpacePage(jdbcTemplate, item.resourceId())) {
+                    throw ApiErrors.spacePageLocked();
                 }
                 message = reparentDocumentToRootIfParentTrashed(item.resourceId());
                 restoreDocument(item.resourceId());
@@ -657,6 +663,8 @@ public class TrashService {
         }
         jdbcTemplate.update(
                 "UPDATE folders SET page_document_id = NULL WHERE page_document_id = ?", documentId);
+        jdbcTemplate.update(
+                "UPDATE spaces SET page_document_id = NULL WHERE page_document_id = ?", documentId);
         int deleted = jdbcTemplate.update(
                 "DELETE FROM documents WHERE id = ? AND deleted_at IS NOT NULL", documentId);
         if (deleted > 0 && historyPurgeService != null) {
