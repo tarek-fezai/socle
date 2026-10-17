@@ -62,13 +62,129 @@
   height: 100vh;
   overflow: hidden;
   background: #ffffff;
+  transition: width 180ms ease;
 }
 
+html[data-socle-reduce-motion='true'] .shell-sidebar {
+  transition: none;
+}
+
+/* Mode réduit : FolderReference.dc.html / Main.dc.html, bloc collapsed. */
+.shell-sidebar.is-collapsed {
+  width: 72px;
+  padding: 20px 16px;
+  gap: 24px;
+}
+
+.shell-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.shell-collapse {
+  position: static;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid #ececee;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  margin: 0;
+  color: #6b6b72;
+  line-height: 0;
+}
+
+.shell-collapse:hover {
+  background: #f5f5f7;
+}
+
+.shell-sidebar.is-collapsed .shell-brand {
+  justify-content: center;
+}
+
+.shell-sidebar.is-collapsed .shell-logo {
+  padding: 0;
+  gap: 0;
+}
+
+.shell-sidebar.is-collapsed .shell-logo-name {
+  display: none;
+}
+
+.shell-collapsed-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.shell-collapsed-item,
+.shell-collapsed-plus {
+  width: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.shell-collapsed-item:hover,
+.shell-collapsed-plus:hover {
+  background: #f5f5f7;
+}
+
+.shell-collapsed-item.active {
+  background: #f0effc;
+}
+
+.shell-collapsed-item.active:hover {
+  background: #f0effc;
+}
+
+.shell-collapsed-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c2c2c6;
+  flex-shrink: 0;
+}
+
+.shell-collapsed-item.active .shell-collapsed-dot {
+  background: #3730e0;
+}
+
+.shell-collapsed-plus {
+  align-self: center;
+  border: 1px solid #ececee;
+  background: #ffffff;
+  color: #3730e0;
+}
+
+.shell-sidebar.is-collapsed .shell-user {
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.shell-sidebar.is-collapsed .shell-user-name {
+  display: none;
+}
+
+/* Largeur naturelle (flex-basis: auto, min-width implicite) : le bouton ne comprime pas la marque. */
 .shell-logo {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 0 2px;
+  flex: 0 1 auto;
   color: #0e0e10;
   text-decoration: none;
 }

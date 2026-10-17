@@ -17,9 +17,18 @@ const LOCAL_FONT_LINK = `<link rel="stylesheet" href="/fonts/fonts.css" />`
 
 /**
  * Main.dc.html uses a few design-canvas template bindings for its collapsible sidebar.
- * Resolve them to the expanded state so the maquette renders like the design preview.
+ * Default: expanded, so existing captures stay on the open menu.
+ * `?collapsed=1` keeps the collapsed block (72 px) for the reduced-menu capture.
  */
-function resolveTemplates(html) {
+function resolveTemplates(html, collapsed = false) {
+  if (collapsed) {
+    return html
+      .replace(/<sc-if value="\{\{expanded\}\}"[^>]*>[\s\S]*?<\/sc-if>/g, '')
+      .replace(/<\/?sc-if[^>]*>/g, '')
+      .replace(/\{\{sidebarWidth\}\}/g, '72')
+      .replace(/\{\{sidebarPad\}\}/g, '20px 16px')
+      .replace(/\{\{logoJustify\}\}/g, 'center')
+  }
   return html
     .replace(/<sc-if value="\{\{collapsed\}\}"[^>]*>[\s\S]*?<\/sc-if>/g, '')
     .replace(/\{\{sidebarWidth\}\}/g, '268')
@@ -64,8 +73,8 @@ function helmetStyles(rawHtml) {
 /** Style de base des maquettes : contrôles de formulaire en police héritée (IBM Plex). */
 const FORM_FONT_RULE = 'button, input, select, textarea { font-family: inherit; }'
 
-function rewriteHtml(rawHtml, name = '') {
-  const html = resolveTemplates(rawHtml)
+function rewriteHtml(rawHtml, name = '', collapsed = false) {
+  const html = resolveTemplates(rawHtml, collapsed)
   const kept = KEEP_HELMET_STYLES.has(name)
     ? helmetStyles(rawHtml)
     : helmetStyles(rawHtml).includes(FORM_FONT_RULE)
@@ -125,7 +134,8 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(filePath)
     let body = data
     if (ext === '.html') {
-      body = Buffer.from(rewriteHtml(data.toString('utf8'), path.basename(filePath)), 'utf8')
+      const collapsed = url.searchParams.get('collapsed') === '1'
+      body = Buffer.from(rewriteHtml(data.toString('utf8'), path.basename(filePath), collapsed), 'utf8')
     }
     res.writeHead(200, { 'Content-Type': mime[ext] || 'application/octet-stream' })
     res.end(body)

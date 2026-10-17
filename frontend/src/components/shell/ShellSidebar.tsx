@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-Socle-Proprietary
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
@@ -23,6 +23,7 @@ import {
   searchShortcutLabel,
 } from './shellUtils'
 import { useAuth } from '../../auth/AuthProvider'
+import { loadDevicePreferences, saveDevicePreferences } from '../../lib/devicePreferences'
 import { isPlatformAdmin } from '../../lib/platformRoles'
 import { ShellUserMenu } from './ShellUserMenu'
 import {
@@ -66,6 +67,13 @@ const iconTeam = (
   </svg>
 )
 
+const iconPlus = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+)
+
 export function ShellSidebar({ onOpenSearch }: Props) {
   const location = useLocation()
   const { me } = useAuth()
@@ -73,6 +81,30 @@ export function ShellSidebar({ onOpenSearch }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(() => loadExpandedSpaces())
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set())
   const [kbd, setKbd] = useState('⌘K')
+  const [collapsed, setCollapsed] = useState(() => loadDevicePreferences().sidebarCollapsed)
+
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev
+      saveDevicePreferences({ sidebarCollapsed: next })
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== '\\' || e.altKey || e.shiftKey || !(e.metaKey || e.ctrlKey)) return
+      const target = e.target
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return
+      }
+      e.preventDefault()
+      toggleCollapsed()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [toggleCollapsed])
 
   useEffect(() => {
     setKbd(searchShortcutLabel())
@@ -173,47 +205,69 @@ export function ShellSidebar({ onOpenSearch }: Props) {
   const brandName = useBrandingInstanceName() || 'Socle'
 
   return (
-    <aside className="shell-sidebar shell-desktop-only" data-mock-id="shell-sidebar" aria-label="Navigation">
-      <Link to="/" className="shell-logo" data-mock-id="shell-logo">
-        {logoUrl ? (
-          <img className="shell-logo-mark shell-logo-mark--img" src={logoUrl} alt="" width={24} height={24} aria-hidden />
-        ) : (
-          <span className="shell-logo-mark" style={{ background: accent }} aria-hidden />
-        )}
-        <span className="shell-logo-name">{brandName}</span>
-      </Link>
+    <aside
+      className={`shell-sidebar shell-desktop-only${collapsed ? ' is-collapsed' : ''}`}
+      data-mock-id="shell-sidebar"
+      data-collapsed={collapsed ? 'true' : 'false'}
+      aria-label="Navigation"
+    >
+      <div className="shell-brand" data-mock-id="shell-brand-row">
+        <Link to="/" className="shell-logo" data-mock-id="shell-logo">
+          {logoUrl ? (
+            <img className="shell-logo-mark shell-logo-mark--img" src={logoUrl} alt="" width={24} height={24} aria-hidden />
+          ) : (
+            <span className="shell-logo-mark" style={{ background: accent }} aria-hidden />
+          )}
+          <span className="shell-logo-name">{brandName}</span>
+        </Link>
+        <button
+          type="button"
+          className="shell-collapse"
+          aria-label="Réduire ou agrandir le menu"
+          aria-expanded={!collapsed}
+          onClick={toggleCollapsed}
+        >
+          <CollapseChevron points={collapsed ? '9 18 15 12 9 6' : '15 18 9 12 15 6'} />
+        </button>
+      </div>
 
-      <button
-        type="button"
-        className="shell-search-chip"
-        onClick={onOpenSearch}
-        data-mock-id="shell-search-chip"
-        data-testid="shell-search-chip"
-      >
-        {iconSearch}
-        <span className="label">Rechercher</span>
-        <span className="kbd">{kbd}</span>
-      </button>
+      {!collapsed && (
+        <button
+          type="button"
+          className="shell-search-chip"
+          onClick={onOpenSearch}
+          data-mock-id="shell-search-chip"
+          data-testid="shell-search-chip"
+        >
+          {iconSearch}
+          <span className="label">Rechercher</span>
+          <span className="kbd">{kbd}</span>
+        </button>
+      )}
 
-      <Link
-        to="/favorites"
-        className={`shell-nav-item${path.startsWith('/favorites') ? ' active' : ''}`}
-        data-mock-id="shell-nav-favorites"
-      >
-        {iconStar}
-        Favoris
-      </Link>
+      {!collapsed && (
+        <Link
+          to="/favorites"
+          className={`shell-nav-item${path.startsWith('/favorites') ? ' active' : ''}`}
+          data-mock-id="shell-nav-favorites"
+        >
+          {iconStar}
+          Favoris
+        </Link>
+      )}
 
-      <Link
-        to="/spaces"
-        className={`shell-nav-item${path === '/spaces' ? ' active' : ''}`}
-        data-mock-id="shell-nav-spaces"
-      >
-        {iconSpaces}
-        Tous les espaces
-      </Link>
+      {!collapsed && (
+        <Link
+          to="/spaces"
+          className={`shell-nav-item${path === '/spaces' ? ' active' : ''}`}
+          data-mock-id="shell-nav-spaces"
+        >
+          {iconSpaces}
+          Tous les espaces
+        </Link>
+      )}
 
-      {admin && (
+      {!collapsed && admin && (
         <Link
           to="/admin/team"
           className={`shell-nav-item${path.startsWith('/admin/team') || path === '/team' ? ' active' : ''}`}
@@ -224,6 +278,35 @@ export function ShellSidebar({ onOpenSearch }: Props) {
         </Link>
       )}
 
+      {collapsed ? (
+        <div className="shell-collapsed-rail">
+          {spaceList.flatMap((space) => {
+            if (!expanded.has(space.id)) return []
+            const tree = treeBySpace.get(space.id)
+            if (!tree) return []
+            return collapsedEntries(buildSpaceTree(tree), openFolders, path, routeFolderId).map((item) => (
+              <Link
+                key={item.key}
+                to={item.to}
+                className={`shell-collapsed-item${item.active ? ' active' : ''}`}
+                title={item.name}
+                aria-label={item.name}
+                aria-current={item.active ? 'page' : undefined}
+              >
+                <span className="shell-collapsed-dot" />
+              </Link>
+            ))
+          })}
+        </div>
+      ) : null}
+
+      {collapsed ? (
+        <Link to="/docs/new" className="shell-collapsed-plus" title="Nouveau document ou dossier" aria-label="Nouveau document ou dossier">
+          {iconPlus}
+        </Link>
+      ) : null}
+
+      {!collapsed && (
       <div className="shell-tree" data-mock-id="shell-tree">
         {spaceList.map((space, idx) => {
           const open = expanded.has(space.id)
@@ -272,6 +355,7 @@ export function ShellSidebar({ onOpenSearch }: Props) {
           )
         })}
       </div>
+      )}
 
       <ShellUserMenu />
     </aside>
@@ -291,6 +375,48 @@ function folderIdFromPath(path: string): string | null {
 
 function docIsActive(path: string, id: string) {
   return path === documentHref(id) || path.startsWith(`/docs/${id}/`)
+}
+
+function CollapseChevron({ points }: { points: string }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <polyline points={points} />
+    </svg>
+  )
+}
+
+type CollapsedEntry = { key: string; name: string; to: string; active: boolean }
+
+/** Une icône par ligne d'arbre actuellement affichée (documents, puis dossiers ouverts). */
+function collapsedEntries(
+  view: { folders: FolderTreeNode[]; documents: TreeDocument[] },
+  openFolders: Set<string>,
+  path: string,
+  currentFolderId: string | null,
+): CollapsedEntry[] {
+  const out: CollapsedEntry[] = []
+  const pushDoc = (doc: TreeDocument) => {
+    out.push({
+      key: doc.id,
+      name: doc.title,
+      to: documentHref(doc.id),
+      active: docIsActive(path, doc.id),
+    })
+  }
+  const pushFolder = (node: FolderTreeNode) => {
+    out.push({
+      key: node.folder.id,
+      name: node.folder.name,
+      to: folderHref(node.folder.id),
+      active: node.folder.id === currentFolderId,
+    })
+    if (!openFolders.has(node.folder.id)) return
+    node.documents.forEach(pushDoc)
+    node.folders.forEach(pushFolder)
+  }
+  view.documents.forEach(pushDoc)
+  view.folders.forEach(pushFolder)
+  return out
 }
 
 function Chevron() {
