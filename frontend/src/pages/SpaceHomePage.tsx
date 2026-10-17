@@ -260,6 +260,7 @@ export function SpaceHomePage() {
 
   const s = space.data
   const canEdit = Boolean(s.canEdit)
+  const publicOnly = s.membership === 'public-only'
   const hasPage = Boolean(page.data)
   const pct = reliabilityPercent(s.reliabilityAverage)
   const created = formatLong(s.createdAt)
@@ -391,7 +392,7 @@ export function SpaceHomePage() {
         ariaLabel="Sections de l'espace"
         current={tab === 'historique' ? 'history' : tab === 'modifier' ? 'edit' : 'read'}
         showEdit={canEdit}
-        showAccess
+        showAccess={!publicOnly}
         openComments={openComments}
         commentsOpen={tab === 'commentaires'}
         onToggleComments={() => setTab((current) => (current === 'commentaires' ? 'lire' : 'commentaires'))}
