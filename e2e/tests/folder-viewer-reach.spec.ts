@@ -44,7 +44,7 @@ test('un lecteur de dossier atteint l’espace, le dossier vide et le document',
       body: { type: 'doc', content: [{ type: 'paragraph' }] },
     }),
   })
-  await apiJson(`/api/v1/spaces/${space.id}/page`, token, {
+  const pageDoc = await apiJson<Doc>(`/api/v1/spaces/${space.id}/page`, token, {
     method: 'PUT',
     body: JSON.stringify({
       body: {
@@ -53,6 +53,10 @@ test('un lecteur de dossier atteint l’espace, le dossier vide et le document',
       },
       changeSummary: 'Création',
     }),
+  })
+  await apiJson(`/api/v1/documents/${pageDoc.id}/visibility`, token, {
+    method: 'PUT',
+    body: JSON.stringify({ visibility: 'restricted' }),
   })
 
   let guest: Guest | null = null
