@@ -127,7 +127,8 @@ class GovernanceAuditCompletenessTest {
 
         new SpaceService(
                 jdbc, userSyncService, authorizationService, auditService,
-                mock(eu.socle.identity.IdentityFacade.class))
+                mock(eu.socle.identity.IdentityFacade.class),
+                new eu.socle.space.SpaceReachability(jdbc, authorizationService))
                 .create(jwt(), new CreateSpaceRequest("Espace A", null));
 
         verify(auditService).record(

@@ -4,6 +4,7 @@ package eu.socle.folder;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
 import eu.socle.config.SocleProperties;
+import eu.socle.space.SpaceReachability;
 import eu.socle.trash.TrashService;
 import eu.socle.user.UserEntity;
 import eu.socle.user.UserSyncService;
@@ -62,7 +63,8 @@ final class FolderTestSupport {
     FolderService service(int maxDepth) {
         return new FolderService(
                 jdbc, userSyncService, authorizationService, auditService, trashService,
-                new SocleProperties(null, null, null, null, new SocleProperties.Folders(maxDepth)));
+                new SocleProperties(null, null, null, null, new SocleProperties.Folders(maxDepth)),
+                new SpaceReachability(jdbc, authorizationService));
     }
 
     FolderTestSupport folder(UUID id, UUID spaceId, UUID parentId, String name) {
@@ -190,6 +192,21 @@ final class FolderTestSupport {
                         if (folder.equals(d.folderId())) {
                             ResultSet rs = mock(ResultSet.class);
                             when(rs.getObject("id")).thenReturn(d.id());
+                            ids.add(mapper.mapRow(rs, 0));
+                        }
+                    }
+                    return ids;
+                });
+
+        when(jdbc.query(contains("space-reachability-folders"), any(RowMapper.class), any(UUID.class)))
+                .thenAnswer(inv -> {
+                    UUID space = inv.getArgument(2);
+                    RowMapper<Object> mapper = inv.getArgument(1);
+                    List<Object> ids = new ArrayList<>();
+                    for (Folder f : folders.values()) {
+                        if (space.equals(f.spaceId())) {
+                            ResultSet rs = mock(ResultSet.class);
+                            when(rs.getObject("id")).thenReturn(f.id());
                             ids.add(mapper.mapRow(rs, 0));
                         }
                     }

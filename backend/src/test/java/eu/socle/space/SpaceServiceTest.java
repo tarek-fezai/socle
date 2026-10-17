@@ -141,7 +141,8 @@ class SpaceServiceTest {
         service = new SpaceService(
                 jdbc, userSyncService, authorizationService,
                 mock(eu.socle.audit.AuditService.class),
-                mock(eu.socle.identity.IdentityFacade.class));
+                mock(eu.socle.identity.IdentityFacade.class),
+                new SpaceReachability(jdbc, authorizationService));
         when(userSyncService.syncFromJwt(any())).thenAnswer(inv -> {
             Jwt jwt = inv.getArgument(0);
             return user(UUID.fromString(jwt.getSubject()));

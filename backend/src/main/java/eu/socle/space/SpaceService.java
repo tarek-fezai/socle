@@ -4,7 +4,7 @@ package eu.socle.space;
 import eu.socle.audit.AuditActions;
 import eu.socle.audit.AuditService;
 import eu.socle.authz.AuthorizationService;
-import eu.socle.authz.DocumentScope;
+import eu.socle.authz.AuthorizationService.ReadableScope;
 import eu.socle.document.DocumentDtos.PersonRef;
 import eu.socle.document.DocumentVisibility;
 import eu.socle.identity.IdentityFacade;
@@ -50,19 +50,22 @@ public class SpaceService {
     private final AuthorizationService authorizationService;
     private final AuditService auditService;
     private final IdentityFacade identityFacade;
+    private final SpaceReachability reachability;
 
     public SpaceService(
             JdbcTemplate jdbc,
             UserSyncService userSyncService,
             AuthorizationService authorizationService,
             AuditService auditService,
-            IdentityFacade identityFacade
+            IdentityFacade identityFacade,
+            SpaceReachability reachability
     ) {
         this.jdbc = jdbc;
         this.userSyncService = userSyncService;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
         this.identityFacade = identityFacade;
+        this.reachability = reachability;
     }
 
     @Transactional(readOnly = true)
@@ -80,7 +83,9 @@ public class SpaceService {
                 },
                 user.getId());
 
-        Set<UUID> publicOnlySpaces = spacesReachableViaReadableDocuments(user.getId());
+        var readable = authorizationService.readableScope(user.getId());
+        Set<UUID> publicOnlySpaces = spacesReachableViaReadableDocuments(readable);
+        publicOnlySpaces.addAll(reachability.spaceIdsOfFolderViewers(readable.folderViewerIds()));
         publicOnlySpaces.removeAll(memberSpaces);
 
         Set<UUID> visible = new HashSet<>(memberSpaces);
@@ -124,17 +129,10 @@ public class SpaceService {
         requireActive(spaceId);
         boolean member = authorizationService.hasRelation(user.getId(), "space", spaceId, "viewer")
                 || isTableOwner(spaceId, user.getId());
-        if (member) {
-            return loadView(spaceId, user.getId(), "member");
-        }
-        // Non-membre : accessible s'il peut lire au moins un document (pages organisation, etc.)
-        List<UUID> readable = authorizationService.listViewableDocumentIds(
-                user.getId(), DocumentScope.space(spaceId));
-        if (readable.isEmpty()) {
-            // 404 : on ne révèle pas l'existence de l'espace
+        if (!reachability.reachable(user.getId(), spaceId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Espace introuvable");
         }
-        return loadView(spaceId, user.getId(), "public-only");
+        return loadView(spaceId, user.getId(), member ? "member" : "public-only");
     }
 
     @Transactional
@@ -455,10 +453,10 @@ public class SpaceService {
 
     /**
      * Espaces contenant au moins un document potentiellement lisible sans membership
-     * espace : pages {@code organisation}, docs en {@code direct_access}, ou dossiers
-     * {@code viewer} hors appartenance espace.
+     * espace : pages {@code organisation} ou docs en {@code direct_access}.
+     * Les dossiers {@code viewer} passent par {@link SpaceReachability#spaceIdsOfFolderViewers}.
      */
-    private Set<UUID> spacesReachableViaReadableDocuments(UUID userId) {
+    private Set<UUID> spacesReachableViaReadableDocuments(ReadableScope readable) {
         Set<UUID> out = new HashSet<>();
         jdbc.query(
                 """
@@ -473,28 +471,12 @@ public class SpaceService {
                     return null;
                 });
 
-        var readable = authorizationService.readableScope(userId);
-        if (!readable.directDocumentIds().isEmpty()) {
+        if (readable != null && !readable.directDocumentIds().isEmpty()) {
             String placeholders = String.join(",",
                     readable.directDocumentIds().stream().map(id -> "?").toList());
             List<Object> args = new ArrayList<>(readable.directDocumentIds());
             jdbc.query(
                     ("SELECT DISTINCT space_id FROM documents WHERE deleted_at IS NULL AND id IN (%s)"
-                            .formatted(placeholders)),
-                    rs -> {
-                        while (rs.next()) {
-                            out.add((UUID) rs.getObject("space_id"));
-                        }
-                        return null;
-                    },
-                    args.toArray());
-        }
-        if (!readable.folderViewerIds().isEmpty()) {
-            String placeholders = String.join(",",
-                    readable.folderViewerIds().stream().map(id -> "?").toList());
-            List<Object> args = new ArrayList<>(readable.folderViewerIds());
-            jdbc.query(
-                    ("SELECT DISTINCT space_id FROM folders WHERE deleted_at IS NULL AND id IN (%s)"
                             .formatted(placeholders)),
                     rs -> {
                         while (rs.next()) {
