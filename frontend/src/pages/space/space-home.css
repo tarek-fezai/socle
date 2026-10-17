@@ -6,6 +6,12 @@
   margin: 0 0 8px;
 }
 
+/* Lecture seule : ProseMirror impose break-spaces, qui fait passer « les »
+   à la ligne sous Linux. La maquette est un paragraphe en white-space normal. */
+.sh-page .fp-prose.ProseMirror[contenteditable='false'] {
+  white-space: normal;
+}
+
 .sh-page .fp-count {
   margin: 0 0 26px;
 }
