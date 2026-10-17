@@ -5,14 +5,21 @@
  * SpaceHome.dc.html vs /spaces/:id @ 1440×900.
  * Texte inclus, seuil 1 % par section. La sidebar n'est pas comparée
  * (décision tf 2026-10-10 : shell canonique). Annotation : data-mock-id seulement.
- * Fixture : forme de GET /spaces/{id} et GET /spaces/{id}/page, même jeu que
- * get_matchesSpaceHomeMockup (7 documents, 2 dossiers, fiabilités 88 / 95 / 91).
+ * Fixture : GET /spaces/{id} (SpaceDetail) et GET /spaces/{id}/page (DocumentResponse),
+ * validées par AJV (fixture-contract.test.ts). Même jeu que get_matchesSpaceHomeMockup
+ * (7 documents, 2 dossiers, fiabilités 88 / 95 / 91).
  * Les effectifs du rail (12 membres, 3 équipes, tag Critique, paragraphe long,
- * dates de la maquette) sont les valeurs visibles de SpaceHome.dc.html : le test
- * Java ne les fige pas (membres FGA vides, teamCount 1, corps court).
+ * dates de la maquette) sont les valeurs de SpaceHome.dc.html, conformes au contrat
+ * et validées par AJV.
  */
 import { test } from '@playwright/test'
 import { ME_TAREK, NOTIFICATIONS_SEED, SPACE_IDENTITE, VISUAL_NOW } from './dashboard-fixtures.mjs'
+import {
+  SPACE_HOME_COMMENTS,
+  SPACE_HOME_DETAIL,
+  SPACE_HOME_PAGE,
+  SPACE_HOME_PAGE_TEXT,
+} from './space-home-fixtures.mjs'
 import {
   MOCK_ORIGIN,
   assertNotImplementedGuards,
@@ -29,98 +36,8 @@ import {
 const MAC_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
-const SPACE_ID = SPACE_IDENTITE.id
-const PAGE_ID = 'd0000001-0000-4000-8000-0000000000e1'
-const FOLDER_PROC = 'f0000001-0000-4000-8000-0000000000a1'
-const FOLDER_REF = 'f0000001-0000-4000-8000-0000000000a2'
-const DOC_POLITIQUE = 'd0000001-0000-4000-8000-000000000021'
-const DOC_REGISTRE = 'd0000001-0000-4000-8000-000000000022'
-
-const PAGE_TEXT =
-  "Politiques, procédures et référentiels du cycle de vie des identités et des accès. Cet espace sert de référence pour les revues d'habilitations et les audits de conformité."
-
-const TAG_IAM = { id: 't0000001-0000-4000-8000-000000000001', name: 'IAM', color: '#3730E0' }
-const TAG_CRIT = { id: 't0000001-0000-4000-8000-000000000002', name: 'Critique', color: '#3730E0' }
-
-const SPACE_DETAIL = {
-  ...SPACE_IDENTITE,
-  createdAt: '2026-05-02T10:00:00.000Z',
-  defaultVisibility: 'organisation',
-  documentCount: 7,
-  pageDocumentId: PAGE_ID,
-  canEdit: true,
-  canDelete: true,
-  language: 'fr',
-  status: 'actif',
-  owner: {
-    id: 'g0000001-0000-4000-8000-000000000001',
-    name: 'Équipe Identité',
-    owner: { id: ME_TAREK.id, displayName: 'Tarek Fezai', initials: 'TF' },
-  },
-  memberCount: 12,
-  teamCount: 3,
-  members: [{ initials: 'TF' }, { initials: 'RL' }, { initials: 'SL' }, { initials: 'CD' }],
-  lastActivity: { who: 'Tarek Fezai', at: '2026-09-28T10:00:00.000Z' },
-  reliabilityAverage: 91,
-  statusCounts: { validated: 5, inReview: 1, draft: 1 },
-  folders: [
-    { id: FOLDER_PROC, name: 'Procédures', documentCount: 3, inReviewCount: 1, reliabilityAverage: 88 },
-    { id: FOLDER_REF, name: 'Référence', documentCount: 2, inReviewCount: 0, reliabilityAverage: 95 },
-  ],
-  rootDocuments: [
-    {
-      id: DOC_POLITIQUE,
-      title: 'Politique de gestion des accès',
-      status: 'valide',
-      docType: 'politique',
-      updatedAt: '2026-09-12T10:00:00.000Z',
-      updatedBy: 'Tarek Fezai',
-      reviewSince: null,
-      tags: [TAG_IAM],
-    },
-    {
-      id: DOC_REGISTRE,
-      title: 'Registre des accès à privilèges',
-      status: 'brouillon',
-      docType: 'politique',
-      updatedAt: '2026-09-28T10:00:00.000Z',
-      updatedBy: 'Tarek Fezai',
-      reviewSince: null,
-      tags: [],
-    },
-  ],
-  toReview: [
-    {
-      id: 'd0000001-0000-4000-8000-000000000013',
-      title: 'Revue périodique des droits',
-      status: 'en_revue',
-      docType: 'procedure',
-      updatedAt: '2026-09-20T08:00:00.000Z',
-      updatedBy: 'Yanis M.',
-      reviewSince: '2026-09-20T08:00:00.000Z',
-      tags: [TAG_CRIT],
-    },
-  ],
-  tags: [TAG_IAM, TAG_CRIT],
-}
-
-const PAGE_DOC = {
-  id: PAGE_ID,
-  spaceId: SPACE_ID,
-  folderId: null,
-  title: 'Identité & accès',
-  body: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: PAGE_TEXT }] }] },
-  status: 'brouillon',
-  docType: 'page',
-  currentVersionNo: 1,
-  createdAt: '2026-05-02T10:00:00.000Z',
-  updatedAt: '2026-09-28T10:00:00.000Z',
-  createdBy: { kind: 'user', id: ME_TAREK.id, displayName: 'Tarek Fezai' },
-  updatedBy: { kind: 'user', id: ME_TAREK.id, displayName: 'Tarek Fezai' },
-  owner: null,
-  tags: [],
-  permissions: { canRead: true, canComment: true, canEdit: true, canDelete: true, canPublish: true },
-}
+const SPACE_ID = SPACE_HOME_DETAIL.id
+const PAGE_ID = SPACE_HOME_PAGE.id
 
 /** Le menu n'est pas ouvert : la surface mesurable est le bouton qui annonce Archiver. */
 export const NOT_IMPLEMENTED = [
@@ -208,14 +125,12 @@ async function annotateSpaceHome(page) {
 
 async function mockSpaceHome(page) {
   await mockBaseApis(page, { me: ME_TAREK, notifications: NOTIFICATIONS_SEED, spaces: [SPACE_IDENTITE] })
-  await page.route(`**/api/v1/spaces/${SPACE_ID}/page`, (route) => json(route, PAGE_DOC))
-  await page.route(`**/api/v1/documents/${PAGE_ID}/comments**`, (route) =>
-    json(route, { documentId: PAGE_ID, versionNo: 1, threads: [], detached: [], openThreadCount: 0 }),
-  )
+  await page.route(`**/api/v1/spaces/${SPACE_ID}/page`, (route) => json(route, SPACE_HOME_PAGE))
+  await page.route(`**/api/v1/documents/${PAGE_ID}/comments**`, (route) => json(route, SPACE_HOME_COMMENTS))
   await page.route(`**/api/v1/spaces/${SPACE_ID}`, (route) => {
     const path = new URL(route.request().url()).pathname
     if (!path.endsWith(`/spaces/${SPACE_ID}`)) return route.fallback()
-    return json(route, SPACE_DETAIL)
+    return json(route, SPACE_HOME_DETAIL)
   })
   await page.route('**/api/v1/favorites/**', (route) => json(route, { favorited: false }))
 }
@@ -241,7 +156,7 @@ test('desktop SpaceHome — sections pixel ≤ 1 % (texte inclus)', async ({ pag
 
   await page.goto(`/spaces/${SPACE_ID}`)
   await page.waitForSelector('[data-mock-id="sh-title"]')
-  await page.waitForSelector(`text=${PAGE_TEXT.slice(0, 24)}`)
+  await page.waitForSelector(`text=${SPACE_HOME_PAGE_TEXT.slice(0, 24)}`)
   await page.waitForSelector('text=7 documents · 2 dossiers')
   await page.waitForSelector('text=En revue depuis le 20 septembre 2026')
   await page.waitForSelector('text=Créé le 28 septembre 2026')

@@ -19,7 +19,7 @@ Ce document est la norme pour tout nouveau spec Playwright sous `frontend/e2e-vi
 ### Données manquantes (backend — ne pas inventer côté app)
 
 - `GET /api/v1/trash?spaceId=` (filtré OpenFGA) — backlog `TRASH-PER-SPACE`.
-- **SpaceHome.dc.html** = accueil d’espace → `/spaces/:id`. Données : `GET /spaces/{id}` (E1) et page `GET`/`PUT /spaces/{id}/page`. Sidebar du shell non comparée (décision tf 2026-10-10). `NOT_IMPLEMENTED` : archivage d’espace (`SPACE-ARCHIVE`), surface = bouton « Autres actions » (le menu n’est pas ouvert dans la maquette).
+- **SpaceHome.dc.html** = accueil d’espace → `/spaces/:id`. Données : `GET /spaces/{id}` (E1) et page `GET`/`PUT /spaces/{id}/page`. Les effectifs du rail sont des valeurs de la maquette, conformes au contrat et validées par AJV. Sidebar du shell non comparée (décision tf 2026-10-10). `NOT_IMPLEMENTED` : archivage d’espace (`SPACE-ARCHIVE`), surface = bouton « Autres actions » (le menu n’est pas ouvert dans la maquette).
 - **SpaceSettings.dc.html** = arbre 420 px + paramètres 620 px ; `/spaces/:id/settings` reprend cette mise en page (l’ancienne route `/spaces/:id` est l’accueil). `NOT_IMPLEMENTED` : membres, archivage. `APP_EXTRA` (relecteur) : description, politique de commentaires, propriétaires, Enregistrer. Pas d’affichage d’UUID.
 - **CreateSpace.dc.html** = modale 480 px ouverte depuis `/spaces` (interaction Playwright). Le bouton × figure dans la maquette : comparé (`create-close`).
 - **Accès** : liste des personnes, « Inviter », onglets document et encart corbeille sont livrés (annuaire nominatif). Plus de `ACCESS-PEOPLE-PICKER` / `access-grant-form`.
